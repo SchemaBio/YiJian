@@ -1,0 +1,22 @@
+export { TaskHeader } from './TaskHeader';
+export { ResultTabs } from './ResultTabs';
+export { QCResultTab } from './QCResultTab';
+export { SampleSummaryCard } from './SampleSummaryCard';
+export { SNVIndelTab } from './SNVIndelTab';
+export { CNVSegmentTab } from './CNVSegmentTab';
+export { CNVExonTab } from './CNVExonTab';
+export { STRTab } from './STRTab';
+export { MEITab } from './MEITab';
+export { MTTab } from './MTTab';
+export { UPDTab } from './UPDTab';
+export { ReportTab } from './ReportTab';
+export { IGVViewer, PositionLink } from './IGVViewer';
+export { VariantDetailPanel } from './VariantDetailPanel';
+export { CNVDetailPanel } from './CNVDetailPanel';
+export { MTDetailPanel } from './MTDetailPanel';
+export { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+
+// CNV 致病性评估组件
+export { CNVPathogenicityTag, CNVPathogenicityBadge } from './CNVPathogenicityTag';
+export { CNVAssessmentPanel } from './CNVAssessmentPanel';
+export * from './assessment';

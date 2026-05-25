@@ -1,0 +1,63 @@
+/* Import design tokens from ui-kit */
+@import '@schema/ui-kit/tokens';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 贻鉴品牌色 - 青绿色，象征生命与传承 */
+:root {
+  --color-accent-fg: #1a7f37;
+  --color-accent-emphasis: #1a7f37;
+  --color-accent-muted: rgba(63, 185, 80, 0.4);
+  --color-accent-subtle: #dafbe1;
+}
+
+[data-theme='dark'] {
+  --color-accent-fg: #3fb950;
+  --color-accent-emphasis: #238636;
+  --color-accent-muted: rgba(46, 160, 67, 0.4);
+  --color-accent-subtle: rgba(46, 160, 67, 0.15);
+}
+
+/* Base styles */
+@layer base {
+  html {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base, 14px);
+    line-height: var(--line-height-normal, 1.5);
+    color: var(--color-fg-default);
+    background-color: var(--color-canvas-default);
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Focus visible styles for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-emphasis);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-canvas-subtle);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-default);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fg-muted);
+  }
+}
