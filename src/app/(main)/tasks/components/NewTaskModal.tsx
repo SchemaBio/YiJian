@@ -2,35 +2,15 @@
 
 import * as React from 'react';
 import { Button, Input, Select } from '@schema/ui-kit';
-import { X, Search } from 'lucide-react';
-
-interface Sample {
-  id: string;
-  internalId: string;
-}
-
-interface Pipeline {
-  id: string;
-  name: string;
-  version: string;
-}
-
-// Mock 样本数据
-const mockSamples: Sample[] = [
-  { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', internalId: 'INT-001' },
-  { id: 'b2c3d4e5-f678-90ab-cdef-123456789012', internalId: 'INT-002' },
-  { id: 'c3d4e5f6-7890-abcd-ef12-345678901234', internalId: 'INT-003' },
-  { id: 'd4e5f678-90ab-cdef-1234-567890123456', internalId: 'INT-004' },
-  { id: 'e5f67890-abcd-ef12-3456-789012345678', internalId: 'INT-005' },
-];
-
-// Mock 流程数据
-const mockPipelines: Pipeline[] = [
-  { id: 'wes-germline-v1', name: 'WES-Germline-v1', version: 'v1.2.0' },
-  { id: 'wes-family-v1', name: 'WES-Family-v1', version: 'v1.1.0' },
-  { id: 'panel-cardio', name: 'Panel-Cardio', version: 'v2.0.1' },
-  { id: 'panel-neuro', name: 'Panel-Neuro', version: 'v1.0.0' },
-];
+import { X, Search, Loader2 } from 'lucide-react';
+import {
+  pipelinesApi,
+  samplesApi,
+  templatesApi,
+  type TaskPipelineOption,
+  type TaskSampleListItem,
+  type TaskTemplateOption,
+} from '@/lib/task-resources';
 
 export interface NewTaskFormData {
   sampleId: string;
@@ -39,6 +19,10 @@ export interface NewTaskFormData {
   pipelineName: string;
   pipelineVersion: string;
   remark: string;
+  template: string;
+  inputs: Record<string, unknown>;
+  uploaded_file_ids: number[];
+  estimatedMinutes: number;
 }
 
 interface NewTaskModalProps {
@@ -49,32 +33,127 @@ interface NewTaskModalProps {
 
 export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [sampleSearch, setSampleSearch] = React.useState('');
-  const [selectedSample, setSelectedSample] = React.useState<Sample | null>(null);
+  const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
+  const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
+  const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
+  const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem | null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState<string>('');
+  const [uploadedFileIds, setUploadedFileIds] = React.useState('');
+  const [estimatedMinutes, setEstimatedMinutes] = React.useState(120);
   const [remark, setRemark] = React.useState('');
+  const [loadingResources, setLoadingResources] = React.useState(false);
+  const [resourceError, setResourceError] = React.useState('');
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+
+    async function loadResources() {
+      setLoadingResources(true);
+      setResourceError('');
+      try {
+        const [sampleItems, pipelineItems, templateItems] = await Promise.all([
+          samplesApi.list(),
+          pipelinesApi.list().catch(() => []),
+          templatesApi.list().catch(() => []),
+        ]);
+        if (cancelled) return;
+        setSamples(sampleItems);
+        setPipelines(pipelineItems);
+        setTemplates(templateItems);
+        const firstValue = pipelineItems[0]?.id || templateItems[0]?.name || '';
+        setSelectedPipeline(prev => prev || firstValue);
+      } catch (err) {
+        if (!cancelled) {
+          setResourceError(err instanceof Error ? err.message : '加载任务资源失败');
+        }
+      } finally {
+        if (!cancelled) setLoadingResources(false);
+      }
+    }
+
+    loadResources();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // 筛选样本
   const filteredSamples = React.useMemo(() => {
-    if (!sampleSearch) return mockSamples;
+    if (!sampleSearch) return samples;
     const query = sampleSearch.toLowerCase();
-    return mockSamples.filter(
+    return samples.filter(
       s => s.id.toLowerCase().includes(query) || s.internalId.toLowerCase().includes(query)
     );
-  }, [sampleSearch]);
+  }, [sampleSearch, samples]);
+
+  const pipelineOptions = React.useMemo(() => {
+    if (pipelines.length > 0) {
+      return pipelines.map(p => ({
+        value: p.id,
+        label: `${p.name}${p.version ? ` (${p.version})` : ''}`,
+      }));
+    }
+    return templates.map(t => ({
+      value: t.name,
+      label: t.name,
+    }));
+  }, [pipelines, templates]);
+
+  const resolveTemplate = (pipeline: TaskPipelineOption | undefined) => {
+    if (pipeline?.template) return pipeline.template;
+    const byBaseType: Record<string, string> = {
+      wes_single: 'single',
+      wes_family: 'family',
+      panel: 'panel',
+    };
+    const baseTemplate = pipeline?.baseType ? byBaseType[pipeline.baseType] : '';
+    if (baseTemplate && templates.some(t => t.name === baseTemplate)) return baseTemplate;
+
+    const target = `${pipeline?.id ?? selectedPipeline} ${pipeline?.name ?? ''}`.toLowerCase();
+    const matchedTemplate = templates.find(t => target.includes(t.name.toLowerCase()));
+    return matchedTemplate?.name || templates[0]?.name || pipeline?.id || selectedPipeline;
+  };
+
+  const parseUploadedFileIds = () => uploadedFileIds
+    .split(',')
+    .map(id => Number(id.trim()))
+    .filter(id => Number.isInteger(id) && id > 0);
+
+  const buildInputs = (sample: TaskSampleListItem) => {
+    const inputs: Record<string, unknown> = {
+      sample_name: sample.internalId || sample.id,
+      sample_id: sample.id,
+    };
+
+    if (sample.matchedPair?.r1Path) {
+      inputs.fastq1 = sample.matchedPair.r1Path;
+    }
+    if (sample.matchedPair?.r2Path) {
+      inputs.fastq2 = sample.matchedPair.r2Path;
+    }
+
+    return inputs;
+  };
 
   const handleSubmit = () => {
     if (!selectedSample || !selectedPipeline) return;
 
-    const pipeline = mockPipelines.find(p => p.id === selectedPipeline);
-    if (!pipeline) return;
+    const pipeline = pipelines.find(p => p.id === selectedPipeline);
+    const template = resolveTemplate(pipeline);
+    if (!template) return;
 
     onSubmit({
       sampleId: selectedSample.id,
       internalId: selectedSample.internalId,
-      pipelineId: pipeline.id,
-      pipelineName: pipeline.name,
-      pipelineVersion: pipeline.version,
+      pipelineId: pipeline?.id || template,
+      pipelineName: pipeline?.name || template,
+      pipelineVersion: pipeline?.version || '',
       remark,
+      template,
+      inputs: buildInputs(selectedSample),
+      uploaded_file_ids: parseUploadedFileIds(),
+      estimatedMinutes,
     });
     handleClose();
   };
@@ -83,7 +162,10 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     setSampleSearch('');
     setSelectedSample(null);
     setSelectedPipeline('');
+    setUploadedFileIds('');
+    setEstimatedMinutes(120);
     setRemark('');
+    setResourceError('');
     onClose();
   };
 
@@ -105,6 +187,18 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+          {loadingResources && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              正在加载样本和流程...
+            </div>
+          )}
+          {resourceError && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+              {resourceError}
+            </div>
+          )}
+
           {/* 选择样本 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">选择样本 *</label>
@@ -150,12 +244,29 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <Select
               value={selectedPipeline}
               onChange={(v) => setSelectedPipeline(Array.isArray(v) ? v[0] : v)}
-              options={mockPipelines.map(p => ({
-                value: p.id,
-                label: `${p.name} (${p.version})`,
-              }))}
+              options={pipelineOptions}
               placeholder="请选择分析流程"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">预计耗时（分钟）</label>
+              <Input
+                type="number"
+                min="1"
+                value={estimatedMinutes}
+                onChange={(e) => setEstimatedMinutes(Math.max(1, Number(e.target.value) || 1))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">上传文件 ID</label>
+              <Input
+                value={uploadedFileIds}
+                onChange={(e) => setUploadedFileIds(e.target.value)}
+                placeholder="如：1,2（可选）"
+              />
+            </div>
           </div>
 
           {/* 备注 */}
@@ -174,7 +285,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={!selectedSample || !selectedPipeline}
+            disabled={loadingResources || !selectedSample || !selectedPipeline}
           >
             创建任务
           </Button>

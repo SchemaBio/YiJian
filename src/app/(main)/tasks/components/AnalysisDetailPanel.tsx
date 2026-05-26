@@ -24,10 +24,12 @@ interface AnalysisDetailPanelProps {
 }
 
 const statusConfig: Record<AnalysisStatus, { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
+  waiting_for_data: { label: '等待数据', variant: 'warning' },
   queued: { label: '排队中', variant: 'neutral' },
   running: { label: '运行中', variant: 'info' },
   completed: { label: '已完成', variant: 'success' },
   failed: { label: '失败', variant: 'danger' },
+  cancelled: { label: '已取消', variant: 'neutral' },
   pending_interpretation: { label: '待解读', variant: 'warning' },
 };
 

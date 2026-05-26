@@ -1,15 +1,37 @@
+export type TaskStatus =
+  | 'waiting_for_data'
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'pending_interpretation';
+
 export interface AnalysisTask {
   id: string;
   sampleId: string;
   internalId: string;
   pipeline: string;
   pipelineVersion: string;
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'pending_interpretation';
+  status: TaskStatus;
   progress: number;
   createdAt: string;
   createdBy: string;
   completedAt?: string;
   remark?: string;
+}
+
+export interface AnalysisTaskDetail {
+  id: string;
+  name: string;
+  sampleId: string;
+  internalId: string;
+  pipeline: string;
+  pipelineVersion: string;
+  status: TaskStatus;
+  createdAt: string;
+  createdBy: string;
+  completedAt?: string;
 }
 
 export interface TaskListResponse {
@@ -27,6 +49,13 @@ export interface TaskCreateRequest {
   pipelineName: string;
   pipelineVersion: string;
   remark: string;
+  template?: string;
+  executor?: 'local' | 'slurm' | 'lsf' | 'cvm_spot';
+  inputs?: Record<string, unknown>;
+  config_file?: string;
+  output_dir?: string;
+  uploaded_file_ids?: number[];
+  estimatedMinutes?: number;
 }
 
 export interface TaskUpdateRequest {

@@ -33,18 +33,22 @@ function IdCell({ id }: { id: string }) {
 }
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
+  waiting_for_data: { label: '等待数据', variant: 'warning' },
   queued: { label: '排队中', variant: 'neutral' },
   running: { label: '运行中', variant: 'info' },
   completed: { label: '已完成', variant: 'success' },
   failed: { label: '失败', variant: 'danger' },
+  cancelled: { label: '已取消', variant: 'neutral' },
   pending_interpretation: { label: '待解读', variant: 'warning' },
 };
 
 const statusDotColors: Record<AnalysisTask['status'], string> = {
+  waiting_for_data: 'bg-attention-emphasis',
   queued: 'bg-neutral-emphasis',
   running: 'bg-accent-emphasis',
   completed: 'bg-success-emphasis',
   failed: 'bg-danger-emphasis',
+  cancelled: 'bg-neutral-emphasis',
   pending_interpretation: 'bg-attention-emphasis',
 };
 
@@ -371,6 +375,10 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
         pipelineName: data.pipelineName,
         pipelineVersion: data.pipelineVersion,
         remark: data.remark,
+        template: data.template,
+        inputs: data.inputs,
+        uploaded_file_ids: data.uploaded_file_ids,
+        estimatedMinutes: data.estimatedMinutes,
       });
       setTasks(prev => [newTask, ...prev]);
     } catch (err) {

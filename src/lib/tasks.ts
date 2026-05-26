@@ -1,11 +1,14 @@
 import { api } from './api';
 import type {
   AnalysisTask,
+  AnalysisTaskDetail,
   TaskListResponse,
   TaskCreateRequest,
   TaskUpdateRequest,
   TaskProgressResponse,
 } from '@/types/task';
+import type { SampleDetail } from '@/app/(main)/samples/types';
+import { normalizeSampleDetail } from './task-resources';
 
 export const tasksApi = {
   /** List tasks with optional filters */
@@ -29,8 +32,14 @@ export const tasksApi = {
   },
 
   /** Get a single task by UUID */
-  get(id: string): Promise<AnalysisTask> {
-    return api.get<AnalysisTask>(`/v1/tasks/${id}`);
+  get(id: string): Promise<AnalysisTaskDetail> {
+    return api.get<AnalysisTaskDetail>(`/v1/tasks/${id}`);
+  },
+
+  /** Get the sample associated with a task */
+  async getSample(id: string): Promise<SampleDetail> {
+    const sample = await api.get<unknown>(`/v1/tasks/${id}/sample`);
+    return normalizeSampleDetail(sample);
   },
 
   /** Update a task */

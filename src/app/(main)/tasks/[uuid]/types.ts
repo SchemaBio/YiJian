@@ -3,7 +3,14 @@
  */
 
 // ============ 任务状态 ============
-export type AnalysisStatus = 'queued' | 'running' | 'completed' | 'failed' | 'pending_interpretation';
+export type AnalysisStatus =
+  | 'waiting_for_data'
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'pending_interpretation';
 
 // ============ 分析任务详情 ============
 export interface AnalysisTaskDetail {

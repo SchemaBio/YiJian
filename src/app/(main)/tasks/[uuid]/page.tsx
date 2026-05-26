@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { getTaskDetail, getSampleDetailByTaskId } from './mock-data';
+import { tasksApi } from '@/lib/tasks';
 import { useTabState } from './hooks/useTabState';
 import type { AnalysisTaskDetail } from './types';
 import type { SampleDetail } from '@/app/(main)/samples/types';
@@ -39,16 +39,21 @@ export default function AnalysisDetailPage() {
   React.useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const taskData = await getTaskDetail(uuid);
-      if (!taskData) {
-        setNotFound(true);
-      } else {
+      setNotFound(false);
+      try {
+        const [taskData, sampleData] = await Promise.all([
+          tasksApi.get(uuid),
+          tasksApi.getSample(uuid).catch(() => null),
+        ]);
         setTask(taskData);
-        // 同时加载样本详情
-        const sampleData = await getSampleDetailByTaskId(uuid);
         setSample(sampleData);
+      } catch {
+        setNotFound(true);
+        setTask(null);
+        setSample(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadData();
   }, [uuid]);
