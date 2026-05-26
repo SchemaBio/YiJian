@@ -1,6 +1,5 @@
 import { STORAGE_KEYS } from './storage';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+import { getRuntimeApiBaseUrl } from './runtime-config';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
@@ -18,23 +17,11 @@ class ApiError extends Error {
 }
 
 function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const tokens = localStorage.getItem(STORAGE_KEYS.TOKENS);
-    if (tokens) {
-      const parsed = JSON.parse(tokens);
-      return parsed.accessToken || null;
-    }
-  } catch {}
   return null;
 }
 
-function setAuthTokens(accessToken: string, refreshToken: string, expiresAt?: string) {
-  localStorage.setItem(STORAGE_KEYS.TOKENS, JSON.stringify({
-    accessToken,
-    refreshToken,
-    expiresAt: expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  }));
+function setAuthTokens(_accessToken: string, _refreshToken: string, _expiresAt?: string) {
+  localStorage.removeItem(STORAGE_KEYS.TOKENS);
 }
 
 function clearAuthTokens() {
@@ -46,6 +33,21 @@ function clearAuthTokens() {
 
 export { ApiError, getAuthToken, setAuthTokens, clearAuthTokens };
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const prefix = `${name}=`;
+  const item = document.cookie
+    .split(';')
+    .map(part => part.trim())
+    .find(part => part.startsWith(prefix));
+  return item ? decodeURIComponent(item.slice(prefix.length)) : null;
+}
+
+function isUnsafeMethod(method?: string): boolean {
+  const normalized = (method || 'GET').toUpperCase();
+  return !['GET', 'HEAD', 'OPTIONS'].includes(normalized);
+}
+
 // Refresh lock: prevents concurrent token refresh calls
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -55,16 +57,11 @@ async function tryRefreshToken(): Promise<boolean> {
 
   refreshPromise = (async () => {
     try {
-      const tokensStr = localStorage.getItem(STORAGE_KEYS.TOKENS);
-      if (!tokensStr) return false;
-
-      const tokens = JSON.parse(tokensStr);
-      if (!tokens.refreshToken) return false;
-
-      const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+      const response = await fetch(`${getRuntimeApiBaseUrl()}/v1/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: tokens.refreshToken }),
+        credentials: 'include',
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
@@ -92,7 +89,7 @@ async function request<T>(
 ): Promise<T> {
   const { params, ...init } = options;
 
-  let url = `${API_BASE_URL}${endpoint}`;
+  let url = `${getRuntimeApiBaseUrl()}${endpoint}`;
   if (params) {
     const searchParams = new URLSearchParams(params);
     url += `?${searchParams.toString()}`;
@@ -107,10 +104,17 @@ async function request<T>(
   if (token) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
+  if (isUnsafeMethod(init.method)) {
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+    }
+  }
 
   const response = await fetch(url, {
     ...init,
     headers,
+    credentials: init.credentials ?? 'include',
   });
 
   // Auto-refresh on 401 (skip for auth endpoints to avoid loops)
@@ -122,7 +126,11 @@ async function request<T>(
       if (newToken) {
         (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
       }
-      const retryResponse = await fetch(url, { ...init, headers });
+      const retryResponse = await fetch(url, {
+        ...init,
+        headers,
+        credentials: init.credentials ?? 'include',
+      });
       if (!retryResponse.ok) {
         const retryData = await retryResponse.json().catch(() => null);
         throw new ApiError(retryResponse.status, retryResponse.statusText, retryData);

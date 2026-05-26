@@ -67,12 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hashedPassword = await hashPassword(password, email);
       const response: LoginResponse = await authApi.login({ email, password: hashedPassword });
 
-      // Store tokens
-      localStorage.setItem(STORAGE_KEYS.TOKENS, JSON.stringify({
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresAt: response.expiresAt,
-      }));
+      localStorage.removeItem(STORAGE_KEYS.TOKENS);
 
       // Store user
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));

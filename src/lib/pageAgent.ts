@@ -3,7 +3,7 @@
  * LLM calls are proxied through the backend (no API key on frontend).
  */
 import type { AIConfig } from '@/types/ai';
-import { getAuthToken } from './api';
+import { getRuntimeApiBaseUrl } from './runtime-config';
 
 let PageAgentClass: typeof import('page-agent').PageAgent | null = null;
 
@@ -16,7 +16,7 @@ async function loadPageAgent(): Promise<typeof import('page-agent').PageAgent> {
 
 function getProxyBaseURL(): string {
   if (typeof window === 'undefined') return '/api/v1/ai/proxy';
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+  const apiBase = getRuntimeApiBaseUrl();
   if (apiBase.startsWith('http')) {
     return `${apiBase}/v1/ai/proxy`;
   }

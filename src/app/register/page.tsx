@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button, Input } from '@schema/ui-kit';
 import { UserPlus } from 'lucide-react';
 import { ApiError, setAuthTokens } from '@/lib/api';
+import { getRuntimeApiBaseUrl } from '@/lib/runtime-config';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -36,10 +37,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || '/api'}/v1/auth/register`,
+        `${getRuntimeApiBaseUrl()}/v1/auth/register`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             email,
             password,

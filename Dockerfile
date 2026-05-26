@@ -6,10 +6,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Public Next.js variables are inlined into browser bundles during build.
-ARG NEXT_PUBLIC_API_URL=/api
 ARG NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_PASSWORD_HASH_ENABLED=$NEXT_PUBLIC_PASSWORD_HASH_ENABLED
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -28,11 +25,10 @@ RUN pnpm build
 # ============ 运行时阶段 ============
 FROM node:20-alpine AS runner
 
-ARG NEXT_PUBLIC_API_URL=/api
 ARG NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV YIJIAN_API_URL=/api
 ENV NEXT_PUBLIC_PASSWORD_HASH_ENABLED=$NEXT_PUBLIC_PASSWORD_HASH_ENABLED
 
 # 安装 pnpm runtime shim
@@ -48,9 +44,12 @@ WORKDIR /app
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 # 复制运行时所需的 node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+RUN chmod +x /app/docker-entrypoint.sh
 
 # 设置端口
 ENV PORT=3000
@@ -59,4 +58,5 @@ USER nextjs
 
 EXPOSE 3000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["pnpm", "start"]

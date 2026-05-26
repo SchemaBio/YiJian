@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { AppProviders } from '@/components/providers/AppProviders';
 import './globals.css';
 
@@ -19,6 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <Script src="/runtime-config.js" strategy="beforeInteractive" />
+      </head>
       <body>
         <AppProviders>{children}</AppProviders>
       </body>
