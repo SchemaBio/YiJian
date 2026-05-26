@@ -6,6 +6,13 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
+# Public Next.js variables are inlined into browser bundles during build.
+ARG NEXT_PUBLIC_API_URL=/api
+ARG NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_PASSWORD_HASH_ENABLED=$NEXT_PUBLIC_PASSWORD_HASH_ENABLED
+ENV NEXT_TELEMETRY_DISABLED=1
+
 # 复制依赖配置
 COPY package.json pnpm-lock.yaml ./
 
@@ -16,14 +23,20 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # 构建
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
 # ============ 运行时阶段 ============
 FROM node:20-alpine AS runner
 
+ARG NEXT_PUBLIC_API_URL=/api
+ARG NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_PASSWORD_HASH_ENABLED=$NEXT_PUBLIC_PASSWORD_HASH_ENABLED
+
+# 安装 pnpm runtime shim
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # 创建非 root 用户
 RUN addgroup --system --gid 1001 nodejs && \
@@ -38,10 +51,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 
 # 复制运行时所需的 node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# 设置后端 API 地址（可通过构建参数覆盖）
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # 设置端口
 ENV PORT=3000
