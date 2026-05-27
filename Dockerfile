@@ -31,23 +31,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV YIJIAN_API_URL=/api
 ENV NEXT_PUBLIC_PASSWORD_HASH_ENABLED=$NEXT_PUBLIC_PASSWORD_HASH_ENABLED
 
-# 安装 pnpm runtime shim
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # 创建非 root 用户
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 WORKDIR /app
 
-# 从构建阶段复制构建产物
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+# 从构建阶段复制 standalone 产物
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
-
-# 复制运行时所需的 node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 RUN chmod +x /app/docker-entrypoint.sh
 
@@ -59,4 +53,4 @@ USER nextjs
 EXPOSE 3000
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["pnpm", "start"]
+CMD ["node", "server.js"]
