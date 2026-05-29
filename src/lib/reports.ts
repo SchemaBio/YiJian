@@ -1,32 +1,9 @@
-import { api } from './api';
-
-export type ReportStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'RELEASED';
+import { api, type DownloadResult } from './api';
 
 export interface ReportTemplate {
   id: string;
   name: string;
   description: string;
-}
-
-export interface ReportRecord {
-  id: string;
-  name: string;
-  type: 'generated' | 'uploaded';
-  templateName?: string;
-  fileName?: string;
-  uploadedFileId?: number;
-  status: ReportStatus;
-  createdAt: string;
-  createdBy: string;
-  reviewedBy?: string;
-  approvedBy?: string;
-  releasedBy?: string;
-  downloadUrl?: string;
-}
-
-export interface ReportDownloadUrl {
-  downloadUrl: string;
-  expiresIn: number;
 }
 
 interface RawReportTemplate {
@@ -35,73 +12,8 @@ interface RawReportTemplate {
   description?: unknown;
 }
 
-interface RawReportRecord {
-  id?: unknown;
-  name?: unknown;
-  type?: unknown;
-  templateName?: unknown;
-  template_name?: unknown;
-  fileName?: unknown;
-  file_name?: unknown;
-  uploadedFileId?: unknown;
-  uploaded_file_id?: unknown;
-  externalUrl?: unknown;
-  external_url?: unknown;
-  downloadUrl?: unknown;
-  download_url?: unknown;
-  status?: unknown;
-  createdAt?: unknown;
-  created_at?: unknown;
-  createdBy?: unknown;
-  created_by?: unknown;
-  reviewedBy?: unknown;
-  reviewed_by?: unknown;
-  approvedBy?: unknown;
-  approved_by?: unknown;
-  releasedBy?: unknown;
-  released_by?: unknown;
-}
-
-interface RawReportDownloadUrl {
-  downloadUrl?: unknown;
-  download_url?: unknown;
-  expiresIn?: unknown;
-  expires_in?: unknown;
-}
-
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
-function asReportStatus(value: unknown): ReportStatus {
-  const status = asString(value);
-  if (status === 'PENDING_REVIEW' || status === 'APPROVED' || status === 'RELEASED') {
-    return status;
-  }
-  return 'DRAFT';
-}
-
-function asReportType(value: unknown): ReportRecord['type'] {
-  return value === 'uploaded' ? 'uploaded' : 'generated';
-}
-
-function formatDateTime(value: string): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).replace(/\//g, '-');
 }
 
 function normalizeTemplate(raw: RawReportTemplate): ReportTemplate {
@@ -112,28 +24,21 @@ function normalizeTemplate(raw: RawReportTemplate): ReportTemplate {
   };
 }
 
-function normalizeReport(raw: RawReportRecord): ReportRecord {
-  const externalUrl = asString(raw.externalUrl ?? raw.external_url);
-  const downloadUrl = asString(raw.downloadUrl ?? raw.download_url) || externalUrl || undefined;
-  const templateName = asString(raw.templateName ?? raw.template_name) || undefined;
-  const fileName = asString(raw.fileName ?? raw.file_name) || undefined;
-  const uploadedFileId = asNumber(raw.uploadedFileId ?? raw.uploaded_file_id);
+function fallbackReportFilename(template: ReportTemplate): string {
+  const base = template.name.trim() || template.id.trim() || 'report';
+  return /\.[a-z0-9]{2,8}$/i.test(base) ? base : `${base}.bin`;
+}
 
-  return {
-    id: asString(raw.id),
-    name: asString(raw.name) || fileName || templateName || asString(raw.id),
-    type: asReportType(raw.type),
-    templateName,
-    fileName,
-    uploadedFileId,
-    status: asReportStatus(raw.status),
-    createdAt: formatDateTime(asString(raw.createdAt ?? raw.created_at)),
-    createdBy: asString(raw.createdBy ?? raw.created_by),
-    reviewedBy: asString(raw.reviewedBy ?? raw.reviewed_by) || undefined,
-    approvedBy: asString(raw.approvedBy ?? raw.approved_by) || undefined,
-    releasedBy: asString(raw.releasedBy ?? raw.released_by) || undefined,
-    downloadUrl,
-  };
+export function saveDownload(download: DownloadResult) {
+  const url = URL.createObjectURL(download.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = download.filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export const reportsApi = {
@@ -142,42 +47,19 @@ export const reportsApi = {
     return templates.map(normalizeTemplate).filter(template => template.id && template.name);
   },
 
-  async listTaskReports(taskId: string): Promise<ReportRecord[]> {
-    const reports = await api.get<RawReportRecord[]>(`/v1/tasks/${taskId}/reports`);
-    return reports.map(normalizeReport).filter(report => report.id);
-  },
-
-  async createTaskReport(taskId: string, template: ReportTemplate): Promise<ReportRecord> {
-    const report = await api.post<RawReportRecord>(`/v1/tasks/${taskId}/reports`, {
-      name: template.name,
-      templateName: template.name,
-    });
-    return normalizeReport(report);
-  },
-
-  async createUploadedReport(taskId: string, fileId: number, fileName: string): Promise<ReportRecord> {
-    const report = await api.post<RawReportRecord>(`/v1/tasks/${taskId}/reports/upload`, {
-      name: fileName,
-      fileName,
-      uploadedFileId: fileId,
-    });
-    return normalizeReport(report);
-  },
-
-  async updateTaskReportStatus(taskId: string, reportId: string, status: ReportStatus): Promise<ReportRecord> {
-    const report = await api.patch<RawReportRecord>(`/v1/tasks/${taskId}/reports/${reportId}/status`, { status });
-    return normalizeReport(report);
-  },
-
-  async deleteTaskReport(taskId: string, reportId: string): Promise<void> {
-    await api.delete(`/v1/tasks/${taskId}/reports/${reportId}`);
-  },
-
-  async getReportDownloadUrl(taskId: string, reportId: string): Promise<ReportDownloadUrl> {
-    const result = await api.get<RawReportDownloadUrl>(`/v1/tasks/${taskId}/reports/${reportId}/download-url`);
-    return {
-      downloadUrl: asString(result.downloadUrl ?? result.download_url),
-      expiresIn: asNumber(result.expiresIn ?? result.expires_in) ?? 0,
-    };
+  async generateTaskReport(taskId: string, template: ReportTemplate): Promise<DownloadResult> {
+    return api.download(
+      `/v1/tasks/${taskId}/reports`,
+      {
+        name: template.name,
+        templateName: template.name,
+      },
+      {
+        fallbackFilename: fallbackReportFilename(template),
+        headers: {
+          Accept: 'application/octet-stream,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*',
+        },
+      }
+    );
   },
 };

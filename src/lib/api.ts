@@ -162,6 +162,109 @@ async function request<T>(
   return json?.data ?? json;
 }
 
+
+export interface DownloadResult {
+  blob: Blob;
+  filename: string;
+  contentType: string;
+}
+
+function filenameFromContentDisposition(contentDisposition: string | null): string {
+  if (!contentDisposition) return '';
+  const filenameStar = contentDisposition.match(/filename\*=([^;]+)/i)?.[1]?.trim();
+  if (filenameStar) {
+    const value = filenameStar.replace(/^UTF-8''/i, '').replace(/^"|"$/g, '');
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+  const filename = contentDisposition.match(/filename=([^;]+)/i)?.[1]?.trim();
+  return filename ? filename.replace(/^"|"$/g, '') : '';
+}
+
+function sanitizeFilename(name: string, fallback: string): string {
+  const cleaned = name.trim().replace(/[\\/]/g, '-').replace(/[\u0000-\u001f]/g, '');
+  return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : fallback;
+}
+
+async function errorData(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('Content-Type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json().catch(() => null);
+  }
+  const text = await response.text().catch(() => '');
+  return text ? { error: text } : null;
+}
+
+async function requestDownload(
+  endpoint: string,
+  options: RequestOptions = {},
+  fallbackFilename = 'download.bin'
+): Promise<DownloadResult> {
+  const { params, ...init } = options;
+
+  let url = `${getRuntimeApiBaseUrl()}${endpoint}`;
+  if (params) {
+    const searchParams = new URLSearchParams(params);
+    url += `?${searchParams.toString()}`;
+  }
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...init.headers,
+  };
+
+  const token = getAuthToken();
+  if (token) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+  if (isUnsafeMethod(init.method)) {
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
+  const doFetch = () => fetch(url, {
+    ...init,
+    headers,
+    credentials: init.credentials ?? 'include',
+  });
+
+  let response = await doFetch();
+  if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      const newToken = getAuthToken();
+      if (newToken) {
+        (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
+      }
+      response = await doFetch();
+    } else {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('schema:auth-expired'));
+      }
+      throw new ApiError(401, 'Unauthorized', { error: 'Token expired and refresh failed' });
+    }
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, response.statusText, await errorData(response));
+  }
+
+  const blob = await response.blob();
+  return {
+    blob,
+    filename: sanitizeFilename(
+      filenameFromContentDisposition(response.headers.get('Content-Disposition')),
+      fallbackFilename
+    ),
+    contentType: response.headers.get('Content-Type') || blob.type || 'application/octet-stream',
+  };
+}
+
 // COS presigned URL upload flow
 export interface PresignedUploadResult {
   file_id: number;
@@ -208,6 +311,19 @@ export const api = {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     }),
+
+  download: (endpoint: string, data?: unknown, options?: RequestOptions & { fallbackFilename?: string }) => {
+    const { fallbackFilename, ...requestOptions } = options ?? {};
+    return requestDownload(
+      endpoint,
+      {
+        ...requestOptions,
+        method: requestOptions.method ?? 'POST',
+        body: data ? JSON.stringify(data) : requestOptions.body,
+      },
+      fallbackFilename
+    );
+  },
 
   put: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {
