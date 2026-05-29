@@ -398,10 +398,10 @@ export async function getGeneLists(): Promise<GeneListOption[]> {
   }
 }
 
-export function reviewVariant(taskId: string, type: string, variantId: string): Promise<{ reviewed: boolean }> {
-  return api.put(`/v1/tasks/${taskId}/results/${type}/${variantId}/review`);
+export function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
+  return api.put(`/v1/tasks/${taskId}/results/${type}/${variantId}/review`, { reviewed });
 }
 
-export function reportVariant(taskId: string, type: string, variantId: string): Promise<{ reported: boolean }> {
-  return api.put(`/v1/tasks/${taskId}/results/${type}/${variantId}/report`);
+export function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
+  return api.put(`/v1/tasks/${taskId}/results/${type}/${variantId}/report`, { reported });
 }

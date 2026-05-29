@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { PaginatedResult, ROHRegion, TableFilterState } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getROHRegions } from '../result-api';
+import { getROHRegions, reportVariant, reviewVariant } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 
 interface ROHTabProps {
@@ -55,19 +55,25 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     });
   }, [filterState, setFilterState]);
 
-  const handleReviewChange = React.useCallback((id: string, checked: boolean) => {
+  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...prev[id], reviewed: checked, reported: prev[id]?.reported ?? false },
+      [id]: { ...currentState, reviewed: checked },
     }));
-  }, []);
+    reviewVariant(taskId, 'roh', id, checked).catch(() => {
+      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+    });
+  }, [taskId]);
 
-  const handleReportChange = React.useCallback((id: string, checked: boolean) => {
+  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { reviewed: prev[id]?.reviewed ?? false, reported: checked },
+      [id]: { ...currentState, reported: checked },
     }));
-  }, []);
+    reportVariant(taskId, 'roh', id, checked).catch(() => {
+      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+    });
+  }, [taskId]);
 
   const getReviewState = React.useCallback((region: ROHRegion) => {
     return reviewStatus[region.id] ?? { reviewed: region.reviewed, reported: region.reported };
@@ -90,7 +96,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       header: <ReviewColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
-        return <ReviewCheckbox checked={state.reviewed} onChange={(checked) => handleReviewChange(row.id, checked)} />;
+        return <ReviewCheckbox checked={state.reviewed} onChange={(checked) => handleReviewChange(row.id, checked, state)} />;
       },
       width: 60,
     },
@@ -99,7 +105,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       header: <ReportColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
-        return <ReportCheckbox checked={state.reported} onChange={(checked) => handleReportChange(row.id, checked)} />;
+        return <ReportCheckbox checked={state.reported} onChange={(checked) => handleReportChange(row.id, checked, state)} />;
       },
       width: 60,
     },

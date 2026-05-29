@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
 import type { STR, STRStatus, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSTRs, getGeneLists, type GeneListOption } from '../result-api';
+import { getSTRs, getGeneLists, reportVariant, reviewVariant, type GeneListOption } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 
 interface STRTabProps {
@@ -86,20 +86,26 @@ export function STRTab({
   }, [filterState, setFilterState]);
 
   // 处理审核状态变更
-  const handleReviewChange = React.useCallback((id: string, checked: boolean) => {
+  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...prev[id], reviewed: checked, reported: prev[id]?.reported ?? false }
+      [id]: { ...currentState, reviewed: checked }
     }));
-  }, []);
+    reviewVariant(taskId, 'str', id, checked).catch(() => {
+      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+    });
+  }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean) => {
+  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { reviewed: prev[id]?.reviewed ?? false, reported: checked }
+      [id]: { ...currentState, reported: checked }
     }));
-  }, []);
+    reportVariant(taskId, 'str', id, checked).catch(() => {
+      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+    });
+  }, [taskId]);
 
   // 获取变异的审核状态
   const getReviewState = React.useCallback((variant: STR) => {
@@ -132,7 +138,7 @@ export function STRTab({
         return (
           <ReviewCheckbox
             checked={state.reviewed}
-            onChange={(checked) => handleReviewChange(row.id, checked)}
+            onChange={(checked) => handleReviewChange(row.id, checked, state)}
           />
         );
       },
@@ -146,7 +152,7 @@ export function STRTab({
         return (
           <ReportCheckbox
             checked={state.reported}
-            onChange={(checked) => handleReportChange(row.id, checked)}
+            onChange={(checked) => handleReportChange(row.id, checked, state)}
           />
         );
       },

@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { MitochondrialVariant, MitochondrialPathogenicity, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMitochondrialVariants } from '../result-api';
+import { getMitochondrialVariants, reportVariant, reviewVariant } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { MTDetailPanel } from './MTDetailPanel';
@@ -72,20 +72,26 @@ export function MTTab({
   }, []);
 
   // 处理审核状态变更
-  const handleReviewChange = React.useCallback((id: string, checked: boolean) => {
+  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...prev[id], reviewed: checked, reported: prev[id]?.reported ?? false }
+      [id]: { ...currentState, reviewed: checked }
     }));
-  }, []);
+    reviewVariant(taskId, 'mt', id, checked).catch(() => {
+      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+    });
+  }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean) => {
+  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { reviewed: prev[id]?.reviewed ?? false, reported: checked }
+      [id]: { ...currentState, reported: checked }
     }));
-  }, []);
+    reportVariant(taskId, 'mt', id, checked).catch(() => {
+      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+    });
+  }, [taskId]);
 
   // 获取变异的审核状态
   const getReviewState = React.useCallback((variant: MitochondrialVariant) => {
@@ -145,7 +151,7 @@ export function MTTab({
         return (
           <ReviewCheckbox
             checked={state.reviewed}
-            onChange={(checked) => handleReviewChange(row.id, checked)}
+            onChange={(checked) => handleReviewChange(row.id, checked, state)}
           />
         );
       },
@@ -159,7 +165,7 @@ export function MTTab({
         return (
           <ReportCheckbox
             checked={state.reported}
-            onChange={(checked) => handleReportChange(row.id, checked)}
+            onChange={(checked) => handleReportChange(row.id, checked, state)}
           />
         );
       },

@@ -14,6 +14,7 @@ export interface ReportRecord {
   type: 'generated' | 'uploaded';
   templateName?: string;
   fileName?: string;
+  uploadedFileId?: number;
   status: ReportStatus;
   createdAt: string;
   createdBy: string;
@@ -21,6 +22,11 @@ export interface ReportRecord {
   approvedBy?: string;
   releasedBy?: string;
   downloadUrl?: string;
+}
+
+export interface ReportDownloadUrl {
+  downloadUrl: string;
+  expiresIn: number;
 }
 
 interface RawReportTemplate {
@@ -37,6 +43,8 @@ interface RawReportRecord {
   template_name?: unknown;
   fileName?: unknown;
   file_name?: unknown;
+  uploadedFileId?: unknown;
+  uploaded_file_id?: unknown;
   externalUrl?: unknown;
   external_url?: unknown;
   downloadUrl?: unknown;
@@ -54,8 +62,19 @@ interface RawReportRecord {
   released_by?: unknown;
 }
 
+interface RawReportDownloadUrl {
+  downloadUrl?: unknown;
+  download_url?: unknown;
+  expiresIn?: unknown;
+  expires_in?: unknown;
+}
+
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function asReportStatus(value: unknown): ReportStatus {
@@ -98,6 +117,7 @@ function normalizeReport(raw: RawReportRecord): ReportRecord {
   const downloadUrl = asString(raw.downloadUrl ?? raw.download_url) || externalUrl || undefined;
   const templateName = asString(raw.templateName ?? raw.template_name) || undefined;
   const fileName = asString(raw.fileName ?? raw.file_name) || undefined;
+  const uploadedFileId = asNumber(raw.uploadedFileId ?? raw.uploaded_file_id);
 
   return {
     id: asString(raw.id),
@@ -105,6 +125,7 @@ function normalizeReport(raw: RawReportRecord): ReportRecord {
     type: asReportType(raw.type),
     templateName,
     fileName,
+    uploadedFileId,
     status: asReportStatus(raw.status),
     createdAt: formatDateTime(asString(raw.createdAt ?? raw.created_at)),
     createdBy: asString(raw.createdBy ?? raw.created_by),
@@ -132,5 +153,31 @@ export const reportsApi = {
       templateName: template.name,
     });
     return normalizeReport(report);
+  },
+
+  async createUploadedReport(taskId: string, fileId: number, fileName: string): Promise<ReportRecord> {
+    const report = await api.post<RawReportRecord>(`/v1/tasks/${taskId}/reports/upload`, {
+      name: fileName,
+      fileName,
+      uploadedFileId: fileId,
+    });
+    return normalizeReport(report);
+  },
+
+  async updateTaskReportStatus(taskId: string, reportId: string, status: ReportStatus): Promise<ReportRecord> {
+    const report = await api.patch<RawReportRecord>(`/v1/tasks/${taskId}/reports/${reportId}/status`, { status });
+    return normalizeReport(report);
+  },
+
+  async deleteTaskReport(taskId: string, reportId: string): Promise<void> {
+    await api.delete(`/v1/tasks/${taskId}/reports/${reportId}`);
+  },
+
+  async getReportDownloadUrl(taskId: string, reportId: string): Promise<ReportDownloadUrl> {
+    const result = await api.get<RawReportDownloadUrl>(`/v1/tasks/${taskId}/reports/${reportId}/download-url`);
+    return {
+      downloadUrl: asString(result.downloadUrl ?? result.download_url),
+      expiresIn: asNumber(result.expiresIn ?? result.expires_in) ?? 0,
+    };
   },
 };

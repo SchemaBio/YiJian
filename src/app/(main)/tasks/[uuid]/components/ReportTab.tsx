@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { Button, Select, Tag, FormItem, Modal, ModalHeader, ModalBody, ModalFooter } from '@schema/ui-kit';
 import {
-  FileText, Play, Clock, CheckCircle, Loader2, Download,
+  FileText, Play, Loader2, Download,
   FileSpreadsheet, Database, FileCode, Upload, Trash2, AlertCircle,
-  X, Eye, FileType, CheckCircle2, ArrowLeft
+  X, Eye, CheckCircle2, ArrowLeft
 } from 'lucide-react';
-import { sanitizeHTML } from '@/lib/sanitize';
+import { requestPresignedUploadUrl, uploadToCOS, confirmUpload } from '@/lib/api';
 import { reportsApi, type ReportRecord, type ReportStatus, type ReportTemplate } from '@/lib/reports';
 
 // 状态配置
@@ -35,7 +35,8 @@ export function ReportTab({ taskId }: ReportTabProps) {
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const [recordToDelete, setRecordToDelete] = React.useState<ReportRecord | null>(null);
   const [previewRecord, setPreviewRecord] = React.useState<ReportRecord | null>(null);
-  const [previewHtml, setPreviewHtml] = React.useState<string>('');
+  const [previewUrl, setPreviewUrl] = React.useState<string>('');
+  const [previewMode, setPreviewMode] = React.useState<'embed' | 'download' | 'none'>('none');
   const [previewLoading, setPreviewLoading] = React.useState(false);
   const [statusModalOpen, setStatusModalOpen] = React.useState(false);
   const [statusAction, setStatusAction] = React.useState<{ record: ReportRecord; action: string } | null>(null);
@@ -74,20 +75,15 @@ export function ReportTab({ taskId }: ReportTabProps) {
     label: `${t.name} - ${t.description}`,
   }));
 
-  // 更新报告状态
-  const updateReportStatus = (recordId: string, newStatus: ReportStatus) => {
-    setRecords((prev) =>
-      prev.map((r) => {
-        if (r.id === recordId) {
-          const updates: Partial<ReportRecord> = { status: newStatus };
-          if (newStatus === 'APPROVED') {
-            updates.approvedBy = '当前用户';
-          }
-          return { ...r, ...updates };
-        }
-        return r;
-      })
-    );
+  const getDownloadUrl = async (record: ReportRecord) => {
+    if (record.downloadUrl) return record.downloadUrl;
+    const result = await reportsApi.getReportDownloadUrl(taskId, record.id);
+    return result.downloadUrl;
+  };
+
+  const isEmbeddableReport = (record: ReportRecord, url: string) => {
+    const target = `${record.fileName || record.name} ${url}`.toLowerCase();
+    return target.includes('.pdf') || target.includes('.png') || target.includes('.jpg') || target.includes('.jpeg') || target.includes('.webp');
   };
 
   const handleGenerate = async () => {
@@ -119,14 +115,21 @@ export function ReportTab({ taskId }: ReportTabProps) {
 
   const confirmDelete = async () => {
     if (!recordToDelete) return;
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRecords((prev) => prev.filter((r) => r.id !== recordToDelete.id));
-    setDeleteModalOpen(false);
-    if (previewRecord?.id === recordToDelete.id) {
-      setPreviewRecord(null);
-      setPreviewHtml('');
+    const target = recordToDelete;
+    const previousRecords = records;
+    setRecords((prev) => prev.filter((r) => r.id !== target.id));
+    try {
+      await reportsApi.deleteTaskReport(taskId, target.id);
+      setDeleteModalOpen(false);
+      if (previewRecord?.id === target.id) {
+        closePreview();
+      }
+      setRecordToDelete(null);
+    } catch (error) {
+      setRecords(previousRecords);
+      setErrorMessage(error instanceof Error ? error.message : '报告删除失败，请稍后重试。');
+      setErrorModalOpen(true);
     }
-    setRecordToDelete(null);
   };
 
   const handleStatusChange = (record: ReportRecord, action: string) => {
@@ -148,40 +151,33 @@ export function ReportTab({ taskId }: ReportTabProps) {
         break;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    updateReportStatus(record.id, newStatus);
-    setStatusModalOpen(false);
-    setStatusAction(null);
+    const previousRecords = records;
+    setRecords((prev) => prev.map((r) => (r.id === record.id ? { ...r, status: newStatus } : r)));
+    try {
+      const updated = await reportsApi.updateTaskReportStatus(taskId, record.id, newStatus);
+      setRecords((prev) => prev.map((r) => (r.id === record.id ? updated : r)));
+      setStatusModalOpen(false);
+      setStatusAction(null);
+    } catch (error) {
+      setRecords(previousRecords);
+      setErrorMessage(error instanceof Error ? error.message : '报告状态更新失败，请稍后重试。');
+      setErrorModalOpen(true);
+    }
   };
 
   const handlePreview = async (record: ReportRecord) => {
-    if (!record.downloadUrl) return;
-
     setPreviewRecord(record);
     setPreviewLoading(true);
-    setPreviewHtml('');
+    setPreviewUrl('');
+    setPreviewMode('none');
 
     try {
-      // 显示模拟内容
-      setPreviewHtml(`
-        <div style="font-family: 'SimSun', serif; padding: 20px;">
-          <h1 style="text-align: center; font-size: 18px; margin-bottom: 20px;">基因检测报告</h1>
-          <p><strong>报告编号：</strong>${record.id}</p>
-          <p><strong>报告名称：</strong>${record.name}</p>
-          <p><strong>生成时间：</strong>${record.createdAt}</p>
-          <p><strong>创建者：</strong>${record.createdBy}</p>
-          <p><strong>状态：</strong>${STATUS_CONFIG[record.status].label}</p>
-          <hr style="margin: 20px 0;" />
-          <h2 style="font-size: 16px;">一、样本信息</h2>
-          <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-            <tr><td style="border: 1px solid #ddd; padding: 8px;">样本类型</td><td style="border: 1px solid #ddd; padding: 8px;">外周血</td></tr>
-            <tr><td style="border: 1px solid #ddd; padding: 8px;">采样日期</td><td style="border: 1px solid #ddd; padding: 8px;">2024-12-25</td></tr>
-            <tr><td style="border: 1px solid #ddd; padding: 8px;">检测方法</td><td style="border: 1px solid #ddd; padding: 8px;">全外显子组测序 (WES)</td></tr>
-          </table>
-          <h2 style="font-size: 16px;">二、检测结果</h2>
-          <p>本次检测共发现 <strong>3</strong> 个可能致病性变异。</p>
-        </div>
-      `);
+      const url = await getDownloadUrl(record);
+      setPreviewUrl(url);
+      setPreviewMode(isEmbeddableReport(record, url) ? 'embed' : 'download');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '报告预览地址获取失败，请稍后重试。');
+      setErrorModalOpen(true);
     } finally {
       setPreviewLoading(false);
     }
@@ -189,7 +185,8 @@ export function ReportTab({ taskId }: ReportTabProps) {
 
   const closePreview = () => {
     setPreviewRecord(null);
-    setPreviewHtml('');
+    setPreviewUrl('');
+    setPreviewMode('none');
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,31 +203,30 @@ export function ReportTab({ taskId }: ReportTabProps) {
     }
 
     setUploading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const presigned = await requestPresignedUploadUrl(file.name, file.size);
+      await uploadToCOS(presigned.upload_url, file);
+      await confirmUpload(presigned.file_id);
+      const newRecord = await reportsApi.createUploadedReport(taskId, presigned.file_id, file.name);
+      setRecords((prev) => [newRecord, ...prev]);
+      setUploadModalOpen(false);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '报告上传失败，请稍后重试。');
+      setErrorModalOpen(true);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
-    const newRecord: ReportRecord = {
-      id: `UPL${String(Date.now()).slice(-6)}`,
-      name: file.name,
-      type: 'uploaded',
-      fileName: file.name,
-      status: 'DRAFT',
-      createdAt: new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      }).replace(/\//g, '-'),
-      createdBy: '当前用户',
-      downloadUrl: `/uploads/${file.name}`,
-    };
-
-    setRecords((prev) => [newRecord, ...prev]);
-    setUploading(false);
-    setUploadModalOpen(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleDownloadReport = async (record: ReportRecord) => {
+    try {
+      const url = await getDownloadUrl(record);
+      window.open(url, '_blank');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '报告下载地址获取失败，请稍后重试。');
+      setErrorModalOpen(true);
+    }
   };
 
   const handleDownloadExcel = () => window.open(`/api/v1/tasks/${taskId}/export/excel`, '_blank');
@@ -249,14 +245,11 @@ export function ReportTab({ taskId }: ReportTabProps) {
       </Button>
     );
 
-    // 下载按钮
-    if (record.downloadUrl) {
-      buttons.push(
-        <Button key="download" variant="ghost" size="small" onClick={() => window.open(record.downloadUrl, '_blank')} title="下载">
-          <Download className="w-4 h-4" />
-        </Button>
-      );
-    }
+    buttons.push(
+      <Button key="download" variant="ghost" size="small" onClick={() => handleDownloadReport(record)} title="下载">
+        <Download className="w-4 h-4" />
+      </Button>
+    );
 
     // 状态流转按钮
     switch (record.status) {
@@ -430,11 +423,9 @@ export function ReportTab({ taskId }: ReportTabProps) {
                 </Tag>
               </div>
               <div className="flex items-center gap-2">
-                {previewRecord.downloadUrl && (
-                  <Button variant="ghost" size="small" leftIcon={<Download className="w-4 h-4" />} onClick={() => window.open(previewRecord.downloadUrl, '_blank')}>
-                    下载
-                  </Button>
-                )}
+                <Button variant="ghost" size="small" leftIcon={<Download className="w-4 h-4" />} onClick={() => handleDownloadReport(previewRecord)}>
+                  下载
+                </Button>
                 <Button variant="ghost" size="small" leftIcon={<X className="w-4 h-4" />} onClick={closePreview}>
                   关闭
                 </Button>
@@ -448,8 +439,18 @@ export function ReportTab({ taskId }: ReportTabProps) {
                     <p className="text-sm text-fg-muted">正在加载预览...</p>
                   </div>
                 </div>
-              ) : previewHtml ? (
-                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHTML(previewHtml) }} />
+              ) : previewMode === 'embed' && previewUrl ? (
+                <iframe className="h-full w-full rounded border border-border bg-canvas-default" src={previewUrl} title={previewRecord.name} />
+              ) : previewMode === 'download' && previewUrl ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="max-w-sm text-center">
+                    <FileText className="mx-auto mb-3 h-10 w-10 text-fg-muted" />
+                    <p className="mb-4 text-sm text-fg-muted">当前文件类型不支持在线预览，请下载后查看。</p>
+                    <Button variant="primary" leftIcon={<Download className="w-4 h-4" />} onClick={() => window.open(previewUrl, '_blank')}>
+                      下载报告
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-fg-muted">无法加载预览内容</div>
               )}
