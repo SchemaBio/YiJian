@@ -32,11 +32,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob:",
               "font-src 'self'",
-              "connect-src 'self' http://localhost:* http://backend:* https://*.supabase.co",
+              "connect-src 'self' http://localhost:* http://backend:*",
               "worker-src 'self' blob:",
               "frame-src 'self'",
               "object-src 'none'",

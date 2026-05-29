@@ -36,8 +36,24 @@ interface BackendLoginData {
   expires_at: string;
 }
 
+type BackendUser = BackendLoginData['user'];
+
 function mapSystemRole(role: string): SystemRole {
   return role === 'PLATFORM_ADMIN' ? 'PLATFORM_ADMIN' : 'ORG_USER';
+}
+
+function mapUser(user: BackendUser) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    systemRole: mapSystemRole(user.system_role),
+    orgId: user.org_id,
+    isActive: user.is_active,
+    approvalStatus: user.approval_status,
+    createdAt: user.created_at,
+    updatedAt: user.updated_at,
+  };
 }
 
 function mapOrganization(org: BackendOrganization, role: SystemRole): UserOrganizationInfo {
@@ -59,17 +75,7 @@ function mapLoginResponse(data: BackendLoginData): LoginResponse {
   const currentOrg = data.organization ? mapOrganization(data.organization, systemRole) : undefined;
 
   return {
-    user: {
-      id: data.user.id,
-      email: data.user.email,
-      name: data.user.name,
-      systemRole,
-      orgId: data.user.org_id,
-      isActive: data.user.is_active,
-      approvalStatus: data.user.approval_status,
-      createdAt: data.user.created_at,
-      updatedAt: data.user.updated_at,
-    },
+    user: mapUser(data.user),
     organizations: currentOrg ? [currentOrg] : [],
     currentOrg,
     accessToken: data.access_token,
@@ -112,6 +118,11 @@ export const authApi = {
     };
     setAuthTokens(response.accessToken, response.refreshToken);
     return response;
+  },
+
+  getCurrentUser: async () => {
+    const backendData = await api.get<BackendUser>('/v1/auth/me');
+    return mapUser(backendData);
   },
 
   getCurrentOrganization: async (): Promise<Organization> => {

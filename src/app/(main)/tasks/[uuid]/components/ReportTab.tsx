@@ -24,6 +24,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
   const [loading, setLoading] = React.useState(true);
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [generating, setGenerating] = React.useState(false);
+  const [exportingKind, setExportingKind] = React.useState<string>('');
   const [lastDownloadedFile, setLastDownloadedFile] = React.useState('');
   const [errorModalOpen, setErrorModalOpen] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
@@ -76,10 +77,19 @@ export function ReportTab({ taskId }: ReportTabProps) {
     }
   };
 
-  const handleDownloadExcel = () => window.open(`/api/v1/tasks/${taskId}/export/excel`, '_blank');
-  const handleDownloadParquet = () => window.open(`/api/v1/tasks/${taskId}/export/parquet`, '_blank');
-  const handleDownloadVCF = () => window.open(`/api/v1/tasks/${taskId}/export/vcf`, '_blank');
-  const handleDownloadMTVCF = () => window.open(`/api/v1/tasks/${taskId}/export/mt-vcf`, '_blank');
+  const handleExport = async (kind: 'excel' | 'parquet' | 'vcf' | 'mt-vcf') => {
+    setExportingKind(kind);
+    try {
+      const download = await reportsApi.exportTaskFile(taskId, kind);
+      saveDownload(download);
+      setLastDownloadedFile(download.filename);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Export failed. Please try again.');
+      setErrorModalOpen(true);
+    } finally {
+      setExportingKind('');
+    }
+  };
 
   if (loading) {
     return (
@@ -97,16 +107,16 @@ export function ReportTab({ taskId }: ReportTabProps) {
           数据导出
         </h4>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="small" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={handleDownloadExcel}>
+          <Button variant="secondary" size="small" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => handleExport('excel')} loading={exportingKind === 'excel'}>
             Excel 结果表
           </Button>
-          <Button variant="secondary" size="small" leftIcon={<Database className="w-4 h-4" />} onClick={handleDownloadParquet}>
+          <Button variant="secondary" size="small" leftIcon={<Database className="w-4 h-4" />} onClick={() => handleExport('parquet')} loading={exportingKind === 'parquet'}>
             Parquet 文件
           </Button>
-          <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={handleDownloadVCF}>
+          <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={() => handleExport('vcf')} loading={exportingKind === 'vcf'}>
             SNP/InDel VCF
           </Button>
-          <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={handleDownloadMTVCF}>
+          <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={() => handleExport('mt-vcf')} loading={exportingKind === 'mt-vcf'}>
             线粒体 VCF
           </Button>
         </div>

@@ -62,4 +62,24 @@ export const reportsApi = {
       }
     );
   },
+
+  exportTaskFile(taskId: string, kind: 'excel' | 'parquet' | 'vcf' | 'mt-vcf'): Promise<DownloadResult> {
+    const fallbackByKind = {
+      excel: `task-${taskId}-results.xlsx`,
+      parquet: `task-${taskId}-results.parquet`,
+      vcf: `task-${taskId}.vcf`,
+      'mt-vcf': `task-${taskId}-mt.vcf`,
+    };
+    return api.download(
+      `/v1/tasks/${taskId}/export/${kind}`,
+      undefined,
+      {
+        method: 'GET',
+        fallbackFilename: fallbackByKind[kind],
+        headers: {
+          Accept: 'application/octet-stream,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*',
+        },
+      }
+    );
+  },
 };

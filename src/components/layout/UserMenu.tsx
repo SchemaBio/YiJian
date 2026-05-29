@@ -28,8 +28,8 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
   const { user, logout, isPlatformAdmin } = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setOpen(false);
     router.push('/login');
   };

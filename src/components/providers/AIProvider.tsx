@@ -37,6 +37,20 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+function normalizeStoredConfig(value: unknown): AIConfig {
+  if (!value || typeof value !== 'object') {
+    return DEFAULT_AI_CONFIG;
+  }
+  const raw = value as Partial<AIConfig>;
+  return {
+    openaiModel: typeof raw.openaiModel === 'string' ? raw.openaiModel : DEFAULT_AI_CONFIG.openaiModel,
+    aiAssistantEnabled:
+      typeof raw.aiAssistantEnabled === 'boolean'
+        ? raw.aiAssistantEnabled
+        : DEFAULT_AI_CONFIG.aiAssistantEnabled,
+  };
+}
+
 export function AIProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfigState] = useState<AIConfig>(DEFAULT_AI_CONFIG);
   const [history, setHistory] = useState<ConversationMessage[]>([]);
@@ -55,7 +69,7 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
 
       if (storedConfig) {
         const parsedConfig = JSON.parse(storedConfig);
-        setConfigState({ ...DEFAULT_AI_CONFIG, ...parsedConfig });
+        setConfigState(normalizeStoredConfig(parsedConfig));
       }
 
       if (storedHistory) {

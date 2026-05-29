@@ -2,21 +2,23 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 /**
  * Root page - redirects based on auth status
  */
 export default function HomePage() {
   const router = useRouter();
+  const { isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (isLoggedIn === 'true') {
+    if (isLoading) return;
+    if (isAuthenticated) {
       router.replace('/dashboard');
     } else {
       router.replace('/login');
     }
-  }, [router]);
+  }, [isAuthenticated, isLoading, router]);
 
   // 显示加载状态
   return (

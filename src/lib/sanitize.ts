@@ -13,13 +13,13 @@ export function sanitizeHTML(html: string): string {
       'table', 'thead', 'tbody', 'tr', 'th', 'td',
       'strong', 'em', 'b', 'i', 'u', 's',
       'a', 'span', 'div', 'pre', 'code',
-      'img', 'sub', 'sup',
+      'sub', 'sup',
     ],
     ALLOWED_ATTR: [
-      'href', 'target', 'rel',
-      'src', 'alt', 'width', 'height',
-      'class', 'id', 'style',
+      'href',
       'colspan', 'rowspan',
     ],
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|\/|#)/i,
+    FORBID_ATTR: ['style', 'id', 'class', 'src', 'srcset'],
   });
 }

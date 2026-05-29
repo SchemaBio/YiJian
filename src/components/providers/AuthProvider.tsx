@@ -14,7 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
   hasOrgRole: (role: OrgRole) => boolean;
   hasAnyOrgRole: (...roles: OrgRole[]) => boolean;
@@ -24,58 +24,71 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function clearStoredAuth() {
+  localStorage.removeItem(STORAGE_KEYS.USER);
+  localStorage.removeItem(STORAGE_KEYS.TOKENS);
+  localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [organizations, setOrganizations] = useState<UserOrganizationInfo[]>([]);
   const [currentOrg, setCurrentOrg] = useState<UserOrganizationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load stored auth state on mount
+  const applySession = useCallback((nextUser: User, nextOrg: UserOrganizationInfo | null) => {
+    const nextOrgs = nextOrg ? [nextOrg] : [];
+    setUser(nextUser);
+    setOrganizations(nextOrgs);
+    setCurrentOrg(nextOrg);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(nextUser));
+    localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(nextOrgs));
+    if (nextOrg) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(nextOrg));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+    }
+  }, []);
+
+  const resetSession = useCallback(() => {
+    clearStoredAuth();
+    setUser(null);
+    setOrganizations([]);
+    setCurrentOrg(null);
+  }, []);
+
+  // Validate the cookie-backed session with the backend before trusting stored UI state.
   useEffect(() => {
-    const loadStoredAuth = () => {
+    let cancelled = false;
+
+    const loadSession = async () => {
       try {
-        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        const storedOrgs = localStorage.getItem(STORAGE_KEYS.ORGANIZATIONS);
-        const storedCurrentOrg = localStorage.getItem(STORAGE_KEYS.CURRENT_ORG);
-
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-
-        if (storedOrgs) {
-          const orgs = JSON.parse(storedOrgs);
-          setOrganizations(orgs);
-
-          if (storedCurrentOrg) {
-            setCurrentOrg(JSON.parse(storedCurrentOrg));
-          } else if (orgs.length > 0) {
-            setCurrentOrg(orgs[0]);
-          }
-        }
-
-        if (storedUser && !storedCurrentOrg) {
-          authApi.getCurrentOrganization()
-            .then((org) => {
-              const parsedUser = JSON.parse(storedUser);
-              const orgInfo = { ...org, orgRole: parsedUser.systemRole };
-              localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify([orgInfo]));
-              localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(orgInfo));
-              setOrganizations([orgInfo]);
-              setCurrentOrg(orgInfo);
-            })
-            .catch(() => {
-              // Keep the stored user so navigation remains stable; API errors are handled centrally.
-            });
-        }
+        const [currentUser, currentOrg] = await Promise.all([
+          authApi.getCurrentUser(),
+          authApi.getCurrentOrganization().catch(() => null),
+        ]);
+        if (cancelled) return;
+        applySession(
+          currentUser,
+          currentOrg ? { ...currentOrg, orgRole: currentUser.systemRole } : null
+        );
       } catch (error) {
-        console.error('Failed to load stored auth state:', error);
+        if (!cancelled) {
+          resetSession();
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadStoredAuth();
-  }, []);
+    loadSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [applySession, resetSession]);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -84,37 +97,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response: LoginResponse = await authApi.login({ email, password: hashedPassword });
 
       localStorage.removeItem(STORAGE_KEYS.TOKENS);
-
-      // Store user
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
-      setUser(response.user);
-
-      // Store organizations
-      localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(response.organizations));
-      setOrganizations(response.organizations);
-
-      // Set current org
-      if (response.currentOrg) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(response.currentOrg));
-        setCurrentOrg(response.currentOrg);
-      } else if (response.organizations.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(response.organizations[0]));
-        setCurrentOrg(response.organizations[0]);
-      }
+      applySession(response.user, response.currentOrg ?? response.organizations[0] ?? null);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [applySession]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    localStorage.removeItem(STORAGE_KEYS.TOKENS);
-    localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
-    setUser(null);
-    setOrganizations([]);
-    setCurrentOrg(null);
-  }, []);
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.warn('Logout request failed; clearing local session anyway.', error);
+    } finally {
+      resetSession();
+    }
+  }, [resetSession]);
 
   const switchOrganization = useCallback(async (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
@@ -141,14 +138,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen for auth-expired event from api.ts refresh failure
   useEffect(() => {
     const handleAuthExpired = () => {
-      logout();
+      resetSession();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
     };
     window.addEventListener('schema:auth-expired', handleAuthExpired);
     return () => window.removeEventListener('schema:auth-expired', handleAuthExpired);
-  }, [logout]);
+  }, [resetSession]);
 
   const value: AuthContextType = {
     user,

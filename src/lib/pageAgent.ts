@@ -37,7 +37,7 @@ export class PageAgentWrapper {
 
     try {
       const PageAgent = await loadPageAgent();
-      const baseURL = this.config.openaiApiEndpoint || getProxyBaseURL();
+      const baseURL = getProxyBaseURL();
 
       this.agent = new PageAgent({
         model: this.config.openaiModel || 'gpt-4',
