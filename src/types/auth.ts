@@ -1,7 +1,7 @@
-import type { User, UserOrganizationInfo } from './user';
+import type { SystemRole, User, UserOrganizationInfo } from './user';
 
 // 用户信息 (legacy compatibility)
-export type UserRole = 'ADMIN' | 'DOCTOR' | 'ANALYST' | 'VIEWER';
+export type UserRole = SystemRole;
 
 // 登录请求
 export interface LoginRequest {
@@ -31,7 +31,7 @@ export interface RefreshTokenResponse {
   expiresAt: string;
 }
 
-// Switch organization request
+// Legacy compatibility: SaaS mode does not switch organizations.
 export interface SwitchOrganizationRequest {
   orgId: string;
 }

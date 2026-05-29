@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar, Tooltip } from '@schema/ui-kit';
 import { LogOut, Settings, User } from 'lucide-react';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface UserMenuProps {
   collapsed?: boolean;
@@ -24,30 +25,24 @@ interface UserData {
  */
 export function UserMenu({ collapsed = false }: UserMenuProps) {
   const [open, setOpen] = React.useState(false);
-  const [user, setUser] = React.useState<UserData | null>(null);
+  const { user, logout, isPlatformAdmin } = useAuth();
   const router = useRouter();
 
-  // 从 localStorage 获取用户信息
-  React.useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch {
-        setUser(null);
-      }
-    }
-  }, []);
-
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user');
+    logout();
     setOpen(false);
     router.push('/login');
   };
 
   // 如果没有用户信息，显示默认头像
-  const displayUser = user || {
+  const displayUser: UserData = user ? {
+    id: user.id,
+    username: user.email,
+    name: user.name,
+    role: user.systemRole,
+    avatar: null,
+  } : {
+    id: '',
     name: '未登录',
     username: '',
     role: 'guest',
@@ -113,7 +108,7 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
               <User className="w-4 h-4" />
               个人设置
             </Link>
-            {displayUser.role === 'admin' && (
+            {isPlatformAdmin() && (
               <Link
                 href="/settings"
                 onClick={() => setOpen(false)}

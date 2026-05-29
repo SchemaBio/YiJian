@@ -1,8 +1,8 @@
 // System-level roles
-export type SystemRole = 'SUPER_ADMIN' | 'USER';
+export type SystemRole = 'PLATFORM_ADMIN' | 'ORG_USER';
 
-// Organization-level roles
-export type OrgRole = 'OWNER' | 'ADMIN' | 'DOCTOR' | 'ANALYST' | 'VIEWER';
+// Legacy UI compatibility: SaaS mode only has account-level roles.
+export type OrgRole = SystemRole;
 
 // Organization info
 export interface Organization {
@@ -10,6 +10,10 @@ export interface Organization {
   name: string;
   slug: string;
   description?: string;
+  maxConcurrentTasks?: number;
+  balanceAlertThreshold?: number;
+  storageQuotaBytes?: number;
+  isActive?: boolean;
 }
 
 // 用户信息
@@ -18,8 +22,9 @@ export interface User {
   email: string;
   name: string;
   systemRole: SystemRole;
-  primaryOrgId?: string;
+  orgId?: string;
   isActive: boolean;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
   createdAt: string;
   updatedAt: string;
 }
@@ -31,7 +36,11 @@ export interface UserOrganizationInfo {
   slug: string;
   description?: string;
   orgRole: OrgRole;
-  joinedAt: string;
+  joinedAt?: string;
+  maxConcurrentTasks?: number;
+  balanceAlertThreshold?: number;
+  storageQuotaBytes?: number;
+  isActive?: boolean;
 }
 
 // 创建用户请求
@@ -40,14 +49,14 @@ export interface UserCreateRequest {
   name: string;
   password: string;
   systemRole?: SystemRole;
-  primaryOrgId?: string;
+  orgId?: string;
 }
 
 // 更新用户请求
 export interface UserUpdateRequest {
   name?: string;
   systemRole?: SystemRole;
-  primaryOrgId?: string;
+  orgId?: string;
 }
 
 // 修改密码请求

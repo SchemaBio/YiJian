@@ -59,7 +59,10 @@ async function tryRefreshToken(): Promise<boolean> {
     try {
       const response = await fetch(`${getRuntimeApiBaseUrl()}/v1/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(getCookie('csrf_token') ? { 'X-CSRF-Token': getCookie('csrf_token') as string } : {}),
+        },
         credentials: 'include',
         body: JSON.stringify({}),
       });

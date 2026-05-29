@@ -18,6 +18,7 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => Promise<void>;
   hasOrgRole: (role: OrgRole) => boolean;
   hasAnyOrgRole: (...roles: OrgRole[]) => boolean;
+  isPlatformAdmin: () => boolean;
   isSuperAdmin: () => boolean;
 }
 
@@ -50,6 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (orgs.length > 0) {
             setCurrentOrg(orgs[0]);
           }
+        }
+
+        if (storedUser && !storedCurrentOrg) {
+          authApi.getCurrentOrganization()
+            .then((org) => {
+              const parsedUser = JSON.parse(storedUser);
+              const orgInfo = { ...org, orgRole: parsedUser.systemRole };
+              localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify([orgInfo]));
+              localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(orgInfo));
+              setOrganizations([orgInfo]);
+              setCurrentOrg(orgInfo);
+            })
+            .catch(() => {
+              // Keep the stored user so navigation remains stable; API errors are handled centrally.
+            });
         }
       } catch (error) {
         console.error('Failed to load stored auth state:', error);
@@ -105,34 +121,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (org) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(org));
       setCurrentOrg(org);
-
-      // Optionally call API to switch on backend
-      try {
-        await authApi.switchOrganization(orgId);
-      } catch (error) {
-        console.error('Failed to switch organization on backend:', error);
-      }
     }
   }, [organizations]);
 
   const hasOrgRole = useCallback((role: OrgRole): boolean => {
-    if (!currentOrg) return false;
-
-    const roleHierarchy: OrgRole[] = ['OWNER', 'ADMIN', 'DOCTOR', 'ANALYST', 'VIEWER'];
-    const currentIndex = roleHierarchy.indexOf(currentOrg.orgRole);
-    const requiredIndex = roleHierarchy.indexOf(role);
-
-    return currentIndex <= requiredIndex;
-  }, [currentOrg]);
+    return user?.systemRole === role || currentOrg?.orgRole === role;
+  }, [currentOrg, user]);
 
   const hasAnyOrgRole = useCallback((...roles: OrgRole[]): boolean => {
-    if (!currentOrg) return false;
-    return roles.includes(currentOrg.orgRole);
-  }, [currentOrg]);
+    return roles.some((role) => user?.systemRole === role || currentOrg?.orgRole === role);
+  }, [currentOrg, user]);
 
-  const isSuperAdmin = useCallback((): boolean => {
-    return user?.systemRole === 'SUPER_ADMIN';
+  const isPlatformAdmin = useCallback((): boolean => {
+    return user?.systemRole === 'PLATFORM_ADMIN';
   }, [user]);
+
+  const isSuperAdmin = isPlatformAdmin;
 
   // Listen for auth-expired event from api.ts refresh failure
   useEffect(() => {
@@ -157,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     switchOrganization,
     hasOrgRole,
     hasAnyOrgRole,
+    isPlatformAdmin,
     isSuperAdmin,
   };
 

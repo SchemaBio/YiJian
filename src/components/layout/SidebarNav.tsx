@@ -22,10 +22,9 @@ interface SidebarNavProps {
  */
 export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
   const pathname = usePathname();
-  const { hasAnyOrgRole, isSuperAdmin, currentOrg } = useAuth();
+  const { isPlatformAdmin } = useAuth();
 
-  // Check if user is org admin or higher
-  const isOrgAdmin = isSuperAdmin() || hasAnyOrgRole('OWNER', 'ADMIN');
+  const isAdmin = isPlatformAdmin();
 
   // Determine current section from pathname
   const currentSection = React.useMemo(() => {
@@ -38,14 +37,14 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
     const items = sidebarNavConfig[currentSection as keyof typeof sidebarNavConfig] || [];
 
     // For settings page, non-admins hide permissions and AI settings
-    if (currentSection === 'settings' && !isOrgAdmin) {
+    if (currentSection === 'settings' && !isAdmin) {
       return items.filter(item =>
         item.href !== '/settings/permissions' && item.href !== '/settings/ai'
       );
     }
 
     return items;
-  }, [currentSection, isOrgAdmin]);
+  }, [currentSection, isAdmin]);
 
   return (
     <aside
