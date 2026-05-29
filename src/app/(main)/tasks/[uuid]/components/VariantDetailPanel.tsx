@@ -4,7 +4,7 @@ import * as React from 'react';
 import { X, ExternalLink, FileText, Database, Dna, Edit2, Check, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { SNVIndel, ACMGClassification } from '../types';
-import { ACMG_CONFIG } from '../mock-data';
+import { ACMG_CONFIG } from '../result-api';
 
 // ACMG 证据项定义
 const ACMG_CRITERIA_OPTIONS = {

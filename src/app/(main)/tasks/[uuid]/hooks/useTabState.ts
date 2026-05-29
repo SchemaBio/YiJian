@@ -13,6 +13,7 @@ interface TabStates {
   'mei': TableFilterState;
   'mt': TableFilterState;
   'upd': TableFilterState;
+  'roh': TableFilterState;
 }
 
 interface UseTabStateReturn {
@@ -38,6 +39,7 @@ export function useTabState(uuid: string): UseTabStateReturn {
     'mei': { ...DEFAULT_FILTER_STATE },
     'mt': { ...DEFAULT_FILTER_STATE },
     'upd': { ...DEFAULT_FILTER_STATE },
+    'roh': { ...DEFAULT_FILTER_STATE },
   });
 
   // 切换标签页

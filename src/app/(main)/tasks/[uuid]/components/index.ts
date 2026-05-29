@@ -9,6 +9,7 @@ export { STRTab } from './STRTab';
 export { MEITab } from './MEITab';
 export { MTTab } from './MTTab';
 export { UPDTab } from './UPDTab';
+export { ROHTab } from './ROHTab';
 export { ReportTab } from './ReportTab';
 export { IGVViewer, PositionLink } from './IGVViewer';
 export { VariantDetailPanel } from './VariantDetailPanel';

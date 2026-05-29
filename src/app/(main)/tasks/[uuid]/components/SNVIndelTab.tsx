@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
 import type { SNVIndel, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSNVIndels, ACMG_CONFIG, getGeneLists, type GeneListOption } from '../mock-data';
+import { getSNVIndels, ACMG_CONFIG, getGeneLists, type GeneListOption } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { VariantDetailPanel } from './VariantDetailPanel';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';

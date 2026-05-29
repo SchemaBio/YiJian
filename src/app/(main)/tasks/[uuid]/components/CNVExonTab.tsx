@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
 import type { CNVExon, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getCNVExons, getGeneLists, type GeneListOption } from '../mock-data';
+import { getCNVExons, getGeneLists, type GeneListOption } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';

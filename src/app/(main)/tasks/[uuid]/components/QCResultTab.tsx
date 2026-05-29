@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { QCResult, QCStatus, QCMetricKey } from '../types';
-import { getQCResult } from '../mock-data';
+import { getQCResult } from '../result-api';
 
 interface QCResultTabProps {
   taskId: string;

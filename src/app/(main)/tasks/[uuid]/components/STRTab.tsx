@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
 import type { STR, STRStatus, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSTRs, getGeneLists, type GeneListOption } from '../mock-data';
+import { getSTRs, getGeneLists, type GeneListOption } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 
 interface STRTabProps {

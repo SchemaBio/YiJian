@@ -8,9 +8,7 @@ import {
   X, Eye, FileType, CheckCircle2, ArrowLeft
 } from 'lucide-react';
 import { sanitizeHTML } from '@/lib/sanitize';
-
-// 报告状态类型
-type ReportStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'RELEASED';
+import { reportsApi, type ReportRecord, type ReportStatus, type ReportTemplate } from '@/lib/reports';
 
 // 状态配置
 const STATUS_CONFIG: Record<ReportStatus, { label: string; variant: 'neutral' | 'info' | 'warning' | 'success' }> = {
@@ -20,69 +18,8 @@ const STATUS_CONFIG: Record<ReportStatus, { label: string; variant: 'neutral' | 
   RELEASED: { label: '已发布', variant: 'success' },
 };
 
-// 统一的报告记录类型
-interface ReportRecord {
-  id: string;
-  name: string;
-  type: 'generated' | 'uploaded';
-  templateName?: string;
-  fileName?: string;
-  status: ReportStatus;
-  createdAt: string;
-  createdBy: string;
-  reviewedBy?: string;
-  approvedBy?: string;
-  releasedBy?: string;
-  downloadUrl?: string;
-}
-
-// 报告模板类型
-interface ReportTemplate {
-  id: string;
-  name: string;
-  description: string;
-}
-
 interface ReportTabProps {
   taskId: string;
-}
-
-// Mock 数据获取函数
-async function getActiveTemplates(): Promise<ReportTemplate[]> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return [
-    { id: 'TPL001', name: 'wes-germline-report', description: '全外显子遗传病检测报告模板' },
-    { id: 'TPL002', name: 'cardio-panel-report', description: '心血管疾病基因检测专用报告' },
-    { id: 'TPL003', name: 'cnv-detection-report', description: '拷贝数变异检测报告' },
-  ];
-}
-
-async function getReportRecords(_taskId: string): Promise<ReportRecord[]> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return [
-    {
-      id: 'RPT001',
-      name: 'wes-germline-report',
-      type: 'generated',
-      templateName: 'wes-germline-report',
-      status: 'APPROVED',
-      createdAt: '2024-12-28 14:30:45',
-      createdBy: '王工',
-      reviewedBy: '李医生',
-      approvedBy: '张主任',
-      downloadUrl: '/reports/RPT001.pdf',
-    },
-    {
-      id: 'UPL001',
-      name: '患者报告_手动上传.docx',
-      type: 'uploaded',
-      fileName: '患者报告_手动上传.docx',
-      status: 'DRAFT',
-      createdAt: '2024-12-27 10:00:30',
-      createdBy: '王工',
-      downloadUrl: '/uploads/UPL001.docx',
-    },
-  ];
 }
 
 export function ReportTab({ taskId }: ReportTabProps) {
@@ -105,17 +42,31 @@ export function ReportTab({ taskId }: ReportTabProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
+    let ignore = false;
+
     async function loadData() {
       setLoading(true);
-      const [tpls, recs] = await Promise.all([
-        getActiveTemplates(),
-        getReportRecords(taskId),
-      ]);
-      setTemplates(tpls);
-      setRecords(recs);
-      setLoading(false);
+      try {
+        const [tpls, recs] = await Promise.all([
+          reportsApi.listTemplates(),
+          reportsApi.listTaskReports(taskId),
+        ]);
+        if (ignore) return;
+        setTemplates(tpls);
+        setRecords(recs);
+      } catch (error) {
+        if (ignore) return;
+        setErrorMessage(error instanceof Error ? error.message : '报告数据加载失败，请稍后重试。');
+        setErrorModalOpen(true);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     }
+
     loadData();
+    return () => {
+      ignore = true;
+    };
   }, [taskId]);
 
   const templateOptions = templates.map((t) => ({
@@ -144,37 +95,16 @@ export function ReportTab({ taskId }: ReportTabProps) {
     if (!template) return;
 
     setGenerating(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const success = Math.random() > 0.2;
-
-    if (success) {
-      const newRecord: ReportRecord = {
-        id: `RPT${String(Date.now()).slice(-6)}`,
-        name: template.name,
-        type: 'generated',
-        templateName: template.name,
-        status: 'DRAFT',
-        createdAt: new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      }).replace(/\//g, '-'),
-        createdBy: '当前用户',
-        downloadUrl: `/reports/RPT${String(Date.now()).slice(-6)}.pdf`,
-      };
+    try {
+      const newRecord = await reportsApi.createTaskReport(taskId, template);
       setRecords((prev) => [newRecord, ...prev]);
-    } else {
-      setErrorMessage(`报告 "${template.name}" 生成失败：API 连接超时，请稍后重试。`);
+      setSelectedTemplate('');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : `报告 "${template.name}" 生成失败，请稍后重试。`);
       setErrorModalOpen(true);
+    } finally {
+      setGenerating(false);
     }
-
-    setGenerating(false);
-    setSelectedTemplate('');
   };
 
   const handleDelete = (record: ReportRecord) => {

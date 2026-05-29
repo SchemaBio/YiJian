@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
 import type { MEIVariant, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMEIs, ACMG_CONFIG, getGeneLists, type GeneListOption } from '../mock-data';
+import { getMEIs, ACMG_CONFIG, getGeneLists, type GeneListOption } from '../result-api';
 import { PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 

@@ -19,6 +19,7 @@ import {
   MEITab,
   MTTab,
   UPDTab,
+  ROHTab,
   ReportTab,
 } from './components';
 
@@ -155,6 +156,14 @@ export default function AnalysisDetailPage() {
             taskId={uuid}
             filterState={getFilterState('upd')}
             onFilterChange={(state) => setFilterState('upd', state)}
+          />
+        );
+      case 'roh':
+        return (
+          <ROHTab
+            taskId={uuid}
+            filterState={getFilterState('roh')}
+            onFilterChange={(state) => setFilterState('roh', state)}
           />
         );
       case 'report':

@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { MitochondrialVariant, MitochondrialPathogenicity, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMitochondrialVariants } from '../mock-data';
+import { getMitochondrialVariants } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { MTDetailPanel } from './MTDetailPanel';

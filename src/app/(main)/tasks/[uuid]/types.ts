@@ -217,8 +217,21 @@ export interface UPDRegion extends VariantReviewStatus {
   parentOfOrigin?: ParentOfOrigin;
 }
 
+// ============ ROH区域 ============
+export interface ROHRegion extends VariantReviewStatus {
+  id: string;
+  chromosome: string;
+  startPosition: number;
+  endPosition: number;
+  length: number;
+  sizeMb: number;
+  variantCount: number;
+  homozygosity: number;
+  genes: string[];
+}
+
 // ============ 标签页类型 ============
-export type TabType = 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'report';
+export type TabType = 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
 
 export interface TabConfig {
   id: TabType;
@@ -234,6 +247,7 @@ export const TAB_CONFIGS: TabConfig[] = [
   { id: 'mei', label: 'MEI' },
   { id: 'mt', label: '线粒体' },
   { id: 'upd', label: 'UPD' },
+  { id: 'roh', label: 'ROH' },
   { id: 'report', label: '报告生成' },
 ];
 
