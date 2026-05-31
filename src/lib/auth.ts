@@ -1,9 +1,7 @@
-import { api, setAuthTokens, clearAuthTokens } from './api';
+import { api, clearAuthSession, clearLegacyAuthTokens } from './api';
 import type {
   LoginRequest,
   LoginResponse,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
 } from '@/types/auth';
 import type { Organization, SystemRole, UserOrganizationInfo } from '@/types/user';
 
@@ -31,9 +29,6 @@ interface BackendLoginData {
     updated_at: string;
   };
   organization?: BackendOrganization | null;
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
 }
 
 type BackendUser = BackendLoginData['user'];
@@ -78,9 +73,6 @@ function mapLoginResponse(data: BackendLoginData): LoginResponse {
     user: mapUser(data.user),
     organizations: currentOrg ? [currentOrg] : [],
     currentOrg,
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresAt: data.expires_at,
   };
 }
 
@@ -91,7 +83,7 @@ export const authApi = {
       data
     );
     const response = mapLoginResponse(backendData);
-    setAuthTokens(response.accessToken, response.refreshToken);
+    clearLegacyAuthTokens();
     return response;
   },
 
@@ -99,25 +91,8 @@ export const authApi = {
     try {
       await api.post('/v1/auth/logout');
     } finally {
-      clearAuthTokens();
+      clearAuthSession();
     }
-  },
-
-  refreshToken: async (
-    data: RefreshTokenRequest
-  ): Promise<RefreshTokenResponse> => {
-    const backendData = await api.post<{
-      access_token: string;
-      refresh_token: string;
-      expires_at: string;
-    }>('/v1/auth/refresh', { refresh_token: data.refreshToken });
-    const response: RefreshTokenResponse = {
-      accessToken: backendData.access_token,
-      refreshToken: backendData.refresh_token,
-      expiresAt: backendData.expires_at,
-    };
-    setAuthTokens(response.accessToken, response.refreshToken);
-    return response;
   },
 
   getCurrentUser: async () => {

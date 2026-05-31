@@ -1,13 +1,13 @@
 /**
- * Unified localStorage key constants
- * All auth-related storage uses these keys — single source of truth.
+ * Unified localStorage key constants.
+ * Cookie-backed auth stores only non-sensitive UI session state here.
  */
 
 const PREFIX = 'schema';
 
 export const STORAGE_KEYS = {
-  /** Auth tokens: { accessToken, refreshToken, expiresAt } */
-  TOKENS: `${PREFIX}_auth_tokens`,
+  /** Legacy pre-cookie token cache key, removed on auth/session changes. */
+  LEGACY_AUTH_TOKENS: `${PREFIX}_auth_tokens`,
   /** Current user profile */
   USER: `${PREFIX}_auth_user`,
   /** User's organizations */

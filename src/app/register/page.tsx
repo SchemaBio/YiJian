@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input } from '@schema/ui-kit';
 import { UserPlus } from 'lucide-react';
-import { ApiError, setAuthTokens } from '@/lib/api';
+import { ApiError, clearLegacyAuthTokens } from '@/lib/api';
 import { getRuntimeApiBaseUrl } from '@/lib/runtime-config';
 
 export default function RegisterPage() {
@@ -57,10 +57,7 @@ export default function RegisterPage() {
         throw new ApiError(res.status, res.statusText, json);
       }
 
-      const data = json?.data ?? json;
-      if (data.access_token) {
-        setAuthTokens(data.access_token, data.refresh_token, data.expires_at);
-      }
+      clearLegacyAuthTokens();
       router.push('/dashboard');
     } catch (err) {
       if (err instanceof ApiError) {

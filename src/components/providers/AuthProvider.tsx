@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function clearStoredAuth() {
   localStorage.removeItem(STORAGE_KEYS.USER);
-  localStorage.removeItem(STORAGE_KEYS.TOKENS);
+  localStorage.removeItem(STORAGE_KEYS.LEGACY_AUTH_TOKENS);
   localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
 }
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hashedPassword = await hashPassword(password, email);
       const response: LoginResponse = await authApi.login({ email, password: hashedPassword });
 
-      localStorage.removeItem(STORAGE_KEYS.TOKENS);
+      localStorage.removeItem(STORAGE_KEYS.LEGACY_AUTH_TOKENS);
       applySession(response.user, response.currentOrg ?? response.organizations[0] ?? null);
     } finally {
       setIsLoading(false);

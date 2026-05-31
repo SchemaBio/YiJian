@@ -16,22 +16,20 @@ class ApiError extends Error {
   }
 }
 
-function getAuthToken(): string | null {
-  return null;
+function clearLegacyAuthTokens() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEYS.LEGACY_AUTH_TOKENS);
 }
 
-function setAuthTokens(_accessToken: string, _refreshToken: string, _expiresAt?: string) {
-  localStorage.removeItem(STORAGE_KEYS.TOKENS);
-}
-
-function clearAuthTokens() {
-  localStorage.removeItem(STORAGE_KEYS.TOKENS);
+function clearAuthSession() {
+  if (typeof window === 'undefined') return;
+  clearLegacyAuthTokens();
   localStorage.removeItem(STORAGE_KEYS.USER);
   localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
 }
 
-export { ApiError, getAuthToken, setAuthTokens, clearAuthTokens };
+export { ApiError, clearLegacyAuthTokens, clearAuthSession };
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -48,7 +46,7 @@ function isUnsafeMethod(method?: string): boolean {
   return !['GET', 'HEAD', 'OPTIONS'].includes(normalized);
 }
 
-// Refresh lock: prevents concurrent token refresh calls
+// Refresh lock: prevents concurrent cookie-backed session refresh calls.
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefreshToken(): Promise<boolean> {
@@ -68,13 +66,12 @@ async function tryRefreshToken(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        clearAuthTokens();
+        clearAuthSession();
         return false;
       }
 
-      const json = await response.json();
-      const data = json?.data ?? json;
-      setAuthTokens(data.access_token, data.refresh_token, data.expires_at);
+      await response.json().catch(() => null);
+      clearLegacyAuthTokens();
       return true;
     } catch {
       return false;
@@ -103,10 +100,6 @@ async function request<T>(
     ...init.headers,
   };
 
-  const token = getAuthToken();
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
   if (isUnsafeMethod(init.method)) {
     const csrfToken = getCookie('csrf_token');
     if (csrfToken) {
@@ -124,11 +117,6 @@ async function request<T>(
   if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
-      // Retry with new token
-      const newToken = getAuthToken();
-      if (newToken) {
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
-      }
       const retryResponse = await fetch(url, {
         ...init,
         headers,
@@ -142,7 +130,7 @@ async function request<T>(
       const retryJson = await retryResponse.json();
       return retryJson?.data ?? retryJson;
     }
-    // Refresh failed — trigger logout by dispatching event
+    // Refresh failed; trigger logout by dispatching event.
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('schema:auth-expired'));
     }
@@ -216,10 +204,6 @@ async function requestDownload(
     ...init.headers,
   };
 
-  const token = getAuthToken();
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
   if (isUnsafeMethod(init.method)) {
     const csrfToken = getCookie('csrf_token');
     if (csrfToken) {
@@ -237,10 +221,6 @@ async function requestDownload(
   if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
-      const newToken = getAuthToken();
-      if (newToken) {
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
-      }
       response = await doFetch();
     } else {
       if (typeof window !== 'undefined') {
