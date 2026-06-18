@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button, Input } from '@schema/ui-kit';
 import { UserPlus } from 'lucide-react';
 import { ApiError, clearLegacyAuthTokens } from '@/lib/api';
+import { hashPassword } from '@/lib/crypto';
 import { getRuntimeApiBaseUrl } from '@/lib/runtime-config';
 
 export default function RegisterPage() {
@@ -36,6 +37,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
+      const hashedPassword = await hashPassword(password, email);
       const res = await fetch(
         `${getRuntimeApiBaseUrl()}/v1/auth/register`,
         {
@@ -44,7 +46,7 @@ export default function RegisterPage() {
           credentials: 'include',
           body: JSON.stringify({
             email,
-            password,
+            password: hashedPassword,
             name,
             org_name: orgName,
             org_slug: orgSlug,
