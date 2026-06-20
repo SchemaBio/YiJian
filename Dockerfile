@@ -48,6 +48,9 @@ RUN chmod +x /app/docker-entrypoint.sh
 
 # 设置端口
 ENV PORT=3000
+# Next.js standalone server 默认 listen 在 localhost；容器健康检查、
+# 反向代理等通过容器名/IP 访问时会失败。绑定到 0.0.0.0 让容器内外都可达。
+ENV HOSTNAME=0.0.0.0
 
 USER nextjs
 
