@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Button, Input } from '@schema/ui-kit';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
@@ -170,6 +171,14 @@ export default function LoginPage() {
               {loading ? '登录中...' : '登录'}
             </Button>
           </form>
+
+          {/* 注册入口 */}
+          <p className="text-center text-sm text-fg-muted mt-6">
+            没有账号？{' '}
+            <Link href="/register" className="text-success-fg hover:underline font-medium">
+              注册
+            </Link>
+          </p>
 
           {/* 移动端底部信息 */}
           <p className="lg:hidden text-center text-xs text-fg-muted mt-8">
