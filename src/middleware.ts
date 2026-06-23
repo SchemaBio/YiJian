@@ -7,7 +7,7 @@ function createNonce() {
 }
 
 function apiConnectSource() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.YIJIAN_API_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl || apiUrl.startsWith('/')) return '';
   try {
     return new URL(apiUrl).origin;
