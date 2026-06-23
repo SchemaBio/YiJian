@@ -42,6 +42,11 @@
     outline-offset: 2px;
   }
 
+  /* Input focus: remove outline, keep ring from ui-kit */
+  input:focus-visible {
+    outline: none;
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 8px;

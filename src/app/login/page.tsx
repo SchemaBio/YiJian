@@ -8,6 +8,7 @@ import { Button, Input } from '@schema/ui-kit';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
+import { DnaHelix } from '@/components/DnaHelix';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,26 +54,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* 左侧 - 品牌展示区 */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden items-center justify-center">
-        {/* 背景图片 */}
-        <Image
-          src="/login-bg.png"
-          alt="Background"
-          fill
-          className="object-cover"
-          priority
-        />
-
-        {/* 内容 */}
-        <div className="relative z-10 flex items-center justify-center">
-          <div className="text-left">
-            <h1 className="text-2xl xl:text-3xl font-bold text-black tracking-wide leading-tight">
-              Open Source<br />Genetic Exploration
-            </h1>
-            <p className="text-2xl xl:text-3xl font-bold text-black tracking-wide mt-2">
-              Germline
-            </p>
-          </div>
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden items-center justify-center bg-canvas-subtle">
+        {/* DNA 双螺旋动画 */}
+        <div className="absolute inset-0 text-accent-emphasis/20">
+          <DnaHelix />
         </div>
       </div>
 
@@ -81,9 +66,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* 移动端 Logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-success-emphasis rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-canvas-subtle rounded-2xl mb-4 shadow-sm">
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt="Schema"
                 width={40}
                 height={40}
@@ -96,15 +81,15 @@ export default function LoginPage() {
 
           {/* 登录标题 */}
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-fg-default">开放分析平台</h2>
+            <h2 className="text-2xl font-semibold text-fg-default">贻鉴分析平台</h2>
             <p className="text-fg-muted mt-1">请登录您的账号</p>
           </div>
 
           {/* 登录表单 */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="login-form space-y-5">
             {/* 错误提示 */}
             {error && (
-              <div className="p-3 rounded-md bg-danger-subtle text-danger-fg text-sm">
+              <div className="p-3.5 rounded-xl bg-danger-subtle text-danger-fg text-sm">
                 {error}
               </div>
             )}
@@ -119,7 +104,7 @@ export default function LoginPage() {
                 placeholder="邮箱"
                 autoComplete="email"
                 autoFocus
-                className="h-12 text-base"
+                className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md !pl-5 pr-12"
               />
             </div>
 
@@ -133,12 +118,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="密码"
                   autoComplete="current-password"
-                  className="h-12 text-base"
+                  className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md !pl-5 pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-default transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-default transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -151,7 +136,7 @@ export default function LoginPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 rounded border-border-default text-success-emphasis focus:ring-success-emphasis"
+                  className="w-4 h-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
                 <span className="text-fg-muted">记住我</span>
               </label>
@@ -164,7 +149,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               variant="primary"
-              className="w-full"
+              className="w-full !rounded-2xl !h-12 !text-base font-medium shadow-sm hover:shadow-md transition-shadow"
               disabled={loading}
               leftIcon={loading ? undefined : <LogIn className="w-4 h-4" />}
             >

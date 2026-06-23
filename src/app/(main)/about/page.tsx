@@ -142,7 +142,7 @@ export default function AboutPage() {
         <div className="text-center mb-8">
           <div className="w-20 h-20 rounded-xl flex items-center justify-center mx-auto mb-4 overflow-hidden">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="贻鉴"
               width={80}
               height={80}

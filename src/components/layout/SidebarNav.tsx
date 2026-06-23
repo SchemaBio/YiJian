@@ -69,7 +69,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
             >
               <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
                 <Image
-                  src="/logo.png"
+                  src="/logo.svg"
                   alt="贻鉴"
                   width={32}
                   height={32}
@@ -82,7 +82,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
           <div className="flex items-center min-w-0">
             <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt="贻鉴"
                 width={32}
                 height={32}
