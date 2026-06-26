@@ -1,8 +1,7 @@
 # ============ 构建阶段 ============
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
-# 安装 pnpm（固定版本：pnpm 10+ 要求 Node.js ≥ 20.0.0 且部分新版本要求更高，
-# 与当前 node:20-alpine 不兼容；lockfile 为 v9.0，使用 pnpm@9.x 保持一致）
+# 安装 pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 WORKDIR /app
@@ -24,7 +23,7 @@ COPY . .
 RUN pnpm build
 
 # ============ 运行时阶段 ============
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 ARG NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
 ENV NODE_ENV=production
