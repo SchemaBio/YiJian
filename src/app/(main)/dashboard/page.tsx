@@ -19,6 +19,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { ConfirmDialog } from '@/components/shared';
 
 // 格式化时间为中文格式
 function formatDateTime(date: Date): string {
@@ -444,31 +445,14 @@ export default function DashboardPage() {
       </div>
 
       {/* 删除确认弹窗 */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setDeleteConfirm(null)} />
-          <div className="relative bg-canvas-default rounded-lg shadow-lg border border-border p-4 w-full max-w-sm mx-4">
-            <h4 className="text-base font-medium text-fg-default mb-2">确认删除</h4>
-            <p className="text-sm text-fg-muted mb-4">
-              确定要删除 {deleteConfirm.author} 的这条备注吗？此操作不可撤销。
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-3 py-1.5 text-sm text-fg-default border border-border rounded-md hover:bg-canvas-subtle transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => handleDeleteNote(deleteConfirm.id)}
-                className="px-3 py-1.5 text-sm bg-danger-emphasis text-white rounded-md hover:bg-danger-muted transition-colors"
-              >
-                删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title="确认删除"
+        message={`确定要删除 ${deleteConfirm?.author} 的这条备注吗？此操作不可撤销。`}
+        variant="danger"
+        onConfirm={() => deleteConfirm && handleDeleteNote(deleteConfirm.id)}
+      />
       </div>
     </PageContent>
   );

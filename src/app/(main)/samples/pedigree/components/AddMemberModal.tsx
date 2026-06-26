@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Button, Input, Select } from '@schema/ui-kit';
 import { X } from 'lucide-react';
+import { AppModal } from '@/components/shared';
 import type { RelationType, AffectedStatus, PedigreeMember } from '../types';
 import type { Gender } from '../../types';
 import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';
@@ -111,104 +112,58 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      
-      <div className="relative bg-canvas-default rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-default">
-          <h2 className="text-lg font-medium text-fg-default">添加家系成员</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-canvas-inset text-fg-muted hover:text-fg-default transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div>
-            <label className="block text-xs text-fg-muted mb-1">姓名 *</label>
-            <Input
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="请输入姓名"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">性别 *</label>
-              <Select
-                value={formData.gender}
-                onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)}
-                options={genderOptions}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">出生年份</label>
-              <Input
-                type="number"
-                value={formData.birthYear}
-                onChange={(e) => handleChange('birthYear', e.target.value)}
-                placeholder="如 1990"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">与先证者关系 *</label>
-              <Select
-                value={formData.relation}
-                onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)}
-                options={relationOptions}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">患病状态 *</label>
-              <Select
-                value={formData.affectedStatus}
-                onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)}
-                options={affectedOptions}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">父亲</label>
-              <Select
-                value={formData.fatherId}
-                onChange={(value) => handleChange('fatherId', Array.isArray(value) ? value[0] : value)}
-                options={fatherOptions}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">母亲</label>
-              <Select
-                value={formData.motherId}
-                onChange={(value) => handleChange('motherId', Array.isArray(value) ? value[0] : value)}
-                options={motherOptions}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-fg-muted mb-1">表型描述</label>
-            <Input
-              value={formData.phenotypes}
-              onChange={(e) => handleChange('phenotypes', e.target.value)}
-              placeholder="多个表型用逗号分隔"
-            />
-          </div>
-        </form>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default bg-canvas-subtle">
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="添加家系成员"
+      size="small"
+      footer={
+        <>
           <Button variant="secondary" onClick={onClose}>取消</Button>
           <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)}>添加成员</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-xs text-fg-muted mb-1">姓名 *</label>
+          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入姓名" required />
         </div>
-      </div>
-    </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">性别 *</label>
+            <Select value={formData.gender} onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)} options={genderOptions} />
+          </div>
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">出生年份</label>
+            <Input type="number" value={formData.birthYear} onChange={(e) => handleChange('birthYear', e.target.value)} placeholder="如 1990" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">与先证者关系 *</label>
+            <Select value={formData.relation} onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)} options={relationOptions} />
+          </div>
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">患病状态 *</label>
+            <Select value={formData.affectedStatus} onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)} options={affectedOptions} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">父亲</label>
+            <Select value={formData.fatherId} onChange={(value) => handleChange('fatherId', Array.isArray(value) ? value[0] : value)} options={fatherOptions} />
+          </div>
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">母亲</label>
+            <Select value={formData.motherId} onChange={(value) => handleChange('motherId', Array.isArray(value) ? value[0] : value)} options={motherOptions} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-fg-muted mb-1">表型描述</label>
+          <Input value={formData.phenotypes} onChange={(e) => handleChange('phenotypes', e.target.value)} placeholder="多个表型用逗号分隔" />
+        </div>
+      </form>
+    </AppModal>
   );
 }

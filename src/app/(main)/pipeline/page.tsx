@@ -5,6 +5,7 @@ import { Button, Input, DataTable, Tag, Select } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Plus, Search, Play, Pause, X, Pencil, Trash2 } from 'lucide-react';
 import * as React from 'react';
+import { AppModal, ConfirmDialog } from '@/components/shared';
 
 // 基础流程类型
 type BasePipelineType =
@@ -162,87 +163,47 @@ function NewPipelineModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">新建分析流程</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">基础流程 *</label>
-            <Select
-              value={formData.basePipeline}
-              onChange={(v) => handleChange('basePipeline', Array.isArray(v) ? v[0] : v)}
-              options={BASE_PIPELINE_OPTIONS}
-            />
-            <p className="text-xs text-gray-500 mt-1">选择要基于的分析流程类型</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">流程名称 *</label>
-            <Input
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="请输入流程名称"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">流程描述</label>
-            <Input
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="请输入流程描述"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">参考基因组版本 *</label>
-            <Select
-              value={formData.referenceGenome}
-              onChange={(v) => handleChange('referenceGenome', Array.isArray(v) ? v[0] : v)}
-              options={REFERENCE_GENOME_OPTIONS}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">BED 文件 *</label>
-            <Select
-              value={formData.bedFile}
-              onChange={(v) => handleChange('bedFile', Array.isArray(v) ? v[0] : v)}
-              options={BED_FILE_OPTIONS}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">CNV 基线文件</label>
-            <Select
-              value={formData.cnvBaseline}
-              onChange={(v) => handleChange('cnvBaseline', Array.isArray(v) ? v[0] : v)}
-              options={CNV_BASELINE_OPTIONS}
-            />
-            <p className="text-xs text-gray-500 mt-1">用于拷贝数变异分析的基线文件</p>
-          </div>
-        </form>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="新建分析流程"
+      size="medium"
+      footer={
+        <>
           <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name}>
-            创建流程
-          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name}>创建流程</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">基础流程 *</label>
+          <Select value={formData.basePipeline} onChange={(v) => handleChange('basePipeline', Array.isArray(v) ? v[0] : v)} options={BASE_PIPELINE_OPTIONS} />
+          <p className="text-xs text-gray-500 mt-1">选择要基于的分析流程类型</p>
         </div>
-      </div>
-    </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">流程名称 *</label>
+          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入流程名称" required />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">流程描述</label>
+          <Input value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="请输入流程描述" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">参考基因组版本 *</label>
+          <Select value={formData.referenceGenome} onChange={(v) => handleChange('referenceGenome', Array.isArray(v) ? v[0] : v)} options={REFERENCE_GENOME_OPTIONS} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">BED 文件 *</label>
+          <Select value={formData.bedFile} onChange={(v) => handleChange('bedFile', Array.isArray(v) ? v[0] : v)} options={BED_FILE_OPTIONS} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">CNV 基线文件</label>
+          <Select value={formData.cnvBaseline} onChange={(v) => handleChange('cnvBaseline', Array.isArray(v) ? v[0] : v)} options={CNV_BASELINE_OPTIONS} />
+          <p className="text-xs text-gray-500 mt-1">用于拷贝数变异分析的基线文件</p>
+        </div>
+      </form>
+    </AppModal>
   );
 }
 
@@ -292,90 +253,50 @@ function EditPipelineModal({
     }
   };
 
-  if (!isOpen || !pipeline) return null;
+  if (!pipeline) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">编辑分析流程</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">基础流程 *</label>
-            <Select
-              value={formData.basePipeline}
-              onChange={(v) => handleChange('basePipeline', Array.isArray(v) ? v[0] : v)}
-              options={BASE_PIPELINE_OPTIONS}
-            />
-            <p className="text-xs text-gray-500 mt-1">选择要基于的分析流程类型</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">流程名称 *</label>
-            <Input
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="请输入流程名称"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">流程描述</label>
-            <Input
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="请输入流程描述"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">参考基因组版本 *</label>
-            <Select
-              value={formData.referenceGenome}
-              onChange={(v) => handleChange('referenceGenome', Array.isArray(v) ? v[0] : v)}
-              options={REFERENCE_GENOME_OPTIONS}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">BED 文件 *</label>
-            <Select
-              value={formData.bedFile}
-              onChange={(v) => handleChange('bedFile', Array.isArray(v) ? v[0] : v)}
-              options={BED_FILE_OPTIONS}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">CNV 基线文件</label>
-            <Select
-              value={formData.cnvBaseline}
-              onChange={(v) => handleChange('cnvBaseline', Array.isArray(v) ? v[0] : v)}
-              options={CNV_BASELINE_OPTIONS}
-            />
-            <p className="text-xs text-gray-500 mt-1">用于拷贝数变异分析的基线文件</p>
-          </div>
-        </form>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="编辑分析流程"
+      size="medium"
+      footer={
+        <>
           <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name}>
-            保存修改
-          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name}>保存修改</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">基础流程 *</label>
+          <Select value={formData.basePipeline} onChange={(v) => handleChange('basePipeline', Array.isArray(v) ? v[0] : v)} options={BASE_PIPELINE_OPTIONS} />
+          <p className="text-xs text-gray-500 mt-1">选择要基于的分析流程类型</p>
         </div>
-      </div>
-    </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">流程名称 *</label>
+          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入流程名称" required />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">流程描述</label>
+          <Input value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="请输入流程描述" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">参考基因组版本 *</label>
+          <Select value={formData.referenceGenome} onChange={(v) => handleChange('referenceGenome', Array.isArray(v) ? v[0] : v)} options={REFERENCE_GENOME_OPTIONS} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">BED 文件 *</label>
+          <Select value={formData.bedFile} onChange={(v) => handleChange('bedFile', Array.isArray(v) ? v[0] : v)} options={BED_FILE_OPTIONS} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">CNV 基线文件</label>
+          <Select value={formData.cnvBaseline} onChange={(v) => handleChange('cnvBaseline', Array.isArray(v) ? v[0] : v)} options={CNV_BASELINE_OPTIONS} />
+          <p className="text-xs text-gray-500 mt-1">用于拷贝数变异分析的基线文件</p>
+        </div>
+      </form>
+    </AppModal>
   );
 }
 
@@ -391,36 +312,15 @@ function DeleteConfirmModal({
   onConfirm: () => void;
   pipelineName: string;
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">确认删除</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6">
-          <p className="text-sm text-gray-600">
-            确定要删除流程 <span className="font-medium text-gray-900">「{pipelineName}」</span> 吗？
-          </p>
-          <p className="text-sm text-gray-500 mt-2">此操作不可撤销。</p>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="danger" onClick={onConfirm}>删除</Button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="确认删除"
+      message={`确定要删除流程「${pipelineName}」吗？此操作不可撤销。`}
+      variant="danger"
+      onConfirm={onConfirm}
+    />
   );
 }
 

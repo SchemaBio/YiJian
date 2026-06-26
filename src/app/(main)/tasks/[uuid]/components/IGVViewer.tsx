@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
+import { AppModal } from '@/components/shared';
 
 export interface IGVViewerProps {
   chromosome: string;
@@ -151,61 +152,48 @@ export function IGVViewer({
   const genomeLabel = reference ? reference.id : (genome ?? 'unknown');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      <div className="relative bg-white dark:bg-[#0d1117] rounded-lg shadow-xl w-[90vw] max-w-6xl max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-medium text-fg-default">IGV 基因组浏览器</h3>
-            <span className="px-2 py-0.5 text-sm bg-canvas-subtle rounded text-fg-muted">{locus}</span>
-            <span className="text-xs text-fg-muted">({genomeLabel})</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <a
-              href={`https://igv.org/app/?locus=${locus}&genome=${genome || genomeLabel}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              IGV Web 版
-            </a>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors"
-              aria-label="关闭"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4 min-h-[500px]">
-          {loading && (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
-                <span className="text-sm text-fg-muted">正在加载参考基因组...</span>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <p className="text-danger-fg mb-2">{error}</p>
-                <p className="text-sm text-fg-muted">
-                  请确认网络连接正常（参考基因组文件托管在远程 CDN）
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div ref={containerRef} className={loading || error ? 'hidden' : ''} />
-        </div>
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="IGV 基因组浏览器"
+      size="fullscreen"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <span className="px-2 py-0.5 text-sm bg-canvas-subtle rounded text-fg-muted">{locus}</span>
+        <span className="text-xs text-fg-muted">({genomeLabel})</span>
+        <a
+          href={`https://igv.org/app/?locus=${locus}&genome=${genome || genomeLabel}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors ml-auto"
+        >
+          <ExternalLink className="w-4 h-4" />
+          IGV Web 版
+        </a>
       </div>
-    </div>
+
+      <div className="flex-1 overflow-auto min-h-[500px]">
+        {loading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
+              <span className="text-sm text-fg-muted">正在加载参考基因组...</span>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-danger-fg mb-2">{error}</p>
+              <p className="text-sm text-fg-muted">请确认网络连接正常（参考基因组文件托管在远程 CDN）</p>
+            </div>
+          </div>
+        )}
+
+        <div ref={containerRef} className={loading || error ? 'hidden' : ''} />
+      </div>
+    </AppModal>
   );
 }
 

@@ -8,29 +8,8 @@ import { AnalysisDetailPanel, NewTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
-
-// 简化的ID显示组件（点击复制，无复制按钮）
-function IdCell({ id }: { id: string }) {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <Tooltip content={id} placement="top" variant="default">
-      <span
-        className={`font-mono text-xs cursor-pointer ${copied ? 'text-green-500' : 'text-accent-fg hover:underline'}`}
-        onClick={handleClick}
-      >
-        {id.substring(0, 8)}
-      </span>
-    </Tooltip>
-  );
-}
+import { useApi, usePolling } from '@/hooks';
+import { IdCell, TaskStatusTag } from '@/components/shared';
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },
@@ -314,9 +293,6 @@ function TaskActionsCell({
 export default function AnalysisPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
-  const [tasks, setTasks] = React.useState<AnalysisTask[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [openTabs, setOpenTabs] = React.useState<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string | null>(null);
@@ -324,33 +300,25 @@ export default function AnalysisPage() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<AnalysisTask | null>(null);
 
-  // Fetch tasks on mount and when status filter changes
-  const fetchTasks = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      const params: Record<string, string> = { page: '1', page_size: '100' };
-      if (statusFilter !== 'all') params.status = statusFilter;
-      const data = await tasksApi.list(params);
-      setTasks(data.items);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '获取任务列表失败');
-    } finally {
-      setLoading(false);
-    }
+  // Create fetcher function with current statusFilter
+  const fetcher = React.useCallback(async () => {
+    const params: Record<string, string> = { page: '1', page_size: '100' };
+    if (statusFilter !== 'all') params.status = statusFilter;
+    const data = await tasksApi.list(params);
+    return data.items;
   }, [statusFilter]);
 
-  React.useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+  // Use polling hook - auto-polls when there are running tasks
+  const { data: tasks, loading, error, refetch } = usePolling(
+    fetcher,
+    10000,
+    { enabled: true, immediate: true }
+  );
 
-  // Auto-poll when there are running tasks
-  React.useEffect(() => {
-    const hasRunning = tasks.some(t => t.status === 'running');
-    if (!hasRunning) return;
-    const interval = setInterval(fetchTasks, 10000);
-    return () => clearInterval(interval);
-  }, [tasks, fetchTasks]);
+  // Check if there are running tasks for polling
+  const hasRunningTasks = React.useMemo(() => {
+    return tasks?.some(t => t.status === 'running') ?? false;
+  }, [tasks]);
 
   const handleDownloadTemplate = () => {
     const templateContent = `样本编号,内部编号,分析流程,流程版本
@@ -380,7 +348,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
         uploaded_file_ids: data.uploaded_file_ids,
         estimatedMinutes: data.estimatedMinutes,
       });
-      setTasks(prev => [newTask, ...prev]);
+      refetch(); // Refresh data after creating
     } catch (err) {
       alert(err instanceof Error ? err.message : '创建任务失败');
     }
@@ -388,12 +356,12 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
 
   const handleEditTask = async (id: string, data: EditTaskFormData) => {
     try {
-      const updated = await tasksApi.update(id, {
+      await tasksApi.update(id, {
         internalId: data.internalId,
         pipeline: data.pipeline,
         remark: data.remark,
       });
-      setTasks(prev => prev.map(t => t.id === id ? updated : t));
+      refetch(); // Refresh data after updating
     } catch (err) {
       alert(err instanceof Error ? err.message : '更新任务失败');
     }
@@ -402,8 +370,8 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
   const handleStartTask = async (taskId: string) => {
     setActionLoading(taskId);
     try {
-      const updated = await tasksApi.start(taskId);
-      setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+      await tasksApi.start(taskId);
+      refetch(); // Refresh data after starting
     } catch (err) {
       alert(err instanceof Error ? err.message : '启动任务失败');
     } finally {
@@ -415,9 +383,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
     setActionLoading(taskId);
     try {
       await tasksApi.cancel(taskId);
-      setTasks(prev => prev.map(t =>
-        t.id === taskId ? { ...t, status: 'queued' as const, progress: 0 } : t
-      ));
+      refetch(); // Refresh data after stopping
     } catch (err) {
       alert(err instanceof Error ? err.message : '停止任务失败');
     } finally {
@@ -428,7 +394,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
   const handleDeleteTask = async (taskId: string) => {
     try {
       await tasksApi.cancel(taskId);
-      setTasks(prev => prev.filter(t => t.id !== taskId));
+      refetch(); // Refresh data after deleting
     } catch (err) {
       alert(err instanceof Error ? err.message : '删除任务失败');
     }
@@ -465,7 +431,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
   }, [activeTabId]);
 
   const filteredTasks = React.useMemo(() => {
-    let result = tasks;
+    let result = tasks ?? [];
     // 先按状态筛选
     if (statusFilter !== 'all') {
       result = result.filter(t => t.status === statusFilter);
@@ -680,7 +646,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <p className="text-danger-fg mb-2">{error}</p>
-                  <Button variant="secondary" onClick={fetchTasks}>重试</Button>
+                  <Button variant="secondary" onClick={refetch}>重试</Button>
                 </div>
               </div>
             )}

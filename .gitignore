@@ -6,3 +6,5 @@ node_modules
 .claude/
 .codex*
 .agents/
+.omo/
+ulw*

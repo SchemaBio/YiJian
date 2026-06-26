@@ -3,6 +3,7 @@
 import { Button, Input, Tag } from '@schema/ui-kit';
 import { Plus, Search, Trash2, Check, Upload, Play, Square, RotateCcw, Pencil, X } from 'lucide-react';
 import * as React from 'react';
+import { AppModal, ConfirmDialog } from '@/components/shared';
 import { generateUUID } from '@/lib/uuid';
 
 interface BaselineFile {
@@ -161,36 +162,15 @@ function DeleteConfirmModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
-            <Trash2 className="w-6 h-6 text-red-600" />
-          </div>
-          <h3 className="text-lg font-medium text-center text-gray-900 mb-2">
-            删除基线
-          </h3>
-          <p className="text-sm text-center text-gray-500 mb-2">
-            确定要删除此基线吗？此操作无法撤销。
-          </p>
-          <p className="text-center font-mono text-xs text-gray-600 break-all">
-            {baselineUuid}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button variant="secondary" onClick={onClose} className="flex-1">
-            取消
-          </Button>
-          <Button variant="danger" onClick={onConfirm} className="flex-1">
-            删除
-          </Button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="删除基线"
+      message={`确定要删除此基线吗？此操作无法撤销。${baselineUuid}`}
+      variant="danger"
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -379,19 +359,18 @@ function CreateBaselineModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
-
-      <div className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">创建基线</h2>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && handleClose()}
+      title="创建基线"
+      size="medium"
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleClose}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.bedFile || parsedSampleIds.length === 0 || parsedSampleIds.length > 50}>创建</Button>
+        </>
+      }
+    >
 
         <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div>
@@ -460,17 +439,7 @@ function CreateBaselineModal({
             </p>
           </div>
         </div>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button variant="secondary" onClick={handleClose}>
-            取消
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.bedFile || parsedSampleIds.length === 0 || parsedSampleIds.length > 50}>
-            创建
-          </Button>
-        </div>
-      </div>
-    </div>
+    </AppModal>
   );
 }
 
@@ -513,22 +482,21 @@ function EditBaselineModal({
     onClose();
   };
 
-  if (!isOpen || !baseline) return null;
+  if (!baseline) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
-
-      <div className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">编辑基线样本</h2>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && handleClose()}
+      title="编辑基线样本"
+      size="medium"
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleClose}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={parsedSampleIds.length === 0 || parsedSampleIds.length > 20}>保存</Button>
+        </>
+      }
+    >
 
         <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="p-3 bg-canvas-subtle rounded-lg text-xs">
@@ -575,17 +543,7 @@ function EditBaselineModal({
             </p>
           </div>
         </div>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button variant="secondary" onClick={handleClose}>
-            取消
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={parsedSampleIds.length === 0 || parsedSampleIds.length > 20}>
-            保存
-          </Button>
-        </div>
-      </div>
-    </div>
+    </AppModal>
   );
 }
 

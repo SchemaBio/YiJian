@@ -4,6 +4,7 @@ import { PageContent } from '@/components/layout';
 import { Button, Input, Tag } from '@schema/ui-kit';
 import { Plus, Search, Pencil, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import * as React from 'react';
+import { AppModal, ConfirmDialog } from '@/components/shared';
 
 interface GeneList {
   id: string;
@@ -62,33 +63,15 @@ function DeleteConfirmModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
-            <Trash2 className="w-6 h-6 text-red-600" />
-          </div>
-          <h3 className="text-lg font-medium text-center text-gray-900 mb-2">
-            删除基因列表
-          </h3>
-          <p className="text-sm text-center text-gray-500">
-            确定要删除 "{listName}" 吗？此操作无法撤销。
-          </p>
-        </div>
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button variant="secondary" onClick={onClose} className="flex-1">
-            取消
-          </Button>
-          <Button variant="danger" onClick={onConfirm} className="flex-1">
-            删除
-          </Button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="删除基因列表"
+      message={`确定要删除 "${listName}" 吗？此操作无法撤销。`}
+      variant="danger"
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -140,87 +123,50 @@ function GeneListModal({
     ? formData.genes.split(/[\n,\s]+/).filter((g) => g.trim()).length
     : 0;
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
-
-      <div className="relative z-10 bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">
-            {mode === 'add' ? '添加基因列表' : '编辑基因列表'}
-          </h2>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">列表名称 *</label>
-            <Input
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="如：心血管疾病Panel"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">关联疾病 *</label>
-            <Input
-              value={formData.disease}
-              onChange={(e) => handleChange('disease', e.target.value)}
-              placeholder="如：遗传性心肌病"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">描述</label>
-            <Input
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="列表用途说明"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-fg-default">基因列表 *</label>
-              {geneCount > 0 && (
-                <span className="text-xs text-fg-muted">已识别 {geneCount} 个基因</span>
-              )}
-            </div>
-            <textarea
-              value={formData.genes}
-              onChange={(e) => handleChange('genes', e.target.value)}
-              placeholder="每行一个基因名，或用逗号/空格分隔&#10;例如：&#10;MYH7&#10;MYBPC3&#10;TNNT2"
-              rows={8}
-              className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-fg-default text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-fg-muted mt-1">
-              支持每行一个基因，或用逗号、空格、Tab 分隔
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button variant="secondary" onClick={handleClose}>
-            取消
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={!formData.name || !formData.disease || !formData.genes}
-          >
+    <AppModal
+      open={isOpen}
+      onOpenChange={(open) => !open && handleClose()}
+      title={mode === 'add' ? '添加基因列表' : '编辑基因列表'}
+      size="medium"
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleClose}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name || !formData.disease || !formData.genes}>
             {mode === 'add' ? '添加' : '保存'}
           </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-fg-default mb-2">列表名称 *</label>
+          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病Panel" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-fg-default mb-2">关联疾病 *</label>
+          <Input value={formData.disease} onChange={(e) => handleChange('disease', e.target.value)} placeholder="如：遗传性心肌病" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-fg-default mb-2">描述</label>
+          <Input value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="列表用途说明" />
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-fg-default">基因列表 *</label>
+            {geneCount > 0 && <span className="text-xs text-fg-muted">已识别 {geneCount} 个基因</span>}
+          </div>
+          <textarea
+            value={formData.genes}
+            onChange={(e) => handleChange('genes', e.target.value)}
+            placeholder={"每行一个基因名，或用逗号/空格分隔\n例如：\nMYH7\nMYBPC3\nTNNT2"}
+            rows={8}
+            className="w-full px-3 py-2 rounded-md border border-border-default bg-canvas-default text-fg-default text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent-emphasis"
+          />
+          <p className="text-xs text-fg-muted mt-1">支持每行一个基因，或用逗号、空格、Tab 分隔</p>
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 }
 

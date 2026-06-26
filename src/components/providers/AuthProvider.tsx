@@ -7,6 +7,29 @@ import { authApi } from '@/lib/auth';
 import { STORAGE_KEYS } from '@/lib/storage';
 import { hashPassword } from '@/lib/crypto';
 
+const DEV_MOCK_AUTH = process.env.NEXT_PUBLIC_DEV_MOCK_AUTH === 'true';
+
+const MOCK_USER: User = {
+  id: 'dev-mock-user-001',
+  email: 'dev@example.com',
+  name: '开发者',
+  systemRole: 'PLATFORM_ADMIN',
+  orgId: 'dev-mock-org-001',
+  isActive: true,
+  approvalStatus: 'approved',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+const MOCK_ORG: UserOrganizationInfo = {
+  id: 'dev-mock-org-001',
+  name: '开发测试机构',
+  slug: 'dev-lab',
+  description: '本地开发环境',
+  orgRole: 'PLATFORM_ADMIN',
+  isActive: true,
+};
+
 interface AuthContextType {
   user: User | null;
   organizations: UserOrganizationInfo[];
@@ -63,6 +86,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     const loadSession = async () => {
+      if (DEV_MOCK_AUTH) {
+        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser) as User;
+            applySession(parsed, MOCK_ORG);
+          } catch {
+            resetSession();
+          }
+        }
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const [currentUser, currentOrg] = await Promise.all([
           authApi.getCurrentUser(),
@@ -93,6 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      if (DEV_MOCK_AUTH) {
+        applySession({ ...MOCK_USER, email }, MOCK_ORG);
+        return;
+      }
       const hashedPassword = await hashPassword(password, email);
       const response: LoginResponse = await authApi.login({ email, password: hashedPassword });
 

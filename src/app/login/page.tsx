@@ -16,8 +16,11 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
+  const [agreePrivacy, setAgreePrivacy] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+
+  const privacyConsentRequired = process.env.NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED !== 'false';
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -32,6 +35,11 @@ export default function LoginPage() {
 
     if (!email || !password) {
       setError('请输入邮箱和密码');
+      return;
+    }
+
+    if (privacyConsentRequired && !agreePrivacy) {
+      setError('请阅读并同意用户隐私协议');
       return;
     }
 
@@ -145,12 +153,30 @@ export default function LoginPage() {
               </button>
             </div>
 
+            {/* 用户隐私协议 */}
+            {privacyConsentRequired && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreePrivacy}
+                  onChange={(e) => setAgreePrivacy(e.target.checked)}
+                  className="w-4 h-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis mt-0.5"
+                />
+                <span className="text-sm text-fg-muted leading-relaxed">
+                  我已阅读并同意{' '}
+                  <Link href="/privacy" target="_blank" className="text-success-fg hover:underline font-medium">
+                    《用户隐私协议与免责声明》
+                  </Link>
+                </span>
+              </label>
+            )}
+
             {/* 登录按钮 */}
             <Button
               type="submit"
               variant="primary"
               className="w-full !rounded-2xl !h-12 !text-base font-medium shadow-sm hover:shadow-md transition-shadow"
-              disabled={loading}
+              disabled={loading || (privacyConsentRequired && !agreePrivacy)}
               leftIcon={loading ? undefined : <LogIn className="w-4 h-4" />}
             >
               {loading ? '登录中...' : '登录'}
