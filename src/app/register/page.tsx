@@ -92,7 +92,7 @@ export default function RegisterPage() {
             value={form.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="姓名 *"
-            className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
@@ -101,7 +101,7 @@ export default function RegisterPage() {
             onChange={(e) => handleChange('email', e.target.value)}
             placeholder="邮箱 *"
             autoComplete="email"
-            className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
@@ -110,7 +110,7 @@ export default function RegisterPage() {
             onChange={(e) => handleChange('password', e.target.value)}
             placeholder="密码 *"
             autoComplete="new-password"
-            className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
@@ -118,7 +118,7 @@ export default function RegisterPage() {
             value={form.orgName}
             onChange={(e) => handleChange('orgName', e.target.value)}
             placeholder="团队/机构名称 *"
-            className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
@@ -126,7 +126,7 @@ export default function RegisterPage() {
             value={form.orgSlug}
             onChange={(e) => handleChange('orgSlug', e.target.value)}
             placeholder="团队标识 (URL slug, 如 mylab) *"
-            className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Button

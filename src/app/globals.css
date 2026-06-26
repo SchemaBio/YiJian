@@ -66,3 +66,49 @@
     background: var(--color-fg-muted);
   }
 }
+
+/* 助手浮动动画 */
+@keyframes assistant-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes assistant-shadow-pulse {
+  0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.15; }
+  50% { transform: translateX(-50%) scaleX(0.8); opacity: 0.08; }
+}
+
+.assistant-float {
+  animation: assistant-float 3s ease-in-out infinite;
+}
+
+.assistant-shadow {
+  animation: assistant-shadow-pulse 3s ease-in-out infinite;
+}
+
+/* 全局圆角升级：输入框、卡片、弹窗 */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    border-radius: 0.625rem !important;
+  }
+}
+
+@layer components {
+  /* 全局卡片圆角升级 */
+  .rounded-medium {
+    border-radius: 0.75rem !important;
+  }
+  .rounded-small {
+    border-radius: 0.5rem !important;
+  }
+}
+
+/* 全局输入框 padding 修复 */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+  }
+}

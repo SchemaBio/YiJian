@@ -112,7 +112,7 @@ export default function LoginPage() {
                 placeholder="邮箱"
                 autoComplete="email"
                 autoFocus
-                className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md !pl-5 pr-12"
+                className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
               />
             </div>
 
@@ -126,7 +126,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="密码"
                   autoComplete="current-password"
-                  className="!rounded-2xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md !pl-5 pr-12"
+                  className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
                 />
                 <button
                   type="button"
@@ -175,7 +175,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               variant="primary"
-              className="w-full !rounded-2xl !h-12 !text-base font-medium shadow-sm hover:shadow-md transition-shadow"
+              className="w-full !rounded-xl !h-12 !text-base font-medium shadow-sm hover:shadow-md transition-shadow"
               disabled={loading || (privacyConsentRequired && !agreePrivacy)}
               leftIcon={loading ? undefined : <LogIn className="w-4 h-4" />}
             >
