@@ -40,8 +40,8 @@ const statsCards = [
     change: '+128',
     changeLabel: '本月新增',
     icon: Users,
-    bgColor: 'bg-blue-50',
-    iconColor: 'text-blue-500',
+    bgColor: 'yj-kpi-blue',
+    iconColor: 'text-blue-600',
     valueColor: 'text-blue-700',
     titleColor: 'text-blue-600',
     changeColor: 'text-blue-500',
@@ -53,8 +53,8 @@ const statsCards = [
     change: '5',
     changeLabel: '紧急',
     icon: FlaskConical,
-    bgColor: 'bg-orange-50',
-    iconColor: 'text-orange-500',
+    bgColor: 'yj-kpi-orange',
+    iconColor: 'text-orange-600',
     valueColor: 'text-orange-700',
     titleColor: 'text-orange-600',
     changeColor: 'text-orange-500',
@@ -66,8 +66,8 @@ const statsCards = [
     change: '~2h',
     changeLabel: '预计完成',
     icon: Clock,
-    bgColor: 'bg-purple-50',
-    iconColor: 'text-purple-500',
+    bgColor: 'yj-kpi-purple',
+    iconColor: 'text-purple-600',
     valueColor: 'text-purple-700',
     titleColor: 'text-purple-600',
     changeColor: 'text-purple-500',
@@ -79,8 +79,8 @@ const statsCards = [
     change: '+12',
     changeLabel: '本周',
     icon: CheckCircle,
-    bgColor: 'bg-green-50',
-    iconColor: 'text-green-500',
+    bgColor: 'yj-kpi-green',
+    iconColor: 'text-green-600',
     valueColor: 'text-green-700',
     titleColor: 'text-green-600',
     changeColor: 'text-green-500',
@@ -92,8 +92,8 @@ const statsCards = [
     change: '-0.5',
     changeLabel: '优化',
     icon: TrendingUp,
-    bgColor: 'bg-teal-50',
-    iconColor: 'text-teal-500',
+    bgColor: 'yj-kpi-teal',
+    iconColor: 'text-teal-600',
     valueColor: 'text-teal-700',
     titleColor: 'text-teal-600',
     changeColor: 'text-teal-500',
@@ -248,41 +248,41 @@ export default function DashboardPage() {
 
   return (
     <PageContent padded={false} className="h-full flex flex-col">
-      <div className="p-6 flex flex-col h-full min-h-0">
+      <div className="p-6 xl:p-8 flex flex-col h-full min-h-0">
       {/* 欢迎信息 */}
-      <div className="mb-6 flex items-center justify-between shrink-0">
+      <div className="mb-7 flex items-start justify-between gap-6 shrink-0">
         <div>
-          <h2 className="text-xl font-semibold text-fg-default">欢迎回来，张医生</h2>
-          <p className="text-sm text-fg-muted mt-1">
-            现在是 {currentTime || '加载中...'}
+          <h2 className="text-[32px] leading-tight font-semibold text-[var(--yj-text-strong)] tracking-tight">今日工作台</h2>
+          <p className="text-sm text-fg-muted mt-2">
+            张医生 · {currentTime || '加载中...'}
           </p>
         </div>
         {/* 快捷操作 */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Link
             href="/samples"
-            className="px-4 py-2 bg-canvas-default rounded-lg border border-border hover:border-accent-muted hover:shadow-sm transition-all flex items-center gap-2"
+            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
           >
             <Users className="w-4 h-4 text-fg-muted" />
             <span className="text-sm text-fg-default">样本管理</span>
           </Link>
           <Link
             href="/tasks"
-            className="px-4 py-2 bg-canvas-default rounded-lg border border-border hover:border-accent-muted hover:shadow-sm transition-all flex items-center gap-2"
+            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
           >
             <ListTodo className="w-4 h-4 text-fg-muted" />
             <span className="text-sm text-fg-default">任务中心</span>
           </Link>
           <Link
             href="/history"
-            className="px-4 py-2 bg-canvas-default rounded-lg border border-border hover:border-accent-muted hover:shadow-sm transition-all flex items-center gap-2"
+            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
           >
             <History className="w-4 h-4 text-fg-muted" />
             <span className="text-sm text-fg-default">历史检出</span>
           </Link>
           <Link
             href="/pipeline"
-            className="px-4 py-2 bg-canvas-default rounded-lg border border-border hover:border-accent-muted hover:shadow-sm transition-all flex items-center gap-2"
+            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
           >
             <Workflow className="w-4 h-4 text-fg-muted" />
             <span className="text-sm text-fg-default">流程中心</span>
@@ -291,24 +291,28 @@ export default function DashboardPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6 shrink-0">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6 shrink-0">
         {statsCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <Link
               key={stat.title}
               href={stat.href}
-              className={`p-4 rounded-lg border border-border hover:shadow-md transition-all ${stat.bgColor}`}
+              className={`yj-kpi-card p-5 hover:bg-white transition-colors ${stat.bgColor}`}
             >
-              <div className="flex items-start justify-between">
-                <Icon className={`w-8 h-8 ${stat.iconColor}`} />
-                <span className={`text-xs ${stat.changeColor}`}>
-                  {stat.change} {stat.changeLabel}
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-sm text-fg-muted">
+                  {stat.title}
+                </span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--yj-panel-subtle)] text-fg-muted">
+                  <Icon className="w-4 h-4" />
                 </span>
               </div>
-              <div className="mt-3">
-                <div className={`text-2xl font-bold ${stat.valueColor}`}>{stat.value}</div>
-                <div className={`text-sm ${stat.titleColor}`}>{stat.title}</div>
+              <div className="mt-6">
+                <div className="text-[28px] leading-none font-semibold tracking-tight text-[var(--yj-text-strong)]">{stat.value}</div>
+                <div className="mt-2 text-xs font-medium text-accent-fg">
+                  {stat.change} {stat.changeLabel}
+                </div>
               </div>
             </Link>
           );
@@ -316,10 +320,10 @@ export default function DashboardPage() {
       </div>
 
       {/* 全局备注 + 待分析任务 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] gap-5 flex-1 min-h-0">
         {/* 全局备注 */}
-        <div className="bg-canvas-default rounded-lg border border-border flex flex-col min-h-0">
-          <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+        <div className="yj-panel flex flex-col min-h-0">
+          <div className="yj-panel-header shrink-0">
             <h3 className="font-medium text-fg-default flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-accent-fg" />
               全局备注
@@ -328,13 +332,13 @@ export default function DashboardPage() {
           </div>
 
           {/* 发备注输入框 */}
-          <div className="p-3 border-b border-border bg-canvas-subtle shrink-0">
+          <div className="p-3 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] shrink-0">
             <div className="flex gap-3">
               <div className="w-7 h-7 rounded-full bg-accent-subtle flex items-center justify-center text-xs font-medium text-accent-fg shrink-0">
                 张
               </div>
               <div className="flex-1 flex items-center gap-2">
-                <div className="flex-1 relative flex items-center bg-canvas-default rounded-lg border border-border focus-within:border-accent-muted focus-within:ring-1 focus-within:ring-accent-muted transition-all">
+                <div className="flex-1 relative flex items-center bg-white rounded-lg border border-[var(--yj-border-subtle)] focus-within:border-accent-muted focus-within:ring-1 focus-within:ring-accent-muted transition-all">
                   <input
                     type="text"
                     value={newNote}
@@ -362,9 +366,9 @@ export default function DashboardPage() {
           </div>
 
           {/* 备注列表 */}
-          <div className="divide-y divide-border overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1">
             {notes.map((note) => (
-              <div key={note.id} className="p-3 hover:bg-canvas-subtle transition-colors group">
+              <div key={note.id} className="yj-status-row p-3 group">
                 <div className="flex gap-3">
                   <div className="w-7 h-7 rounded-full bg-canvas-inset flex items-center justify-center text-xs font-medium text-fg-muted shrink-0">
                     {note.avatar}
@@ -397,8 +401,8 @@ export default function DashboardPage() {
         </div>
 
         {/* 待分析任务 */}
-        <div className="bg-canvas-default rounded-lg border border-border flex flex-col min-h-0">
-          <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+        <div className="yj-panel flex flex-col min-h-0">
+          <div className="yj-panel-header shrink-0">
             <h3 className="font-medium text-fg-default flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-orange-500" />
               待分析任务
@@ -410,11 +414,11 @@ export default function DashboardPage() {
               查看全部 <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-border overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1">
             {pendingSamples.map((sample) => (
               <div
                 key={sample.id}
-                className="flex items-center justify-between p-4 hover:bg-canvas-subtle transition-colors"
+                className="yj-status-row flex items-center justify-between p-4"
               >
                 <div className="flex items-center gap-4">
                   <div>

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, Download, Upload, BookOpen, ChevronDown, Loader2 } from 'lucide-react';
+import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, Download, Upload, BookOpen, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
 import { AnalysisDetailPanel, NewTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
@@ -632,20 +632,30 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
       ) : (
         // 展开状态：完整表格
         <div className="flex-1">
-          <div className="p-6 h-full overflow-auto">
-            <h2 className="text-lg font-medium text-fg-default mb-4">任务列表</h2>
+          <div className="p-6 xl:p-8 h-full overflow-auto yj-page-shell">
+            <div className="yj-page-header">
+              <h2 className="yj-page-title">任务列表</h2>
+            </div>
 
             {loading && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-fg-muted" />
-                <span className="ml-2 text-fg-muted">加载中...</span>
+              <div className="yj-empty-state">
+                <div>
+                  <span className="yj-empty-state-icon">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  </span>
+                  <p className="text-sm text-fg-muted">加载中...</p>
+                </div>
               </div>
             )}
 
             {error && !loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <p className="text-danger-fg mb-2">{error}</p>
+              <div className="yj-empty-state">
+                <div>
+                  <span className="yj-empty-state-icon">
+                    <AlertTriangle className="w-5 h-5 text-danger-fg" />
+                  </span>
+                  <p className="text-sm font-medium text-[var(--yj-text-strong)] mb-1">任务列表暂不可用</p>
+                  <p className="text-sm text-danger-fg mb-4">{error}</p>
                   <Button variant="secondary" onClick={refetch}>重试</Button>
                 </div>
               </div>
@@ -653,7 +663,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
 
             {!loading && !error && (
               <>
-                <div className="flex items-center justify-between mb-4">
+                <div className="yj-toolbar-panel">
                   <div className="flex items-center gap-4">
                     <div className="w-64">
                       <Input

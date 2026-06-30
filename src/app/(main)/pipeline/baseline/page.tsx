@@ -681,17 +681,19 @@ export default function BaselineManagementPage() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="p-6">
-        <h2 className="text-lg font-medium text-fg-default mb-4">基线管理</h2>
+      <div className="p-6 xl:p-8 yj-page-shell">
+        <div className="yj-page-header">
+          <h2 className="yj-page-title">基线管理</h2>
+        </div>
 
-        <div className="p-4 bg-canvas-subtle rounded-lg border border-border mb-4">
+        <div className="yj-info-panel mb-4">
           <p className="text-sm text-fg-muted">
             基线用于 CNV（拷贝数变异）检测。通过对比样本与基线的覆盖度差异识别 CNV。
             建议使用相同捕获试剂盒、相同测序平台的样本构建基线，最多支持 20 个样本。
           </p>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="yj-toolbar-panel">
           <div className="w-64">
             <Input
               placeholder="搜索基线..."
@@ -706,7 +708,7 @@ export default function BaselineManagementPage() {
         </div>
 
         {/* 列表展示 */}
-        <div className="bg-canvas-default rounded-lg border border-border overflow-hidden">
+        <div className="yj-list-panel">
           <div className="divide-y divide-border">
             {filteredFiles.map((baseline) => {
               const isExpanded = expandedIds.has(baseline.id);
@@ -716,7 +718,7 @@ export default function BaselineManagementPage() {
                 <div key={baseline.id}>
                   {/* 主行 */}
                   <div
-                    className="px-4 py-3 flex items-center justify-between hover:bg-canvas-subtle transition-colors cursor-pointer"
+                    className="yj-list-row px-4 py-3 flex items-center justify-between cursor-pointer"
                     onClick={() => toggleExpand(baseline.id)}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -779,7 +781,7 @@ export default function BaselineManagementPage() {
           </div>
 
           {filteredFiles.length === 0 && (
-            <div className="text-center py-12 text-fg-muted">
+            <div className="yj-empty-state min-h-[220px] text-fg-muted">
               暂无基线
             </div>
           )}

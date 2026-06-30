@@ -60,49 +60,42 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* 左侧 - 品牌展示区 */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden items-center justify-center bg-canvas-subtle">
-        {/* DNA 双螺旋动画 */}
-        <div className="absolute inset-0 text-accent-emphasis/20">
-          <DnaHelix />
-        </div>
+    <div className="yj-modern yj-public-shell flex min-h-screen">
+      <div
+        className="relative hidden items-center justify-center overflow-hidden bg-[var(--yj-panel-subtle)] lg:flex lg:w-1/2 xl:w-3/5"
+        style={{ color: 'rgba(26, 127, 55, 0.16)' }}
+      >
+        <DnaHelix />
       </div>
 
-      {/* 右侧 - 登录表单区 */}
-      <div className="flex-1 flex items-center justify-center bg-canvas-default p-8">
+      <div className="flex flex-1 items-center justify-center bg-[var(--yj-panel-bg)] p-8">
         <div className="w-full max-w-md">
-          {/* 移动端 Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-canvas-subtle rounded-2xl mb-4 shadow-sm">
+          <div className="mb-8 text-center lg:hidden">
+            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--yj-panel-subtle)] shadow-sm">
               <Image
                 src="/logo.svg"
-                alt="Schema"
+                alt="贻鉴"
                 width={40}
                 height={40}
                 className="object-contain"
               />
             </div>
-            <h1 className="text-2xl font-semibold text-fg-default">绳墨生物</h1>
-            <p className="text-fg-muted mt-1">遗传病基因组分析系统</p>
+            <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">贻鉴</h1>
+            <p className="mt-1 text-[var(--yj-text-muted)]">遗传病胚系突变分析平台</p>
           </div>
 
-          {/* 登录标题 */}
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-fg-default">贻鉴分析平台</h2>
-            <p className="text-fg-muted mt-1">请登录您的账号</p>
+            <h2 className="text-2xl font-semibold text-[var(--yj-text-strong)]">贻鉴分析平台</h2>
+            <p className="mt-1 text-[var(--yj-text-muted)]">请登录您的账号</p>
           </div>
 
-          {/* 登录表单 */}
           <form onSubmit={handleSubmit} className="login-form space-y-5">
-            {/* 错误提示 */}
             {error && (
-              <div className="p-3.5 rounded-xl bg-danger-subtle text-danger-fg text-sm">
+              <div className="yj-public-alert rounded-xl p-3.5 text-sm">
                 {error}
               </div>
             )}
 
-            {/* 用户名 */}
             <div>
               <Input
                 id="email"
@@ -112,11 +105,10 @@ export default function LoginPage() {
                 placeholder="邮箱"
                 autoComplete="email"
                 autoFocus
-                className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+                className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
               />
             </div>
 
-            {/* 密码 */}
             <div>
               <div className="relative">
                 <Input
@@ -126,73 +118,69 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="密码"
                   autoComplete="current-password"
-                  className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+                  className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-default transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted transition-colors hover:text-fg-default"
                   tabIndex={-1}
+                  aria-label={showPassword ? '隐藏密码' : '显示密码'}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
-            {/* 记住我 & 忘记密码 */}
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
+                  className="h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
-                <span className="text-fg-muted">记住我</span>
+                <span className="text-[var(--yj-text-muted)]">记住我</span>
               </label>
               <button type="button" className="text-success-fg hover:underline">
                 忘记密码？
               </button>
             </div>
 
-            {/* 用户隐私协议 */}
             {privacyConsentRequired && (
-              <label className="flex items-start gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-start gap-2">
                 <input
                   type="checkbox"
                   checked={agreePrivacy}
                   onChange={(e) => setAgreePrivacy(e.target.checked)}
-                  className="w-4 h-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis mt-0.5"
+                  className="mt-0.5 h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
-                <span className="text-sm text-fg-muted leading-relaxed">
+                <span className="text-sm leading-relaxed text-[var(--yj-text-muted)]">
                   我已阅读并同意{' '}
-                  <Link href="/privacy" target="_blank" className="text-success-fg hover:underline font-medium">
+                  <Link href="/privacy" target="_blank" className="font-medium text-success-fg hover:underline">
                     《用户隐私协议与免责声明》
                   </Link>
                 </span>
               </label>
             )}
 
-            {/* 登录按钮 */}
             <Button
               type="submit"
               variant="primary"
-              className="w-full !rounded-xl !h-12 !text-base font-medium shadow-sm hover:shadow-md transition-shadow"
+              className="yj-public-primary w-full !h-12 !rounded-xl !text-base font-medium transition-shadow"
               disabled={loading || (privacyConsentRequired && !agreePrivacy)}
-              leftIcon={loading ? undefined : <LogIn className="w-4 h-4" />}
+              leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
             >
               {loading ? '登录中...' : '登录'}
             </Button>
           </form>
 
-          {/* 注册入口 */}
-          <p className="text-center text-sm text-fg-muted mt-6">
+          <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
             没有账号？{' '}
-            <Link href="/register" className="text-success-fg hover:underline font-medium">
+            <Link href="/register" className="font-medium text-success-fg hover:underline">
               注册
             </Link>
           </p>
 
-          {/* 移动端底部信息 */}
-          <p className="lg:hidden text-center text-xs text-fg-muted mt-8">
+          <p className="mt-8 text-center text-xs text-[var(--yj-text-muted)] lg:hidden">
             © 2024 绳墨生物科技. All rights reserved.
           </p>
         </div>

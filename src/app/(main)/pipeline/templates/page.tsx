@@ -327,10 +327,12 @@ export default function ReportTemplatesPage() {
   const isFormValid = formData.name.trim() && formData.apiEndpoint && !nameError;
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">报告模板管理</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">报告模板管理</h2>
+      </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="yj-toolbar-panel">
         <div className="w-64">
           <Input
             placeholder="搜索模板..."

@@ -5,40 +5,40 @@ import Link from 'next/link';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-canvas-default">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="yj-modern yj-public-shell">
+      <div className="yj-legal-page">
         {/* 返回登录 */}
         <Link
           href="/login"
-          className="inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg-default transition-colors mb-6"
+          className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3.5 py-2 text-sm text-fg-muted shadow-sm transition-colors hover:text-fg-default"
         >
           <ArrowLeft className="w-4 h-4" />
           返回登录
         </Link>
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4 border border-blue-100">
-            <Shield className="w-8 h-8 text-blue-600" />
+        <div className="yj-panel mb-6 p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--yj-border-subtle)] bg-[var(--yj-sage-subtle)]">
+            <Shield className="h-7 w-7 text-success-fg" />
           </div>
-          <h1 className="text-2xl font-semibold text-fg-default mb-2">用户服务协议与隐私政策</h1>
-          <p className="text-fg-muted text-sm">贻鉴遗传病胚系突变分析平台</p>
+          <h1 className="mb-2 text-[30px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">用户服务协议与隐私政策</h1>
+          <p className="text-sm text-[var(--yj-text-muted)]">贻鉴遗传病胚系突变分析平台</p>
         </div>
 
         {/* 生效日期 */}
-        <div className="flex items-center gap-4 text-xs text-fg-muted mb-8 px-4 py-3 bg-canvas-subtle rounded-lg border border-border">
+        <div className="yj-info-panel mb-6 flex items-center gap-4 text-xs text-fg-muted">
           <span>发布日期：2026年6月26日</span>
           <span className="text-border">|</span>
           <span>生效日期：2026年6月26日</span>
         </div>
 
         {/* 重要声明 */}
-        <div className="mb-8 p-4 bg-red-50 rounded-lg border border-red-200">
+        <div className="yj-public-alert mb-6 rounded-[var(--yj-radius-panel)] p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-sm font-medium text-red-800 mb-1">特别提示</h3>
-              <p className="text-sm text-red-700 leading-relaxed">
+              <h3 className="text-sm font-medium mb-1">特别提示</h3>
+              <p className="text-sm leading-relaxed">
                 本平台处理人类遗传资源数据，请确保您的使用符合《中华人民共和国人类遗传资源管理条例》及相关法律法规要求。
                 使用本平台即表示您已充分阅读、理解并同意本协议的全部条款。
               </p>
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="yj-panel yj-legal-card space-y-8">
           {/* 第一条 定义与适用范围 */}
           <section>
             <h2 className="text-base font-semibold text-fg-default mb-3 flex items-center gap-2">
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
           </section>
 
           {/* 第五条 数据保留与删除策略 */}
-          <section className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <section className="rounded-[var(--yj-radius-panel)] border border-amber-200 bg-amber-50/80 p-4">
             <h2 className="text-base font-semibold text-amber-900 mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>第五条 数据保留与删除策略</span>
@@ -263,7 +263,7 @@ export default function PrivacyPage() {
           </section>
 
           {/* 附录：适用法律法规 */}
-          <section className="p-4 bg-canvas-subtle rounded-lg border border-border">
+          <section className="rounded-[var(--yj-radius-panel)] border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] p-4">
             <h2 className="text-sm font-medium text-fg-default mb-3">附录：本协议涉及的主要法律法规</h2>
             <ul className="text-xs text-fg-muted space-y-1.5 list-disc list-inside">
               <li>《中华人民共和国个人信息保护法》</li>

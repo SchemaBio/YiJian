@@ -17,11 +17,11 @@ export default function Error({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas">
-      <div className="text-center px-4 max-w-md">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-danger-subtle flex items-center justify-center">
+    <div className="yj-modern yj-public-shell flex items-center justify-center p-8">
+      <div className="yj-panel w-full max-w-md p-10 text-center">
+        <div className="yj-public-alert mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
           <svg
-            className="w-8 h-8 text-danger-fg"
+            className="w-8 h-8"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -42,7 +42,7 @@ export default function Error({ error, reset }: ErrorProps) {
         </p>
         <button
           onClick={reset}
-          className="inline-flex items-center px-4 py-2 rounded-md bg-accent-emphasis text-fg-on-emphasis hover:bg-accent-fg transition-colors"
+          className="yj-public-primary inline-flex items-center rounded-xl px-4 py-2 transition-colors"
         >
           重试
         </button>

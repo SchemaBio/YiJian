@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import Script from 'next/script';
 import { AppProviders } from '@/components/providers/AppProviders';
 import './globals.css';
 
@@ -29,7 +28,7 @@ export default async function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
-        <Script nonce={nonce} src="/runtime-config.js" strategy="beforeInteractive" />
+        <script nonce={nonce} src="/runtime-config.js" suppressHydrationWarning></script>
       </head>
       <body>
         <AppProviders>{children}</AppProviders>

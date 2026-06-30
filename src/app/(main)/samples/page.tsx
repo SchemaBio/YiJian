@@ -3,14 +3,70 @@
 import * as React from 'react';
 import { Button, Input, DataTable, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, Download, Upload, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle,
+  Database,
+  Download,
+  FileCheck,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  XCircle,
+} from 'lucide-react';
 import { NewSampleModal, EditSampleModal } from './components';
 import { mockSamples } from './mock-data';
 import type { Sample } from './types';
 import { GENDER_CONFIG } from './types';
 import type { EditSampleFormData } from './components';
 
-// 简化的ID显示组件（点击复制，无复制按钮）
+function ColumnHeader({ group, label }: { group: string; label: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-fg-muted">
+        {group}
+      </span>
+      <span className="text-xs font-semibold text-[var(--yj-text-strong)]">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  icon,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  tone?: 'neutral' | 'success' | 'warning';
+}) {
+  const toneClass = {
+    neutral: 'text-fg-muted bg-[var(--yj-panel-subtle)]',
+    success: 'text-green-700 bg-[var(--yj-sage-subtle)]',
+    warning: 'text-orange-700 bg-orange-50',
+  }[tone];
+
+  return (
+    <div className="min-w-[136px] rounded-2xl border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-4 py-3 shadow-[var(--yj-shadow-panel)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm text-fg-muted">{label}</div>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${toneClass}`}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-4 text-[24px] font-semibold leading-none tracking-tight text-[var(--yj-text-strong)]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function IdCell({ id }: { id: string }) {
   const [copied, setCopied] = React.useState(false);
 
@@ -24,10 +80,99 @@ function IdCell({ id }: { id: string }) {
   return (
     <Tooltip content={id} placement="top" variant="default">
       <span
-        className={`font-mono text-xs cursor-pointer ${copied ? 'text-green-500' : 'text-accent-fg hover:underline'}`}
+        className={`font-mono text-xs cursor-pointer ${
+          copied ? 'text-green-600' : 'text-accent-fg hover:underline'
+        }`}
         onClick={handleClick}
       >
         {id.substring(0, 8)}
+      </span>
+    </Tooltip>
+  );
+}
+
+function SubjectCell({ sample }: { sample: Sample }) {
+  const genderInfo = GENDER_CONFIG[sample.gender];
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className={`text-xs font-medium ${genderInfo.color}`}>
+        {genderInfo.label}
+      </span>
+      <span className="text-xs text-fg-muted">
+        {sample.age !== undefined ? `${sample.age}岁` : '年龄未知'}
+      </span>
+      <span className="rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-1.5 py-0.5 text-xs text-fg-default">
+        {sample.sampleType}
+      </span>
+    </div>
+  );
+}
+
+function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
+  if (!hpoTerms || hpoTerms.length === 0) {
+    return <span className="text-xs text-fg-muted">未录入</span>;
+  }
+
+  const visibleTerms = hpoTerms.slice(0, 2);
+  const hiddenCount = hpoTerms.length - visibleTerms.length;
+
+  return (
+    <Tooltip
+      content={
+        <div className="text-xs space-y-1">
+          {hpoTerms.map((term) => (
+            <div key={term.id}>
+              <span className="text-blue-300 font-mono">{term.id}</span>
+              <span className="text-gray-300 ml-1">{term.name}</span>
+            </div>
+          ))}
+        </div>
+      }
+    >
+      <div className="flex flex-wrap gap-1">
+        {visibleTerms.map((term) => (
+          <span
+            key={term.id}
+            className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[11px] text-blue-700"
+          >
+            {term.id}
+          </span>
+        ))}
+        {hiddenCount > 0 && (
+          <span className="inline-flex items-center rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-1.5 py-0.5 text-[11px] text-fg-muted">
+            +{hiddenCount}
+          </span>
+        )}
+      </div>
+    </Tooltip>
+  );
+}
+
+function MatchedCell({ sample }: { sample: Sample }) {
+  if (sample.matchedPair) {
+    return (
+      <Tooltip
+        content={
+          <div className="text-xs space-y-1">
+            <div><span className="text-gray-400">R1:</span> {sample.matchedPair.r1Path}</div>
+            <div><span className="text-gray-400">R2:</span> {sample.matchedPair.r2Path}</div>
+          </div>
+        }
+      >
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+          <CheckCircle className="h-3.5 w-3.5" />
+          已匹配
+        </span>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip content={<div className="text-xs text-gray-300">暂无匹配测序数据</div>}>
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">
+        <XCircle className="h-3.5 w-3.5" />
+        待匹配
       </span>
     </Tooltip>
   );
@@ -38,6 +183,13 @@ export default function SamplesPage() {
   const [isNewSampleModalOpen, setIsNewSampleModalOpen] = React.useState(false);
   const [editingSample, setEditingSample] = React.useState<Sample | null>(null);
   const [samples, setSamples] = React.useState<Sample[]>(mockSamples);
+  const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set());
+
+  const matchedCount = React.useMemo(
+    () => samples.filter((sample) => sample.matchedPair).length,
+    [samples]
+  );
+  const unmatchedCount = samples.length - matchedCount;
 
   const handleDownloadTemplate = () => {
     const templateContent = `样本编号,内部编号,性别,样本类型,批次,临床诊断
@@ -57,21 +209,24 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     if (!searchQuery) return samples;
     const query = searchQuery.toLowerCase();
     return samples.filter(
-      (s) => s.id.toLowerCase().includes(query) || s.internalId.toLowerCase().includes(query)
+      (sample) =>
+        sample.id.toLowerCase().includes(query) ||
+        sample.internalId.toLowerCase().includes(query) ||
+        sample.batch.toLowerCase().includes(query) ||
+        sample.clinicalDiagnosis.toLowerCase().includes(query)
     );
   }, [searchQuery, samples]);
 
   const handleEditSample = (id: string, data: EditSampleFormData) => {
-    setSamples(prev => prev.map(s => {
-      if (s.id !== id) return s;
+    setSamples((prev) => prev.map((sample) => {
+      if (sample.id !== id) return sample;
 
-      // 处理匹配数据
       const matchedPair = (data.r1Path && data.r2Path)
         ? { r1Path: data.r1Path, r2Path: data.r2Path }
         : null;
 
       return {
-        ...s,
+        ...sample,
         internalId: data.internalId,
         gender: data.gender,
         age: data.age,
@@ -87,203 +242,208 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
   };
 
   const handleDeleteSample = (id: string) => {
-    setSamples(prev => prev.filter(s => s.id !== id));
+    setSamples((prev) => prev.filter((sample) => sample.id !== id));
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     console.log('删除样本:', id);
   };
 
-  // 匹配状态单元格组件
-  const MatchedCell = ({ sample }: { sample: Sample }) => {
-    if (sample.matchedPair) {
-      return (
-        <Tooltip
-          content={
-            <div className="text-xs space-y-1">
-              <div><span className="text-gray-400">R1:</span> {sample.matchedPair.r1Path}</div>
-              <div><span className="text-gray-400">R2:</span> {sample.matchedPair.r2Path}</div>
-            </div>
-          }
-        >
-          <span className="inline-flex items-center justify-center">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-          </span>
-        </Tooltip>
-      );
-    }
-    return (
-      <Tooltip
-        content={
-          <div className="text-xs text-gray-400">
-            暂无匹配数据
-          </div>
-        }
-      >
-        <span className="inline-flex items-center justify-center">
-          <XCircle className="w-5 h-5 text-gray-300" />
-        </span>
-      </Tooltip>
-    );
-  };
-
-  // HPO单元格组件
-  const HpoCell = ({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) => {
-    if (!hpoTerms || hpoTerms.length === 0) {
-      return <span className="text-fg-muted">-</span>;
-    }
-    return (
-      <Tooltip
-        content={
-          <div className="text-xs space-y-1">
-            {hpoTerms.map(term => (
-              <div key={term.id}>
-                <span className="text-blue-400 font-mono">{term.id}</span>
-                <span className="text-gray-300 ml-1">{term.name}</span>
-              </div>
-            ))}
-          </div>
-        }
-      >
-        <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 text-xs">
-          {hpoTerms.map(term => (
-            <span key={term.id} className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 truncate">
-              {term.id}
-            </span>
-          ))}
-        </div>
-      </Tooltip>
-    );
+  const handleSelectionChange = (nextSelection: Set<string>) => {
+    const latest = Array.from(nextSelection).slice(-1);
+    setSelectedRows(new Set(latest));
   };
 
   const columns: Column<Sample>[] = [
     {
       id: 'sample',
-      header: '样本编号',
-      accessor: (row) => <IdCell id={row.id} />,
-      width: 120,
-    },
-    {
-      id: 'internalId',
-      header: '内部编号',
-      accessor: 'internalId',
-      width: 90,
+      header: <ColumnHeader group="标识" label="样本 / 内部编号" />,
+      accessor: (row) => (
+        <div className="flex flex-col gap-1">
+          <IdCell id={row.id} />
+          <span className="font-mono text-xs text-fg-muted">{row.internalId}</span>
+        </div>
+      ),
+      width: 145,
+      pinned: 'left',
     },
     {
       id: 'batch',
-      header: '批次',
-      accessor: 'batch',
-      width: 120,
+      header: <ColumnHeader group="标识" label="批次" />,
+      accessor: (row) => <span className="font-mono text-xs">{row.batch}</span>,
+      width: 140,
     },
     {
-      id: 'gender',
-      header: '性别',
-      accessor: (row) => {
-        const genderInfo = GENDER_CONFIG[row.gender];
-        return <span className={genderInfo.color}>{genderInfo.label}</span>;
-      },
-      width: 50,
-      align: 'center',
-    },
-    {
-      id: 'age',
-      header: '年龄',
-      accessor: (row) => row.age !== undefined ? `${row.age}岁` : '-',
-      width: 60,
-      align: 'center',
-    },
-    {
-      id: 'sampleType',
-      header: '样本类型',
-      accessor: 'sampleType',
-      width: 70,
-      align: 'center',
+      id: 'subject',
+      header: <ColumnHeader group="受检者" label="性别 / 年龄 / 类型" />,
+      accessor: (row) => <SubjectCell sample={row} />,
+      width: 150,
     },
     {
       id: 'clinicalDiagnosis',
-      header: '临床诊断',
-      accessor: 'clinicalDiagnosis',
-      width: 160,
+      header: <ColumnHeader group="临床" label="临床诊断" />,
+      accessor: (row) => (
+        <span className="block max-w-[220px] truncate text-sm text-fg-default" title={row.clinicalDiagnosis}>
+          {row.clinicalDiagnosis}
+        </span>
+      ),
+      width: 210,
     },
     {
       id: 'hpoTerms',
-      header: 'HPO',
+      header: <ColumnHeader group="临床" label="HPO 表型" />,
       accessor: (row) => <HpoCell hpoTerms={row.hpoTerms} />,
-      width: 160,
-      align: 'center',
+      width: 175,
     },
     {
       id: 'matchedPair',
-      header: '数据匹配',
+      header: <ColumnHeader group="数据" label="测序数据" />,
       accessor: (row) => <MatchedCell sample={row} />,
-      width: 80,
+      width: 132,
       align: 'center',
     },
     {
       id: 'remark',
-      header: '备注',
+      header: <ColumnHeader group="追踪" label="备注" />,
       accessor: (row) => (
-        <span className={row.remark ? 'text-fg-default truncate block max-w-[100px]' : 'text-fg-muted'}>
-          {row.remark || '-'}
+        <span className={row.remark ? 'block max-w-[180px] truncate text-sm text-fg-default' : 'text-xs text-fg-muted'}>
+          {row.remark || '无'}
         </span>
       ),
-      width: 100,
+      width: 170,
     },
     {
       id: 'createdAt',
-      header: '创建时间',
-      accessor: 'createdAt',
-      width: 150,
+      header: <ColumnHeader group="追踪" label="创建时间" />,
+      accessor: (row) => (
+        <span className="font-mono text-xs text-fg-muted">{row.createdAt}</span>
+      ),
+      width: 155,
     },
     {
       id: 'actions',
-      header: '操作',
+      header: <ColumnHeader group="操作" label="动作" />,
       accessor: (row) => (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>
           <button
-            className="p-1.5 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
             onClick={() => setEditingSample(row)}
             aria-label="编辑"
+            title="编辑"
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="h-4 w-4" />
           </button>
           <button
-            className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
             onClick={() => handleDeleteSample(row.id)}
             aria-label="删除"
+            title="删除"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       ),
-      width: 70,
+      width: 82,
       align: 'center',
+      pinned: 'right',
     },
   ];
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1">
-        <div className="p-6 h-full overflow-auto">
-          <h2 className="text-lg font-medium text-fg-default mb-4">样本管理</h2>
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-64">
-              <Input placeholder="搜索样本编号、内部编号..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" leftIcon={<Download className="w-4 h-4" />} onClick={handleDownloadTemplate}>下载模板</Button>
-              <Button variant="secondary" leftIcon={<Upload className="w-4 h-4" />}>批量导入</Button>
-              <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewSampleModalOpen(true)}>新建样本</Button>
-            </div>
-          </div>
-          <DataTable
-            data={filteredSamples}
-            columns={columns}
-            rowKey="id"
-            striped
-            density="compact"
+    <div className="h-full overflow-auto p-6 xl:p-8">
+      <div className="mb-6 flex items-end justify-between gap-6">
+        <div>
+          <h2 className="text-[32px] font-semibold leading-tight tracking-tight text-[var(--yj-text-strong)]">
+            样本管理
+          </h2>
+          <p className="mt-2 text-sm text-fg-muted">
+            管理样本登记、临床信息和测序数据匹配状态
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <MetricTile
+            label="样本总数"
+            value={samples.length}
+            icon={<Database className="h-4 w-4" />}
+          />
+          <MetricTile
+            label="已匹配"
+            value={matchedCount}
+            icon={<FileCheck className="h-4 w-4" />}
+            tone="success"
+          />
+          <MetricTile
+            label="待匹配"
+            value={unmatchedCount}
+            icon={<AlertCircle className="h-4 w-4" />}
+            tone="warning"
           />
         </div>
       </div>
 
-      <NewSampleModal isOpen={isNewSampleModalOpen} onClose={() => setIsNewSampleModalOpen(false)} onSubmit={(data) => console.log('新建样本:', data)} />
+      <div className="yj-panel overflow-hidden">
+        <div className="yj-panel-header gap-4 px-5 py-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="w-[380px]">
+              <Input
+                id="samples-search"
+                placeholder="搜索样本编号、内部编号、批次或诊断..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftElement={<Search className="h-4 w-4" />}
+              />
+            </div>
+            <span className="text-sm text-fg-muted">
+              当前显示 {filteredSamples.length} / {samples.length} 条
+            </span>
+          </div>
+          <div className="yj-toolbar shrink-0">
+            <Button
+              variant="secondary"
+              leftIcon={<Download className="h-4 w-4" />}
+              onClick={handleDownloadTemplate}
+            >
+              下载模板
+            </Button>
+            <Button variant="secondary" leftIcon={<Upload className="h-4 w-4" />}>
+              批量导入
+            </Button>
+            <Button
+              variant="primary"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setIsNewSampleModalOpen(true)}
+            >
+              新建样本
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <DataTable
+            data={filteredSamples}
+            columns={columns}
+            rowKey="id"
+            selectable
+            selectionMode="single"
+            selectedRows={selectedRows}
+            onSelectionChange={handleSelectionChange}
+            onRowClick={(row) => setSelectedRows(new Set([row.id]))}
+            onRowDoubleClick={(row) => setEditingSample(row)}
+            striped
+            stickyHeader
+            density="compact"
+            className="yj-data-table"
+          />
+        </div>
+      </div>
+
+      <NewSampleModal
+        isOpen={isNewSampleModalOpen}
+        onClose={() => setIsNewSampleModalOpen(false)}
+        onSubmit={(data) => console.log('新建样本:', data)}
+      />
 
       <EditSampleModal
         isOpen={editingSample !== null}

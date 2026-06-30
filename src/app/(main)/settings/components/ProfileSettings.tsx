@@ -57,7 +57,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="yj-panel yj-form-card-wide space-y-8">
       {/* 账户信息 */}
       <section>
         <h3 className="text-base font-medium text-fg-default mb-4">账户信息</h3>
@@ -93,7 +93,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       </section>
 
       {/* 保存按钮 */}
-      <div className="pt-4 border-t border-border">
+      <div className="pt-4 border-t border-[var(--yj-border-subtle)] flex justify-end">
         <Button
           variant="primary"
           leftIcon={<Save className="w-4 h-4" />}

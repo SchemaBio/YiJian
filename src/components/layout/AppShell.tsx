@@ -185,7 +185,7 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="h-screen flex bg-canvas">
+    <div className="yj-modern h-screen flex yj-workspace text-fg-default">
       {/* Sidebar */}
       <SidebarNav
         collapsed={collapsed}
@@ -195,31 +195,31 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-canvas shrink-0">
+        <header className="h-14 flex items-center justify-between px-5 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-workspace-bg)] shrink-0">
           {/* Left: Breadcrumbs */}
           <div className="flex-1 min-w-0">
             {breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} />}
           </div>
 
           {/* Right: Settings + About */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href="/settings"
-              className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-canvas-inset transition-colors"
+              className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
               aria-label="系统设置"
             >
               <Settings className="w-5 h-5" />
             </Link>
             <Link
               href="/about"
-              className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-canvas-inset transition-colors"
+              className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
               aria-label="关于"
             >
               <Info className="w-5 h-5" />
             </Link>
             <Link
               href="/privacy"
-              className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-canvas-inset transition-colors"
+              className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
               aria-label="隐私协议"
             >
               <Shield className="w-5 h-5" />
@@ -228,7 +228,7 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-[var(--yj-workspace-bg)]">
           {children}
         </main>
       </div>

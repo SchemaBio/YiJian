@@ -761,9 +761,11 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
           </div>
       ) : (
         <div className="flex-1">
-          <div className="p-6 h-full overflow-auto">
-            <h2 className="text-lg font-medium text-fg-default mb-4">家系管理</h2>
-            <div className="flex items-center justify-between mb-4">
+          <div className="p-6 xl:p-8 h-full overflow-auto yj-page-shell">
+            <div className="yj-page-header">
+              <h2 className="yj-page-title">家系管理</h2>
+            </div>
+            <div className="yj-toolbar-panel">
               <div className="w-64">
                 <Input placeholder="搜索家系编号、内部编号、样本..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
               </div>

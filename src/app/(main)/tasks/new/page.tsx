@@ -67,12 +67,14 @@ export default function NewAnalysisPage() {
   };
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">新建分析任务</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">新建分析任务</h2>
+      </div>
 
-      <div className="max-w-2xl space-y-6">
+      <div className="yj-panel yj-form-card space-y-6">
         {/* 任务ID显示 */}
-        <div className="p-4 bg-canvas-subtle rounded-lg border border-border">
+        <div className="yj-info-panel">
           <div className="flex items-center gap-2 mb-2">
             <Info className="w-4 h-4 text-fg-muted" />
             <span className="text-sm font-medium text-fg-default">任务ID</span>
@@ -154,7 +156,7 @@ export default function NewAnalysisPage() {
         </div>
 
         {/* 提交按钮 */}
-        <div className="pt-4 border-t border-border">
+        <div className="pt-5 border-t border-[var(--yj-border-subtle)] flex items-center justify-end">
           <Button
             variant="primary"
             leftIcon={<Play className="w-4 h-4" />}

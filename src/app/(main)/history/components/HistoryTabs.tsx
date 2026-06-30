@@ -48,7 +48,7 @@ export function HistoryTabs({ activeTab, onTabChange, children }: HistoryTabsPro
   return (
     <div>
       {/* 标签页导航 */}
-      <div className="border-b border-border-default mb-4">
+      <div className="yj-panel p-1.5 mb-4">
         <nav
           className="flex gap-1"
           role="tablist"
@@ -70,11 +70,11 @@ export function HistoryTabs({ activeTab, onTabChange, children }: HistoryTabsPro
                 onClick={() => onTabChange(tab.id)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 className={`
-                  px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+                  rounded-[12px] px-4 py-2.5 text-sm font-medium transition-colors
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis focus-visible:ring-offset-2
                   ${isActive
-                    ? 'border-accent-emphasis text-accent-fg'
-                    : 'border-transparent text-fg-muted hover:text-fg-default hover:border-border-default'
+                    ? 'bg-[var(--yj-sage)] text-[var(--yj-text-strong)] shadow-sm'
+                    : 'text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-subtle)]'
                   }
                 `}
               >

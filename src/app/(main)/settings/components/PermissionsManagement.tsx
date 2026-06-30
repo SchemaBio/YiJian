@@ -114,7 +114,7 @@ export function PermissionsManagement() {
   return (
     <div className="space-y-6">
       {/* 权限规则说明 */}
-      <div className="bg-canvas-subtle rounded-lg p-4 border border-border">
+      <div className="yj-info-panel">
         <h3 className="text-sm font-medium text-fg-default mb-3">权限规则说明</h3>
         <div className="space-y-2 text-xs text-fg-muted">
           <p><strong className="text-fg-default">基础权限：</strong>所有角色都可以查看所有页面</p>
@@ -127,7 +127,7 @@ export function PermissionsManagement() {
       {/* 角色说明卡片 */}
       <div className="grid grid-cols-3 gap-4">
         {ROLES.map((role) => (
-          <div key={role.id} className="bg-canvas-default rounded-lg border border-border p-4">
+          <div key={role.id} className="yj-panel p-4">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="w-4 h-4 text-accent-fg" />
               <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
@@ -365,7 +365,7 @@ function UserManagement({ users, setUsers }: UserManagementProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="yj-toolbar-panel">
         <div className="w-64">
           <Input
             placeholder="搜索用户..."

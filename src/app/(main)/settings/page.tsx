@@ -13,8 +13,10 @@ const mockCurrentUser = {
 
 export default function SettingsProfilePage() {
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">个人设置</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">个人设置</h2>
+      </div>
       <ProfileSettings user={mockCurrentUser} />
     </PageContent>
   );

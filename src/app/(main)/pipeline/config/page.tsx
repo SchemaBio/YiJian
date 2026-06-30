@@ -28,10 +28,12 @@ export default function PipelineConfigPage() {
   };
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">流程配置</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">流程配置</h2>
+      </div>
 
-      <div className="max-w-2xl space-y-8">
+      <div className="yj-panel yj-form-card-wide space-y-8">
         {/* 基本配置 */}
         <section>
           <h3 className="text-sm font-medium text-fg-default mb-4 pb-2 border-b border-border">

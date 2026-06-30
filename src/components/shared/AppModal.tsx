@@ -9,6 +9,7 @@ import {
   Button,
 } from '@schema/ui-kit';
 import type { ModalSize } from '@schema/ui-kit';
+import { cn } from '@/lib/utils';
 
 export interface AppModalProps {
   /** Whether the modal is open */
@@ -71,7 +72,7 @@ export function AppModal({
       size={size}
       closeOnOverlayClick={closeOnOverlayClick}
       closeOnEscape={closeOnEscape}
-      className={className}
+      className={cn('rounded-2xl border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]', className)}
     >
       <ModalHeader showCloseButton={showCloseButton}>
         {title}

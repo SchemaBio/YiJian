@@ -263,10 +263,12 @@ export default function GeneListPage() {
   }, [searchQuery, geneLists]);
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">基因列表管理</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">基因列表管理</h2>
+      </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="yj-toolbar-panel">
         <div className="w-64">
           <Input
             placeholder="搜索基因列表..."
@@ -281,7 +283,7 @@ export default function GeneListPage() {
       </div>
 
       {/* 列表展示 */}
-      <div className="bg-canvas-default rounded-lg border border-border overflow-hidden">
+      <div className="yj-list-panel">
         <div className="divide-y divide-border">
           {filteredLists.map((list) => {
             const isExpanded = expandedIds.has(list.id);
@@ -289,7 +291,7 @@ export default function GeneListPage() {
               <div key={list.id}>
                 {/* 主行 */}
                 <div
-                  className="px-4 py-3 flex items-center justify-between hover:bg-canvas-subtle transition-colors cursor-pointer"
+                  className="yj-list-row px-4 py-3 flex items-center justify-between cursor-pointer"
                   onClick={() => toggleExpand(list.id)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -351,7 +353,7 @@ export default function GeneListPage() {
         </div>
 
         {filteredLists.length === 0 && (
-          <div className="text-center py-12 text-fg-muted">
+          <div className="yj-empty-state min-h-[220px] text-fg-muted">
             <p>暂无基因列表</p>
           </div>
         )}

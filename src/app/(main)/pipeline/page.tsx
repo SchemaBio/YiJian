@@ -458,10 +458,12 @@ export default function PipelineListPage() {
   ];
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">流程列表</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">流程列表</h2>
+      </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="yj-toolbar-panel">
         <div className="w-64">
           <Input
             placeholder="搜索流程..."

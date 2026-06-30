@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button, Input } from '@schema/ui-kit';
 import { UserPlus } from 'lucide-react';
 import { ApiError, clearLegacyAuthTokens } from '@/lib/api';
@@ -73,66 +74,77 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas-default p-8">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold text-fg-default">创建账号</h2>
-          <p className="text-fg-muted mt-1">注册您的研究团队和账号</p>
+    <div className="yj-modern yj-public-shell flex items-center justify-center p-8">
+      <div className="yj-panel yj-auth-card yj-auth-single">
+        <div className="mb-8">
+          <div className="yj-brand-lockup mb-8">
+            <span className="yj-brand-mark">
+              <Image src="/logo.svg" alt="贻鉴" width={28} height={28} className="object-contain" />
+            </span>
+            <span>贻鉴</span>
+          </div>
+          <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">创建账号</h2>
+          <p className="mt-2 text-sm text-[var(--yj-text-muted)]">注册您的研究团队和账号</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3.5 rounded-xl bg-danger-subtle text-danger-fg text-sm">
+            <div className="yj-public-alert rounded-[var(--yj-radius-panel)] p-3.5 text-sm">
               {error}
             </div>
           )}
 
           <Input
+            id="register-name"
             type="text"
             value={form.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="姓名 *"
-            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
+            id="register-email"
             type="email"
             value={form.email}
             onChange={(e) => handleChange('email', e.target.value)}
             placeholder="邮箱 *"
             autoComplete="email"
-            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
+            id="register-password"
             type="password"
             value={form.password}
             onChange={(e) => handleChange('password', e.target.value)}
             placeholder="密码 *"
             autoComplete="new-password"
-            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
+            id="register-org-name"
             type="text"
             value={form.orgName}
             onChange={(e) => handleChange('orgName', e.target.value)}
             placeholder="团队/机构名称 *"
-            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Input
+            id="register-org-slug"
             type="text"
             value={form.orgSlug}
             onChange={(e) => handleChange('orgSlug', e.target.value)}
             placeholder="团队标识 (URL slug, 如 mylab) *"
-            className="!rounded-xl !h-12 text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
           />
 
           <Button
             type="submit"
             variant="primary"
-            className="w-full !rounded-2xl !h-12 !text-base font-medium shadow-sm hover:shadow-md transition-shadow"
+            className="yj-public-primary w-full !h-12 !rounded-xl !text-base font-medium transition-shadow"
             disabled={loading}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
@@ -141,7 +153,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-fg-muted">
             已有账号？{' '}
-            <Link href="/login" className="text-success-fg hover:underline">
+            <Link href="/login" className="font-medium text-success-fg hover:underline">
               登录
             </Link>
           </p>

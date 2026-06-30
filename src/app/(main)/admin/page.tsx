@@ -284,15 +284,19 @@ export default function AdminPage() {
   ];
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">管理中心</h2>
-      <p className="text-sm text-fg-muted mb-6">
-        管理组织账户、系统路径配置和 AI 服务配置。
-      </p>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <div>
+          <h2 className="yj-page-title">管理中心</h2>
+          <p className="yj-page-subtitle">
+            管理组织账户、系统路径配置和 AI 服务配置。
+          </p>
+        </div>
+      </div>
 
       <div className="space-y-8">
         {/* 权限规则说明 */}
-        <div className="bg-canvas-subtle rounded-lg p-4 border border-border">
+        <div className="yj-info-panel">
           <h3 className="text-sm font-medium text-fg-default mb-3">权限规则说明</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-fg-muted">
             <div>
@@ -316,7 +320,7 @@ export default function AdminPage() {
 
         {/* 组织账户管理 */}
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="yj-toolbar-panel">
             <div>
               <h3 className="text-base font-medium text-fg-default flex items-center gap-2">
                 <Users className="w-5 h-5" />
@@ -337,7 +341,7 @@ export default function AdminPage() {
             <FolderOutput className="w-5 h-5" />
             路径配置
           </h3>
-          <div className="bg-canvas-default rounded-lg border border-border p-4">
+          <div className="yj-panel p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-fg-default mb-1.5">结果输出主路径</label>
@@ -371,7 +375,7 @@ export default function AdminPage() {
             <Bot className="w-5 h-5" />
             OpenAI 兼容 API 配置
           </h3>
-          <div className="bg-canvas-default rounded-lg border border-border p-4">
+          <div className="yj-panel p-4">
             {/* AI 助手开关 */}
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
               <div>
@@ -419,7 +423,7 @@ export default function AdminPage() {
         </section>
 
         {/* 保存按钮 */}
-        <div className="pt-4 border-t border-border">
+        <div className="pt-4 border-t border-[var(--yj-border-subtle)] flex justify-end">
           <Button
             variant="primary"
             leftIcon={<Save className="w-4 h-4" />}

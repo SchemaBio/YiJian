@@ -49,15 +49,15 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
   return (
     <aside
       className={`
-        flex flex-col bg-canvas-subtle border-r border-border
+        flex flex-col bg-[var(--yj-workspace-rail)] border-r border-[var(--yj-border-subtle)]
         transition-[width] duration-normal ease-default shrink-0
-        ${collapsed ? 'w-16' : 'w-60'}
+        ${collapsed ? 'w-16' : 'w-[244px]'}
       `}
       data-collapsed={collapsed}
     >
       {/* Logo + Collapse Button */}
       <div className={`
-        flex items-center h-12 border-b border-border px-3
+        flex items-center h-14 border-b border-[var(--yj-border-subtle)] px-3
         ${collapsed ? 'justify-center' : 'justify-between'}
       `}>
         {collapsed ? (
@@ -89,7 +89,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
                 className="object-contain"
               />
             </div>
-            <span className="ml-2 font-semibold text-fg-default truncate">
+            <span className="ml-2 font-semibold text-[15px] text-fg-default truncate">
               贻鉴
             </span>
           </div>
@@ -97,7 +97,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
         {!collapsed && (
           <button
             onClick={() => onCollapsedChange(true)}
-            className="p-1.5 rounded-md text-fg-muted hover:text-fg-default hover:bg-canvas-inset transition-colors duration-fast shrink-0"
+            className="p-1.5 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors duration-fast shrink-0"
             aria-label="折叠侧边栏"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -106,13 +106,13 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
       </div>
 
       {/* Organization Switcher */}
-      <div className="border-b border-border px-2">
+      <div className="border-b border-[var(--yj-border-subtle)] px-3">
         <OrganizationSwitcher collapsed={collapsed} />
       </div>
 
       {/* Main Navigation */}
-      <nav className="py-2 border-b border-border">
-        <ul className="space-y-1 px-2">
+      <nav className="py-2.5 border-b border-[var(--yj-border-subtle)]">
+        <ul className="space-y-0.5 px-2">
           {mainNavItems.map((item) => (
             <MainNavItemComponent
               key={item.href}
@@ -127,14 +127,14 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
       {/* Sub Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2">
         {!collapsed && subItems.length > 0 && (
-          <div className="px-3 mb-2">
-            <span className="text-xs font-medium text-fg-muted uppercase tracking-wider">
+          <div className="px-3 mb-1.5">
+            <span className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">
               {mainNavItems.find(item => item.href.includes(currentSection))?.label || 
                 (currentSection === 'settings' ? '系统设置' : '子菜单')}
             </span>
           </div>
         )}
-        <ul className="space-y-1 px-2">
+        <ul className="space-y-0.5 px-2">
           {subItems.map((item) => (
             <SubNavItemComponent
               key={item.href}
@@ -147,7 +147,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
       </nav>
 
       {/* Bottom section: User Menu */}
-      <div className="border-t border-border p-2 mt-auto flex justify-center">
+      <div className="border-t border-[var(--yj-border-subtle)] p-2 mt-auto flex justify-center">
         <UserMenu collapsed={collapsed} />
       </div>
     </aside>
@@ -168,12 +168,12 @@ function MainNavItemComponent({ item, collapsed, currentPath }: MainNavItemCompo
     <Link
       href={item.href}
       className={`
-        flex items-center gap-3 px-3 py-2 rounded-md text-sm
-        transition-colors duration-fast
+        relative flex items-center gap-3 px-3 py-2 rounded-md text-sm
+        transition-all duration-fast
         ${
           isActive
-            ? 'bg-accent-subtle text-accent-fg font-medium'
-            : 'text-fg-default hover:bg-canvas-inset'
+            ? 'bg-[var(--yj-sage)] text-[#17310f] font-medium'
+            : 'text-fg-default hover:bg-[var(--yj-panel-subtle)] hover:text-fg-default'
         }
         ${collapsed ? 'justify-center' : ''}
       `}
@@ -205,7 +205,11 @@ interface SubNavItemComponentProps {
 
 function SubNavItemComponent({ item, collapsed, currentPath }: SubNavItemComponentProps) {
   const router = useRouter();
-  const isActive = item.href === currentPath || (item.href !== '/samples' && currentPath.startsWith(item.href));
+  const itemSegments = item.href.split('/').filter(Boolean);
+  const isSectionRoot = itemSegments.length === 1;
+  const isActive = isSectionRoot
+    ? item.href === currentPath
+    : item.href === currentPath || currentPath.startsWith(`${item.href}/`);
   const Icon = item.icon;
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -221,12 +225,12 @@ function SubNavItemComponent({ item, collapsed, currentPath }: SubNavItemCompone
       href={item.href}
       onClick={handleClick}
       className={`
-        flex items-center gap-3 px-3 py-2 rounded-md text-sm
-        transition-colors duration-fast
+        relative flex items-center gap-3 px-3 py-2 rounded-md text-sm
+        transition-all duration-fast
         ${
           isActive
-            ? 'bg-canvas-inset text-fg-default font-medium'
-            : 'text-fg-muted hover:text-fg-default hover:bg-canvas-inset'
+            ? 'bg-[var(--yj-sage-subtle)] text-fg-default font-medium'
+            : 'text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-subtle)]'
         }
         ${collapsed ? 'justify-center' : ''}
       `}

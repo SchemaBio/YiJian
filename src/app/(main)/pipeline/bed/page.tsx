@@ -108,16 +108,18 @@ export default function BedFilesPage() {
   ];
 
   return (
-    <PageContent>
-      <h2 className="text-lg font-medium text-fg-default mb-4">BED 文件管理</h2>
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <h2 className="yj-page-title">BED 文件管理</h2>
+      </div>
 
-      <div className="p-4 bg-canvas-subtle rounded-lg border border-border mb-4">
+      <div className="yj-info-panel mb-4">
         <p className="text-sm text-fg-muted">
           BED 文件定义了目标捕获区域，用于变异检测和质控分析。支持 hg19/hg38 参考基因组。
         </p>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="yj-toolbar-panel">
         <div className="w-64">
           <Input
             placeholder="搜索文件..."

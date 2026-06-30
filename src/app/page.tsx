@@ -22,8 +22,8 @@ export default function HomePage() {
 
   // 显示加载状态
   return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas-subtle">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
+    <div className="yj-modern yj-public-shell flex items-center justify-center">
+      <div className="yj-public-spinner" />
     </div>
   );
 }

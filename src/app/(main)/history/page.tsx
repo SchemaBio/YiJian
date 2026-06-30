@@ -83,12 +83,14 @@ export default function HistoryPage() {
   }, [activeTab, filterState, setFilterState]);
 
   return (
-    <PageContent>
-      <div className="mb-4">
-        <h2 className="text-lg font-medium text-fg-default">历史检出统计</h2>
-        <p className="text-sm text-fg-muted mt-1">
+    <PageContent className="yj-page-shell">
+      <div className="yj-page-header">
+        <div>
+          <h2 className="yj-page-title">历史检出统计</h2>
+          <p className="yj-page-subtitle">
           统计所有任务中已审核通过的位点，按变异类型分类展示
-        </p>
+          </p>
+        </div>
       </div>
 
       <HistoryTabs activeTab={activeTab} onTabChange={handleTabChange}>
