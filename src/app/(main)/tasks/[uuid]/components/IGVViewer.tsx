@@ -43,6 +43,10 @@ export interface IGVTrackConfig {
   color?: string;
 }
 
+function igvWebURL(locus: string, genome: string): string {
+  return `https://igv.org/app/?locus=${encodeURIComponent(locus)}&genome=${encodeURIComponent(genome)}`;
+}
+
 /**
  * 格式化染色体名称（添加 chr 前缀）
  */
@@ -162,7 +166,7 @@ export function IGVViewer({
         <span className="px-2 py-0.5 text-sm bg-canvas-subtle rounded text-fg-muted">{locus}</span>
         <span className="text-xs text-fg-muted">({genomeLabel})</span>
         <a
-          href={`https://igv.org/app/?locus=${locus}&genome=${genome || genomeLabel}`}
+          href={igvWebURL(locus, genome || genomeLabel)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors ml-auto"

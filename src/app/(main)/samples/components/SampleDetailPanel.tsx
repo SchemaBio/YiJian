@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { Tag, Button, Input, Select, TextArea } from '@schema/ui-kit';
+import { Tag, Button, Input } from '@schema/ui-kit';
 import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Pencil, Save, X, Search } from 'lucide-react';
-import { getSampleDetail } from '../mock-data';
+import { api } from '@/lib/api';
+import { getSampleDetail, normalizeSampleDetail, sampleDetailPayload } from '@/lib/samples';
 import type { SampleDetail } from '../types';
 import { GENDER_CONFIG } from '../types';
 
@@ -73,7 +73,7 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-// 常用HPO术语列表（模拟数据）
+// 内置常用 HPO 快捷建议；不是后端样本数据。
 const COMMON_HPO_TERMS = [
   { id: 'HP:0001250', name: '癫痫发作' },
   { id: 'HP:0001249', name: '智力障碍' },
@@ -147,29 +147,40 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
   const [activeTab, setActiveTab] = React.useState<TabType>('basic');
   const [isEditing, setIsEditing] = React.useState(false);
   const [editData, setEditData] = React.useState<Partial<SampleDetail>>({});
+  const [error, setError] = React.useState('');
 
   React.useEffect(() => {
     async function loadSample() {
       setLoading(true);
-      const data = await getSampleDetail(sampleId);
-      setSample(data);
-      if (data) {
-        setEditData(data);
+      try {
+        const data = await getSampleDetail(sampleId);
+        setSample(data);
+        if (data) {
+          setEditData(data);
+        }
+        setError('');
+      } catch (err) {
+        setSample(null);
+        setError(err instanceof Error ? err.message : 'Failed to load sample');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadSample();
   }, [sampleId]);
 
-  const handleEditChange = (field: string, value: string) => {
-    setEditData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editData) {
-      setSample(editData as SampleDetail);
-      setIsEditing(false);
-      console.log('保存样本数据:', editData);
+      try {
+        const updated = await api.put<unknown>(`/v1/samples/${encodeURIComponent(sampleId)}`, sampleDetailPayload(editData));
+        const next = normalizeSampleDetail({ ...editData, ...updated });
+        setSample(next);
+        setEditData(next);
+        setIsEditing(false);
+        setError('');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save sample');
+      }
     }
   };
 
@@ -191,7 +202,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
   if (!sample) {
     return (
       <div className="flex items-center justify-center py-16 text-fg-muted">
-        未找到该样本
+        {error || '未找到该样本'}
       </div>
     );
   }
@@ -457,6 +468,11 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
     <div className="p-4">
       {/* 样本信息头部 */}
       <div className="mb-4 pb-3 border-b border-border-default">
+        {error && (
+          <div className="mb-3 rounded-md border border-danger-emphasis bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+            {error}
+          </div>
+        )}
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">{sample.internalId}</h3>

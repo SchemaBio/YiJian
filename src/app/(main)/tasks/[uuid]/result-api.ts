@@ -26,6 +26,20 @@ export const ACMG_CONFIG: Record<ACMGClassification, { label: string; variant: '
   Benign: { label: '良性', variant: 'success' },
 };
 
+const ACMG_ALIASES: Record<string, ACMGClassification> = {
+  pathogenic: 'Pathogenic',
+  likely_pathogenic: 'Likely_Pathogenic',
+  likelypathogenic: 'Likely_Pathogenic',
+  lp: 'Likely_Pathogenic',
+  vus: 'VUS',
+  uncertain_significance: 'VUS',
+  variant_of_uncertain_significance: 'VUS',
+  likely_benign: 'Likely_Benign',
+  likelybenign: 'Likely_Benign',
+  lb: 'Likely_Benign',
+  benign: 'Benign',
+};
+
 export interface GeneListOption {
   id: string;
   name: string;
@@ -60,6 +74,11 @@ function n(value: unknown, fallback = 0): number {
   if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value);
     if (Number.isFinite(parsed)) return parsed;
+    const firstNumber = value.match(/-?\d+(?:\.\d+)?/);
+    if (firstNumber) {
+      const parsedTextNumber = Number(firstNumber[0]);
+      if (Number.isFinite(parsedTextNumber)) return parsedTextNumber;
+    }
   }
   return fallback;
 }
@@ -84,6 +103,15 @@ function arr(value: unknown): string[] {
     return trimmed.split(/[,;|]/).map(item => item.trim()).filter(Boolean);
   }
   return [];
+}
+
+function nums(value: unknown): number[] {
+  if (typeof value === 'number' && Number.isFinite(value)) return [value];
+  if (Array.isArray(value)) return value.flatMap(nums);
+  if (typeof value !== 'string') return [];
+  return Array.from(value.matchAll(/-?\d+(?:\.\d+)?/g))
+    .map(match => Number(match[0]))
+    .filter(Number.isFinite);
 }
 
 function normalizeReview(row: BackendRow): VariantReviewStatus {
@@ -121,25 +149,47 @@ function normalizePage<T, U>(
   };
 }
 
-function params(filterState: TableFilterState): Record<string, string> {
+type ResultQueryType = 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh';
+
+function params(type: ResultQueryType, filterState: TableFilterState): Record<string, string> {
   const result: Record<string, string> = {
     page: String(filterState.page),
     page_size: String(filterState.pageSize),
   };
   if (filterState.searchQuery) result.search = filterState.searchQuery;
-  if (filterState.geneListId) result.geneListId = filterState.geneListId;
 
   const filters = filterState.filters;
-  if (typeof filters.acmgClassification === 'string') result.classification = filters.acmgClassification;
-  if (typeof filters.pathogenicity === 'string') result.pathogenicity = filters.pathogenicity;
-  if (typeof filters.status === 'string') result.status = filters.status;
-  if (typeof filters.type === 'string') result.type = toBackendCnvType(filters.type);
+  switch (type) {
+    case 'snv-indel':
+      if (filterState.geneListId) result.geneListId = filterState.geneListId;
+      if (typeof filters.acmgClassification === 'string') result.classification = filters.acmgClassification;
+      break;
+    case 'cnv-segment':
+      if (typeof filters.type === 'string') result.type = toBackendCnvType(filters.type);
+      break;
+    case 'str':
+      if (typeof filters.status === 'string') result.status = filters.status;
+      break;
+    case 'mei':
+      if (typeof filters.type === 'string') result.teType = toBackendMEIType(filters.type);
+      break;
+    case 'cnv-exon':
+    case 'mt':
+    case 'upd':
+    case 'roh':
+      break;
+  }
   return result;
 }
 
 function toBackendCnvType(type: string): string {
   if (type === 'Amplification') return 'DUP';
   if (type === 'Deletion') return 'DEL';
+  return type;
+}
+
+function toBackendMEIType(type: string): string {
+  if (type === 'LINE1') return 'L1';
   return type;
 }
 
@@ -169,13 +219,18 @@ function zygosity(value: unknown): SNVIndel['zygosity'] {
 }
 
 function acmg(value: unknown): ACMGClassification {
-  const normalized = s(value, 'VUS').replace(/\s+/g, '_') as ACMGClassification;
-  return normalized in ACMG_CONFIG ? normalized : 'VUS';
+  const normalized = s(value, 'VUS')
+    .trim()
+    .replace(/[-\s]+/g, '_')
+    .replace(/__+/g, '_')
+    .toLowerCase();
+  return ACMG_ALIASES[normalized] ?? 'VUS';
 }
 
 function strStatus(value: unknown): STRStatus {
-  const normalized = s(value, 'Normal');
-  if (normalized === 'Premutation' || normalized === 'FullMutation') return normalized;
+  const normalized = s(value, 'Normal').replace(/[-\s]+/g, '').toLowerCase();
+  if (normalized === 'premutation') return 'Premutation';
+  if (normalized === 'fullmutation') return 'FullMutation';
   return 'Normal';
 }
 
@@ -200,8 +255,32 @@ function pathogenicity(row: BackendRow): MitochondrialPathogenicity {
 function repeatCount(row: BackendRow): number {
   const direct = n(row.repeatCount, NaN);
   if (Number.isFinite(direct)) return direct;
-  const alleles = [n(row.allele1Repeats, NaN), n(row.allele2Repeats, NaN)].filter(Number.isFinite);
+  const alleles = [
+    ...nums(row.allele1Repeats),
+    ...nums(row.allele2Repeats),
+    ...nums(row.repeatDisplay),
+  ];
   return alleles.length > 0 ? Math.max(...alleles) : n(row.refRepeats);
+}
+
+function predictedGender(value: unknown): QCResult['predictedGender'] {
+  const normalized = s(value, 'Unknown').trim().toLowerCase();
+  if (normalized === 'male' || normalized === 'm' || normalized === 'xy') return 'Male';
+  if (normalized === 'female' || normalized === 'f' || normalized === 'xx') return 'Female';
+  return 'Unknown';
+}
+
+function updType(value: unknown): UPDRegion['type'] {
+  return s(value).replace(/[-\s]+/g, '').toLowerCase() === 'heterodisomy'
+    ? 'Heterodisomy'
+    : 'Isodisomy';
+}
+
+function parentOfOrigin(value: unknown): UPDRegion['parentOfOrigin'] {
+  const normalized = s(value).trim().toLowerCase();
+  if (normalized === 'maternal' || normalized === 'mother') return 'Maternal';
+  if (normalized === 'paternal' || normalized === 'father') return 'Paternal';
+  return 'Unknown';
 }
 
 function mapSNV(row: BackendRow): SNVIndel {
@@ -322,9 +401,9 @@ function mapUPD(row: BackendRow): UPDRegion {
     startPosition: start,
     endPosition: end,
     length: n(row.length, Math.max(0, end - start + 1)),
-    type: s(row.type) === 'Heterodisomy' ? 'Heterodisomy' : 'Isodisomy',
+    type: updType(row.type),
     genes: arr(row.genes),
-    parentOfOrigin: s(row.parentOfOrigin) === 'Maternal' || s(row.parentOfOrigin) === 'Paternal' ? s(row.parentOfOrigin) as UPDRegion['parentOfOrigin'] : 'Unknown',
+    parentOfOrigin: parentOfOrigin(row.parentOfOrigin),
     ...normalizeReview(row),
   };
 }
@@ -348,7 +427,7 @@ function mapROH(row: BackendRow): ROHRegion {
 }
 
 export async function getQCResult(taskId: string): Promise<QCResult | null> {
-  const row = await api.get<BackendRow>(`/v1/tasks/${taskId}/results/qc`);
+  const row = await api.get<BackendRow>(`/v1/tasks/${encodeURIComponent(taskId)}/results/qc`);
   return {
     totalReads: n(row.totalReads),
     mappedReads: n(row.mappedReads),
@@ -362,15 +441,15 @@ export async function getQCResult(taskId: string): Promise<QCResult | null> {
     gcRatio: n(row.gcRatio ?? row.gcContent),
     uniformity: n(row.uniformity ?? row.pctTargetBases30x),
     captureEfficiency: n(row.captureEfficiency ?? row.targetDataFraction),
-    predictedGender: s(row.predictedGender, 'Unknown') as QCResult['predictedGender'],
+    predictedGender: predictedGender(row.predictedGender),
     contaminationRate: n(row.contaminationRate ?? row.pfMismatchRate),
     mtCoverage: n(row.mtCoverageGt0x),
     mtDepth: n(row.mtAverageDepth),
   };
 }
 
-async function getPage<T>(taskId: string, type: string, filterState: TableFilterState, mapper: (row: BackendRow) => T): Promise<PaginatedResult<T>> {
-  const response = await api.get<BackendPage<BackendRow>>(`/v1/tasks/${taskId}/results/${type}`, { params: params(filterState) });
+async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T): Promise<PaginatedResult<T>> {
+  const response = await api.get<BackendPage<BackendRow>>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}`, { params: params(type, filterState) });
   return normalizePage(response, filterState, mapper);
 }
 
@@ -399,9 +478,15 @@ export async function getGeneLists(): Promise<GeneListOption[]> {
 }
 
 export function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
-  return api.put(`/v1/tasks/${taskId}/results/${type}/${variantId}/review`, { reviewed });
+  if (!reviewed) {
+    return Promise.reject(new Error('Octopus review endpoint only supports marking a variant as reviewed.'));
+  }
+  return api.put(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/review`, { reviewed });
 }
 
 export function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
-  return api.put(`/v1/tasks/${taskId}/results/${type}/${variantId}/report`, { reported });
+  if (!reported) {
+    return Promise.reject(new Error('Octopus report endpoint only supports marking a variant as reported.'));
+  }
+  return api.put(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/report`, { reported });
 }

@@ -16,7 +16,8 @@ export function AuthGate({ children }: AuthGateProps) {
   React.useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
+      router.replace(`/login?next=${encodeURIComponent(`${pathname}${currentSearch}`)}`);
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 

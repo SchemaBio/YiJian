@@ -22,7 +22,10 @@ import { classify } from '../utils/pathogenicity-classifier';
  * 生成唯一ID
  */
 function generateId(): string {
-  return `assessment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `assessment-${crypto.randomUUID()}`;
+  }
+  return `assessment-${Date.now()}`;
 }
 
 /**
@@ -122,8 +125,8 @@ export function useCNVAssessment(cnv: CNVSegment | CNVExon | null) {
     setAssessment(savedAssessment);
     setOriginalAssessment(savedAssessment);
 
-    // TODO: 这里可以添加API调用来持久化到后端
-    // await api.saveAssessment(savedAssessment);
+    // Octopus/Squid 当前没有 CNV assessment 持久化接口；这里只返回
+    // 当前页面内存态，避免伪造“已保存到后端”的状态。
 
     return savedAssessment;
   }, [assessment]);

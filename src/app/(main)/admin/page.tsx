@@ -1,538 +1,553 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
+import { Button, DataTable, Tag } from '@schema/ui-kit';
+import type { Column } from '@schema/ui-kit';
+import { AlertTriangle, BarChart3, Building2, CreditCard, Loader2, RefreshCw, Users } from 'lucide-react';
+import { useAuth } from '@/components/providers/AuthProvider';
 import {
-  Button,
-  Input,
-  FormItem,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  DataTable,
-  Tag,
-  Checkbox,
-  type Column,
-} from '@schema/ui-kit';
-import { Plus, Pencil, Trash2, Users, FolderOutput, FolderInput, Bot, Save, Info, Loader2, KeyRound } from 'lucide-react';
-import { useAI } from '@/components/providers/AIProvider';
+  getAdminBillingConfig,
+  getAdminStats,
+  getBalanceAlerts,
+  getOrgBillingPolicy,
+  listAdminOrganizations,
+  rechargeOrganization,
+  updateAdminBillingConfig,
+  updateOrgBillingPolicy,
+  type AdminBillingConfig,
+  type AdminOrganization,
+  type AdminStats,
+  type BalanceAlert,
+  type OrgBillingPolicy,
+} from '@/lib/admin';
 
-// 角色定义
-const ROLES = [
-  { id: 'admin', name: '管理员', description: '拥有所有权限，可管理用户和系统配置' },
-  { id: 'interpreter', name: '解读工程师', description: '可对任务结果进行调整和审核' },
-  { id: 'bioinformatics', name: '生信工程师', description: '可对流程中心中的配置进行修改' },
-] as const;
-
-type RoleId = typeof ROLES[number]['id'];
-
-// 按需分配的权限
-const ASSIGNABLE_PERMISSIONS = [
-  { id: 'task_submit', name: '任务投递', category: '任务操作' },
-  { id: 'data_upload', name: '数据上传', category: '数据操作' },
-  { id: 'data_download', name: '数据下载', category: '数据操作' },
-  { id: 'report_generate', name: '生成报告', category: '报告操作' },
-] as const;
-
-type AssignablePermissionId = typeof ASSIGNABLE_PERMISSIONS[number]['id'];
-
-// 组织账户接口
-interface OrganizationAccount {
-  id: string;
-  username: string;
-  displayName: string;
-  role: RoleId;
-  additionalPermissions: AssignablePermissionId[];
-  createdAt: string;
+function formatTime(value: string): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
 }
 
-// 系统路径配置接口（非 AI 配置）
-interface PathConfig {
-  outputBasePath: string;
-  rawDataPath: string;
+function formatBytes(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '-';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
-// Mock 数据
-const mockAccounts: OrganizationAccount[] = [
-  {
-    id: '1',
-    username: 'admin',
-    displayName: '管理员',
-    role: 'admin',
-    additionalPermissions: [],
-    createdAt: '2024-01-01 09:00:00',
-  },
-  {
-    id: '2',
-    username: 'interpreter_zhang',
-    displayName: '解读工程师张三',
-    role: 'interpreter',
-    additionalPermissions: ['task_submit', 'data_upload'],
-    createdAt: '2024-06-15 10:30:00',
-  },
-  {
-    id: '3',
-    username: 'bioinfo_wang',
-    displayName: '生信工程师王五',
-    role: 'bioinformatics',
-    additionalPermissions: ['data_upload', 'data_download'],
-    createdAt: '2024-08-20 14:15:00',
-  },
-];
+function StatCard({ title, value, icon }: { title: string; value: React.ReactNode; icon: React.ReactNode }) {
+  return (
+    <div className="yj-panel p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-fg-muted">{title}</p>
+          <p className="text-2xl font-semibold text-fg-default mt-1">{value}</p>
+        </div>
+        <div className="text-accent-fg">{icon}</div>
+      </div>
+    </div>
+  );
+}
 
-const roleConfig: Record<RoleId, { label: string; variant: 'warning' | 'success' | 'info' }> = {
-  admin: { label: '管理员', variant: 'warning' },
-  interpreter: { label: '解读工程师', variant: 'success' },
-  bioinformatics: { label: '生信工程师', variant: 'info' },
+const emptyStats: AdminStats = {
+  organizations: { total: 0, active: 0, suspended: 0 },
+  tasks: { running: 0, completed: 0, failed: 0, today_created: 0, today_finished: 0 },
+  credits: {
+    total_consumed_today: 0,
+    total_consumed_month: 0,
+    total_recharged_today: 0,
+    total_recharged_month: 0,
+    orgs_low_balance: 0,
+  },
+  top_orgs: [],
+  recent_tasks: [],
+};
+
+const emptyBillingConfig: AdminBillingConfig = {
+  credits_per_minute: 0,
+  credit_rate_multiplier: 1,
+  min_balance: 0,
 };
 
 export default function AdminPage() {
-  // 使用全局 AI 配置上下文
-  const { config: aiConfig, setConfig: setAIConfig } = useAI();
-
-  // 账户管理状态
-  const [accounts, setAccounts] = React.useState<OrganizationAccount[]>(mockAccounts);
-  const [isAccountModalOpen, setIsAccountModalOpen] = React.useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = React.useState(false);
-  const [editingAccount, setEditingAccount] = React.useState<OrganizationAccount | null>(null);
-  const [accountForm, setAccountForm] = React.useState({
-    username: '',
-    displayName: '',
-    role: 'interpreter' as RoleId,
-    additionalPermissions: [] as AssignablePermissionId[],
-    password: '',
+  const { isLoading: authLoading, isPlatformAdmin } = useAuth();
+  const [stats, setStats] = React.useState<AdminStats>(emptyStats);
+  const [alerts, setAlerts] = React.useState<BalanceAlert[]>([]);
+  const [organizations, setOrganizations] = React.useState<AdminOrganization[]>([]);
+  const [billingConfig, setBillingConfig] = React.useState<AdminBillingConfig>(emptyBillingConfig);
+  const [configForm, setConfigForm] = React.useState({
+    creditsPerMinute: '',
+    creditRateMultiplier: '',
+    minBalance: '',
   });
-
-  // 路径配置状态（非 AI 配置，保持本地状态）
-  const [pathConfig, setPathConfig] = React.useState<PathConfig>({
-    outputBasePath: '/data/results',
-    rawDataPath: '/data/raw',
+  const [rechargeForm, setRechargeForm] = React.useState({
+    orgId: '',
+    amount: '',
+    description: '',
   });
-  const [saving, setSaving] = React.useState(false);
+  const [policyOrgId, setPolicyOrgId] = React.useState('');
+  const [policy, setPolicy] = React.useState<OrgBillingPolicy | null>(null);
+  const [policyForm, setPolicyForm] = React.useState({
+    creditsPerMinute: '',
+    creditRateMultiplier: '',
+    minBalance: '',
+  });
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSavingBilling, setIsSavingBilling] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [actionMessage, setActionMessage] = React.useState<string | null>(null);
 
-  // 账户操作
-  const handleAddAccount = () => {
-    setEditingAccount(null);
-    setAccountForm({ username: '', displayName: '', role: 'interpreter', additionalPermissions: [], password: '' });
-    setIsAccountModalOpen(true);
-  };
-
-  const handleEditAccount = (account: OrganizationAccount) => {
-    setEditingAccount(account);
-    setAccountForm({
-      username: account.username,
-      displayName: account.displayName,
-      role: account.role,
-      additionalPermissions: [...account.additionalPermissions],
-      password: '',
-    });
-    setIsAccountModalOpen(true);
-  };
-
-  const handleDeleteAccount = (id: string) => {
-    if (confirm('确定要删除此账户吗？')) {
-      setAccounts(prev => prev.filter(a => a.id !== id));
+  const loadData = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [nextStats, nextAlerts, nextOrganizations, nextBillingConfig] = await Promise.all([
+        getAdminStats(),
+        getBalanceAlerts(),
+        listAdminOrganizations(),
+        getAdminBillingConfig(),
+      ]);
+      setStats(nextStats);
+      setAlerts(nextAlerts);
+      setOrganizations(nextOrganizations);
+      setBillingConfig(nextBillingConfig);
+      setConfigForm({
+        creditsPerMinute: String(nextBillingConfig.credits_per_minute),
+        creditRateMultiplier: String(nextBillingConfig.credit_rate_multiplier),
+        minBalance: String(nextBillingConfig.min_balance),
+      });
+      setRechargeForm((prev) => ({
+        ...prev,
+        orgId: prev.orgId || nextOrganizations[0]?.id || '',
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载管理后台数据失败');
+      setStats(emptyStats);
+      setAlerts([]);
+      setOrganizations([]);
+      setBillingConfig(emptyBillingConfig);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handlePermissionToggle = (permissionId: AssignablePermissionId) => {
-    setAccountForm((prev) => ({
-      ...prev,
-      additionalPermissions: prev.additionalPermissions.includes(permissionId)
-        ? prev.additionalPermissions.filter((p) => p !== permissionId)
-        : [...prev.additionalPermissions, permissionId],
-    }));
-  };
+  React.useEffect(() => {
+    if (!authLoading && isPlatformAdmin()) {
+      void loadData();
+    } else if (!authLoading) {
+      setIsLoading(false);
+    }
+  }, [authLoading, isPlatformAdmin, loadData]);
 
-  const handleSubmitAccount = () => {
-    if (!accountForm.username || !accountForm.displayName) return;
-    if (!editingAccount && !accountForm.password) {
-      alert('请设置初始密码');
+  const submitRecharge = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const orgId = rechargeForm.orgId.trim();
+    const amount = Number(rechargeForm.amount);
+    if (!orgId || !Number.isInteger(amount) || amount <= 0) {
+      setError('请选择机构并输入大于 0 的整数充值点数');
       return;
     }
 
-    if (editingAccount) {
-      setAccounts(prev => prev.map(a =>
-        a.id === editingAccount.id
-          ? {
-              ...a,
-              username: accountForm.username,
-              displayName: accountForm.displayName,
-              role: accountForm.role,
-              additionalPermissions: accountForm.additionalPermissions,
-            }
-          : a
-      ));
-    } else {
-      const newAccount: OrganizationAccount = {
-        id: String(Date.now()),
-        username: accountForm.username,
-        displayName: accountForm.displayName,
-        role: accountForm.role,
-        additionalPermissions: accountForm.additionalPermissions,
-        createdAt: new Date().toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        }).replace(/\//g, '-'),
-      };
-      setAccounts(prev => [...prev, newAccount]);
+    setIsSavingBilling(true);
+    setError(null);
+    setActionMessage(null);
+    try {
+      const result = await rechargeOrganization({
+        org_id: orgId,
+        amount,
+        ...(rechargeForm.description.trim() ? { description: rechargeForm.description.trim() } : {}),
+      });
+      setActionMessage(`已为机构 ${result.org_id} 充值，当前余额 ${result.balance}`);
+      setRechargeForm((prev) => ({ ...prev, amount: '', description: '' }));
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '充值失败');
+    } finally {
+      setIsSavingBilling(false);
     }
-    setIsAccountModalOpen(false);
   };
 
-  const handleChangePassword = (account: OrganizationAccount) => {
-    setEditingAccount(account);
-    setAccountForm(prev => ({ ...prev, password: '' }));
-    setIsPasswordModalOpen(true);
-  };
-
-  const handleSubmitPassword = () => {
-    if (!accountForm.password || accountForm.password.length < 6) {
-      alert('密码长度至少6位');
+  const submitBillingConfig = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const creditsPerMinute = Number(configForm.creditsPerMinute);
+    const creditRateMultiplier = Number(configForm.creditRateMultiplier);
+    const minBalance = Number(configForm.minBalance);
+    if (!Number.isInteger(creditsPerMinute) || creditsPerMinute <= 0 || !Number.isFinite(creditRateMultiplier) || creditRateMultiplier <= 0 || !Number.isInteger(minBalance)) {
+      setError('请填写有效的计费配置：每分钟点数为正整数，倍率为正数，最低余额为整数');
       return;
     }
-    alert(`${editingAccount?.username} 的密码已修改`);
-    setIsPasswordModalOpen(false);
-    setAccountForm(prev => ({ ...prev, password: '' }));
+
+    setIsSavingBilling(true);
+    setError(null);
+    setActionMessage(null);
+    try {
+      const next = await updateAdminBillingConfig({
+        credits_per_minute: creditsPerMinute,
+        credit_rate_multiplier: creditRateMultiplier,
+        min_balance: minBalance,
+      });
+      setBillingConfig(next);
+      setActionMessage('全局计费配置已更新');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新计费配置失败');
+    } finally {
+      setIsSavingBilling(false);
+    }
   };
 
-  // 保存配置
-  const handleSaveConfig = async () => {
-    setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
-    alert('配置已保存');
+  const loadOrgPolicy = async (orgId = policyOrgId) => {
+    const normalizedOrgId = orgId.trim();
+    if (!normalizedOrgId) {
+      setPolicy(null);
+      setPolicyForm({ creditsPerMinute: '', creditRateMultiplier: '', minBalance: '' });
+      return;
+    }
+
+    setIsSavingBilling(true);
+    setError(null);
+    try {
+      const next = await getOrgBillingPolicy(normalizedOrgId);
+      setPolicy(next);
+      setPolicyForm({
+        creditsPerMinute: next.overrides.credits_per_minute == null ? '' : String(next.overrides.credits_per_minute),
+        creditRateMultiplier: next.overrides.credit_rate_multiplier == null ? '' : String(next.overrides.credit_rate_multiplier),
+        minBalance: next.overrides.min_balance == null ? '' : String(next.overrides.min_balance),
+      });
+    } catch (err) {
+      setPolicy(null);
+      setError(err instanceof Error ? err.message : '加载机构计费策略失败');
+    } finally {
+      setIsSavingBilling(false);
+    }
   };
 
-  const accountColumns: Column<OrganizationAccount>[] = [
-    { id: 'username', header: '用户名', accessor: 'username', width: 140, align: 'center' },
-    { id: 'displayName', header: '显示名称', accessor: 'displayName', width: 150, align: 'center' },
+  const submitOrgPolicy = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const orgId = policyOrgId.trim();
+    if (!orgId) {
+      setError('请选择机构');
+      return;
+    }
+
+    const creditsPerMinute = policyForm.creditsPerMinute.trim() ? Number(policyForm.creditsPerMinute) : undefined;
+    const creditRateMultiplier = policyForm.creditRateMultiplier.trim() ? Number(policyForm.creditRateMultiplier) : undefined;
+    const minBalance = policyForm.minBalance.trim() ? Number(policyForm.minBalance) : undefined;
+    if (
+      (creditsPerMinute !== undefined && (!Number.isInteger(creditsPerMinute) || creditsPerMinute <= 0)) ||
+      (creditRateMultiplier !== undefined && (!Number.isFinite(creditRateMultiplier) || creditRateMultiplier <= 0)) ||
+      (minBalance !== undefined && !Number.isInteger(minBalance))
+    ) {
+      setError('机构计费覆盖值格式不正确');
+      return;
+    }
+
+    setIsSavingBilling(true);
+    setError(null);
+    setActionMessage(null);
+    try {
+      const next = await updateOrgBillingPolicy(orgId, {
+        ...(creditsPerMinute === undefined ? { reset_credits_per_minute: true } : { credits_per_minute: creditsPerMinute }),
+        ...(creditRateMultiplier === undefined ? { reset_credit_rate_multiplier: true } : { credit_rate_multiplier: creditRateMultiplier }),
+        ...(minBalance === undefined ? { reset_min_balance: true } : { min_balance: minBalance }),
+      });
+      setPolicy(next);
+      setActionMessage('机构计费策略已更新');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新机构计费策略失败');
+    } finally {
+      setIsSavingBilling(false);
+    }
+  };
+
+  const alertColumns: Column<BalanceAlert>[] = [
+    { id: 'org_name', header: '机构', accessor: 'org_name', width: 220, align: 'center' },
+    { id: 'balance', header: '余额', accessor: (row) => row.balance, width: 100, align: 'center' },
+    { id: 'threshold', header: '预警阈值', accessor: (row) => row.threshold, width: 120, align: 'center' },
     {
-      id: 'role',
-      header: '角色',
-      accessor: (row) => {
-        const cfg = roleConfig[row.role];
-        return <Tag variant={cfg.variant}>{cfg.label}</Tag>;
-      },
-      width: 120,
-      align: 'center',
-    },
-    {
-      id: 'additionalPermissions',
-      header: '附加权限',
-      accessor: (row) => {
-        if (row.role === 'admin') {
-          return <span className="text-xs text-fg-muted">全部权限</span>;
-        }
-        if (row.additionalPermissions.length === 0) {
-          return <span className="text-xs text-fg-muted">无</span>;
-        }
-        return (
-          <div className="flex flex-wrap gap-1 justify-center">
-            {row.additionalPermissions.map((p) => {
-              const perm = ASSIGNABLE_PERMISSIONS.find(ap => ap.id === p);
-              return (
-                <Tag key={p} variant="neutral" className="text-xs">
-                  {perm?.name || p}
-                </Tag>
-              );
-            })}
-          </div>
-        );
-      },
-      width: 150,
-      align: 'center',
-    },
-    { id: 'createdAt', header: '创建时间', accessor: 'createdAt', width: 160, align: 'center' },
-    {
-      id: 'actions',
-      header: '操作',
-      accessor: (row) => (
-        <div className="flex items-center justify-center gap-1">
-          <button
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
-            title="编辑"
-            onClick={() => handleEditAccount(row)}
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-green-600 transition-colors"
-            title="修改密码"
-            onClick={() => handleChangePassword(row)}
-          >
-            <KeyRound className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors"
-            title="删除"
-            onClick={() => handleDeleteAccount(row.id)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      id: 'is_active',
+      header: '状态',
+      accessor: (row) => <Tag variant={row.is_active ? 'success' : 'neutral'}>{row.is_active ? '启用' : '停用'}</Tag>,
       width: 100,
       align: 'center',
     },
   ];
 
+  const orgColumns: Column<AdminOrganization>[] = [
+    { id: 'name', header: '机构', accessor: 'name', width: 220, align: 'center' },
+    { id: 'slug', header: 'Slug', accessor: 'slug', width: 160, align: 'center' },
+    {
+      id: 'is_active',
+      header: '状态',
+      accessor: (row) => <Tag variant={row.is_active ? 'success' : 'neutral'}>{row.is_active ? '启用' : '停用'}</Tag>,
+      width: 100,
+      align: 'center',
+    },
+    { id: 'max_concurrent_tasks', header: '并发上限', accessor: (row) => row.max_concurrent_tasks, width: 110, align: 'center' },
+    { id: 'balance_alert_threshold', header: '余额阈值', accessor: (row) => row.balance_alert_threshold, width: 110, align: 'center' },
+    { id: 'storage_quota_bytes', header: '存储配额', accessor: (row) => formatBytes(row.storage_quota_bytes), width: 120, align: 'center' },
+  ];
+
+  const topOrgColumns: Column<AdminStats['top_orgs'][number]>[] = [
+    { id: 'org_name', header: '机构', accessor: 'org_name', width: 200, align: 'center' },
+    { id: 'balance', header: '余额', accessor: (row) => row.balance, width: 100, align: 'center' },
+    { id: 'task_count', header: '任务数', accessor: (row) => row.task_count, width: 100, align: 'center' },
+    { id: 'credits_used_today', header: '今日消耗', accessor: (row) => row.credits_used_today, width: 120, align: 'center' },
+  ];
+
+  const taskColumns: Column<AdminStats['recent_tasks'][number]>[] = [
+    { id: 'name', header: '任务', accessor: 'name', width: 240, align: 'center' },
+    { id: 'org_name', header: '机构', accessor: 'org_name', width: 180, align: 'center' },
+    { id: 'status', header: '状态', accessor: (row) => <Tag variant="info">{row.status}</Tag>, width: 100, align: 'center' },
+    { id: 'created_at', header: '创建时间', accessor: (row) => formatTime(row.created_at), width: 180, align: 'center' },
+  ];
+
+  if (authLoading || isLoading) {
+    return (
+      <PageContent className="yj-page-shell">
+        <div className="yj-empty-state">
+          <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
+          <p className="text-fg-muted">正在加载管理后台...</p>
+        </div>
+      </PageContent>
+    );
+  }
+
+  if (!isPlatformAdmin()) {
+    return (
+      <PageContent className="yj-page-shell">
+        <div className="yj-empty-state">
+          <p className="text-fg-muted">您没有权限访问平台管理后台。</p>
+        </div>
+      </PageContent>
+    );
+  }
+
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">管理中心</h2>
+          <h2 className="yj-page-title">平台管理后台</h2>
           <p className="yj-page-subtitle">
-            管理组织账户、系统路径配置和 AI 服务配置。
+            数据来自 Squid `/api/v1/admin/stats`、`/api/v1/admin/alerts` 和 `/api/v1/admin/orgs`，不再使用前端 mock 账号或本地机构状态。
           </p>
+        </div>
+        <Button variant="secondary" onClick={() => void loadData()}>
+          <RefreshCw className="w-4 h-4" />
+          刷新
+        </Button>
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard title="机构总数" value={stats.organizations.total} icon={<Users className="w-6 h-6" />} />
+        <StatCard title="运行中任务" value={stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
+        <StatCard title="今日消耗点数" value={stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
+        <StatCard title="低余额机构" value={stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
+      </div>
+
+      {actionMessage && (
+        <div className="rounded-md border border-success-muted bg-success-subtle px-4 py-3 text-sm text-success-fg">
+          {actionMessage}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <form className="yj-panel p-4 space-y-3" onSubmit={submitRecharge}>
+          <div>
+            <h3 className="text-base font-medium text-fg-default">机构充值</h3>
+            <p className="text-xs text-fg-muted mt-1">调用 Squid `POST /api/v1/admin/billing/recharge`，不再用本地状态模拟余额。</p>
+          </div>
+          <label className="block text-xs text-fg-muted">
+            机构
+            <select
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              value={rechargeForm.orgId}
+              onChange={(e) => setRechargeForm((prev) => ({ ...prev, orgId: e.target.value }))}
+            >
+              <option value="">请选择机构</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>{org.name} ({org.slug})</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs text-fg-muted">
+            充值点数
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              min={1}
+              step={1}
+              value={rechargeForm.amount}
+              onChange={(e) => setRechargeForm((prev) => ({ ...prev, amount: e.target.value }))}
+              placeholder="例如 1000"
+            />
+          </label>
+          <label className="block text-xs text-fg-muted">
+            备注
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              value={rechargeForm.description}
+              onChange={(e) => setRechargeForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="可选"
+            />
+          </label>
+          <Button type="submit" variant="primary" disabled={isSavingBilling}>提交充值</Button>
+        </form>
+
+        <form className="yj-panel p-4 space-y-3" onSubmit={submitBillingConfig}>
+          <div>
+            <h3 className="text-base font-medium text-fg-default">全局计费配置</h3>
+            <p className="text-xs text-fg-muted mt-1">当前：{billingConfig.credits_per_minute} 点/分钟，倍率 {billingConfig.credit_rate_multiplier}，最低余额 {billingConfig.min_balance}</p>
+          </div>
+          <label className="block text-xs text-fg-muted">
+            每分钟点数
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              min={1}
+              step={1}
+              value={configForm.creditsPerMinute}
+              onChange={(e) => setConfigForm((prev) => ({ ...prev, creditsPerMinute: e.target.value }))}
+            />
+          </label>
+          <label className="block text-xs text-fg-muted">
+            费率倍率
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              min={0.0001}
+              step="0.0001"
+              value={configForm.creditRateMultiplier}
+              onChange={(e) => setConfigForm((prev) => ({ ...prev, creditRateMultiplier: e.target.value }))}
+            />
+          </label>
+          <label className="block text-xs text-fg-muted">
+            最低余额
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              step={1}
+              value={configForm.minBalance}
+              onChange={(e) => setConfigForm((prev) => ({ ...prev, minBalance: e.target.value }))}
+            />
+          </label>
+          <Button type="submit" variant="secondary" disabled={isSavingBilling}>保存全局配置</Button>
+        </form>
+
+        <form className="yj-panel p-4 space-y-3" onSubmit={submitOrgPolicy}>
+          <div>
+            <h3 className="text-base font-medium text-fg-default">机构计费覆盖</h3>
+            <p className="text-xs text-fg-muted mt-1">留空会调用 reset 字段清除覆盖值，恢复继承全局配置。</p>
+          </div>
+          <label className="block text-xs text-fg-muted">
+            机构
+            <select
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              value={policyOrgId}
+              onChange={(e) => {
+                setPolicyOrgId(e.target.value);
+                void loadOrgPolicy(e.target.value);
+              }}
+            >
+              <option value="">请选择机构</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>{org.name} ({org.slug})</option>
+              ))}
+            </select>
+          </label>
+          {policy && (
+            <p className="text-xs text-fg-muted">
+              生效值：{policy.credits_per_minute} 点/分钟，倍率 {policy.credit_rate_multiplier}，最低余额 {policy.min_balance}
+            </p>
+          )}
+          <label className="block text-xs text-fg-muted">
+            覆盖每分钟点数
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              min={1}
+              step={1}
+              value={policyForm.creditsPerMinute}
+              onChange={(e) => setPolicyForm((prev) => ({ ...prev, creditsPerMinute: e.target.value }))}
+              placeholder="留空继承全局"
+            />
+          </label>
+          <label className="block text-xs text-fg-muted">
+            覆盖费率倍率
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              min={0.0001}
+              step="0.0001"
+              value={policyForm.creditRateMultiplier}
+              onChange={(e) => setPolicyForm((prev) => ({ ...prev, creditRateMultiplier: e.target.value }))}
+              placeholder="留空继承全局"
+            />
+          </label>
+          <label className="block text-xs text-fg-muted">
+            覆盖最低余额
+            <input
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              type="number"
+              step={1}
+              value={policyForm.minBalance}
+              onChange={(e) => setPolicyForm((prev) => ({ ...prev, minBalance: e.target.value }))}
+              placeholder="留空继承全局"
+            />
+          </label>
+          <Button type="submit" variant="secondary" disabled={isSavingBilling || !policyOrgId}>保存机构策略</Button>
+        </form>
+      </div>
+
+      <div className="yj-panel p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 className="w-4 h-4 text-accent-fg" />
+          <h3 className="text-base font-medium text-fg-default">机构列表</h3>
+        </div>
+        {organizations.length === 0 ? (
+          <p className="text-sm text-fg-muted">暂无机构数据</p>
+        ) : (
+          <DataTable data={organizations} columns={orgColumns} rowKey="id" density="default" striped />
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="yj-panel p-4">
+          <h3 className="text-base font-medium text-fg-default mb-3">余额预警</h3>
+          {alerts.length === 0 ? (
+            <p className="text-sm text-fg-muted">暂无低余额机构</p>
+          ) : (
+            <DataTable data={alerts} columns={alertColumns} rowKey="org_id" density="default" striped />
+          )}
+        </div>
+        <div className="yj-panel p-4">
+          <h3 className="text-base font-medium text-fg-default mb-3">高消耗机构</h3>
+          {stats.top_orgs.length === 0 ? (
+            <p className="text-sm text-fg-muted">暂无机构消耗数据</p>
+          ) : (
+            <DataTable data={stats.top_orgs} columns={topOrgColumns} rowKey="org_id" density="default" striped />
+          )}
         </div>
       </div>
 
-      <div className="space-y-8">
-        {/* 权限规则说明 */}
-        <div className="yj-info-panel">
-          <h3 className="text-sm font-medium text-fg-default mb-3">权限规则说明</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-fg-muted">
-            <div>
-              <p className="font-medium text-fg-default mb-1">基础权限</p>
-              <p>所有角色都可以查看所有页面</p>
-            </div>
-            <div>
-              <p className="font-medium text-fg-default mb-1">解读工程师</p>
-              <p>可对任务结果进行调整和审核</p>
-            </div>
-            <div>
-              <p className="font-medium text-fg-default mb-1">生信工程师</p>
-              <p>可对流程中心中的配置进行修改</p>
-            </div>
-            <div>
-              <p className="font-medium text-fg-default mb-1">按需分配</p>
-              <p>任务投递、数据上传等权限可单独授予</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 组织账户管理 */}
-        <section>
-          <div className="yj-toolbar-panel">
-            <div>
-              <h3 className="text-base font-medium text-fg-default flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                组织账户管理
-              </h3>
-              <p className="text-sm text-fg-muted mt-1">管理组织内的用户账户和权限角色</p>
-            </div>
-            <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddAccount}>
-              添加账户
-            </Button>
-          </div>
-          <DataTable data={accounts} columns={accountColumns} rowKey="id" density="default" striped />
-        </section>
-
-        {/* 路径配置 */}
-        <section>
-          <h3 className="text-base font-medium text-fg-default flex items-center gap-2 mb-4">
-            <FolderOutput className="w-5 h-5" />
-            路径配置
-          </h3>
-          <div className="yj-panel p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-fg-default mb-1.5">结果输出主路径</label>
-                <Input
-                  value={pathConfig.outputBasePath}
-                  onChange={(e) => setPathConfig(prev => ({ ...prev, outputBasePath: e.target.value }))}
-                  placeholder="/data/results"
-                  leftElement={<FolderOutput className="w-4 h-4" />}
-                  className="w-full"
-                />
-                <p className="text-xs text-fg-muted mt-1">分析结果文件的存储根目录</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-fg-default mb-1.5">原始数据路径</label>
-                <Input
-                  value={pathConfig.rawDataPath}
-                  onChange={(e) => setPathConfig(prev => ({ ...prev, rawDataPath: e.target.value }))}
-                  placeholder="/data/raw"
-                  leftElement={<FolderInput className="w-4 h-4" />}
-                  className="w-full"
-                />
-                <p className="text-xs text-fg-muted mt-1">测序原始数据的存储目录</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* AI 配置 */}
-        <section>
-          <h3 className="text-base font-medium text-fg-default flex items-center gap-2 mb-4">
-            <Bot className="w-5 h-5" />
-            OpenAI 兼容 API 配置
-          </h3>
-          <div className="yj-panel p-4">
-            {/* AI 助手开关 */}
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
-              <div>
-                <label className="text-sm font-medium text-fg-default">AI 助手</label>
-                <p className="text-xs text-fg-muted mt-0.5">启用后可在任务详情中使用 AI 辅助解读功能</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAIConfig({ aiAssistantEnabled: !aiConfig.aiAssistantEnabled })}
-                className={`
-                  relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                  transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:ring-offset-2
-                  ${aiConfig.aiAssistantEnabled ? 'bg-accent-emphasis' : 'bg-neutral-emphasis'}
-                `}
-                role="switch"
-                aria-checked={aiConfig.aiAssistantEnabled}
-              >
-                <span
-                  className={`
-                    pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
-                    transition duration-200 ease-in-out
-                    ${aiConfig.aiAssistantEnabled ? 'translate-x-5' : 'translate-x-0'}
-                  `}
-                />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-fg-default mb-1.5">模型名称</label>
-                <Input
-                  value={aiConfig.openaiModel}
-                  onChange={(e) => setAIConfig({ openaiModel: e.target.value })}
-                  placeholder="gpt-4"
-                  className="w-full"
-                  disabled={!aiConfig.aiAssistantEnabled}
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border text-sm text-fg-muted">
-              <Info className="w-4 h-4" />
-              API 密钥由服务端统一管理（LLM_API_KEY 环境变量），无需在浏览器中配置。
-            </div>
-          </div>
-        </section>
-
-        {/* 保存按钮 */}
-        <div className="pt-4 border-t border-[var(--yj-border-subtle)] flex justify-end">
-          <Button
-            variant="primary"
-            leftIcon={<Save className="w-4 h-4" />}
-            onClick={handleSaveConfig}
-            loading={saving}
-          >
-            保存配置
-          </Button>
-        </div>
-
-        {/* 添加/编辑账户弹窗 */}
-        <Modal open={isAccountModalOpen} onOpenChange={setIsAccountModalOpen} size="medium">
-          <ModalHeader>{editingAccount ? '编辑账户' : '添加账户'}</ModalHeader>
-          <ModalBody>
-            <div className="space-y-4">
-              <FormItem label="用户名" required>
-                <Input
-                  value={accountForm.username}
-                  onChange={(e) => setAccountForm(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="登录用户名"
-                />
-              </FormItem>
-              <FormItem label="显示名称" required>
-                <Input
-                  value={accountForm.displayName}
-                  onChange={(e) => setAccountForm(prev => ({ ...prev, displayName: e.target.value }))}
-                  placeholder="用户显示名称"
-                />
-              </FormItem>
-              <FormItem label="角色" required hint="角色决定了用户的基础权限范围">
-                <select
-                  value={accountForm.role}
-                  onChange={(e) => setAccountForm(prev => ({ ...prev, role: e.target.value as RoleId }))}
-                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-fg-default focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {ROLES.map(opt => (
-                    <option key={opt.id} value={opt.id}>{opt.name}</option>
-                  ))}
-                </select>
-              </FormItem>
-
-              {/* 按需分配权限 */}
-              {accountForm.role !== 'admin' && (
-                <FormItem label="附加权限" hint="任务投递、数据上传等按需分配的权限">
-                  <div className="grid grid-cols-2 gap-2">
-                    {ASSIGNABLE_PERMISSIONS.map((permission) => (
-                      <label key={permission.id} className="flex items-center gap-2 cursor-pointer">
-                        <Checkbox
-                          checked={accountForm.additionalPermissions.includes(permission.id)}
-                          onChange={() => handlePermissionToggle(permission.id)}
-                        />
-                        <span className="text-sm text-fg-default">{permission.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </FormItem>
-              )}
-
-              {accountForm.role === 'admin' && (
-                <div className="bg-canvas-subtle rounded-md p-3 text-xs text-fg-muted">
-                  <p>管理员自动拥有所有权限，无需额外配置附加权限</p>
-                </div>
-              )}
-
-              {!editingAccount && (
-                <FormItem label="初始密码" required>
-                  <Input
-                    type="password"
-                    value={accountForm.password}
-                    onChange={(e) => setAccountForm(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="请设置初始密码（至少6位）"
-                  />
-                </FormItem>
-              )}
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="secondary" onClick={() => setIsAccountModalOpen(false)}>取消</Button>
-            <Button variant="primary" onClick={handleSubmitAccount} disabled={!accountForm.username || !accountForm.displayName || (!editingAccount && accountForm.password.length < 6)}>
-              {editingAccount ? '保存' : '添加'}
-            </Button>
-          </ModalFooter>
-        </Modal>
-
-        {/* 修改密码弹窗 */}
-        <Modal open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen} size="small">
-          <ModalHeader>修改密码</ModalHeader>
-          <ModalBody>
-            <div className="space-y-4">
-              <p className="text-sm text-fg-muted">
-                为用户 <span className="font-medium text-fg-default">{editingAccount?.displayName}</span> 设置新密码
-              </p>
-              <FormItem label="新密码" required>
-                <Input
-                  type="password"
-                  value={accountForm.password}
-                  onChange={(e) => setAccountForm(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="请输入新密码（至少6位）"
-                />
-              </FormItem>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="secondary" onClick={() => setIsPasswordModalOpen(false)}>取消</Button>
-            <Button variant="primary" onClick={handleSubmitPassword} disabled={accountForm.password.length < 6}>
-              确认修改
-            </Button>
-          </ModalFooter>
-        </Modal>
+      <div className="yj-panel p-4">
+        <h3 className="text-base font-medium text-fg-default mb-3">最近任务</h3>
+        {stats.recent_tasks.length === 0 ? (
+          <p className="text-sm text-fg-muted">暂无最近任务</p>
+        ) : (
+          <DataTable data={stats.recent_tasks} columns={taskColumns} rowKey="id" density="default" striped />
+        )}
       </div>
     </PageContent>
   );

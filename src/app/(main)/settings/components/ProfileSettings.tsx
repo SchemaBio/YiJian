@@ -1,149 +1,87 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
-import { Button, Input, FormItem, Modal, ModalHeader, ModalBody, ModalFooter } from '@schema/ui-kit';
-import { Lock, Save } from 'lucide-react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import Link from 'next/link';
+import { Button, FormItem, Input, Tag } from '@schema/ui-kit';
+import { Shield, UserRound } from 'lucide-react';
+import type { User, UserOrganizationInfo } from '@/types/user';
 
 interface ProfileSettingsProps {
   user: User;
+  currentOrg: UserOrganizationInfo | null;
 }
 
-export function ProfileSettings({ user }: ProfileSettingsProps) {
-  const [formData, setFormData] = React.useState({
-    name: user.name,
-    email: user.email,
-  });
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = React.useState(false);
-  const [passwordForm, setPasswordForm] = React.useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [saving, setSaving] = React.useState(false);
+function roleLabel(role: User['systemRole']): string {
+  return role === 'PLATFORM_ADMIN' ? '平台管理员' : '机构用户';
+}
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+function formatTime(value?: string): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
 
-  const handleSaveProfile = async () => {
-    setSaving(true);
-    // 模拟保存
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaving(false);
-    alert('个人信息已保存');
-  };
-
-  const handleChangePassword = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert('两次输入的密码不一致');
-      return;
-    }
-    if (passwordForm.newPassword.length < 6) {
-      alert('密码长度至少6位');
-      return;
-    }
-    // 模拟修改密码
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsPasswordModalOpen(false);
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    alert('密码修改成功');
-  };
-
+export function ProfileSettings({ user, currentOrg }: ProfileSettingsProps) {
   return (
     <div className="yj-panel yj-form-card-wide space-y-8">
-      {/* 账户信息 */}
       <section>
-        <h3 className="text-base font-medium text-fg-default mb-4">账户信息</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <UserRound className="w-5 h-5 text-accent-fg" />
+          <h3 className="text-base font-medium text-fg-default">账号信息</h3>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-          <FormItem label="账户名" required>
-            <Input
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="请输入账户名"
-            />
+          <FormItem label="姓名">
+            <Input value={user.name} disabled />
           </FormItem>
           <FormItem label="邮箱">
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              placeholder="请输入邮箱"
-            />
+            <Input type="email" value={user.email} disabled />
+          </FormItem>
+          <FormItem label="系统角色">
+            <div className="h-10 flex items-center">
+              <Tag variant={user.systemRole === 'PLATFORM_ADMIN' ? 'warning' : 'info'}>{roleLabel(user.systemRole)}</Tag>
+            </div>
+          </FormItem>
+          <FormItem label="账号状态">
+            <div className="h-10 flex items-center">
+              <Tag variant={user.isActive ? 'success' : 'neutral'}>{user.isActive ? '启用' : '停用'}</Tag>
+            </div>
+          </FormItem>
+          <FormItem label="注册审批">
+            <Input value={user.approvalStatus ?? '-'} disabled />
+          </FormItem>
+          <FormItem label="创建时间">
+            <Input value={formatTime(user.createdAt)} disabled />
           </FormItem>
         </div>
       </section>
 
-      {/* 安全设置 */}
       <section>
-        <h3 className="text-base font-medium text-fg-default mb-4">安全设置</h3>
-        <Button
-          variant="secondary"
-          leftIcon={<Lock className="w-4 h-4" />}
-          onClick={() => setIsPasswordModalOpen(true)}
-        >
-          修改密码
-        </Button>
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="w-5 h-5 text-accent-fg" />
+          <h3 className="text-base font-medium text-fg-default">当前机构</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+          <FormItem label="机构名称">
+            <Input value={currentOrg?.name ?? '-'} disabled />
+          </FormItem>
+          <FormItem label="机构标识">
+            <Input value={currentOrg?.slug ?? '-'} disabled />
+          </FormItem>
+        </div>
+        <p className="text-xs text-fg-muted mt-3">
+          个人资料以 Squid `/api/v1/auth/me` 和 `/api/v1/orgs/me` 为准；当前后端未开放普通用户自助修改资料接口，前端不再伪造本地保存成功。
+        </p>
       </section>
 
-      {/* 保存按钮 */}
-      <div className="pt-4 border-t border-[var(--yj-border-subtle)] flex justify-end">
-        <Button
-          variant="primary"
-          leftIcon={<Save className="w-4 h-4" />}
-          onClick={handleSaveProfile}
-          loading={saving}
-        >
-          保存修改
-        </Button>
-      </div>
-
-      {/* 修改密码弹窗 */}
-      <Modal open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen} size="small">
-        <ModalHeader>修改密码</ModalHeader>
-        <ModalBody>
-          <div className="space-y-4">
-            <FormItem label="当前密码" required>
-              <Input
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
-                placeholder="请输入当前密码"
-              />
-            </FormItem>
-            <FormItem label="新密码" required>
-              <Input
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-                placeholder="请输入新密码（至少6位）"
-              />
-            </FormItem>
-            <FormItem label="确认新密码" required>
-              <Input
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                placeholder="请再次输入新密码"
-              />
-            </FormItem>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setIsPasswordModalOpen(false)}>
-            取消
-          </Button>
-          <Button variant="primary" onClick={handleChangePassword}>
-            确认修改
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <section className="pt-4 border-t border-[var(--yj-border-subtle)]">
+        <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          密码找回已接入 Squid `/api/v1/auth/forgot-password` 与 `/api/v1/auth/reset-password`。
+        </div>
+        <Link href="/forgot-password">
+          <Button variant="secondary">修改密码 / 找回密码</Button>
+        </Link>
+      </section>
     </div>
   );
 }

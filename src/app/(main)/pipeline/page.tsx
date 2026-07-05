@@ -3,14 +3,16 @@
 import { PageContent } from '@/components/layout';
 import { Button, Input, DataTable, Tag, Select } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Plus, Search, Play, Pause, X, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Play, Pause, Pencil, Trash2 } from 'lucide-react';
 import * as React from 'react';
 import { AppModal, ConfirmDialog } from '@/components/shared';
+import { api } from '@/lib/api';
 
 // 基础流程类型
 type BasePipelineType =
   | 'wes_single'    // WES单样本分析
-  | 'wes_family';   // WES家系分析
+  | 'wes_family'    // WES家系分析
+  | 'panel';        // Panel分析
 
 interface Pipeline {
   id: string;
@@ -30,6 +32,7 @@ interface Pipeline {
 const BASE_PIPELINE_OPTIONS = [
   { value: 'wes_single', label: 'WES单样本分析' },
   { value: 'wes_family', label: 'WES家系分析' },
+  { value: 'panel', label: 'Panel分析' },
 ];
 
 // 参考基因组选项
@@ -60,60 +63,53 @@ const getBasePipelineLabel = (type: BasePipelineType): string => {
   return BASE_PIPELINE_OPTIONS.find(o => o.value === type)?.label || type;
 };
 
-const mockPipelines: Pipeline[] = [
-  {
-    id: '1',
-    name: 'WES单样本分析-标准版',
-    basePipeline: 'wes_single',
-    version: 'v1.2.0',
-    description: '全外显子单样本遗传病分析流程',
-    bedFile: 'Agilent_SureSelect_V7.bed',
-    referenceGenome: 'hg38',
-    cnvBaseline: 'CNV_Baseline_WES_V1.txt',
-    status: 'active',
-    createdAt: '2024-01-15',
-    updatedAt: '2024-12-01',
-  },
-  {
-    id: '2',
-    name: 'WES家系分析-标准版',
-    basePipeline: 'wes_family',
-    version: 'v1.1.0',
-    description: '全外显子家系联合分析流程，支持Trio分析',
-    bedFile: 'Agilent_SureSelect_V7.bed',
-    referenceGenome: 'hg38',
-    cnvBaseline: 'CNV_Baseline_WES_V1.txt',
-    status: 'active',
-    createdAt: '2024-02-20',
-    updatedAt: '2024-11-15',
-  },
-  {
-    id: '3',
-    name: '心血管Panel分析',
-    basePipeline: 'wes_single',
-    version: 'v2.0.1',
-    description: '心血管疾病基因Panel分析流程',
-    bedFile: 'Cardio_Panel_v2.bed',
-    referenceGenome: 'hg38',
-    status: 'active',
-    createdAt: '2024-03-20',
-    updatedAt: '2024-11-15',
-  },
-  {
-    id: '4',
-    name: 'WES单样本分析-旧版',
-    basePipeline: 'wes_single',
-    version: 'v1.0.0',
-    description: '旧版全外显子分析流程（已停用）',
-    bedFile: 'Agilent_SureSelect_V6.bed',
-    referenceGenome: 'hg19',
-    status: 'inactive',
-    createdAt: '2023-06-01',
-    updatedAt: '2024-01-15',
-  },
-];
+type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] }; total?: number };
 
-// 新建流程表单数据
+function unwrapList<T>(value: MaybeList<T>): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value.items)) return value.items;
+  if (Array.isArray(value.data)) return value.data;
+  if (value.data && !Array.isArray(value.data) && Array.isArray(value.data.items)) return value.data.items;
+  return [];
+}
+
+function rawString(raw: Record<string, unknown>, camel: string, snake: string, fallback = ''): string {
+  const value = raw[camel] ?? raw[snake];
+  return typeof value === 'string' ? value : fallback;
+}
+
+function normalizePipeline(rawValue: unknown): Pipeline {
+  const raw = (rawValue ?? {}) as Record<string, unknown>;
+  const baseType = rawString(raw, 'baseType', 'base_type', 'wes_single') as BasePipelineType;
+  const status = rawString(raw, 'status', 'status', 'inactive');
+  return {
+    id: String(raw.id ?? ''),
+    name: rawString(raw, 'name', 'name'),
+    basePipeline: baseType === 'wes_single' || baseType === 'wes_family' || baseType === 'panel' ? baseType : 'wes_single',
+    version: rawString(raw, 'version', 'version'),
+    description: rawString(raw, 'description', 'description'),
+    bedFile: rawString(raw, 'bedFile', 'bed_file'),
+    referenceGenome: rawString(raw, 'referenceGenome', 'reference_genome'),
+    cnvBaseline: rawString(raw, 'cnvBaseline', 'cnv_baseline') || undefined,
+    status: status === 'active' ? 'active' : 'inactive',
+    createdAt: rawString(raw, 'createdAt', 'created_at'),
+    updatedAt: rawString(raw, 'updatedAt', 'updated_at'),
+  };
+}
+
+function pipelinePayload(data: NewPipelineFormData, status?: Pipeline['status'], version = 'v1.0.0') {
+  return {
+    name: data.name,
+    base_type: data.basePipeline,
+    version,
+    description: data.description,
+    bed_file: data.bedFile,
+    reference_genome: data.referenceGenome,
+    cnv_baseline: data.cnvBaseline !== 'none' ? data.cnvBaseline : '',
+    ...(status ? { status } : {}),
+  };
+}
+
 interface NewPipelineFormData {
   name: string;
   basePipeline: BasePipelineType;
@@ -131,8 +127,10 @@ function NewPipelineModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: NewPipelineFormData) => void;
+  onSubmit: (data: NewPipelineFormData) => void | Promise<void>;
 }) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<NewPipelineFormData>({
     name: '',
     basePipeline: 'wes_single',
@@ -146,18 +144,27 @@ function NewPipelineModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    setFormData({
-      name: '',
-      basePipeline: 'wes_single',
-      description: '',
-      bedFile: 'Agilent_SureSelect_V7.bed',
-      referenceGenome: 'hg38',
-      cnvBaseline: 'none',
-    });
-    onClose();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
+    if (!formData.name || submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(formData);
+      setFormData({
+        name: '',
+        basePipeline: 'wes_single',
+        description: '',
+        bedFile: 'Agilent_SureSelect_V7.bed',
+        referenceGenome: 'hg38',
+        cnvBaseline: 'none',
+      });
+      onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to create pipeline');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -165,17 +172,24 @@ function NewPipelineModal({
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="新建分析流程"
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name}>创建流程</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name || submitting}>
+            {submitting ? '创建中...' : '创建流程'}
+          </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">基础流程 *</label>
           <Select value={formData.basePipeline} onChange={(v) => handleChange('basePipeline', Array.isArray(v) ? v[0] : v)} options={BASE_PIPELINE_OPTIONS} />
@@ -216,9 +230,11 @@ function EditPipelineModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (id: string, data: NewPipelineFormData) => void;
+  onSubmit: (id: string, data: NewPipelineFormData) => void | Promise<void>;
   pipeline: Pipeline | null;
 }) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<NewPipelineFormData>({
     name: '',
     basePipeline: 'wes_single',
@@ -230,6 +246,7 @@ function EditPipelineModal({
 
   React.useEffect(() => {
     if (pipeline) {
+      setSubmitError('');
       setFormData({
         name: pipeline.name,
         basePipeline: pipeline.basePipeline,
@@ -245,11 +262,18 @@ function EditPipelineModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pipeline) {
-      onSubmit(pipeline.id, formData);
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
+    if (!pipeline || !formData.name || submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(pipeline.id, formData);
       onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to update pipeline');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -258,17 +282,24 @@ function EditPipelineModal({
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="编辑分析流程"
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name}>保存修改</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name || submitting}>
+            {submitting ? '保存中...' : '保存修改'}
+          </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">基础流程 *</label>
           <Select value={formData.basePipeline} onChange={(v) => handleChange('basePipeline', Array.isArray(v) ? v[0] : v)} options={BASE_PIPELINE_OPTIONS} />
@@ -309,7 +340,7 @@ function DeleteConfirmModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   pipelineName: string;
 }) {
   return (
@@ -326,62 +357,85 @@ function DeleteConfirmModal({
 
 export default function PipelineListPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [pipelines, setPipelines] = React.useState<Pipeline[]>(mockPipelines);
+  const [pipelines, setPipelines] = React.useState<Pipeline[]>([]);
+  const [pipelineError, setPipelineError] = React.useState('');
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false);
   const [editingPipeline, setEditingPipeline] = React.useState<Pipeline | null>(null);
   const [deletingPipeline, setDeletingPipeline] = React.useState<Pipeline | null>(null);
 
-  const handleToggleStatus = (id: string) => {
-    setPipelines(prev => prev.map(p => {
-      if (p.id === id) {
-        return {
-          ...p,
-          status: p.status === 'active' ? 'inactive' : 'active',
-          updatedAt: new Date().toISOString().split('T')[0],
-        };
-      }
-      return p;
-    }));
+  const loadPipelines = React.useCallback(async () => {
+    try {
+      const response = await api.get<MaybeList<unknown>>('/v1/pipelines', {
+        params: { page: '1', page_size: '100' },
+      });
+      setPipelines(unwrapList(response).map(normalizePipeline).filter(pipeline => pipeline.id));
+      setPipelineError('');
+    } catch (err) {
+      setPipelineError(err instanceof Error ? err.message : 'Failed to load pipelines');
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadPipelines();
+  }, [loadPipelines]);
+
+  const handleToggleStatus = async (pipeline: Pipeline) => {
+    const nextStatus = pipeline.status === 'active' ? 'inactive' : 'active';
+    try {
+      const updated = await api.put<unknown>(
+        `/v1/pipelines/${encodeURIComponent(pipeline.id)}`,
+        pipelinePayload({
+          name: pipeline.name,
+          basePipeline: pipeline.basePipeline,
+          description: pipeline.description,
+          bedFile: pipeline.bedFile,
+          referenceGenome: pipeline.referenceGenome,
+          cnvBaseline: pipeline.cnvBaseline || 'none',
+        }, nextStatus, pipeline.version || 'v1.0.0')
+      );
+      setPipelines(prev => prev.map(p => p.id === pipeline.id ? normalizePipeline(updated) : p));
+      setPipelineError('');
+    } catch (err) {
+      setPipelineError(err instanceof Error ? err.message : 'Failed to update pipeline status');
+    }
   };
 
-  const handleCreatePipeline = (data: NewPipelineFormData) => {
-    const newPipeline: Pipeline = {
-      id: String(Date.now()),
-      name: data.name,
-      basePipeline: data.basePipeline,
-      version: 'v1.0.0',
-      description: data.description || `基于${getBasePipelineLabel(data.basePipeline)}的自定义流程`,
-      bedFile: data.bedFile,
-      referenceGenome: data.referenceGenome,
-      cnvBaseline: data.cnvBaseline !== 'none' ? data.cnvBaseline : undefined,
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-    };
-    setPipelines(prev => [...prev, newPipeline]);
+  const handleCreatePipeline = async (data: NewPipelineFormData) => {
+    try {
+      const created = await api.post<unknown>('/v1/pipelines', pipelinePayload(data));
+      setPipelines(prev => [normalizePipeline(created), ...prev].filter(pipeline => pipeline.id));
+      setPipelineError('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create pipeline';
+      setPipelineError(message);
+      throw new Error(message);
+    }
   };
 
-  const handleEditPipeline = (id: string, data: NewPipelineFormData) => {
-    setPipelines(prev => prev.map(p => {
-      if (p.id === id) {
-        return {
-          ...p,
-          name: data.name,
-          basePipeline: data.basePipeline,
-          description: data.description,
-          bedFile: data.bedFile,
-          referenceGenome: data.referenceGenome,
-          cnvBaseline: data.cnvBaseline !== 'none' ? data.cnvBaseline : undefined,
-          updatedAt: new Date().toISOString().split('T')[0],
-        };
-      }
-      return p;
-    }));
+  const handleEditPipeline = async (id: string, data: NewPipelineFormData) => {
+    try {
+      const current = pipelines.find(p => p.id === id);
+      const updated = await api.put<unknown>(`/v1/pipelines/${encodeURIComponent(id)}`, pipelinePayload(data, current?.status, current?.version || 'v1.0.0'));
+      setPipelines(prev => prev.map(p => p.id === id ? normalizePipeline(updated) : p));
+      setPipelineError('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update pipeline';
+      setPipelineError(message);
+      throw new Error(message);
+    }
   };
 
-  const handleDeletePipeline = (id: string) => {
-    setPipelines(prev => prev.filter(p => p.id !== id));
-    setDeletingPipeline(null);
+  const handleDeletePipeline = async (id: string) => {
+    try {
+      await api.delete<void>(`/v1/pipelines/${encodeURIComponent(id)}`);
+      setPipelines(prev => prev.filter(p => p.id !== id));
+      setDeletingPipeline(null);
+      setPipelineError('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete pipeline';
+      setPipelineError(message);
+      throw new Error(message);
+    }
   };
 
   const filteredPipelines = React.useMemo(() => {
@@ -433,7 +487,7 @@ export default function PipelineListPage() {
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            onClick={() => handleToggleStatus(row.id)}
+            onClick={() => handleToggleStatus(row)}
             className={`p-1.5 rounded transition-colors ${
               row.status === 'active'
                 ? 'hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-600 dark:text-gray-400 hover:text-orange-600'
@@ -476,6 +530,12 @@ export default function PipelineListPage() {
           新建流程
         </Button>
       </div>
+
+      {pipelineError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {pipelineError}
+        </div>
+      )}
 
       <DataTable
         data={filteredPipelines}

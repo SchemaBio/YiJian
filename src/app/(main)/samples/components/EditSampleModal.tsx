@@ -9,7 +9,7 @@ import type { Gender, SampleType, Sample } from '../types';
 interface EditSampleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (id: string, data: EditSampleFormData) => void;
+  onSubmit: (id: string, data: EditSampleFormData) => void | Promise<void>;
   sample: Sample | null;
 }
 
@@ -55,6 +55,8 @@ const COMMON_HPO_TERMS = [
 ];
 
 export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampleModalProps) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<EditSampleFormData>({
     internalId: '',
     gender: 'unknown',
@@ -74,6 +76,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
   // 当 sample 变化时更新表单数据
   React.useEffect(() => {
     if (sample) {
+      setSubmitError('');
       setFormData({
         internalId: sample.internalId,
         gender: sample.gender,
@@ -116,11 +119,18 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (sample) {
-      onSubmit(sample.id, formData);
+    if (!sample || submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(sample.id, formData);
       onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to update sample');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -129,17 +139,22 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="编辑样本"
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)}>保存</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
+          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存</Button>
         </>
       }
     >
       <form onSubmit={handleSubmit}>
+        {submitError && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
           {/* 基本信息 */}
           <div className="mb-6">
             <h3 className="text-sm font-medium text-fg-default mb-3">基本信息</h3>

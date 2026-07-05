@@ -10,7 +10,7 @@ import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';
 interface EditMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (memberId: string, updates: Partial<PedigreeMember>) => void;
+  onSubmit: (memberId: string, updates: Partial<PedigreeMember>) => void | Promise<void>;
   member: PedigreeMember | null;
   existingMembers: PedigreeMember[];
 }
@@ -31,6 +31,8 @@ const affectedOptions = Object.entries(AFFECTED_STATUS_CONFIG)
 const NONE_VALUE = '__none__';
 
 export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMembers }: EditMemberModalProps) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState({
     name: '',
     gender: 'unknown' as Gender,
@@ -48,6 +50,7 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
   // 从 member prop 初始化表单数据
   React.useEffect(() => {
     if (member) {
+      setSubmitError('');
       setFormData({
         name: member.name,
         gender: member.gender,
@@ -78,27 +81,34 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
     setFormData(prev => ({ ...prev, spouseIds: prev.spouseIds.filter(id => id !== spouseId) }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!member) return;
+    if (!member || submitting) return;
 
-    onSubmit(member.id, {
-      name: formData.name,
-      gender: formData.gender,
-      birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
-      relation: formData.relation,
-      affectedStatus: formData.affectedStatus,
-      fatherId: formData.fatherId === NONE_VALUE ? undefined : formData.fatherId,
-      motherId: formData.motherId === NONE_VALUE ? undefined : formData.motherId,
-      spouseIds: formData.spouseIds.length > 0 ? formData.spouseIds : undefined,
-      phenotypes: formData.phenotypes ? formData.phenotypes.split(',').map(s => s.trim()) : undefined,
-      isDeceased: formData.isDeceased,
-      deceasedYear: formData.isDeceased && formData.deceasedYear ? parseInt(formData.deceasedYear) : undefined,
-    });
-    onClose();
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(member.id, {
+        name: formData.name,
+        gender: formData.gender,
+        birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
+        relation: formData.relation,
+        affectedStatus: formData.affectedStatus,
+        fatherId: formData.fatherId === NONE_VALUE ? undefined : formData.fatherId,
+        motherId: formData.motherId === NONE_VALUE ? undefined : formData.motherId,
+        spouseIds: formData.spouseIds.length > 0 ? formData.spouseIds : undefined,
+        phenotypes: formData.phenotypes ? formData.phenotypes.split(',').map(s => s.trim()) : undefined,
+        isDeceased: formData.isDeceased,
+        deceasedYear: formData.isDeceased && formData.deceasedYear ? parseInt(formData.deceasedYear) : undefined,
+      });
+      onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to update pedigree member');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // 获取可选的父母（排除自己和自己的后代）
   const getDescendants = (memberId: string): string[] => {
     const descendants: string[] = [];
     const children = existingMembers.filter(m => m.fatherId === memberId || m.motherId === memberId);
@@ -140,17 +150,22 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="编辑成员信息"
       size="small"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)}>保存修改</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
+          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存修改</Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div>
           <label className="block text-xs text-fg-muted mb-1">姓名 *</label>
           <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入姓名" required />

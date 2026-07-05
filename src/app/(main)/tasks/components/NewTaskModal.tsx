@@ -2,8 +2,9 @@
 
 import * as React from 'react';
 import { Button, Input, Select } from '@schema/ui-kit';
-import { X, Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Upload } from 'lucide-react';
 import { AppModal } from '@/components/shared';
+import { requestPairedUploadJob, uploadToCOS } from '@/lib/api';
 import {
   pipelinesApi,
   samplesApi,
@@ -22,14 +23,14 @@ export interface NewTaskFormData {
   remark: string;
   template: string;
   inputs: Record<string, unknown>;
-  uploaded_file_ids: number[];
+  uploadJobId: string;
   estimatedMinutes: number;
 }
 
 interface NewTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: NewTaskFormData) => void;
+  onSubmit: (data: NewTaskFormData) => void | Promise<void>;
 }
 
 export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
@@ -39,10 +40,16 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem | null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState<string>('');
-  const [uploadedFileIds, setUploadedFileIds] = React.useState('');
+  const [uploadJobId, setUploadJobId] = React.useState('');
   const [estimatedMinutes, setEstimatedMinutes] = React.useState(120);
   const [remark, setRemark] = React.useState('');
+  const [r1File, setR1File] = React.useState<File | null>(null);
+  const [r2File, setR2File] = React.useState<File | null>(null);
+  const [uploadingFiles, setUploadingFiles] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [uploadNotice, setUploadNotice] = React.useState('');
   const [loadingResources, setLoadingResources] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
   const [resourceError, setResourceError] = React.useState('');
 
   React.useEffect(() => {
@@ -97,7 +104,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     }
     return templates.map(t => ({
       value: t.name,
-      label: t.name,
+      label: t.displayName && t.displayName !== t.name ? `${t.displayName} (${t.name})` : t.name,
     }));
   }, [pipelines, templates]);
 
@@ -105,67 +112,111 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     if (pipeline?.template) return pipeline.template;
     const byBaseType: Record<string, string> = {
       wes_single: 'single',
-      wes_family: 'family',
+      // Octopus' built-in trio/family WDL is trio.wdl; the catalog exposes it
+      // as germline_trio with shortName "trio".
+      wes_family: 'trio',
       panel: 'panel',
     };
     const baseTemplate = pipeline?.baseType ? byBaseType[pipeline.baseType] : '';
-    if (baseTemplate && templates.some(t => t.name === baseTemplate)) return baseTemplate;
+    if (baseTemplate && (templates.length === 0 || templates.some(t => t.name === baseTemplate))) {
+      return baseTemplate;
+    }
 
     const target = `${pipeline?.id ?? selectedPipeline} ${pipeline?.name ?? ''}`.toLowerCase();
     const matchedTemplate = templates.find(t => target.includes(t.name.toLowerCase()));
     return matchedTemplate?.name || templates[0]?.name || pipeline?.id || selectedPipeline;
   };
 
-  const parseUploadedFileIds = () => uploadedFileIds
-    .split(',')
-    .map(id => Number(id.trim()))
-    .filter(id => Number.isInteger(id) && id > 0);
+  const uploadJobID = uploadJobId.trim();
+  const hasSequencingInput = Boolean(selectedSample?.matchedPair || uploadJobID);
 
   const buildInputs = (sample: TaskSampleListItem) => {
-    const inputs: Record<string, unknown> = {
+    return {
       sample_name: sample.internalId || sample.id,
       sample_id: sample.id,
     };
-
-    if (sample.matchedPair?.r1Path) {
-      inputs.fastq1 = sample.matchedPair.r1Path;
-    }
-    if (sample.matchedPair?.r2Path) {
-      inputs.fastq2 = sample.matchedPair.r2Path;
-    }
-
-    return inputs;
   };
 
-  const handleSubmit = () => {
-    if (!selectedSample || !selectedPipeline) return;
+  const handleSubmit = async () => {
+    if (!selectedSample || !selectedPipeline || submitting || uploadingFiles) return;
+    if (!hasSequencingInput) {
+      setResourceError('Please select a sample with matched_pair or provide an Upload job ID.');
+      return;
+    }
 
     const pipeline = pipelines.find(p => p.id === selectedPipeline);
     const template = resolveTemplate(pipeline);
     if (!template) return;
 
-    onSubmit({
-      sampleId: selectedSample.id,
-      internalId: selectedSample.internalId,
-      pipelineId: pipeline?.id || template,
-      pipelineName: pipeline?.name || template,
-      pipelineVersion: pipeline?.version || '',
-      remark,
-      template,
-      inputs: buildInputs(selectedSample),
-      uploaded_file_ids: parseUploadedFileIds(),
-      estimatedMinutes,
-    });
-    handleClose();
+    setSubmitting(true);
+    setResourceError('');
+    try {
+      await onSubmit({
+        sampleId: selectedSample.id,
+        internalId: selectedSample.internalId,
+        // Octopus treats a non-empty pipelineId as a concrete persisted
+        // Pipeline lookup. When the UI falls back to the template catalog, do
+        // not submit the template name as pipelineId or CreateTask will fail
+        // with "pipeline not found".
+        pipelineId: pipeline?.id || '',
+        pipelineName: pipeline?.name || template,
+        pipelineVersion: pipeline?.version || '',
+        remark,
+        template,
+        inputs: buildInputs(selectedSample),
+        uploadJobId: uploadJobID,
+        estimatedMinutes,
+      });
+      handleClose();
+    } catch (err) {
+      setResourceError(err instanceof Error ? err.message : 'Failed to create task');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePairedUpload = async () => {
+    if (!r1File || !r2File || uploadingFiles) {
+      setResourceError('Please choose both R1 and R2 FASTQ files before uploading.');
+      return;
+    }
+
+    setUploadingFiles(true);
+    setUploadProgress(0);
+    setUploadNotice('');
+    setResourceError('');
+    try {
+      const job = await requestPairedUploadJob(r1File, r2File, selectedSample?.id);
+      const r1 = job.files.find(file => file.read_type === 'read1');
+      const r2 = job.files.find(file => file.read_type === 'read2');
+      if (!r1 || !r2) {
+        throw new Error('Upload job did not return both R1 and R2 upload URLs');
+      }
+
+      await uploadToCOS(r1.upload_url, r1File, pct => setUploadProgress(Math.round(pct / 2)));
+      await uploadToCOS(r2.upload_url, r2File, pct => setUploadProgress(50 + Math.round(pct / 2)));
+      setUploadJobId(job.job_id);
+      setUploadProgress(100);
+      setUploadNotice(`Upload job ${job.job_id} is ready; Octopus will inject fastq_r1/fastq_r2 from this job.`);
+    } catch (err) {
+      setResourceError(err instanceof Error ? err.message : 'Failed to upload paired FASTQ files');
+    } finally {
+      setUploadingFiles(false);
+    }
   };
 
   const handleClose = () => {
+    if (submitting || uploadingFiles) return;
     setSampleSearch('');
     setSelectedSample(null);
     setSelectedPipeline('');
-    setUploadedFileIds('');
+    setUploadJobId('');
     setEstimatedMinutes(120);
     setRemark('');
+    setR1File(null);
+    setR2File(null);
+    setUploadProgress(0);
+    setUploadNotice('');
     setResourceError('');
     onClose();
   };
@@ -180,8 +231,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={handleClose}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={loadingResources || !selectedSample || !selectedPipeline}>创建任务</Button>
+          <Button variant="secondary" onClick={handleClose} disabled={submitting || uploadingFiles}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={loadingResources || uploadingFiles || submitting || !selectedSample || !selectedPipeline || !hasSequencingInput}>创建任务</Button>
         </>
       }
     >
@@ -211,7 +262,10 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
                 className={`px-3 py-2 cursor-pointer transition-colors ${selectedSample?.id === sample.id ? 'bg-accent-subtle text-accent-fg' : 'hover:bg-canvas-subtle'}`}
               >
                 <div className="text-sm font-mono">{sample.id.substring(0, 8)}...</div>
-                <div className="text-xs text-fg-muted">{sample.internalId}</div>
+                <div className="text-xs text-fg-muted">
+                  {sample.internalId}
+                  {!sample.matchedPair ? ' · no matched_pair' : ''}
+                </div>
               </div>
             ))}
             {filteredSamples.length === 0 && (
@@ -234,10 +288,62 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <Input type="number" min="1" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(Math.max(1, Number(e.target.value) || 1))} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">上传文件 ID</label>
-            <Input value={uploadedFileIds} onChange={(e) => setUploadedFileIds(e.target.value)} placeholder="如：1,2（可选）" />
+            <label className="block text-sm font-medium text-fg-default mb-2">Upload job ID</label>
+            <Input value={uploadJobId} onChange={(e) => setUploadJobId(e.target.value)} placeholder="Upload job UUID (optional)" disabled={uploadingFiles} />
           </div>
         </div>
+
+        <div className="rounded-md border border-border bg-canvas-subtle p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium text-fg-default">Paired FASTQ upload</div>
+              <div className="text-xs text-fg-muted">
+                Creates one Octopus upload job with read1/read2 files, then fills Upload job ID automatically.
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handlePairedUpload}
+              disabled={!r1File || !r2File || uploadingFiles || submitting}
+              leftIcon={uploadingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            >
+              {uploadingFiles ? `Uploading ${uploadProgress}%` : 'Upload pair'}
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
+              <span className="block font-medium text-fg-default">R1 FASTQ</span>
+              <span className="block truncate">{r1File?.name || 'Choose read1 file'}</span>
+              <input
+                type="file"
+                accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
+                className="hidden"
+                disabled={uploadingFiles || submitting}
+                onChange={(e) => setR1File(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
+              <span className="block font-medium text-fg-default">R2 FASTQ</span>
+              <span className="block truncate">{r2File?.name || 'Choose read2 file'}</span>
+              <input
+                type="file"
+                accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
+                className="hidden"
+                disabled={uploadingFiles || submitting}
+                onChange={(e) => setR2File(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
+          {uploadNotice && (
+            <div className="mt-2 text-xs text-success-fg">{uploadNotice}</div>
+          )}
+        </div>
+
+        {selectedSample && !selectedSample.matchedPair && !uploadJobID && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            当前样本没有 Octopus matched_pair。请先在样本详情写入 R1/R2 storage key，或填写 Upload job ID，让后端从上传任务注入 fastq_r1/fastq_r2。
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-fg-default mb-2">备注</label>

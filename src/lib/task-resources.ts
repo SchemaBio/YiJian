@@ -36,6 +36,7 @@ export interface TaskPipelineOption {
 
 export interface TaskTemplateOption {
   name: string;
+  displayName?: string;
   path?: string;
   description?: string;
   inputFields?: string[];
@@ -44,10 +45,11 @@ export interface TaskTemplateOption {
 function normalizeMatchedPair(raw: unknown): { r1Path?: string; r2Path?: string } | null {
   if (!raw || typeof raw !== 'object') return null;
   const pair = raw as Record<string, unknown>;
-  return {
-    r1Path: valueOf<string>(pair, 'r1Path', 'r1_path', ''),
-    r2Path: valueOf<string>(pair, 'r2Path', 'r2_path', ''),
+  const matchedPair = {
+    r1Path: valueOf<string>(pair, 'r1Path', 'r1_path', '').trim(),
+    r2Path: valueOf<string>(pair, 'r2Path', 'r2_path', '').trim(),
   };
+  return matchedPair.r1Path && matchedPair.r2Path ? matchedPair : null;
 }
 
 export function normalizeSampleListItem(rawValue: unknown): TaskSampleListItem {
@@ -114,8 +116,16 @@ function normalizePipeline(rawValue: unknown): TaskPipelineOption {
 
 function normalizeTemplate(rawValue: unknown): TaskTemplateOption {
   const raw = (rawValue ?? {}) as Record<string, unknown>;
+  const rawName = String(raw.name ?? '');
+  const shortName = valueOf<string>(raw, 'shortName', 'short_name', '');
   return {
-    name: String(raw.name ?? ''),
+    // Octopus' template catalog exposes logical names such as
+    // "germline_single" plus a shortName "single", while CreateTask currently
+    // resolves <template>.wdl directly. Use shortName for task creation so the
+    // UI does not submit "germline_single" and then fail on missing
+    // germline_single.wdl.
+    name: shortName || rawName,
+    displayName: rawName || shortName,
     path: String(raw.path ?? ''),
     description: String(raw.description ?? ''),
     inputFields: valueOf<string[]>(raw, 'inputFields', 'input_fields', []),
@@ -139,7 +149,9 @@ export const pipelinesApi = {
     const response = await api.get<MaybeList<unknown>>('/v1/pipelines', {
       params: { page: '1', page_size: '100' },
     });
-    return unwrapList(response).map(normalizePipeline).filter(pipeline => pipeline.id && pipeline.name);
+    return unwrapList(response)
+      .map(normalizePipeline)
+      .filter(pipeline => pipeline.id && pipeline.name && pipeline.status !== 'inactive');
   },
 };
 

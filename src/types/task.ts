@@ -50,11 +50,11 @@ export interface TaskCreateRequest {
   pipelineVersion: string;
   remark: string;
   template?: string;
-  executor?: 'local' | 'slurm' | 'lsf' | 'cvm_spot';
+  executor?: 'local' | 'slurm' | 'lsf';
   inputs?: Record<string, unknown>;
   config_file?: string;
   output_dir?: string;
-  uploaded_file_ids?: number[];
+  uploadJobId?: string;
   estimatedMinutes?: number;
 }
 

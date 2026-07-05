@@ -1,463 +1,289 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import * as React from 'react';
+import Link from 'next/link';
 import { PageContent } from '@/components/layout';
 import { Tag } from '@schema/ui-kit';
 import {
-  Users,
-  FlaskConical,
-  Clock,
-  CheckCircle,
   AlertCircle,
-  TrendingUp,
   ArrowRight,
-  ListTodo,
+  CheckCircle,
+  Clock,
+  FlaskConical,
   History,
+  ListTodo,
+  RefreshCw,
+  Users,
   Workflow,
-  MessageSquare,
-  Send,
-  Trash2,
+  XCircle,
 } from 'lucide-react';
-import Link from 'next/link';
-import { ConfirmDialog } from '@/components/shared';
+import { api } from '@/lib/api';
+import { tasksApi } from '@/lib/tasks';
+import { useAuth } from '@/components/providers/AuthProvider';
+import type { AnalysisTask, TaskStatus } from '@/types/task';
 
-// 格式化时间为中文格式
-function formatDateTime(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}`;
+interface DashboardStats {
+  totalSamples: number;
+  pendingTasks: number;
+  waitingDataTasks: number;
+  runningTasks: number;
+  completedTasks: number;
+  failedTasks: number;
 }
 
-// 统计卡片数据
-const statsCards = [
-  {
-    title: '样本总数',
-    value: '2,456',
-    change: '+128',
-    changeLabel: '本月新增',
-    icon: Users,
-    bgColor: 'yj-kpi-blue',
-    iconColor: 'text-blue-600',
-    valueColor: 'text-blue-700',
-    titleColor: 'text-blue-600',
-    changeColor: 'text-blue-500',
-    href: '/samples',
-  },
-  {
-    title: '待分析任务',
-    value: '23',
-    change: '5',
-    changeLabel: '紧急',
-    icon: FlaskConical,
-    bgColor: 'yj-kpi-orange',
-    iconColor: 'text-orange-600',
-    valueColor: 'text-orange-700',
-    titleColor: 'text-orange-600',
-    changeColor: 'text-orange-500',
-    href: '/tasks/pending',
-  },
-  {
-    title: '进行中任务',
-    value: '8',
-    change: '~2h',
-    changeLabel: '预计完成',
-    icon: Clock,
-    bgColor: 'yj-kpi-purple',
-    iconColor: 'text-purple-600',
-    valueColor: 'text-purple-700',
-    titleColor: 'text-purple-600',
-    changeColor: 'text-purple-500',
-    href: '/tasks/running',
-  },
-  {
-    title: '已完成任务',
-    value: '156',
-    change: '+12',
-    changeLabel: '本周',
-    icon: CheckCircle,
-    bgColor: 'yj-kpi-green',
-    iconColor: 'text-green-600',
-    valueColor: 'text-green-700',
-    titleColor: 'text-green-600',
-    changeColor: 'text-green-500',
-    href: '/tasks/completed',
-  },
-  {
-    title: '平均周转',
-    value: '3.2天',
-    change: '-0.5',
-    changeLabel: '优化',
-    icon: TrendingUp,
-    bgColor: 'yj-kpi-teal',
-    iconColor: 'text-teal-600',
-    valueColor: 'text-teal-700',
-    titleColor: 'text-teal-600',
-    changeColor: 'text-teal-500',
-    href: '/tasks',
-  },
-];
+const EMPTY_STATS: DashboardStats = {
+  totalSamples: 0,
+  pendingTasks: 0,
+  waitingDataTasks: 0,
+  runningTasks: 0,
+  completedTasks: 0,
+  failedTasks: 0,
+};
 
-// 待分析样本列表
-const pendingSamples = [
-  {
-    id: '1',
-    sampleId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    internalId: 'INT-001',
-    testType: '全外显子组测序',
-    priority: 'urgent' as const,
-    receivedDate: '2024-12-25',
-    waitingDays: 3,
-  },
-  {
-    id: '2',
-    sampleId: 'b2c3d4e5-f678-90ab-cdef-123456789012',
-    internalId: 'INT-002',
-    testType: '遗传性心肌病Panel',
-    priority: 'normal' as const,
-    receivedDate: '2024-12-26',
-    waitingDays: 2,
-  },
-  {
-    id: '3',
-    sampleId: 'c3d4e5f6-7890-abcd-ef12-345678901234',
-    internalId: 'INT-003',
-    testType: '遗传性肿瘤Panel',
-    priority: 'urgent' as const,
-    receivedDate: '2024-12-26',
-    waitingDays: 2,
-  },
-  {
-    id: '4',
-    sampleId: 'd4e5f678-90ab-cdef-1234-567890123456',
-    internalId: 'INT-004',
-    testType: '全外显子组测序',
-    priority: 'normal' as const,
-    receivedDate: '2024-12-27',
-    waitingDays: 1,
-  },
-  {
-    id: '5',
-    sampleId: 'e5f67890-abcd-ef12-3456-789012345678',
-    internalId: 'INT-005',
-    testType: '线粒体基因组测序',
-    priority: 'normal' as const,
-    receivedDate: '2024-12-27',
-    waitingDays: 1,
-  },
-];
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  waiting_for_data: '等待数据',
+  queued: '排队中',
+  running: '运行中',
+  completed: '已完成',
+  failed: '失败',
+  cancelled: '已取消',
+  pending_interpretation: '待解读',
+};
 
-// 全局备注
-const globalNotes = [
-  {
-    id: '1',
-    content: '下周一开始系统维护，预计停机2小时，请提前保存工作内容。',
-    author: '张医生',
-    createdAt: '2024-12-28 14:30',
-    avatar: '张',
-    isOwner: true, // 当前用户发送的
-  },
-  {
-    id: '2',
-    content: '新增心血管Panel检测项目已上线，欢迎大家试用并反馈问题。',
-    author: '李工程师',
-    createdAt: '2024-12-28 10:15',
-    avatar: '李',
-    isOwner: false,
-  },
-  {
-    id: '3',
-    content: '本周五下午3点召开项目进度会议，请相关人员准时参加。',
-    author: '王主任',
-    createdAt: '2024-12-27 16:45',
-    avatar: '王',
-    isOwner: false,
-  },
-  {
-    id: '4',
-    content: '提醒：请大家及时更新样本状态，确保流程追踪准确。',
-    author: '张医生',
-    createdAt: '2024-12-27 09:30',
-    avatar: '张',
-    isOwner: true,
-  },
-  {
-    id: '5',
-    content: '新版本已部署，修复了报告导出的问题。',
-    author: '李工程师',
-    createdAt: '2024-12-26 15:20',
-    avatar: '李',
-    isOwner: false,
-  },
-];
+function formatDateTime(date: Date): string {
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
+function statusVariant(status: TaskStatus): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
+  if (status === 'completed') return 'success';
+  if (status === 'failed' || status === 'cancelled') return 'danger';
+  if (status === 'running') return 'info';
+  if (status === 'queued' || status === 'waiting_for_data') return 'warning';
+  return 'neutral';
+}
 
 export default function DashboardPage() {
-  const [currentTime, setCurrentTime] = useState<string>('');
-  const [newNote, setNewNote] = useState('');
-  const [notes, setNotes] = useState(globalNotes);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; author: string } | null>(null);
+  const { user, currentOrg } = useAuth();
+  const [currentTime, setCurrentTime] = React.useState('');
+  const [stats, setStats] = React.useState<DashboardStats>(EMPTY_STATS);
+  const [tasks, setTasks] = React.useState<AnalysisTask[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
 
-  // 当前用户是否是管理员（模拟）
-  const isAdmin = true;
-
-  useEffect(() => {
-    // 初始化时间
-    setCurrentTime(formatDateTime(new Date()));
-
-    // 每秒更新时间
-    const timer = setInterval(() => {
-      setCurrentTime(formatDateTime(new Date()));
-    }, 1000);
-
-    return () => clearInterval(timer);
+  const loadDashboard = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [statsData, taskData] = await Promise.all([
+        api.get<DashboardStats>('/v1/dashboard/stats'),
+        tasksApi.list({ page: 1, page_size: 6 }),
+      ]);
+      setStats({ ...EMPTY_STATS, ...statsData });
+      setTasks(taskData.items ?? []);
+    } catch (err) {
+      setStats(EMPTY_STATS);
+      setTasks([]);
+      setError(err instanceof Error ? err.message : '加载工作台数据失败');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
+  React.useEffect(() => {
+    setCurrentTime(formatDateTime(new Date()));
+    const timer = window.setInterval(() => setCurrentTime(formatDateTime(new Date())), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-    const note = {
-      id: String(Date.now()),
-      content: newNote.trim(),
-      author: '张医生',
-      createdAt: new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).replace(/\//g, '-'),
-      avatar: '张',
-      isOwner: true,
-    };
+  React.useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
 
-    setNotes([note, ...notes]);
-    setNewNote('');
-  };
-
-  const handleDeleteNote = (id: string) => {
-    setNotes(notes.filter((n) => n.id !== id));
-    setDeleteConfirm(null);
-  };
-
-  const canDeleteNote = (note: typeof notes[0]) => {
-    return note.isOwner || isAdmin;
-  };
+  const cards = [
+    {
+      title: '样本总数',
+      value: stats.totalSamples,
+      hint: 'Octopus samples',
+      icon: Users,
+      href: '/samples',
+      className: 'yj-kpi-blue',
+    },
+    {
+      title: '待处理任务',
+      value: stats.pendingTasks,
+      hint: `等待数据 ${stats.waitingDataTasks}`,
+      icon: FlaskConical,
+      href: '/tasks',
+      className: 'yj-kpi-orange',
+    },
+    {
+      title: '运行中',
+      value: stats.runningTasks,
+      hint: 'running',
+      icon: Clock,
+      href: '/tasks',
+      className: 'yj-kpi-purple',
+    },
+    {
+      title: '已完成',
+      value: stats.completedTasks,
+      hint: 'completed',
+      icon: CheckCircle,
+      href: '/tasks',
+      className: 'yj-kpi-green',
+    },
+    {
+      title: '失败任务',
+      value: stats.failedTasks,
+      hint: 'failed',
+      icon: XCircle,
+      href: '/tasks',
+      className: 'yj-kpi-teal',
+    },
+  ];
 
   return (
     <PageContent padded={false} className="h-full flex flex-col">
       <div className="p-6 xl:p-8 flex flex-col h-full min-h-0">
-      {/* 欢迎信息 */}
-      <div className="mb-7 flex items-start justify-between gap-6 shrink-0">
-        <div>
-          <h2 className="text-[32px] leading-tight font-semibold text-[var(--yj-text-strong)] tracking-tight">今日工作台</h2>
-          <p className="text-sm text-fg-muted mt-2">
-            张医生 · {currentTime || '加载中...'}
-          </p>
-        </div>
-        {/* 快捷操作 */}
-        <div className="flex items-center gap-2">
-          <Link
-            href="/samples"
-            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
-          >
-            <Users className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm text-fg-default">样本管理</span>
-          </Link>
-          <Link
-            href="/tasks"
-            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
-          >
-            <ListTodo className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm text-fg-default">任务中心</span>
-          </Link>
-          <Link
-            href="/history"
-            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
-          >
-            <History className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm text-fg-default">历史检出</span>
-          </Link>
-          <Link
-            href="/pipeline"
-            className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
-          >
-            <Workflow className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm text-fg-default">流程中心</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6 shrink-0">
-        {statsCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Link
-              key={stat.title}
-              href={stat.href}
-              className={`yj-kpi-card p-5 hover:bg-white transition-colors ${stat.bgColor}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-sm text-fg-muted">
-                  {stat.title}
-                </span>
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--yj-panel-subtle)] text-fg-muted">
-                  <Icon className="w-4 h-4" />
-                </span>
-              </div>
-              <div className="mt-6">
-                <div className="text-[28px] leading-none font-semibold tracking-tight text-[var(--yj-text-strong)]">{stat.value}</div>
-                <div className="mt-2 text-xs font-medium text-accent-fg">
-                  {stat.change} {stat.changeLabel}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* 全局备注 + 待分析任务 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] gap-5 flex-1 min-h-0">
-        {/* 全局备注 */}
-        <div className="yj-panel flex flex-col min-h-0">
-          <div className="yj-panel-header shrink-0">
-            <h3 className="font-medium text-fg-default flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-accent-fg" />
-              全局备注
-            </h3>
-            <span className="text-xs text-fg-muted">组织内可见</span>
+        <div className="mb-7 flex items-start justify-between gap-6 shrink-0">
+          <div>
+            <h2 className="text-[32px] leading-tight font-semibold text-[var(--yj-text-strong)] tracking-tight">今日工作台</h2>
+            <p className="text-sm text-fg-muted mt-2">
+              {user?.name || user?.email || '当前用户'}{currentOrg?.name ? ` · ${currentOrg.name}` : ''} · {currentTime || '加载中...'}
+            </p>
+            <p className="text-xs text-fg-muted mt-1">
+              统计数据来自 Octopus `/api/v1/dashboard/stats`，不再使用前端模拟仪表盘数据。
+            </p>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => void loadDashboard()}
+              disabled={loading}
+              className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2 disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 text-fg-muted ${loading ? 'animate-spin' : ''}`} />
+              <span className="text-sm text-fg-default">刷新</span>
+            </button>
+            <QuickLink href="/samples" icon={<Users className="w-4 h-4 text-fg-muted" />} label="样本管理" />
+            <QuickLink href="/tasks" icon={<ListTodo className="w-4 h-4 text-fg-muted" />} label="任务中心" />
+            <QuickLink href="/history" icon={<History className="w-4 h-4 text-fg-muted" />} label="历史检出" />
+            <QuickLink href="/pipeline" icon={<Workflow className="w-4 h-4 text-fg-muted" />} label="流程中心" />
+          </div>
+        </div>
 
-          {/* 发备注输入框 */}
-          <div className="p-3 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] shrink-0">
-            <div className="flex gap-3">
-              <div className="w-7 h-7 rounded-full bg-accent-subtle flex items-center justify-center text-xs font-medium text-accent-fg shrink-0">
-                张
-              </div>
-              <div className="flex-1 flex items-center gap-2">
-                <div className="flex-1 relative flex items-center bg-white rounded-lg border border-[var(--yj-border-subtle)] focus-within:border-accent-muted focus-within:ring-1 focus-within:ring-accent-muted transition-all">
-                  <input
-                    type="text"
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleAddNote();
-                      }
-                    }}
-                    placeholder="发布备注..."
-                    className="flex-1 w-full px-3 py-2 text-sm bg-transparent focus:outline-none"
-                  />
-                  <button
-                    onClick={handleAddNote}
-                    disabled={!newNote.trim()}
-                    className="shrink-0 w-7 h-7 mr-1 flex items-center justify-center rounded-md bg-accent-emphasis text-white hover:bg-accent-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    title="发布"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
+        {error && (
+          <div className="yj-panel border border-danger-muted bg-danger-subtle text-danger-fg flex items-center gap-2 mb-5">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm">{error}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6 shrink-0">
+          {cards.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Link
+                key={stat.title}
+                href={stat.href}
+                className={`yj-kpi-card p-5 hover:bg-white transition-colors ${stat.className}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-sm text-fg-muted">{stat.title}</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--yj-panel-subtle)] text-fg-muted">
+                    <Icon className="w-4 h-4" />
+                  </span>
                 </div>
-              </div>
+                <div className="mt-6">
+                  <div className="text-[28px] leading-none font-semibold tracking-tight text-[var(--yj-text-strong)]">
+                    {loading ? '...' : stat.value}
+                  </div>
+                  <div className="mt-2 text-xs font-medium text-accent-fg">{stat.hint}</div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] gap-5 flex-1 min-h-0">
+          <div className="yj-panel flex flex-col min-h-0">
+            <div className="yj-panel-header shrink-0">
+              <h3 className="font-medium text-fg-default flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-orange-500" />
+                最近任务
+              </h3>
+              <Link href="/tasks" className="text-sm text-accent-fg hover:underline flex items-center gap-1">
+                查看全部 <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {tasks.length > 0 ? tasks.map((task) => (
+                <Link
+                  key={task.id}
+                  href={`/tasks/${encodeURIComponent(task.id)}`}
+                  className="yj-status-row flex items-center justify-between p-4"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-fg-default font-mono text-sm truncate">
+                        {task.internalId || task.sampleId || task.id}
+                      </span>
+                      <Tag variant={statusVariant(task.status)}>{STATUS_LABEL[task.status] ?? task.status}</Tag>
+                    </div>
+                    <div className="text-sm text-fg-muted mt-0.5 truncate">
+                      {task.pipeline || '-'} {task.pipelineVersion ? `· ${task.pipelineVersion}` : ''}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-4">
+                    <div className="text-sm text-fg-muted">{task.progress ?? 0}%</div>
+                    <div className="text-xs text-fg-subtle">{task.createdAt || '-'}</div>
+                  </div>
+                </Link>
+              )) : (
+                <div className="p-6 text-center text-fg-muted text-sm">
+                  {loading ? '加载任务中...' : '暂无任务'}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 备注列表 */}
-          <div className="overflow-y-auto flex-1">
-            {notes.map((note) => (
-              <div key={note.id} className="yj-status-row p-3 group">
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-canvas-inset flex items-center justify-center text-xs font-medium text-fg-muted shrink-0">
-                    {note.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-medium text-fg-default">{note.author}</span>
-                      <span className="text-xs text-fg-muted">{note.createdAt}</span>
-                      {canDeleteNote(note) && (
-                        <button
-                          onClick={() => setDeleteConfirm({ id: note.id, author: note.author })}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-all"
-                          title="删除"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-sm text-fg-default">{note.content}</p>
-                  </div>
-                </div>
+          <div className="yj-panel flex flex-col min-h-0">
+            <div className="yj-panel-header shrink-0">
+              <h3 className="font-medium text-fg-default flex items-center gap-2">
+                <Workflow className="w-4 h-4 text-accent-fg" />
+                API 对齐说明
+              </h3>
+            </div>
+            <div className="p-4 space-y-3 text-sm text-fg-muted">
+              <p>工作台只展示后端已有的样本和任务统计，不再维护前端本地公告、假任务或固定 KPI。</p>
+              <p>如需组织公告/待办能力，建议在 Squid 增加 SaaS 侧公告接口后再接入，避免 UI 状态与审计记录脱节。</p>
+              <div className="rounded-lg bg-canvas-subtle p-3 font-mono text-xs text-fg-default">
+                GET /v1/dashboard/stats<br />
+                GET /v1/tasks?page=1&amp;page_size=6
               </div>
-            ))}
-            {notes.length === 0 && (
-              <div className="p-6 text-center text-fg-muted text-sm">
-                暂无备注
-              </div>
-            )}
+            </div>
           </div>
         </div>
-
-        {/* 待分析任务 */}
-        <div className="yj-panel flex flex-col min-h-0">
-          <div className="yj-panel-header shrink-0">
-            <h3 className="font-medium text-fg-default flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-orange-500" />
-              待分析任务
-            </h3>
-            <Link
-              href="/tasks/pending"
-              className="text-sm text-accent-fg hover:underline flex items-center gap-1"
-            >
-              查看全部 <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="overflow-y-auto flex-1">
-            {pendingSamples.map((sample) => (
-              <div
-                key={sample.id}
-                className="yj-status-row flex items-center justify-between p-4"
-              >
-                <div className="flex items-center gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-fg-default font-mono text-sm">
-                        {sample.sampleId.substring(0, 8)}
-                      </span>
-                      <span className="text-fg-muted text-sm">({sample.internalId})</span>
-                      {sample.priority === 'urgent' && (
-                        <Tag variant="danger">紧急</Tag>
-                      )}
-                    </div>
-                    <div className="text-sm text-fg-muted mt-0.5">
-                      {sample.testType}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-fg-muted">
-                    等待 {sample.waitingDays} 天
-                  </div>
-                  <div className="text-xs text-fg-subtle">{sample.receivedDate}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 删除确认弹窗 */}
-      <ConfirmDialog
-        open={!!deleteConfirm}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-        title="确认删除"
-        message={`确定要删除 ${deleteConfirm?.author} 的这条备注吗？此操作不可撤销。`}
-        variant="danger"
-        onConfirm={() => deleteConfirm && handleDeleteNote(deleteConfirm.id)}
-      />
       </div>
     </PageContent>
+  );
+}
+
+function QuickLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="h-10 px-3.5 bg-[var(--yj-panel-bg)] rounded-xl border border-[var(--yj-border-subtle)] hover:border-[var(--yj-border-strong)] hover:bg-white transition-colors flex items-center gap-2"
+    >
+      {icon}
+      <span className="text-sm text-fg-default">{label}</span>
+    </Link>
   );
 }

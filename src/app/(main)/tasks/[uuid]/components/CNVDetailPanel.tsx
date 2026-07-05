@@ -13,6 +13,20 @@ interface CNVDetailPanelProps {
   allSegments?: CNVSegment[];  // 所有CNV片段数据，用于绘制全基因组图
 }
 
+function geneCardsURL(gene: string): string {
+  return `https://www.genecards.org/cgi-bin/carddisp.pl?gene=${encodeURIComponent(String(gene).trim())}`;
+}
+
+function ucscRegionURL(chromosome: string, startPosition: number, endPosition: number): string {
+  const position = `${chromosome}:${startPosition}-${endPosition}`;
+  return `https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=${encodeURIComponent(position)}`;
+}
+
+function ensemblRegionURL(chromosome: string, startPosition: number, endPosition: number): string {
+  const region = `${chromosome.replace(/^chr/i, '')}:${startPosition}-${endPosition}`;
+  return `https://www.ensembl.org/Homo_sapiens/Location/View?r=${encodeURIComponent(region)}`;
+}
+
 // 信息项组件
 function InfoItem({ label, value, link }: { label: string; value?: React.ReactNode; link?: string }) {
   if (value === undefined || value === null || value === '' || value === '-') {
@@ -137,16 +151,10 @@ function CNVPlotModal({
     if (!isOpen) resetPosition();
   }, [isOpen, resetPosition]);
 
-  // 生成当前染色体的滑窗数据
+  // Octopus 当前结果接口只返回 CNV segment，不返回原始 coverage/bin 级数据。
+  // 因此这里绘制的是基于 segment 坐标与 copyNumber 的确定性示意线，
+  // 不生成随机 coverage 点，避免把前端伪造信号误认为真实测序证据。
   const windowData = React.useMemo(() => {
-    // Box-Muller变换生成正态分布随机数
-    const gaussianRandom = (mean: number, stdDev: number) => {
-      const u1 = Math.random();
-      const u2 = Math.random();
-      const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-      return z0 * stdDev + mean;
-    };
-
     const data: { pos: number; logRatio: number; inCNV: boolean; cnvType?: string }[] = [];
     const windowSize = 100000; // 100kb滑窗，单染色体可以更精细
     const chr = variant.chromosome;
@@ -178,12 +186,11 @@ function CNVPlotModal({
       let cnvType: string | undefined;
 
       if (overlappingCNV) {
-        const theoreticalRatio = Math.log2(overlappingCNV.copyNumber / 2);
-        logRatio = theoreticalRatio + gaussianRandom(0, 0.05);
+        logRatio = Math.log2(overlappingCNV.copyNumber / 2);
         inCNV = true;
         cnvType = overlappingCNV.type;
       } else {
-        logRatio = gaussianRandom(0, 0.08);
+        logRatio = 0;
       }
 
       data.push({ pos: windowMid, logRatio, inCNV, cnvType });
@@ -332,6 +339,9 @@ function CNVPlotModal({
         </button>
       </div>
       <div ref={containerRef} className="p-4">
+        <p className="mb-2 text-xs text-amber-700">
+          示意图仅基于后端返回的 CNV segment 坐标和 copyNumber 绘制；Octopus 当前未提供原始 coverage/bin 级曲线数据。
+        </p>
         <canvas ref={canvasRef} className="rounded" style={{ display: 'block', maxWidth: '100%' }} />
       </div>
       <div className="flex items-center justify-center gap-6 px-4 pb-4 text-xs text-fg-muted">
@@ -426,7 +436,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
                   {(variant as CNVSegment).genes.map((gene) => (
                     <a
                       key={gene}
-                      href={`https://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene}`}
+                      href={geneCardsURL(gene)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-canvas-inset text-accent-fg rounded hover:bg-accent-subtle transition-colors"
@@ -446,18 +456,18 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
             <InfoItem 
               label="UCSC Genome Browser" 
               value="查看"
-              link={`https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=${variant.chromosome}:${variant.startPosition}-${variant.endPosition}`}
+              link={ucscRegionURL(variant.chromosome, variant.startPosition, variant.endPosition)}
             />
             <InfoItem 
               label="Ensembl" 
               value="查看"
-              link={`https://www.ensembl.org/Homo_sapiens/Location/View?r=${variant.chromosome.replace('chr', '')}:${variant.startPosition}-${variant.endPosition}`}
+              link={ensemblRegionURL(variant.chromosome, variant.startPosition, variant.endPosition)}
             />
             {isExon && (
               <InfoItem 
                 label="GeneCards" 
                 value={(variant as CNVExon).gene}
-                link={`https://www.genecards.org/cgi-bin/carddisp.pl?gene=${(variant as CNVExon).gene}`}
+                link={geneCardsURL((variant as CNVExon).gene)}
               />
             )}
           </div>

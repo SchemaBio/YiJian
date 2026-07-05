@@ -17,10 +17,11 @@ import {
   XCircle,
 } from 'lucide-react';
 import { NewSampleModal, EditSampleModal } from './components';
-import { mockSamples } from './mock-data';
+import type { NewSampleFormData, EditSampleFormData } from './components';
+import { api } from '@/lib/api';
+import { listSamples, normalizeSample, samplePayload } from '@/lib/samples';
 import type { Sample } from './types';
 import { GENDER_CONFIG } from './types';
-import type { EditSampleFormData } from './components';
 
 function ColumnHeader({ group, label }: { group: string; label: string }) {
   return (
@@ -182,7 +183,8 @@ export default function SamplesPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isNewSampleModalOpen, setIsNewSampleModalOpen] = React.useState(false);
   const [editingSample, setEditingSample] = React.useState<Sample | null>(null);
-  const [samples, setSamples] = React.useState<Sample[]>(mockSamples);
+  const [samples, setSamples] = React.useState<Sample[]>([]);
+  const [samplesError, setSamplesError] = React.useState('');
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set());
 
   const matchedCount = React.useMemo(
@@ -190,6 +192,20 @@ export default function SamplesPage() {
     [samples]
   );
   const unmatchedCount = samples.length - matchedCount;
+
+
+  const loadSamples = React.useCallback(async () => {
+    try {
+      setSamples(await listSamples({ page: '1', page_size: '100' }));
+      setSamplesError('');
+    } catch (err) {
+      setSamplesError(err instanceof Error ? err.message : 'Failed to load samples');
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadSamples();
+  }, [loadSamples]);
 
   const handleDownloadTemplate = () => {
     const templateContent = `样本编号,内部编号,性别,样本类型,批次,临床诊断
@@ -217,38 +233,44 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     );
   }, [searchQuery, samples]);
 
-  const handleEditSample = (id: string, data: EditSampleFormData) => {
-    setSamples((prev) => prev.map((sample) => {
-      if (sample.id !== id) return sample;
-
-      const matchedPair = (data.r1Path && data.r2Path)
-        ? { r1Path: data.r1Path, r2Path: data.r2Path }
-        : null;
-
-      return {
-        ...sample,
-        internalId: data.internalId,
-        gender: data.gender,
-        age: data.age,
-        sampleType: data.sampleType,
-        batch: data.batch,
-        clinicalDiagnosis: data.clinicalDiagnosis,
-        hpoTerms: data.hpoTerms,
-        matchedPair,
-        remark: data.remark,
-      };
-    }));
-    console.log('编辑样本:', id, data);
+  const handleCreateSample = async (data: NewSampleFormData) => {
+    try {
+      const created = await api.post<unknown>('/v1/samples', samplePayload(data));
+      setSamples(prev => [normalizeSample(created), ...prev].filter(sample => sample.id));
+      setSamplesError('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create sample';
+      setSamplesError(message);
+      throw new Error(message);
+    }
   };
 
-  const handleDeleteSample = (id: string) => {
-    setSamples((prev) => prev.filter((sample) => sample.id !== id));
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    console.log('删除样本:', id);
+  const handleEditSample = async (id: string, data: EditSampleFormData) => {
+    try {
+      const updated = await api.put<unknown>(`/v1/samples/${encodeURIComponent(id)}`, samplePayload(data));
+      setSamples((prev) => prev.map((sample) => sample.id === id ? normalizeSample(updated) : sample));
+      setEditingSample(null);
+      setSamplesError('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update sample';
+      setSamplesError(message);
+      throw new Error(message);
+    }
+  };
+
+  const handleDeleteSample = async (id: string) => {
+    try {
+      await api.delete<void>(`/v1/samples/${encodeURIComponent(id)}`);
+      setSamples((prev) => prev.filter((sample) => sample.id !== id));
+      setSelectedRows((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setSamplesError('');
+    } catch (err) {
+      setSamplesError(err instanceof Error ? err.message : 'Failed to delete sample');
+    }
   };
 
   const handleSelectionChange = (nextSelection: Set<string>) => {
@@ -421,6 +443,11 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
         </div>
 
         <div className="p-4">
+          {samplesError && (
+            <div className="mb-3 rounded-md border border-danger-emphasis bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+              {samplesError}
+            </div>
+          )}
           <DataTable
             data={filteredSamples}
             columns={columns}
@@ -442,7 +469,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       <NewSampleModal
         isOpen={isNewSampleModalOpen}
         onClose={() => setIsNewSampleModalOpen(false)}
-        onSubmit={(data) => console.log('新建样本:', data)}
+        onSubmit={handleCreateSample}
       />
 
       <EditSampleModal

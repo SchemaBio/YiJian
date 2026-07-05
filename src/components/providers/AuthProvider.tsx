@@ -2,12 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, UserOrganizationInfo, OrgRole } from '@/types/user';
-import type { LoginRequest, LoginResponse } from '@/types/auth';
+import type { LoginResponse } from '@/types/auth';
 import { authApi } from '@/lib/auth';
 import { STORAGE_KEYS } from '@/lib/storage';
 import { hashPassword } from '@/lib/crypto';
 
-const DEV_MOCK_AUTH = process.env.NEXT_PUBLIC_DEV_MOCK_AUTH === 'true';
+const DEV_MOCK_AUTH = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEV_MOCK_AUTH === 'true';
 
 const MOCK_USER: User = {
   id: 'dev-mock-user-001',
@@ -54,6 +54,33 @@ function clearStoredAuth() {
   localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
 }
 
+function persistDevAuthState(nextUser: User, nextOrgs: UserOrganizationInfo[], nextOrg: UserOrganizationInfo | null) {
+  if (!DEV_MOCK_AUTH) {
+    // Production sessions are cookie-backed and revalidated with the backend on
+    // page load. Do not keep account/org profile data in localStorage.
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(nextUser));
+  localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(nextOrgs));
+  if (nextOrg) {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(nextOrg));
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+  }
+}
+
+function loginRedirectForCurrentPath(): string {
+  if (typeof window === 'undefined') return '/login';
+  if (window.location.pathname === '/login') return '/login';
+  const next = `${window.location.pathname}${window.location.search}`;
+  if (!next) return '/login';
+  return `/login?next=${encodeURIComponent(next)}`;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [organizations, setOrganizations] = useState<UserOrganizationInfo[]>([]);
@@ -65,13 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextUser);
     setOrganizations(nextOrgs);
     setCurrentOrg(nextOrg);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(nextUser));
-    localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(nextOrgs));
-    if (nextOrg) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(nextOrg));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
-    }
+    persistDevAuthState(nextUser, nextOrgs, nextOrg);
   }, []);
 
   const resetSession = useCallback(() => {
@@ -110,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           currentUser,
           currentOrg ? { ...currentOrg, orgRole: currentUser.systemRole } : null
         );
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           resetSession();
         }
@@ -157,7 +178,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const switchOrganization = useCallback(async (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(org));
+      if (DEV_MOCK_AUTH) {
+        localStorage.setItem(STORAGE_KEYS.CURRENT_ORG, JSON.stringify(org));
+      }
       setCurrentOrg(org);
     }
   }, [organizations]);
@@ -176,12 +199,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isSuperAdmin = isPlatformAdmin;
 
-  // Listen for auth-expired event from api.ts refresh failure
+  // Listen for auth-expired event from api.ts refresh failure.
   useEffect(() => {
     const handleAuthExpired = () => {
       resetSession();
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        window.location.href = loginRedirectForCurrentPath();
       }
     };
     window.addEventListener('schema:auth-expired', handleAuthExpired);

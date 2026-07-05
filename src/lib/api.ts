@@ -1,8 +1,10 @@
 import { STORAGE_KEYS } from './storage';
-import { getRuntimeApiBaseUrl } from './runtime-config';
+import { getRuntimeApiBaseUrl, getRuntimeBackendFlavor, getRuntimeCoreApiPrefix } from './runtime-config';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
+  /** Internal escape hatch for SaaS-only endpoints that must not be routed through Squid's Octopus proxy. */
+  coreApi?: boolean;
 }
 
 class ApiError extends Error {
@@ -38,12 +40,136 @@ function getCookie(name: string): string | null {
     .split(';')
     .map(part => part.trim())
     .find(part => part.startsWith(prefix));
-  return item ? decodeURIComponent(item.slice(prefix.length)) : null;
+  if (!item) return null;
+  try {
+    return decodeURIComponent(item.slice(prefix.length));
+  } catch {
+    return null;
+  }
 }
 
 function isUnsafeMethod(method?: string): boolean {
   const normalized = (method || 'GET').toUpperCase();
   return !['GET', 'HEAD', 'OPTIONS'].includes(normalized);
+}
+
+const CORE_API_PREFIX_FALLBACK = '/v1/octopus';
+const CORE_API_ROOTS = [
+  'tasks',
+  'samples',
+  'pipelines',
+  'templates',
+  'report-templates',
+  'gene-lists',
+  'archive',
+  'history',
+  'dashboard',
+  'projects',
+  'pedigrees',
+  'upload',
+];
+
+function decodePathSegment(segment: string): string | null {
+  let decoded = segment;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) return decoded;
+      decoded = next;
+    } catch {
+      return null;
+    }
+  }
+  return decoded;
+}
+
+function hasUnsafeEndpointPathSegment(endpoint: string): boolean {
+  for (const segment of endpoint.split('/').filter(Boolean)) {
+    const decoded = decodePathSegment(segment);
+    if (
+      decoded === null ||
+      decoded === '.' ||
+      decoded === '..' ||
+      decoded.includes('/') ||
+      decoded.includes('\\') ||
+      /[\u0000-\u001f\u007f]/.test(decoded)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function assertRelativeAPIEndpoint(endpoint: string): string {
+  if (!endpoint.startsWith('/')) {
+    throw new Error(`API endpoint must start with "/": ${endpoint}`);
+  }
+  if (
+    endpoint.startsWith('//') ||
+    endpoint.includes('\\') ||
+    /[\u0000-\u001f]/.test(endpoint) ||
+    /[?#]/.test(endpoint) ||
+    /^[a-z][a-z0-9+.-]*:/i.test(endpoint) ||
+    hasUnsafeEndpointPathSegment(endpoint)
+  ) {
+    throw new Error(`API endpoint must be relative: ${endpoint}`);
+  }
+  return endpoint;
+}
+
+function isCoreEndpoint(endpoint: string): boolean {
+  const normalized = assertRelativeAPIEndpoint(endpoint);
+  return CORE_API_ROOTS.some(root => normalized === `/v1/${root}` || normalized.startsWith(`/v1/${root}/`));
+}
+
+function withCorePrefix(endpoint: string, prefix = getRuntimeCoreApiPrefix(), coreApi = true): string {
+  const normalized = assertRelativeAPIEndpoint(endpoint);
+  if (coreApi === false) return normalized;
+  if (!prefix || !isCoreEndpoint(normalized)) return normalized;
+  const cleanPrefix = prefix.replace(/\/+$/, '');
+  return `${cleanPrefix}${normalized.replace(/^\/v1(?=\/|$)/, '')}`;
+}
+
+function shouldRetryViaSquidOctopus(endpoint: string, response: Response, coreApi?: boolean): boolean {
+  const backendFlavor = getRuntimeBackendFlavor();
+  return response.status === 404
+    && coreApi !== false
+    && backendFlavor !== 'octopus'
+    && !getRuntimeCoreApiPrefix()
+    // In Squid deployments, core Octopus routes live under /v1/octopus/*.
+    // Gateways commonly return JSON 404 for the unmounted /v1/* root route, so
+    // do not key fallback on Content-Type. Direct Octopus users can set
+    // BACKEND_FLAVOR=octopus or CORE_API_PREFIX empty with no proxy requirement.
+    && isCoreEndpoint(endpoint);
+}
+
+function appendQuery(url: string, params?: Record<string, string>): string {
+  if (!params || Object.keys(params).length === 0) return url;
+  const searchParams = new URLSearchParams(params);
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}${searchParams.toString()}`;
+}
+
+function buildURL(endpoint: string, params?: Record<string, string>, prefix?: string, coreApi = true): string {
+  return appendQuery(`${getRuntimeApiBaseUrl()}${withCorePrefix(endpoint, prefix, coreApi)}`, params);
+}
+
+async function parseJSONBody(response: Response): Promise<unknown> {
+  if (response.status === 204) return undefined;
+  const text = await response.text();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function unwrapResponse<T>(json: unknown): T {
+  if (json && typeof json === 'object' && 'data' in json) {
+    return (json as { data?: T }).data as T;
+  }
+  return json as T;
 }
 
 // Refresh lock: prevents concurrent cookie-backed session refresh calls.
@@ -74,6 +200,7 @@ async function tryRefreshToken(): Promise<boolean> {
       clearLegacyAuthTokens();
       return true;
     } catch {
+      clearAuthSession();
       return false;
     } finally {
       refreshPromise = null;
@@ -87,67 +214,72 @@ async function request<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { params, ...init } = options;
+  const { params, coreApi, ...init } = options;
+  const url = buildURL(endpoint, params, undefined, coreApi);
 
-  let url = `${getRuntimeApiBaseUrl()}${endpoint}`;
-  if (params) {
-    const searchParams = new URLSearchParams(params);
-    url += `?${searchParams.toString()}`;
+  const headers = new Headers(init.headers);
+  if (init.body !== undefined && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...init.headers,
-  };
 
   if (isUnsafeMethod(init.method)) {
     const csrfToken = getCookie('csrf_token');
     if (csrfToken) {
-      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+      headers.set('X-CSRF-Token', csrfToken);
     }
   }
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     ...init,
     headers,
     credentials: init.credentials ?? 'include',
   });
 
-  // Auto-refresh on 401 (skip for auth endpoints to avoid loops)
+  if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
+    response = await fetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK), {
+      ...init,
+      headers,
+      credentials: init.credentials ?? 'include',
+    });
+  }
+
+  // Auto-refresh on 401 (skip for auth endpoints to avoid loops). This runs
+  // after Squid /v1/octopus fallback too, because expired sessions usually
+  // surface from the proxied core endpoint rather than the first /v1/* probe.
   if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
-      const retryResponse = await fetch(url, {
+      response = await fetch(url, {
         ...init,
         headers,
         credentials: init.credentials ?? 'include',
       });
-      if (!retryResponse.ok) {
-        const retryData = await retryResponse.json().catch(() => null);
-        throw new ApiError(retryResponse.status, retryResponse.statusText, retryData);
+      if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
+        response = await fetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK), {
+          ...init,
+          headers,
+          credentials: init.credentials ?? 'include',
+        });
       }
-      if (retryResponse.status === 204) return undefined as T;
-      const retryJson = await retryResponse.json();
-      return retryJson?.data ?? retryJson;
+    } else {
+      // Refresh failed; trigger logout by dispatching event.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('schema:auth-expired'));
+      }
+      throw new ApiError(401, 'Unauthorized', { error: 'Token expired and refresh failed' });
     }
-    // Refresh failed; trigger logout by dispatching event.
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('schema:auth-expired'));
-    }
-    throw new ApiError(401, 'Unauthorized', { error: 'Token expired and refresh failed' });
   }
 
   if (!response.ok) {
-    const data = await response.json().catch(() => null);
+    const data = await parseJSONBody(response);
     throw new ApiError(response.status, response.statusText, data);
   }
 
   // 204 No Content
   if (response.status === 204) return undefined as T;
 
-  const json = await response.json();
-  // Backend wraps all responses as { data: T }
-  return json?.data ?? json;
+  // Backend wraps most responses as { data: T }; keep raw JSON compatible too.
+  return unwrapResponse<T>(await parseJSONBody(response));
 }
 
 
@@ -173,17 +305,21 @@ function filenameFromContentDisposition(contentDisposition: string | null): stri
 }
 
 function sanitizeFilename(name: string, fallback: string): string {
-  const cleaned = name.trim().replace(/[\\/]/g, '-').replace(/[\u0000-\u001f]/g, '');
-  return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : fallback;
+  const clean = (value: string) => value
+    .trim()
+    .replace(/[\\/]/g, '-')
+    .replace(/[\u0000-\u001f\u007f]/g, '');
+  const cleaned = clean(name);
+  if (cleaned && cleaned !== '.' && cleaned !== '..') return cleaned;
+  const cleanedFallback = clean(fallback);
+  return cleanedFallback && cleanedFallback !== '.' && cleanedFallback !== '..'
+    ? cleanedFallback
+    : 'download.bin';
 }
 
 async function errorData(response: Response): Promise<unknown> {
-  const contentType = response.headers.get('Content-Type') || '';
-  if (contentType.includes('application/json')) {
-    return response.json().catch(() => null);
-  }
-  const text = await response.text().catch(() => '');
-  return text ? { error: text } : null;
+  const data = await parseJSONBody(response).catch(() => null);
+  return typeof data === 'string' ? { error: data } : data;
 }
 
 async function requestDownload(
@@ -191,37 +327,38 @@ async function requestDownload(
   options: RequestOptions = {},
   fallbackFilename = 'download.bin'
 ): Promise<DownloadResult> {
-  const { params, ...init } = options;
+  const { params, coreApi, ...init } = options;
+  const url = buildURL(endpoint, params, undefined, coreApi);
 
-  let url = `${getRuntimeApiBaseUrl()}${endpoint}`;
-  if (params) {
-    const searchParams = new URLSearchParams(params);
-    url += `?${searchParams.toString()}`;
+  const headers = new Headers(init.headers);
+  if (init.body !== undefined && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...init.headers,
-  };
 
   if (isUnsafeMethod(init.method)) {
     const csrfToken = getCookie('csrf_token');
     if (csrfToken) {
-      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+      headers.set('X-CSRF-Token', csrfToken);
     }
   }
 
-  const doFetch = () => fetch(url, {
+  const doFetch = (requestURL = url) => fetch(requestURL, {
     ...init,
     headers,
     credentials: init.credentials ?? 'include',
   });
 
   let response = await doFetch();
+  if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
+    response = await doFetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK));
+  }
   if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
       response = await doFetch();
+      if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
+        response = await doFetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK));
+      }
     } else {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('schema:auth-expired'));
@@ -247,22 +384,200 @@ async function requestDownload(
 
 // COS presigned URL upload flow
 export interface PresignedUploadResult {
-  file_id: number;
+  job_id: string;
+  file_id: string;
   upload_url: string;
   storage_key: string;
   storage_type: string;
 }
 
-export async function requestPresignedUploadUrl(filename: string, fileSize: number) {
-  const res = await api.post<PresignedUploadResult>('/v1/files/presigned-url', { filename, file_size: fileSize });
-  return res;
+interface UploadJobFile {
+  id: string;
+  file_name?: string;
+  read_type?: 'read1' | 'read2' | 'single' | 'bed';
+  storage_key?: string;
+  presigned_url?: string;
 }
 
-export async function uploadToCOS(presignedUrl: string, file: File, onProgress?: (pct: number) => void) {
+interface UploadJobResponse {
+  id: string;
+  files?: UploadJobFile[];
+}
+
+function backendUploadURL(fileID: string): string {
+  const configuredPrefix = getRuntimeCoreApiPrefix();
+  const prefix = configuredPrefix || (getRuntimeBackendFlavor() === 'squid' ? CORE_API_PREFIX_FALLBACK : '');
+  return `${getRuntimeApiBaseUrl()}${withCorePrefix(`/v1/upload/local/${encodeURIComponent(fileID)}`, prefix)}`;
+}
+
+function isBackendLocalUploadURL(uploadURL: string): boolean {
+  try {
+    const url = new URL(uploadURL, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    return /\/v1\/(?:octopus\/)?upload\/local\//.test(url.pathname) && isAllowedBackendOrigin(url);
+  } catch {
+    return false;
+  }
+}
+
+function isAbsoluteHTTPURL(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
+function allowedBackendOrigins(): Set<string> {
+  const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+  const origins = new Set<string>([fallbackOrigin]);
+  try {
+    origins.add(new URL(getRuntimeApiBaseUrl(), fallbackOrigin).origin);
+  } catch {
+    // Ignore malformed runtime values here; runtime-config normalization already falls back safely.
+  }
+  return origins;
+}
+
+function isAllowedBackendOrigin(url: URL): boolean {
+  return allowedBackendOrigins().has(url.origin);
+}
+
+function squidFallbackLocalUploadURL(uploadURL: string): string | null {
+  if (getRuntimeBackendFlavor() === 'octopus' || getRuntimeCoreApiPrefix()) return null;
+  try {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const url = new URL(uploadURL, base);
+    if (!/\/v1\/upload\/local\//.test(url.pathname)) return null;
+    url.pathname = url.pathname.replace('/v1/upload/local/', '/v1/octopus/upload/local/');
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export async function requestPresignedUploadUrl(
+  filename: string,
+  fileSize: number,
+  readType: 'read1' | 'read2' | 'single' | 'bed' = 'single'
+): Promise<PresignedUploadResult> {
+  const fileType = readType === 'bed'
+    ? 'bed'
+    : readType === 'single'
+      ? 'fastq_single'
+      : 'fastq_paired';
+  const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
+    name: filename,
+    file_type: fileType,
+    provider: 'local',
+    files: [{
+      file_name: filename,
+      read_type: readType,
+      file_size: fileSize,
+    }],
+  });
+  const file = job.files?.[0];
+  if (!file?.id) {
+    throw new Error('Upload job did not return a file id');
+  }
+  return {
+    job_id: job.id,
+    file_id: file.id,
+    upload_url: file.presigned_url || backendUploadURL(file.id),
+    storage_key: file.storage_key || '',
+    storage_type: file.presigned_url ? 'presigned' : 'local',
+  };
+}
+
+export interface PairedUploadJobResult {
+  job_id: string;
+  files: Array<PresignedUploadResult & { read_type: 'read1' | 'read2' }>;
+}
+
+export async function requestPairedUploadJob(r1: File, r2: File, sampleId?: string): Promise<PairedUploadJobResult> {
+  const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
+    ...(sampleId ? { sample_id: sampleId } : {}),
+    name: `${r1.name} + ${r2.name}`,
+    file_type: 'fastq_paired',
+    provider: 'local',
+    files: [
+      {
+        file_name: r1.name,
+        read_type: 'read1',
+        file_size: r1.size,
+      },
+      {
+        file_name: r2.name,
+        read_type: 'read2',
+        file_size: r2.size,
+      },
+    ],
+  });
+
+  const files = job.files ?? [];
+  const byReadType = new Map(files.map((file, index) => [file.read_type || (index === 0 ? 'read1' : 'read2'), file]));
+  const r1File = byReadType.get('read1');
+  const r2File = byReadType.get('read2');
+  if (!job.id || !r1File?.id || !r2File?.id) {
+    throw new Error('Upload job did not return both R1 and R2 file ids');
+  }
+
+  const normalizeFile = (file: UploadJobFile, readType: 'read1' | 'read2') => ({
+    job_id: job.id,
+    file_id: file.id,
+    upload_url: file.presigned_url || backendUploadURL(file.id),
+    storage_key: file.storage_key || '',
+    storage_type: file.presigned_url ? 'presigned' : 'local',
+    read_type: readType,
+  });
+
+  return {
+    job_id: job.id,
+    files: [normalizeFile(r1File, 'read1'), normalizeFile(r2File, 'read2')],
+  };
+}
+
+class UploadError extends Error {
+  constructor(public status: number, message = `Upload failed: ${status}`) {
+    super(message);
+    this.name = 'UploadError';
+  }
+}
+
+function normalizeUploadURL(uploadURL: string): string {
+  if (/[\u0000-\u001f]/.test(uploadURL)) {
+    throw new Error('Invalid upload URL');
+  }
+
+  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+  const url = new URL(uploadURL, base);
+  const isLocalUpload = isBackendLocalUploadURL(uploadURL);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error(`Unsupported upload URL scheme: ${url.protocol}`);
+  }
+  if (url.username || url.password) {
+    throw new Error('Upload URL must not include credentials');
+  }
+  if (!isLocalUpload && !isAbsoluteHTTPURL(uploadURL)) {
+    throw new Error('Presigned upload URL must be absolute');
+  }
+  if (!isLocalUpload && isAllowedBackendOrigin(url)) {
+    throw new Error('Refusing to upload to a non-upload backend endpoint');
+  }
+  url.hash = '';
+  return url.toString();
+}
+
+function uploadFileOnce(uploadURL: string, file: File, onProgress?: (pct: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('PUT', presignedUrl);
-    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    const safeUploadURL = normalizeUploadURL(uploadURL);
+    const isLocalUpload = isBackendLocalUploadURL(safeUploadURL);
+    xhr.open(isLocalUpload ? 'POST' : 'PUT', safeUploadURL);
+    if (!isLocalUpload) {
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    } else {
+      xhr.withCredentials = true;
+      const csrfToken = getCookie('csrf_token');
+      if (csrfToken) {
+        xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+      }
+    }
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -270,15 +585,36 @@ export async function uploadToCOS(presignedUrl: string, file: File, onProgress?:
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`COS upload failed: ${xhr.status}`));
+      else reject(new UploadError(xhr.status));
     };
-    xhr.onerror = () => reject(new Error('COS upload network error'));
-    xhr.send(file);
+    xhr.onerror = () => reject(new Error('Upload network error'));
+    if (isLocalUpload) {
+      const form = new FormData();
+      form.append('file', file);
+      xhr.send(form);
+    } else {
+      xhr.send(file);
+    }
   });
 }
 
-export async function confirmUpload(fileId: number) {
-  return api.post(`/v1/files/${fileId}/confirm`);
+export async function uploadToCOS(presignedUrl: string, file: File, onProgress?: (pct: number) => void) {
+  try {
+    await uploadFileOnce(presignedUrl, file, onProgress);
+  } catch (err) {
+    const fallbackURL = isBackendLocalUploadURL(presignedUrl) ? squidFallbackLocalUploadURL(presignedUrl) : null;
+    if (fallbackURL && err instanceof UploadError && err.status === 404) {
+      await uploadFileOnce(fallbackURL, file, onProgress);
+      return;
+    }
+    throw err;
+  }
+}
+
+export async function confirmUpload(_fileId: string) {
+  // Current Octopus/Squid upload API marks local uploads complete in /v1/upload/local/:file_uuid.
+  // Kept as a compatibility no-op for callers that still model upload as request/upload/confirm.
+  return undefined;
 }
 
 export const api = {
@@ -289,7 +625,7 @@ export const api = {
     request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     }),
 
   download: (endpoint: string, data?: unknown, options?: RequestOptions & { fallbackFilename?: string }) => {
@@ -299,7 +635,7 @@ export const api = {
       {
         ...requestOptions,
         method: requestOptions.method ?? 'POST',
-        body: data ? JSON.stringify(data) : requestOptions.body,
+        body: data !== undefined ? JSON.stringify(data) : requestOptions.body,
       },
       fallbackFilename
     );
@@ -309,14 +645,14 @@ export const api = {
     request<T>(endpoint, {
       ...options,
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     }),
 
   patch: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     }),
 
   delete: <T>(endpoint: string, options?: RequestOptions) =>

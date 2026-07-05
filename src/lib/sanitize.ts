@@ -19,7 +19,9 @@ export function sanitizeHTML(html: string): string {
       'href',
       'colspan', 'rowspan',
     ],
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|\/|#)/i,
+    // Allow absolute http(s)/mailto links, same-origin absolute paths, and
+    // fragment links. Reject scheme-relative URLs such as //evil.example.
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|\/(?!\/)|#)/i,
     FORBID_ATTR: ['style', 'id', 'class', 'src', 'srcset'],
   });
 }

@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
 import type { GroupedMEI, HistoryTableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
-import { getGroupedMEIs, ACMG_CONFIG, MEI_TYPE_CONFIG } from '../mock-data';
+import { getGroupedMEIs, ACMG_CONFIG, MEI_TYPE_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
 
 interface MEIHistoryTabProps {
@@ -26,9 +26,14 @@ export function MEIHistoryTab({
   React.useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const data = await getGroupedMEIs(filterState);
-      setResult(data);
-      setLoading(false);
+      try {
+        const data = await getGroupedMEIs(filterState);
+        setResult(data);
+      } catch {
+        setResult({ data: [], total: 0, page: filterState.page, pageSize: filterState.pageSize });
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [filterState]);

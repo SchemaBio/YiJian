@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, ListFilter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { CNVExon, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getCNVExons, getGeneLists, reportVariant, reviewVariant, type GeneListOption } from '../result-api';
+import { getCNVExons, reportVariant, reviewVariant } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
@@ -27,7 +27,6 @@ export function CNVExonTab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<CNVExon> | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [geneLists, setGeneLists] = React.useState<GeneListOption[]>([]);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
 
   // 详情面板状态
@@ -93,14 +92,6 @@ export function CNVExonTab({
 
   // 加载基因列表
   React.useEffect(() => {
-    async function loadGeneLists() {
-      const lists = await getGeneLists();
-      setGeneLists(lists);
-    }
-    loadGeneLists();
-  }, []);
-
-  React.useEffect(() => {
     async function loadData() {
       setLoading(true);
       const data = await getCNVExons(taskId, filterState);
@@ -119,24 +110,6 @@ export function CNVExonTab({
       ...filterState,
       sortColumn: direction ? column : undefined,
       sortDirection: direction ?? undefined,
-    });
-  }, [filterState, setFilterState]);
-
-  const handleTypeFilter = React.useCallback((type: string) => {
-    const newFilters = { ...filterState.filters };
-    if (type) {
-      newFilters.type = type;
-    } else {
-      delete newFilters.type;
-    }
-    setFilterState({ ...filterState, filters: newFilters, page: 1 });
-  }, [filterState, setFilterState]);
-
-  const handleGeneListFilter = React.useCallback((geneListId: string) => {
-    setFilterState({ 
-      ...filterState, 
-      geneListId: geneListId || undefined, 
-      page: 1 
     });
   }, [filterState, setFilterState]);
 
@@ -178,11 +151,6 @@ export function CNVExonTab({
       return 0;
     });
   }, [result?.data, getReviewState]);
-
-  const selectedGeneList = React.useMemo(() => {
-    if (!filterState.geneListId) return null;
-    return geneLists.find(list => list.id === filterState.geneListId);
-  }, [filterState.geneListId, geneLists]);
 
   const columns: Column<CNVExon>[] = [
     {
@@ -326,39 +294,10 @@ export function CNVExonTab({
           </div>
 
           {/* 基因列表筛选 */}
-          <div className="relative">
-            <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none" />
-            <select
-              value={filterState.geneListId || ''}
-              onChange={(e) => handleGeneListFilter(e.target.value)}
-              className="pl-9 pr-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default min-w-[180px] appearance-none cursor-pointer"
-            >
-              <option value="">全部基因</option>
-              {geneLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name} ({list.geneCount})
-                </option>
-              ))}
-            </select>
-          </div>
 
-          <select
-            value={(filterState.filters.type as string) || ''}
-            onChange={(e) => handleTypeFilter(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default"
-          >
-            <option value="">全部类型</option>
-            <option value="Amplification">扩增</option>
-            <option value="Deletion">缺失</option>
-          </select>
         </div>
 
         <div className="flex items-center gap-4 text-sm text-fg-muted">
-          {selectedGeneList && (
-            <span className="text-accent-fg">
-              已筛选: {selectedGeneList.name}
-            </span>
-          )}
           <span>共 {result?.total ?? 0} 条外显子CNV</span>
         </div>
       </div>

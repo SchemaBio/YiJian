@@ -2,54 +2,10 @@
 
 import { PageContent } from '@/components/layout';
 import { Button, Input, Tag } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import * as React from 'react';
 import { AppModal, ConfirmDialog } from '@/components/shared';
-
-interface GeneList {
-  id: string;
-  name: string;
-  disease: string;
-  description: string;
-  genes: string[];
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-}
-
-// 简化的mock数据
-const initialGeneLists: GeneList[] = [
-  {
-    id: '1',
-    name: '心血管疾病Panel',
-    disease: '遗传性心肌病',
-    description: '心血管疾病相关基因检测列表',
-    genes: ['MYH7', 'MYBPC3', 'TNNT2', 'TNNI3', 'TPM1', 'ACTC1', 'MYL2', 'MYL3'],
-    createdAt: '2024-06-15',
-    updatedAt: '2024-12-01',
-    createdBy: '王工',
-  },
-  {
-    id: '2',
-    name: '神经系统疾病Panel',
-    disease: '遗传性神经病',
-    description: '神经系统遗传病基因检测列表',
-    genes: ['SCN1A', 'SCN2A', 'KCNQ2', 'KCNQ3', 'STXBP1', 'CDKL5', 'PCDH19'],
-    createdAt: '2024-06-20',
-    updatedAt: '2024-11-15',
-    createdBy: '李工',
-  },
-  {
-    id: '3',
-    name: '眼科遗传病Panel',
-    disease: '遗传性眼病',
-    description: '遗传性视网膜病变相关基因',
-    genes: ['RHO', 'RDS', 'RPGR', 'RP2', 'USH2A', 'ABCA4', 'RPE65'],
-    createdAt: '2024-05-10',
-    updatedAt: '2024-11-01',
-    createdBy: '张工',
-  },
-];
+import { createGeneList, deleteGeneList, listGeneLists, updateGeneList, type GeneList } from '@/lib/gene-lists';
 
 // 删除确认弹窗
 function DeleteConfirmModal({
@@ -61,7 +17,7 @@ function DeleteConfirmModal({
   isOpen: boolean;
   listName: string;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 }) {
   return (
     <ConfirmDialog
@@ -87,8 +43,10 @@ function GeneListModal({
   mode: 'add' | 'edit';
   initialData?: { name: string; disease: string; description: string; genes: string };
   onClose: () => void;
-  onSubmit: (data: { name: string; disease: string; description: string; genes: string }) => void;
+  onSubmit: (data: { name: string; disease: string; description: string; genes: string }) => void | Promise<void>;
 }) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState({
     name: '',
     disease: '',
@@ -108,13 +66,23 @@ function GeneListModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    if (!formData.name || !formData.disease || !formData.genes) return;
-    onSubmit(formData);
-    handleClose();
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.disease || !formData.genes || submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(formData);
+      handleClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save gene list');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
+    if (submitting) return;
+    setSubmitError('');
     setFormData({ name: '', disease: '', description: '', genes: '' });
     onClose();
   };
@@ -131,14 +99,19 @@ function GeneListModal({
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={handleClose}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name || !formData.disease || !formData.genes}>
+          <Button variant="secondary" onClick={handleClose} disabled={submitting}>取消</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name || !formData.disease || !formData.genes || submitting}>
             {mode === 'add' ? '添加' : '保存'}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-fg-default mb-2">列表名称 *</label>
           <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病Panel" />
@@ -172,12 +145,32 @@ function GeneListModal({
 
 export default function GeneListPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [geneLists, setGeneLists] = React.useState<GeneList[]>(initialGeneLists);
+  const [geneLists, setGeneLists] = React.useState<GeneList[]>([]);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalMode, setModalMode] = React.useState<'add' | 'edit'>('add');
   const [editingList, setEditingList] = React.useState<GeneList | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<GeneList | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const refreshGeneLists = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setGeneLists(await listGeneLists());
+    } catch (err) {
+      console.error('加载基因列表失败', err);
+      setGeneLists([]);
+      setError('加载基因列表失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshGeneLists();
+  }, [refreshGeneLists]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -208,44 +201,50 @@ export default function GeneListPage() {
     setEditingList(null);
   };
 
-  const handleSubmit = (data: { name: string; disease: string; description: string; genes: string }) => {
+  const handleSubmit = async (data: { name: string; disease: string; description: string; genes: string }) => {
     const genes = data.genes.split(/[\n,\s]+/).filter((g) => g.trim().toUpperCase());
 
-    if (modalMode === 'add') {
-      const newList: GeneList = {
-        id: String(Date.now()),
-        name: data.name,
-        disease: data.disease,
-        description: data.description || `${data.name} 基因列表`,
-        genes,
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0],
-        createdBy: '当前用户',
-      };
-      setGeneLists((prev) => [...prev, newList]);
-    } else if (editingList) {
-      setGeneLists((prev) =>
-        prev.map((list) => {
-          if (list.id === editingList.id) {
-            return {
-              ...list,
-              name: data.name,
-              disease: data.disease,
-              description: data.description || list.description,
-              genes,
-              updatedAt: new Date().toISOString().split('T')[0],
-            };
-          }
-          return list;
-        })
-      );
+    try {
+      if (modalMode === 'add') {
+        const newList = await createGeneList({
+          name: data.name,
+          disease: data.disease,
+          description: data.description || `${data.name} 基因列表`,
+          genes,
+        });
+        setGeneLists((prev) => [newList, ...prev]);
+      } else if (editingList) {
+        const updated = await updateGeneList(editingList.id, {
+          name: data.name,
+          disease: data.disease,
+          description: data.description || editingList.description,
+          genes,
+          category: editingList.category,
+        });
+        setGeneLists((prev) =>
+          prev.map((list) => list.id === editingList.id ? updated : list)
+        );
+      }
+    } catch (err) {
+      console.error('保存基因列表失败', err);
+      const message = err instanceof Error ? err.message : '保存基因列表失败，请稍后重试';
+      setError(message);
+      throw new Error(message);
     }
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteTarget) {
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteGeneList(deleteTarget.id);
       setGeneLists((prev) => prev.filter((l) => l.id !== deleteTarget.id));
       setDeleteTarget(null);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to delete gene list', err);
+      const message = err instanceof Error ? err.message : 'Failed to delete gene list';
+      setError(message);
+      throw new Error(message);
     }
   };
 
@@ -281,6 +280,16 @@ export default function GeneListPage() {
           添加基因列表
         </Button>
       </div>
+
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-sm text-fg-muted">加载基因列表...</div>
+      )}
 
       {/* 列表展示 */}
       <div className="yj-list-panel">

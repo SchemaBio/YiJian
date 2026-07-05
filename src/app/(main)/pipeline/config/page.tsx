@@ -1,175 +1,204 @@
 'use client';
 
-import { PageContent } from '@/components/layout';
-import { Button, Input, Select, FormItem } from '@schema/ui-kit';
-import { Save } from 'lucide-react';
 import * as React from 'react';
+import { PageContent } from '@/components/layout';
+import { Button, Select, Tag } from '@schema/ui-kit';
+import { AlertCircle, Database, RefreshCw, Settings } from 'lucide-react';
+import { listPipelines, type Pipeline } from '@/lib/pipelines';
+
+const BASE_TYPE_LABEL: Record<string, string> = {
+  wes_single: 'WES 单样本分析',
+  wes_family: 'WES 家系分析',
+  panel: 'Panel 分析',
+};
+
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values.map(value => value.trim()).filter(Boolean))).sort();
+}
 
 export default function PipelineConfigPage() {
-  const [config, setConfig] = React.useState({
-    defaultBed: 'Agilent_SureSelect_V7.bed',
-    genomeVersion: 'hg38',
-    minDepth: '20',
-    minBaseQuality: '20',
-    minMappingQuality: '30',
-    variantCallers: ['gatk', 'deepvariant'],
-    cnvEnabled: true,
-    svEnabled: false,
-    annotationDatabases: ['gnomad', 'clinvar', 'hgmd', 'omim'],
-  });
+  const [pipelines, setPipelines] = React.useState<Pipeline[]>([]);
+  const [selectedId, setSelectedId] = React.useState('');
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
 
-  const [saving, setSaving] = React.useState(false);
+  const loadPipelines = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await listPipelines({ page: 1, pageSize: 100 });
+      setPipelines(data);
+      setSelectedId(current => current && data.some(item => item.id === current) ? current : data[0]?.id ?? '');
+    } catch (err) {
+      setPipelines([]);
+      setSelectedId('');
+      setError(err instanceof Error ? err.message : '加载流程配置失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaving(false);
-    alert('配置已保存');
-  };
+  React.useEffect(() => {
+    void loadPipelines();
+  }, [loadPipelines]);
+
+  const selected = pipelines.find(item => item.id === selectedId) ?? pipelines[0];
+  const bedFiles = uniqueValues(pipelines.map(item => item.bedFile));
+  const cnvBaselines = uniqueValues(pipelines.map(item => item.cnvBaseline));
+  const references = uniqueValues(pipelines.map(item => item.referenceGenome));
+  const activeCount = pipelines.filter(item => item.status === 'active').length;
 
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">流程配置</h2>
+        <div>
+          <h2 className="yj-page-title">流程配置</h2>
+          <p className="yj-page-subtitle">
+            数据来自 Octopus `/api/v1/pipelines`。Octopus 当前没有独立“全局流程参数”保存接口，本页不再伪造本地保存成功。
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+          onClick={() => void loadPipelines()}
+          disabled={loading}
+        >
+          刷新
+        </Button>
       </div>
 
-      <div className="yj-panel yj-form-card-wide space-y-8">
-        {/* 基本配置 */}
-        <section>
-          <h3 className="text-sm font-medium text-fg-default mb-4 pb-2 border-b border-border">
-            基本配置
-          </h3>
-          <div className="space-y-4">
-            <FormItem label="默认 BED 文件">
-              <Select
-                options={[
-                  { value: 'Agilent_SureSelect_V7.bed', label: 'Agilent SureSelect V7' },
-                  { value: 'IDT_xGen_Exome_v2.bed', label: 'IDT xGen Exome v2' },
-                  { value: 'Cardio_Panel_v2.bed', label: 'Cardio Panel v2' },
-                ]}
-                value={config.defaultBed}
-                onChange={(v) => setConfig((prev) => ({ ...prev, defaultBed: v as string }))}
-              />
-            </FormItem>
-            <FormItem label="参考基因组版本">
-              <Select
-                options={[
-                  { value: 'hg38', label: 'GRCh38 (hg38)' },
-                  { value: 'hg19', label: 'GRCh37 (hg19)' },
-                ]}
-                value={config.genomeVersion}
-                onChange={(v) => setConfig((prev) => ({ ...prev, genomeVersion: v as string }))}
-              />
-            </FormItem>
-          </div>
-        </section>
+      {error && (
+        <div className="yj-panel border border-danger-muted bg-danger-subtle text-danger-fg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
 
-        {/* 质控参数 */}
-        <section>
-          <h3 className="text-sm font-medium text-fg-default mb-4 pb-2 border-b border-border">
-            质控参数
-          </h3>
-          <div className="grid grid-cols-3 gap-4">
-            <FormItem label="最小测序深度">
-              <Input
-                type="number"
-                value={config.minDepth}
-                onChange={(e) => setConfig((prev) => ({ ...prev, minDepth: e.target.value }))}
-                rightElement={<span className="text-fg-muted text-xs">X</span>}
-              />
-            </FormItem>
-            <FormItem label="最小碱基质量">
-              <Input
-                type="number"
-                value={config.minBaseQuality}
-                onChange={(e) => setConfig((prev) => ({ ...prev, minBaseQuality: e.target.value }))}
-              />
-            </FormItem>
-            <FormItem label="最小比对质量">
-              <Input
-                type="number"
-                value={config.minMappingQuality}
-                onChange={(e) => setConfig((prev) => ({ ...prev, minMappingQuality: e.target.value }))}
-              />
-            </FormItem>
-          </div>
-        </section>
-
-        {/* 变异检测 */}
-        <section>
-          <h3 className="text-sm font-medium text-fg-default mb-4 pb-2 border-b border-border">
-            变异检测
-          </h3>
-          <div className="space-y-4">
-            <FormItem label="SNV/InDel 检测工具">
-              <Select
-                options={[
-                  { value: 'gatk', label: 'GATK HaplotypeCaller' },
-                  { value: 'deepvariant', label: 'DeepVariant' },
-                  { value: 'strelka2', label: 'Strelka2' },
-                ]}
-                value={config.variantCallers}
-                onChange={(v) => setConfig((prev) => ({ ...prev, variantCallers: v as string[] }))}
-                multiple
-              />
-            </FormItem>
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.cnvEnabled}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, cnvEnabled: e.target.checked }))}
-                  className="w-4 h-4 rounded border-border-default text-accent-emphasis focus:ring-accent-emphasis"
-                />
-                <span className="text-sm text-fg-default">启用 CNV 检测</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.svEnabled}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, svEnabled: e.target.checked }))}
-                  className="w-4 h-4 rounded border-border-default text-accent-emphasis focus:ring-accent-emphasis"
-                />
-                <span className="text-sm text-fg-default">启用 SV 检测</span>
-              </label>
-            </div>
-          </div>
-        </section>
-
-        {/* 注释数据库 */}
-        <section>
-          <h3 className="text-sm font-medium text-fg-default mb-4 pb-2 border-b border-border">
-            注释数据库
-          </h3>
-          <FormItem label="启用的注释数据库">
-            <Select
-              options={[
-                { value: 'gnomad', label: 'gnomAD' },
-                { value: 'clinvar', label: 'ClinVar' },
-                { value: 'hgmd', label: 'HGMD' },
-                { value: 'omim', label: 'OMIM' },
-                { value: 'dbsnp', label: 'dbSNP' },
-                { value: 'spliceai', label: 'SpliceAI' },
-              ]}
-              value={config.annotationDatabases}
-              onChange={(v) => setConfig((prev) => ({ ...prev, annotationDatabases: v as string[] }))}
-              multiple
-            />
-          </FormItem>
-        </section>
-
-        {/* 保存按钮 */}
-        <div className="pt-4 border-t border-border">
-          <Button
-            variant="primary"
-            leftIcon={<Save className="w-4 h-4" />}
-            onClick={handleSave}
-            loading={saving}
-          >
-            保存配置
-          </Button>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="yj-panel">
+          <div className="text-xs text-fg-muted">流程总数</div>
+          <div className="mt-2 text-2xl font-semibold text-fg-default">{pipelines.length}</div>
+        </div>
+        <div className="yj-panel">
+          <div className="text-xs text-fg-muted">启用流程</div>
+          <div className="mt-2 text-2xl font-semibold text-success-fg">{activeCount}</div>
+        </div>
+        <div className="yj-panel">
+          <div className="text-xs text-fg-muted">参考基因组</div>
+          <div className="mt-2 text-sm text-fg-default">{references.join(' / ') || '-'}</div>
+        </div>
+        <div className="yj-panel">
+          <div className="text-xs text-fg-muted">BED 引用</div>
+          <div className="mt-2 text-2xl font-semibold text-fg-default">{bedFiles.length}</div>
         </div>
       </div>
+
+      <div className="yj-panel yj-form-card-wide space-y-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
+          </div>
+        ) : pipelines.length === 0 ? (
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-canvas-subtle">
+            <AlertCircle className="w-5 h-5 text-fg-muted mt-0.5" />
+            <div>
+              <div className="text-sm font-medium text-fg-default">暂无流程配置</div>
+              <p className="text-sm text-fg-muted mt-1">
+                请在“流程管理”页通过 Octopus `POST /api/v1/pipelines` 创建流程；本页只汇总真实后端配置。
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <section className="space-y-3">
+              <h3 className="text-sm font-medium text-fg-default pb-2 border-b border-border flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                当前流程
+              </h3>
+              <Select
+                value={selected?.id ?? ''}
+                onChange={(value) => setSelectedId(Array.isArray(value) ? value[0] : value)}
+                options={pipelines.map(item => ({
+                  value: item.id,
+                  label: `${item.name} (${item.version || '未标版本'})`,
+                }))}
+              />
+            </section>
+
+            {selected && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-fg-default">{selected.name}</h3>
+                  <Tag variant={selected.status === 'active' ? 'success' : 'neutral'}>
+                    {selected.status === 'active' ? '启用' : '停用'}
+                  </Tag>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Info label="流程 ID" value={selected.id} mono />
+                  <Info label="基础流程" value={BASE_TYPE_LABEL[selected.baseType] ?? selected.baseType} />
+                  <Info label="版本" value={selected.version || '-'} />
+                  <Info label="参考基因组" value={selected.referenceGenome || '-'} />
+                  <Info label="BED 文件" value={selected.bedFile || '-'} mono />
+                  <Info label="CNV baseline" value={selected.cnvBaseline || '未配置'} mono />
+                  <Info label="创建时间" value={selected.createdAt || '-'} />
+                  <Info label="更新时间" value={selected.updatedAt || '-'} />
+                </div>
+                {selected.description && (
+                  <div>
+                    <div className="text-xs text-fg-muted">描述</div>
+                    <p className="mt-1 text-sm text-fg-default whitespace-pre-wrap">{selected.description}</p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-medium text-fg-default pb-2 border-b border-border flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                已配置资源引用
+              </h3>
+              <ResourceList title="BED 文件" values={bedFiles} />
+              <ResourceList title="CNV baseline" values={cnvBaselines} emptyText="未配置 CNV baseline" />
+            </section>
+
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-canvas-subtle">
+              <AlertCircle className="w-4 h-4 text-fg-muted mt-0.5" />
+              <p className="text-xs text-fg-muted leading-5">
+                QC 阈值、变异 caller 和注释数据库属于后端执行模板/配置文件能力，当前 Octopus API 未暴露可由前端修改的全局配置接口。
+                前端只展示真实 Pipeline 记录，避免本地状态与实际分析参数不一致。
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     </PageContent>
+  );
+}
+
+function Info({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-lg bg-canvas-subtle p-3">
+      <div className="text-xs text-fg-muted">{label}</div>
+      <div className={`mt-1 text-sm text-fg-default break-all ${mono ? 'font-mono' : ''}`}>{value}</div>
+    </div>
+  );
+}
+
+function ResourceList({ title, values, emptyText = '暂无引用' }: { title: string; values: string[]; emptyText?: string }) {
+  return (
+    <div>
+      <div className="text-xs text-fg-muted mb-2">{title}</div>
+      {values.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {values.map(value => (
+            <span key={value} className="px-2 py-1 rounded bg-canvas-subtle text-xs font-mono text-fg-default">
+              {value}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-fg-muted">{emptyText}</div>
+      )}
+    </div>
   );
 }

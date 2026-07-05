@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
 import type { GroupedCNVExon, HistoryTableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
-import { getGroupedCNVExons } from '../mock-data';
+import { getGroupedCNVExons } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
 
 interface CNVExonHistoryTabProps {
@@ -26,9 +26,14 @@ export function CNVExonHistoryTab({
   React.useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const data = await getGroupedCNVExons(filterState);
-      setResult(data);
-      setLoading(false);
+      try {
+        const data = await getGroupedCNVExons(filterState);
+        setResult(data);
+      } catch {
+        setResult({ data: [], total: 0, page: filterState.page, pageSize: filterState.pageSize });
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [filterState]);

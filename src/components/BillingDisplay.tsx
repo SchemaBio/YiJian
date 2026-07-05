@@ -2,17 +2,16 @@
 
 import * as React from 'react';
 import { Coins } from 'lucide-react';
-import { getRuntimeApiBaseUrl } from '@/lib/runtime-config';
+import { getBillingBalance } from '@/lib/billing';
 
 export function BillingDisplay() {
   const [balance, setBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    fetch(`${getRuntimeApiBaseUrl()}/v1/billing/balance`, { credentials: 'include' })
-      .then((r) => r.json())
+    getBillingBalance()
       .then((d) => {
-        if (d?.data?.balance != null) setBalance(d.data.balance);
+        if (d?.balance != null) setBalance(d.balance);
         setLoading(false);
       })
       .catch(() => setLoading(false));

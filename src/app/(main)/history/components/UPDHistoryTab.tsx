@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
 import type { GroupedUPDRegion, HistoryTableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
-import { getGroupedUPDRegions, UPD_TYPE_CONFIG } from '../mock-data';
+import { getGroupedUPDRegions, UPD_TYPE_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
 
 interface UPDHistoryTabProps {
@@ -32,9 +32,14 @@ export function UPDHistoryTab({
   React.useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const data = await getGroupedUPDRegions(filterState);
-      setResult(data);
-      setLoading(false);
+      try {
+        const data = await getGroupedUPDRegions(filterState);
+        setResult(data);
+      } catch {
+        setResult({ data: [], total: 0, page: filterState.page, pageSize: filterState.pageSize });
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [filterState]);

@@ -9,11 +9,47 @@ function createNonce() {
 function apiConnectSource() {
   const apiUrl = process.env.YIJIAN_API_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl || apiUrl.startsWith('/')) return '';
+  if (apiUrl.startsWith('//') || apiUrl.includes('\\') || /[\u0000-\u001f]/.test(apiUrl)) return '';
   try {
-    return new URL(apiUrl).origin;
+    const parsed = new URL(apiUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    if (parsed.username || parsed.password) return '';
+    if (hasUnsafePathSegment(parsed.pathname)) return '';
+    return parsed.origin;
   } catch {
     return '';
   }
+}
+
+function decodePathSegment(segment: string): string | null {
+  let decoded = segment;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) return decoded;
+      decoded = next;
+    } catch {
+      return null;
+    }
+  }
+  return decoded;
+}
+
+function hasUnsafePathSegment(path: string): boolean {
+  for (const segment of path.split('/').filter(Boolean)) {
+    const decoded = decodePathSegment(segment);
+    if (
+      decoded === null ||
+      decoded === '.' ||
+      decoded === '..' ||
+      decoded.includes('/') ||
+      decoded.includes('\\') ||
+      /[\u0000-\u001f\u007f]/.test(decoded)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function contentSecurityPolicy(nonce: string) {
@@ -21,7 +57,11 @@ function contentSecurityPolicy(nonce: string) {
   const scriptSrc = isProduction
     ? [`'self'`, `'nonce-${nonce}'`]
     : [`'self'`, `'nonce-${nonce}'`, `'unsafe-inline'`, `'unsafe-eval'`];
-  const connectSrc = [`'self'`, apiConnectSource(), 'http://localhost:*', 'http://backend:*']
+  const connectSrc = [
+    `'self'`,
+    apiConnectSource(),
+    ...(isProduction ? [] : ['http://localhost:*', 'http://backend:*']),
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -34,6 +74,7 @@ function contentSecurityPolicy(nonce: string) {
     `connect-src ${connectSrc}`,
     `worker-src 'self' blob:`,
     `frame-src 'self'`,
+    `frame-ancestors 'none'`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

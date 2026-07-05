@@ -4,8 +4,8 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Tag } from '@schema/ui-kit';
-import { ArrowLeft, Database, User, FileText, Activity, Users, RotateCcw } from 'lucide-react';
-import { getSampleDetail } from '../mock-data';
+import { ArrowLeft, Database, User, FileText, Activity, Users } from 'lucide-react';
+import { getSampleDetail } from '@/lib/samples';
 import type { SampleDetail } from '../types';
 import { GENDER_CONFIG } from '../types';
 import { MatchingTab } from './components/MatchingTab';
@@ -34,13 +34,21 @@ export default function SampleDetailPage() {
   React.useEffect(() => {
     async function loadSample() {
       setLoading(true);
-      const data = await getSampleDetail(uuid);
-      if (!data) {
+      setNotFound(false);
+      try {
+        const data = await getSampleDetail(uuid);
+        if (!data) {
+          setSample(null);
+          setNotFound(true);
+        } else {
+          setSample(data);
+        }
+      } catch {
+        setSample(null);
         setNotFound(true);
-      } else {
-        setSample(data);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadSample();
   }, [uuid]);
@@ -48,11 +56,6 @@ export default function SampleDetailPage() {
   const handleBack = React.useCallback(() => {
     router.push('/samples');
   }, [router]);
-
-  const handleRedo = React.useCallback(() => {
-    // TODO: Implement sample redo functionality
-    console.log('Redo sample:', uuid);
-  }, [uuid]);
 
   if (notFound) {
     return (
@@ -93,7 +96,7 @@ export default function SampleDetailPage() {
       case 'info':
         return <SampleInfoTab sample={sample} />;
       case 'matching':
-        return <MatchingTab sampleId={uuid} />;
+        return <MatchingTab sample={sample} onSampleUpdated={setSample} />;
       case 'clinical':
         return (
           <div className="bg-canvas-subtle rounded-lg p-4">
@@ -148,7 +151,7 @@ export default function SampleDetailPage() {
                   <div
                     key={task.id}
                     className="flex items-center justify-between p-3 bg-canvas-default rounded hover:bg-canvas-inset transition-colors cursor-pointer"
-                    onClick={() => router.push(`/tasks/${task.id}`)}
+                    onClick={() => router.push(`/tasks/${encodeURIComponent(task.id)}`)}
                   >
                     <div>
                       <span className="text-sm font-medium text-fg-default">{task.name}</span>
@@ -186,15 +189,8 @@ export default function SampleDetailPage() {
             <span className={`text-sm ${genderInfo.color}`}>{genderInfo.label}</span>
             <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? '已匹配' : '未匹配'}</Tag>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="small"
-              leftIcon={<RotateCcw className="w-4 h-4" />}
-              onClick={handleRedo}
-            >
-              重做样本
-            </Button>
+          <div className="text-xs text-fg-muted">
+            Octopus matched_pair is the source of truth for R1/R2 sequencing data.
           </div>
         </div>
 

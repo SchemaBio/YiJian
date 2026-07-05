@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Button, Input, TextArea, Tag } from '@schema/ui-kit';
 import { X, Search, Check, Plus, Trash2 } from 'lucide-react';
 import { AppModal } from '@/components/shared';
-import { getAvailableSamples } from '../mock-data';
+import { listSamples } from '@/lib/samples';
 import type { PedigreeListItem } from '../types';
 
 interface Sample {
@@ -16,7 +16,7 @@ interface Sample {
 interface EditPedigreeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (id: string, data: EditPedigreeFormData) => void;
+  onSubmit: (id: string, data: EditPedigreeFormData) => void | Promise<void>;
   pedigree: PedigreeListItem | null;
 }
 
@@ -30,6 +30,8 @@ export interface EditPedigreeFormData {
 }
 
 export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditPedigreeModalProps) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<EditPedigreeFormData>({
     internalId: '',
     clinicalDiagnosis: '',
@@ -46,6 +48,7 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
   // 当 pedigree 变化时更新表单数据
   React.useEffect(() => {
     if (pedigree) {
+      setSubmitError('');
       setFormData({
         internalId: pedigree.internalId,
         clinicalDiagnosis: pedigree.clinicalDiagnosis || '',
@@ -61,10 +64,14 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
   React.useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      getAvailableSamples().then(data => {
-        setSamples(data);
-        setLoading(false);
-      });
+      listSamples()
+        .then(data => setSamples(data.map(sample => ({
+          id: sample.id,
+          internalId: sample.internalId,
+          gender: sample.gender,
+        }))))
+        .catch(() => setSamples([]))
+        .finally(() => setLoading(false));
     }
   }, [isOpen]);
 
@@ -129,12 +136,20 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!pedigree || formData.sampleIds.length === 0 || !formData.probandSampleId) return;
-    onSubmit(pedigree.id, formData);
-    onClose();
-    setSearchQuery('');
+    if (!pedigree || formData.sampleIds.length === 0 || !formData.probandSampleId || submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(pedigree.id, formData);
+      onClose();
+      setSearchQuery('');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to update pedigree');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getSampleInfo = (sampleId: string) => {
@@ -152,16 +167,16 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="编辑家系"
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
           <Button
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
-            disabled={formData.sampleIds.length === 0 || !formData.probandSampleId}
+            disabled={formData.sampleIds.length === 0 || !formData.probandSampleId || submitting}
           >
             保存
           </Button>
@@ -169,6 +184,11 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
       }
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-3">家系信息</h3>
           <div className="grid grid-cols-3 gap-4">

@@ -9,8 +9,19 @@ import { PedigreeTree, MemberDetailPanel, AddMemberModal, LinkSampleModal, NewPe
 import type { ContextMenuItem } from './components';
 import type { NewPedigreeFormData } from './components/NewPedigreeModal';
 import type { EditPedigreeFormData } from './components/EditPedigreeModal';
-import { mockPedigreeList, getPedigreeDetail, generatePedigreeUUID, generateMemberUUID } from './mock-data';
 import type { PedigreeListItem, Pedigree, PedigreeMember, RelationType } from './types';
+import { listSamples } from '@/lib/samples';
+import {
+  createPedigree,
+  createPedigreeMember,
+  deletePedigree,
+  deletePedigreeMember,
+  getPedigree,
+  listPedigrees,
+  setPedigreeProband,
+  updatePedigree,
+  updatePedigreeMember,
+} from '@/lib/pedigrees';
 
 interface OpenTab {
   id: string;
@@ -38,6 +49,9 @@ export default function PedigreePage() {
   // 当前查看的家系详情
   const [currentPedigree, setCurrentPedigree] = React.useState<Pedigree | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [pedigrees, setPedigrees] = React.useState<PedigreeListItem[]>([]);
+  const [listLoading, setListLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   // 选中的成员
   const [selectedMember, setSelectedMember] = React.useState<PedigreeMember | null>(null);
@@ -89,6 +103,41 @@ export default function PedigreePage() {
   // 防止重复打开家系
   const processedPedigreeId = React.useRef<string | null>(null);
 
+  const refreshPedigrees = React.useCallback(async () => {
+    setListLoading(true);
+    setError(null);
+    try {
+      setPedigrees(await listPedigrees());
+    } catch (err) {
+      console.error('加载家系列表失败', err);
+      setPedigrees([]);
+      setError('加载家系列表失败，请稍后重试');
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshPedigrees();
+  }, [refreshPedigrees]);
+
+  const refreshCurrentPedigree = React.useCallback(async (pedigreeId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const detail = await getPedigree(pedigreeId);
+      setCurrentPedigree(detail);
+      return detail;
+    } catch (err) {
+      console.error('加载家系详情失败', err);
+      setCurrentPedigree(null);
+      setError('加载家系详情失败，请稍后重试');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // 处理 URL 参数，自动打开对应家系或关闭所有标签
   React.useEffect(() => {
     const pedigreeId = searchParams.get('id');
@@ -107,22 +156,19 @@ export default function PedigreePage() {
     // 否则处理打开家系
     if (pedigreeId && pedigreeId !== processedPedigreeId.current) {
       processedPedigreeId.current = pedigreeId;
-      const pedigree = mockPedigreeList.find(p => p.id === pedigreeId);
+      const pedigree = pedigrees.find(p => p.id === pedigreeId);
       if (pedigree) {
         handleOpenTabById(pedigreeId, pedigree.internalId);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, pedigrees]);
 
   // 通过 ID 打开家系标签
   const handleOpenTabById = async (pedigreeId: string, name: string) => {
     const existingTab = openTabs.find(t => t.pedigreeId === pedigreeId);
     if (existingTab) {
       setActiveTabId(existingTab.id);
-      setLoading(true);
-      const detail = await getPedigreeDetail(pedigreeId);
-      setCurrentPedigree(detail);
-      setLoading(false);
+      await refreshCurrentPedigree(pedigreeId);
       return;
     }
 
@@ -134,10 +180,7 @@ export default function PedigreePage() {
     setOpenTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);
 
-    setLoading(true);
-    const detail = await getPedigreeDetail(pedigreeId);
-    setCurrentPedigree(detail);
-    setLoading(false);
+    await refreshCurrentPedigree(pedigreeId);
     setSelectedMember(null);
   };
 
@@ -147,10 +190,7 @@ export default function PedigreePage() {
     if (existingTab) {
       setActiveTabId(existingTab.id);
       // 加载详情
-      setLoading(true);
-      const detail = await getPedigreeDetail(pedigree.id);
-      setCurrentPedigree(detail);
-      setLoading(false);
+      await refreshCurrentPedigree(pedigree.id);
       return;
     }
 
@@ -163,25 +203,19 @@ export default function PedigreePage() {
     setActiveTabId(newTab.id);
     
     // 加载详情
-    setLoading(true);
-    const detail = await getPedigreeDetail(pedigree.id);
-    setCurrentPedigree(detail);
-    setLoading(false);
+    await refreshCurrentPedigree(pedigree.id);
     setSelectedMember(null);
-  }, [openTabs]);
+  }, [openTabs, refreshCurrentPedigree]);
 
   // 切换标签
   const handleSwitchTab = React.useCallback(async (tabId: string) => {
     setActiveTabId(tabId);
     const tab = openTabs.find(t => t.id === tabId);
     if (tab) {
-      setLoading(true);
-      const detail = await getPedigreeDetail(tab.pedigreeId);
-      setCurrentPedigree(detail);
-      setLoading(false);
+      await refreshCurrentPedigree(tab.pedigreeId);
       setSelectedMember(null);
     }
-  }, [openTabs]);
+  }, [openTabs, refreshCurrentPedigree]);
 
   // 关闭标签
   const handleCloseTab = React.useCallback((tabId: string, e?: React.MouseEvent) => {
@@ -191,7 +225,7 @@ export default function PedigreePage() {
       if (activeTabId === tabId && newTabs.length > 0) {
         const lastTab = newTabs[newTabs.length - 1];
         setActiveTabId(lastTab.id);
-        getPedigreeDetail(lastTab.pedigreeId).then(setCurrentPedigree);
+        refreshCurrentPedigree(lastTab.pedigreeId);
       } else if (newTabs.length === 0) {
         setActiveTabId(null);
         setCurrentPedigree(null);
@@ -199,13 +233,11 @@ export default function PedigreePage() {
       return newTabs;
     });
     setSelectedMember(null);
-  }, [activeTabId]);
+  }, [activeTabId, refreshCurrentPedigree]);
 
   // 添加成员
-  const handleAddMember = (memberData: Omit<PedigreeMember, 'id' | 'generation' | 'position'>) => {
+  const handleAddMember = async (memberData: Omit<PedigreeMember, 'id' | 'generation' | 'position'>) => {
     if (!currentPedigree) return;
-
-    const newMemberId = `M${Date.now()}`;
 
     // 计算 generation
     let generation = 0;
@@ -217,36 +249,43 @@ export default function PedigreePage() {
       generation = parentGen + 1;
     }
 
-    const newMember: PedigreeMember = {
-      ...memberData,
-      id: newMemberId,
-      generation,
-      position: currentPedigree.members.filter(m => m.generation === generation).length,
-    };
+    const position = currentPedigree.members.filter(m => m.generation === generation).length;
 
-    setCurrentPedigree(prev => {
-      if (!prev) return null;
+    try {
+      const newMember = await createPedigreeMember(currentPedigree.id, {
+        ...memberData,
+        generation,
+        position,
+      });
 
-      let updatedMembers = [...prev.members, newMember];
+      setCurrentPedigree(prev => {
+        if (!prev) return null;
 
-      // 处理配偶双向关联
-      if (memberData.spouseIds && memberData.spouseIds.length > 0) {
-        updatedMembers = updatedMembers.map(m => {
-          if (memberData.spouseIds!.includes(m.id)) {
-            return { ...m, spouseIds: [...(m.spouseIds || []), newMemberId] };
-          }
-          return m;
-        });
-      }
+        let updatedMembers = [...prev.members, { ...newMember, spouseIds: memberData.spouseIds }];
 
-      return {
-        ...prev,
-        members: updatedMembers,
-      };
-    });
+        // 处理配偶双向关联（前端展示字段，后端当前无 spouse_ids 字段）
+        if (memberData.spouseIds && memberData.spouseIds.length > 0) {
+          updatedMembers = updatedMembers.map(m => {
+            if (memberData.spouseIds!.includes(m.id)) {
+              return { ...m, spouseIds: [...(m.spouseIds || []), newMember.id] };
+            }
+            return m;
+          });
+        }
 
-    // 清除预填充提示
-    setAddMemberHint(null);
+        return {
+          ...prev,
+          members: updatedMembers,
+        };
+      });
+      refreshPedigrees();
+      setAddMemberHint(null);
+    } catch (err) {
+      console.error('Failed to add pedigree member', err);
+      const message = err instanceof Error ? err.message : 'Failed to add pedigree member';
+      setError(message);
+      throw new Error(message);
+    }
   };
 
   // 打开关联样本弹窗
@@ -256,86 +295,79 @@ export default function PedigreePage() {
   };
 
   // 关联样本到成员
-  const handleLinkSample = (sampleId: string) => {
+  const handleLinkSample = async (sampleId: string) => {
     if (!currentPedigree || !linkingMemberId) return;
+    const member = currentPedigree.members.find(m => m.id === linkingMemberId);
+    if (!member) return;
 
-    setCurrentPedigree(prev => prev ? {
-      ...prev,
-      members: prev.members.map(m =>
-        m.id === linkingMemberId ? { ...m, sampleId } : m
-      ),
-    } : null);
+    try {
+      const updated = await updatePedigreeMember(currentPedigree.id, linkingMemberId, { ...member, sampleId });
 
-    // 更新选中成员
-    if (selectedMember?.id === linkingMemberId) {
-      setSelectedMember(prev => prev ? { ...prev, sampleId } : null);
+      setCurrentPedigree(prev => prev ? {
+        ...prev,
+        members: prev.members.map(m =>
+          m.id === linkingMemberId ? { ...m, ...updated } : m
+        ),
+      } : null);
+
+      if (selectedMember?.id === linkingMemberId) {
+        setSelectedMember(prev => prev ? { ...prev, ...updated } : null);
+      }
+      refreshPedigrees();
+      setLinkingMemberId(null);
+    } catch (err) {
+      console.error('Failed to link sample', err);
+      const message = err instanceof Error ? err.message : 'Failed to link sample';
+      setError(message);
+      throw new Error(message);
     }
-
-    setLinkingMemberId(null);
   };
 
-  // 创建新家系
   const handleCreatePedigree = async (data: NewPedigreeFormData) => {
-    const newPedigreeId = generatePedigreeUUID();
-    const newMemberId = generateMemberUUID();
+    setError(null);
+    try {
+      const samples = await listSamples();
+      const probandSample = samples.find(s => s.id === data.probandSampleId);
+      if (!probandSample) {
+        const message = '未找到先证者样本';
+        setError(message);
+        throw new Error(message);
+      }
 
-    // 从样本列表获取先证者样本信息
-    const { mockSamples } = await import('../mock-data');
-    const probandSample = mockSamples.find((s: { id: string }) => s.id === data.probandSampleId);
+      const created = await createPedigree({
+        internalId: data.internalId,
+        clinicalDiagnosis: data.clinicalDiagnosis,
+        remark: data.remark,
+      });
+      const probandMember = await createPedigreeMember(created.id, {
+        sampleId: data.probandSampleId,
+        name: probandSample.internalId || '先证者',
+        gender: probandSample.gender,
+        relation: 'proband',
+        affectedStatus: 'affected',
+        generation: 0,
+        position: 0,
+      });
+      const newPedigree = await setPedigreeProband(created.id, probandMember.id);
 
-    if (!probandSample) {
-      console.error('未找到先证者样本');
-      return;
+      // 打开新创建的家系
+      const newTab: OpenTab = {
+        id: `tab-${Date.now()}`,
+        pedigreeId: created.id,
+        name: data.internalId,
+      };
+      setOpenTabs(prev => [...prev, newTab]);
+      setActiveTabId(newTab.id);
+      setCurrentPedigree(newPedigree);
+      setSelectedMember(null);
+      setIsEditMode(true); // 自动进入编辑模式
+      refreshPedigrees();
+    } catch (err) {
+      console.error('创建家系失败', err);
+      const message = err instanceof Error ? err.message : '创建家系失败，请稍后重试';
+      setError(message);
+      throw new Error(message);
     }
-
-    const now = new Date();
-    const formatDate = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      const seconds = String(d.getSeconds()).padStart(2, '0');
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    };
-
-    const newPedigree: Pedigree = {
-      id: newPedigreeId,
-      internalId: data.internalId,
-      probandId: newMemberId,
-      probandSampleId: data.probandSampleId,
-      clinicalDiagnosis: data.clinicalDiagnosis || undefined,
-      batch: data.batch || undefined,
-      remark: data.remark || undefined,
-      createdAt: formatDate(now),
-      updatedAt: formatDate(now),
-      members: [
-        {
-          id: newMemberId,
-          sampleId: data.probandSampleId,
-          name: '先证者',
-          gender: probandSample.gender,
-          relation: 'proband',
-          affectedStatus: 'affected',
-          generation: 0,
-          position: 0,
-        },
-      ],
-    };
-
-    // 打开新创建的家系
-    const newTab: OpenTab = {
-      id: `tab-${Date.now()}`,
-      pedigreeId: newPedigreeId,
-      name: data.internalId,
-    };
-    setOpenTabs(prev => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-    setCurrentPedigree(newPedigree);
-    setSelectedMember(null);
-    setIsEditMode(true); // 自动进入编辑模式
-
-    console.log('创建新家系:', newPedigree);
   };
 
   // 打开编辑家系弹窗
@@ -346,144 +378,157 @@ export default function PedigreePage() {
 
   // 编辑家系
   const handleEditPedigree = async (id: string, data: EditPedigreeFormData) => {
-    // 1. 更新 currentPedigree（如果匹配）
-    if (currentPedigree?.id === id) {
-      setCurrentPedigree(prev => prev ? {
-        ...prev,
+    try {
+      await updatePedigree(id, {
         internalId: data.internalId,
-        clinicalDiagnosis: data.clinicalDiagnosis || undefined,
-        batch: data.batch || undefined,
-        remark: data.remark || undefined,
-        updatedAt: formatDate(new Date()),
-      } : null);
+        clinicalDiagnosis: data.clinicalDiagnosis,
+        remark: data.remark,
+      });
+
+      // 1. 更新 currentPedigree（如果匹配）
+      if (currentPedigree?.id === id) {
+        await refreshCurrentPedigree(id);
+      }
+
+      // 2. 更新 tab 名称（如果 internalId 变化）
+      setOpenTabs(prev => prev.map(tab =>
+        tab.pedigreeId === id ? { ...tab, name: data.internalId } : tab
+      ));
+
+      refreshPedigrees();
+      setIsEditPedigreeOpen(false);
+      setEditingPedigree(null);
+    } catch (err) {
+      console.error('Failed to update pedigree', err);
+      const message = err instanceof Error ? err.message : 'Failed to update pedigree';
+      setError(message);
+      throw new Error(message);
     }
-
-    // 2. 更新 tab 名称（如果 internalId 变化）
-    setOpenTabs(prev => prev.map(tab =>
-      tab.pedigreeId === id ? { ...tab, name: data.internalId } : tab
-    ));
-
-    // 3. 更新 mockPedigreeList（实际项目中应调用 API）
-    const listIndex = mockPedigreeList.findIndex(p => p.id === id);
-    if (listIndex !== -1) {
-      mockPedigreeList[listIndex] = {
-        ...mockPedigreeList[listIndex],
-        internalId: data.internalId,
-        clinicalDiagnosis: data.clinicalDiagnosis || undefined,
-        batch: data.batch || undefined,
-        remark: data.remark || undefined,
-        updatedAt: formatDate(new Date()),
-      };
-    }
-
-    // 关闭弹窗
-    setIsEditPedigreeOpen(false);
-    setEditingPedigree(null);
   };
 
   // 删除家系
-  const handleDeletePedigree = () => {
+  const handleDeletePedigree = async () => {
     if (!deletingPedigreeId) return;
 
-    // 关闭相关标签页
-    const tabToClose = openTabs.find(t => t.pedigreeId === deletingPedigreeId);
-    if (tabToClose) {
-      handleCloseTab(tabToClose.id);
+    try {
+      await deletePedigree(deletingPedigreeId);
+
+      const tabToClose = openTabs.find(t => t.pedigreeId === deletingPedigreeId);
+      if (tabToClose) {
+        handleCloseTab(tabToClose.id);
+      }
+
+      refreshPedigrees();
+      setIsDeletePedigreeOpen(false);
+      setDeletingPedigreeId(null);
+    } catch (err) {
+      console.error('Failed to delete pedigree', err);
+      const message = err instanceof Error ? err.message : 'Failed to delete pedigree';
+      setError(message);
+      throw new Error(message);
     }
-
-    // 从列表中移除（实际项目中应调用 API）
-    console.log('删除家系:', deletingPedigreeId);
-
-    setIsDeletePedigreeOpen(false);
-    setDeletingPedigreeId(null);
   };
 
-  // 打开删除家系确认弹窗
   const handleOpenDeletePedigree = (pedigreeId: string) => {
     setDeletingPedigreeId(pedigreeId);
     setIsDeletePedigreeOpen(true);
   };
 
   // 删除成员（含孤儿引用清理）
-  const handleConfirmDeleteMember = () => {
+  const handleConfirmDeleteMember = async () => {
     if (!currentPedigree || !deletingMemberId) return;
 
-    // 检查是否为先证者
     const memberToDelete = currentPedigree.members.find(m => m.id === deletingMemberId);
     if (memberToDelete?.relation === 'proband') {
-      alert('无法删除先证者');
-      setIsDeleteMemberOpen(false);
-      setDeletingMemberId(null);
-      return;
+      const message = 'Cannot delete the proband; set another member as proband first.';
+      setError(message);
+      throw new Error(message);
     }
 
-    setCurrentPedigree(prev => {
-      if (!prev) return null;
+    try {
+      await deletePedigreeMember(currentPedigree.id, deletingMemberId);
 
-      const updatedMembers = prev.members
-        // 移除该成员
-        .filter(m => m.id !== deletingMemberId)
-        // 清理孤儿引用：移除 fatherId/motherId/spouseIds 中对该成员的引用
-        .map(m => ({
-          ...m,
-          fatherId: m.fatherId === deletingMemberId ? undefined : m.fatherId,
-          motherId: m.motherId === deletingMemberId ? undefined : m.motherId,
-          spouseIds: m.spouseIds?.filter(id => id !== deletingMemberId),
-        }));
+      setCurrentPedigree(prev => {
+        if (!prev) return null;
 
-      return {
-        ...prev,
-        members: updatedMembers,
-      };
-    });
+        const updatedMembers = prev.members
+          .filter(m => m.id !== deletingMemberId)
+          .map(m => ({
+            ...m,
+            fatherId: m.fatherId === deletingMemberId ? undefined : m.fatherId,
+            motherId: m.motherId === deletingMemberId ? undefined : m.motherId,
+            spouseIds: m.spouseIds?.filter(id => id !== deletingMemberId),
+          }));
 
-    // 如果删除的是当前选中的成员，清除选中状态
-    if (selectedMember?.id === deletingMemberId) {
-      setSelectedMember(null);
-    }
+        return {
+          ...prev,
+          members: updatedMembers,
+        };
+      });
+      refreshPedigrees();
 
-    setIsDeleteMemberOpen(false);
-    setDeletingMemberId(null);
-  };
-
-  // 编辑成员
-  const handleEditMember = (memberId: string, updates: Partial<PedigreeMember>) => {
-    if (!currentPedigree) return;
-
-    setCurrentPedigree(prev => {
-      if (!prev) return null;
-      const oldMember = prev.members.find(m => m.id === memberId);
-
-      let updatedMembers = prev.members.map(m =>
-        m.id === memberId ? { ...m, ...updates } : m
-      );
-
-      // 处理配偶双向同步
-      if (updates.spouseIds && oldMember) {
-        const removedSpouses = (oldMember.spouseIds || []).filter(
-          id => !(updates.spouseIds || []).includes(id)
-        );
-        const addedSpouses = (updates.spouseIds || []).filter(
-          id => !(oldMember.spouseIds || []).includes(id)
-        );
-
-        updatedMembers = updatedMembers.map(m => {
-          if (removedSpouses.includes(m.id)) {
-            return { ...m, spouseIds: (m.spouseIds || []).filter(id => id !== memberId) };
-          }
-          if (addedSpouses.includes(m.id)) {
-            return { ...m, spouseIds: [...(m.spouseIds || []), memberId] };
-          }
-          return m;
-        });
+      if (selectedMember?.id === deletingMemberId) {
+        setSelectedMember(null);
       }
 
-      return { ...prev, members: updatedMembers, updatedAt: formatDate(new Date()) };
-    });
+      setIsDeleteMemberOpen(false);
+      setDeletingMemberId(null);
+    } catch (err) {
+      console.error('Failed to delete pedigree member', err);
+      const message = err instanceof Error ? err.message : 'Failed to delete pedigree member';
+      setError(message);
+      throw new Error(message);
+    }
+  };
 
-    // 同步选中成员
-    if (selectedMember?.id === memberId) {
-      setSelectedMember(prev => prev ? { ...prev, ...updates } : null);
+  const handleEditMember = async (memberId: string, updates: Partial<PedigreeMember>) => {
+    if (!currentPedigree) return;
+    const oldMember = currentPedigree.members.find(m => m.id === memberId);
+    if (!oldMember) return;
+
+    try {
+      const updatedMember = await updatePedigreeMember(currentPedigree.id, memberId, { ...oldMember, ...updates });
+
+      setCurrentPedigree(prev => {
+        if (!prev) return null;
+
+        let updatedMembers = prev.members.map(m =>
+          m.id === memberId ? { ...m, ...updatedMember, spouseIds: updates.spouseIds } : m
+        );
+
+        // 处理配偶双向同步（前端展示字段，后端当前无 spouse_ids 字段）
+        if (updates.spouseIds && oldMember) {
+          const removedSpouses = (oldMember.spouseIds || []).filter(
+            id => !(updates.spouseIds || []).includes(id)
+          );
+          const addedSpouses = (updates.spouseIds || []).filter(
+            id => !(oldMember.spouseIds || []).includes(id)
+          );
+
+          updatedMembers = updatedMembers.map(m => {
+            if (removedSpouses.includes(m.id)) {
+              return { ...m, spouseIds: (m.spouseIds || []).filter(id => id !== memberId) };
+            }
+            if (addedSpouses.includes(m.id)) {
+              return { ...m, spouseIds: [...(m.spouseIds || []), memberId] };
+            }
+            return m;
+          });
+        }
+
+        return { ...prev, members: updatedMembers, updatedAt: formatDate(new Date()) };
+      });
+
+      // 同步选中成员
+      if (selectedMember?.id === memberId) {
+        setSelectedMember(prev => prev ? { ...prev, ...updatedMember, spouseIds: updates.spouseIds } : null);
+      }
+      refreshPedigrees();
+    } catch (err) {
+      console.error('Failed to update pedigree member', err);
+      const message = err instanceof Error ? err.message : 'Failed to update pedigree member';
+      setError(message);
+      throw new Error(message);
     }
   };
 
@@ -501,17 +546,16 @@ export default function PedigreePage() {
   };
 
   // 设为先证者
-  const handleSetProband = (memberId: string) => {
+  const handleSetProband = async (memberId: string) => {
     if (!currentPedigree) return;
-    setCurrentPedigree(prev => prev ? {
-      ...prev,
-      probandId: memberId,
-      members: prev.members.map(m => {
-        if (m.id === memberId) return { ...m, relation: 'proband' as RelationType };
-        if (m.id === prev.probandId) return { ...m, relation: 'other' as RelationType };
-        return m;
-      }),
-    } : null);
+    try {
+      const updated = await setPedigreeProband(currentPedigree.id, memberId);
+      setCurrentPedigree(updated);
+      refreshPedigrees();
+    } catch (err) {
+      console.error('设置先证者失败', err);
+      setError('设置先证者失败，请稍后重试');
+    }
   };
 
   // 上下文菜单项
@@ -586,14 +630,14 @@ export default function PedigreePage() {
 
   // 筛选家系
   const filteredPedigrees = React.useMemo(() => {
-    if (!searchQuery) return mockPedigreeList;
+    if (!searchQuery) return pedigrees;
     const query = searchQuery.toLowerCase();
-    return mockPedigreeList.filter(
+    return pedigrees.filter(
       (p) => p.id.toLowerCase().includes(query) ||
              p.internalId.toLowerCase().includes(query) ||
              p.sampleInternalIds.some(id => id.toLowerCase().includes(query))
     );
-  }, [searchQuery]);
+  }, [pedigrees, searchQuery]);
 
   // 下载模板
   const handleDownloadTemplate = () => {
@@ -775,6 +819,14 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                 <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewPedigreeOpen(true)}>新建家系</Button>
               </div>
             </div>
+            {error && (
+              <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            {listLoading && (
+              <div className="mb-3 text-sm text-fg-muted">加载家系列表...</div>
+            )}
             <DataTable data={filteredPedigrees} columns={columns} rowKey="id" striped density="compact" />
           </div>
         </div>
@@ -922,7 +974,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
         }}
         onConfirm={handleDeletePedigree}
         title="删除家系"
-        message={`确定要删除家系 ${deletingPedigreeId ? mockPedigreeList.find(p => p.id === deletingPedigreeId)?.internalId || deletingPedigreeId.substring(0, 8) : ''} 吗？此操作不可撤销。`}
+        message={`确定要删除家系 ${deletingPedigreeId ? pedigrees.find(p => p.id === deletingPedigreeId)?.internalId || deletingPedigreeId.substring(0, 8) : ''} 吗？此操作不可撤销。`}
         confirmLabel="删除"
         confirmVariant="danger"
       />

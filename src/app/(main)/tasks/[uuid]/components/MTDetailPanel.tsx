@@ -21,6 +21,19 @@ interface MTDetailPanelProps {
   onOpenIGV?: (chromosome: string, position: number) => void;
 }
 
+function mitomapAlleleURL(position: number): string {
+  return `https://www.mitomap.org/MITOMAP/SearchAllele?position=${encodeURIComponent(String(position))}`;
+}
+
+function hmtVarURL(position: number, ref: string, alt: string): string {
+  const variant = `m.${position}${ref}>${alt}`;
+  return `https://www.hmtvar.uniba.it/varCard/${encodeURIComponent(variant)}`;
+}
+
+function mitoTipURL(position: number): string {
+  return `https://www.mitomap.org/cgi-bin/search_tRNA?pos=${encodeURIComponent(String(position))}`;
+}
+
 // 信息项组件
 function InfoItem({ label, value, link }: { label: string; value?: React.ReactNode; link?: string }) {
   if (value === undefined || value === null || value === '' || value === '-') {
@@ -145,17 +158,17 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             <InfoItem 
               label="MITOMAP" 
               value="查看"
-              link={`https://www.mitomap.org/MITOMAP/SearchAllele?position=${variant.position}`}
+              link={mitomapAlleleURL(variant.position)}
             />
             <InfoItem 
               label="HmtVar" 
               value="查看"
-              link={`https://www.hmtvar.uniba.it/varCard/m.${variant.position}${variant.ref}>${variant.alt}`}
+              link={hmtVarURL(variant.position, variant.ref, variant.alt)}
             />
             <InfoItem 
               label="MitoTIP" 
               value="查看"
-              link={`https://www.mitomap.org/cgi-bin/search_tRNA?pos=${variant.position}`}
+              link={mitoTipURL(variant.position)}
             />
           </div>
 

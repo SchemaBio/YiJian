@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { getTaskDetail, getSampleDetailByTaskId } from '../[uuid]/mock-data';
+import { tasksApi } from '@/lib/tasks';
 import type { AnalysisTaskDetail, TabType, AnalysisStatus } from '../[uuid]/types';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import { TAB_CONFIGS } from '../[uuid]/types';
@@ -15,6 +15,7 @@ import {
   MEITab,
   MTTab,
   UPDTab,
+  ROHTab,
   ReportTab,
 } from '../[uuid]/components';
 import { Tag } from '@schema/ui-kit';
@@ -48,6 +49,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
     'mei': { searchQuery: '', filters: {}, page: 1, pageSize: 20 },
     'mt': { searchQuery: '', filters: {}, page: 1, pageSize: 20 },
     'upd': { searchQuery: '', filters: {}, page: 1, pageSize: 20 },
+    'roh': { searchQuery: '', filters: {}, page: 1, pageSize: 20 },
   });
 
   const getFilterState = (tab: keyof typeof tabStates) => tabStates[tab];
@@ -58,13 +60,19 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   React.useEffect(() => {
     async function loadTask() {
       setLoading(true);
-      const [taskData, sampleData] = await Promise.all([
-        getTaskDetail(taskId),
-        getSampleDetailByTaskId(taskId),
-      ]);
-      setTask(taskData);
-      setSample(sampleData);
-      setLoading(false);
+      try {
+        const [taskData, sampleData] = await Promise.all([
+          tasksApi.get(taskId),
+          tasksApi.getSample(taskId).catch(() => null),
+        ]);
+        setTask(taskData);
+        setSample(sampleData);
+      } catch {
+        setTask(null);
+        setSample(null);
+      } finally {
+        setLoading(false);
+      }
     }
     loadTask();
   }, [taskId]);
@@ -85,7 +93,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
     );
   }
 
-  const statusInfo = statusConfig[task.status];
+  const statusInfo = statusConfig[task.status] ?? { label: task.status, variant: 'neutral' as const };
 
   // 渲染当前标签页内容
   const renderTabContent = () => {
@@ -146,6 +154,14 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
             taskId={taskId}
             filterState={getFilterState('upd')}
             onFilterChange={(state) => setFilterState('upd', state)}
+          />
+        );
+      case 'roh':
+        return (
+          <ROHTab
+            taskId={taskId}
+            filterState={getFilterState('roh')}
+            onFilterChange={(state) => setFilterState('roh', state)}
           />
         );
       case 'report':

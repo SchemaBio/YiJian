@@ -2,15 +2,14 @@
 
 import * as React from 'react';
 import { Button, Input, Select, TextArea } from '@schema/ui-kit';
-import { X, Search, Upload, Loader2 } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { AppModal } from '@/components/shared';
 import type { Gender, SampleType } from '../types';
-import { requestPresignedUploadUrl, uploadToCOS, confirmUpload } from '@/lib/api';
 
 interface NewSampleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: NewSampleFormData) => void;
+  onSubmit: (data: NewSampleFormData) => void | Promise<void>;
 }
 
 export interface NewSampleFormData {
@@ -21,8 +20,8 @@ export interface NewSampleFormData {
   batch: string;
   clinicalDiagnosis: string;
   hpoTerms: { id: string; name: string }[];
-  r1FileId?: number;
-  r2FileId?: number;
+  r1Path?: string;
+  r2Path?: string;
   remark: string;
 }
 
@@ -66,31 +65,11 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     remark: '',
   });
 
-  const [uploadingR1, setUploadingR1] = React.useState(false);
-  const [uploadingR2, setUploadingR2] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [uploadError, setUploadError] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
 
   const [hpoSearchQuery, setHpoSearchQuery] = React.useState('');
   const [showHpoDropdown, setShowHpoDropdown] = React.useState(false);
-
-  const handleFileUpload = async (file: File, side: 'r1' | 'r2') => {
-    const setUploading = side === 'r1' ? setUploadingR1 : setUploadingR2;
-    setUploading(true);
-    setUploadError('');
-    setUploadProgress(0);
-    try {
-      const result = await requestPresignedUploadUrl(file.name, file.size);
-      await uploadToCOS(result.upload_url, file, setUploadProgress);
-      await confirmUpload(result.file_id);
-      setFormData(prev => ({ ...prev, [`${side}FileId`]: result.file_id }));
-    } catch (err: any) {
-      setUploadError(err.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
-  };
 
   const filteredHpoTerms = React.useMemo(() => {
     if (!hpoSearchQuery) return COMMON_HPO_TERMS.slice(0, 5);
@@ -104,23 +83,31 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
-    // 重置表单
-    setFormData({
-      internalId: '',
-      gender: 'unknown',
-      age: undefined,
-      sampleType: '全血',
-      batch: '',
-      clinicalDiagnosis: '',
-      hpoTerms: [],
-      remark: '',
-    });
-    setUploadError('');
-    setHpoSearchQuery('');
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(formData);
+      onClose();
+      // Reset form only after the backend confirms creation.
+      setFormData({
+        internalId: '',
+        gender: 'unknown',
+        age: undefined,
+        sampleType: '全血',
+        batch: '',
+        clinicalDiagnosis: '',
+        hpoTerms: [],
+        remark: '',
+      });
+      setHpoSearchQuery('');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to create sample');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const addHpoTerm = (term: { id: string; name: string }) => {
@@ -141,21 +128,26 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="新建样本"
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)}>
+          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
             创建样本
           </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit}>
+        {submitError && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         {/* 基本信息 */}
         <div className="mb-6">
           <h3 className="text-sm font-medium text-fg-default mb-3">基本信息</h3>
@@ -274,50 +266,28 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                 )}
               </div>
             </div>
-            {/* 匹配数据 */}
+            {/* Matched sequencing paths */}
             <div className="pt-2 border-t border-gray-100">
-              <label className="block text-xs text-fg-muted mb-2">匹配数据（双端 FASTQ 文件上传至 COS）</label>
-              {uploadError && (
-                <div className="mb-2 text-xs text-red-500">{uploadError}</div>
-              )}
+              <label className="block text-xs text-fg-muted mb-2">Matched data (optional; R1/R2 must be provided together)</label>
+              <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Octopus sample API accepts validated FASTQ storage keys or paths only. For browser local uploads, use Paired FASTQ upload when creating a task and run it with the Upload job ID.
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-fg-muted mb-1">R1 FASTQ</label>
-                  {formData.r1FileId ? (
-                    <div className="text-xs text-green-600 py-2">已上传 (ID: {formData.r1FileId})</div>
-                  ) : uploadingR1 ? (
-                    <div className="flex items-center gap-2 text-xs text-blue-600 py-2">
-                      <Loader2 className="w-3 h-3 animate-spin" /> 上传中 {uploadProgress}%
-                    </div>
-                  ) : (
-                    <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded text-xs text-fg-muted cursor-pointer hover:border-blue-400 hover:text-blue-600">
-                      <Upload className="w-4 h-4" />
-                      <span>选择 R1 文件</span>
-                      <input type="file" className="hidden" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file, 'r1');
-                      }} />
-                    </label>
-                  )}
+                  <Input
+                    value={formData.r1Path ?? ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, r1Path: e.target.value }))}
+                    placeholder="/data/sample_R1.fastq.gz or storage key"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-fg-muted mb-1">R2 FASTQ</label>
-                  {formData.r2FileId ? (
-                    <div className="text-xs text-green-600 py-2">已上传 (ID: {formData.r2FileId})</div>
-                  ) : uploadingR2 ? (
-                    <div className="flex items-center gap-2 text-xs text-blue-600 py-2">
-                      <Loader2 className="w-3 h-3 animate-spin" /> 上传中 {uploadProgress}%
-                    </div>
-                  ) : (
-                    <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded text-xs text-fg-muted cursor-pointer hover:border-blue-400 hover:text-blue-600">
-                      <Upload className="w-4 h-4" />
-                      <span>选择 R2 文件</span>
-                      <input type="file" className="hidden" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file, 'r2');
-                      }} />
-                    </label>
-                  )}
+                  <Input
+                    value={formData.r2Path ?? ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, r2Path: e.target.value }))}
+                    placeholder="/data/sample_R2.fastq.gz or storage key"
+                  />
                 </div>
               </div>
             </div>

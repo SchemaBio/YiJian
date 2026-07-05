@@ -21,6 +21,23 @@ const ACMG_CRITERIA_OPTIONS = {
   },
 };
 
+function pubMedURL(pmid: string): string {
+  return `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(pmid).trim())}`;
+}
+
+function clinVarURL(clinvarId: string): string {
+  const id = String(clinvarId).trim().replace(/^VCV/i, '');
+  return `https://www.ncbi.nlm.nih.gov/clinvar/variation/${encodeURIComponent(id)}`;
+}
+
+function dbSnpURL(rsId: string): string {
+  return `https://www.ncbi.nlm.nih.gov/snp/${encodeURIComponent(String(rsId).trim())}`;
+}
+
+function omimURL(omimId: string): string {
+  return `https://omim.org/entry/${encodeURIComponent(String(omimId).trim())}`;
+}
+
 interface VariantDetailPanelProps {
   variant: SNVIndel | null;
   isOpen: boolean;
@@ -472,18 +489,18 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
             <InfoItem 
               label="ClinVar" 
               value={variant.clinvarId}
-              link={variant.clinvarId ? `https://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvarId.replace('VCV', '')}` : undefined}
+              link={variant.clinvarId ? clinVarURL(variant.clinvarId) : undefined}
             />
             <InfoItem label="ClinVar 意义" value={variant.clinvarSignificance} />
             <InfoItem 
               label="dbSNP" 
               value={variant.rsId}
-              link={variant.rsId ? `https://www.ncbi.nlm.nih.gov/snp/${variant.rsId}` : undefined}
+              link={variant.rsId ? dbSnpURL(variant.rsId) : undefined}
             />
             <InfoItem 
               label="OMIM" 
               value={variant.omimId}
-              link={variant.omimId ? `https://omim.org/entry/${variant.omimId}` : undefined}
+              link={variant.omimId ? omimURL(variant.omimId) : undefined}
             />
             <InfoItem label="疾病关联" value={variant.diseaseAssociation} />
             <InfoItem label="遗传模式" value={
@@ -505,7 +522,7 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
                   {variant.pubmedIds.map((pmid) => (
                     <a
                       key={pmid}
-                      href={`https://pubmed.ncbi.nlm.nih.gov/${pmid}`}
+                      href={pubMedURL(pmid)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-canvas-inset text-accent-fg rounded hover:bg-accent-subtle transition-colors"

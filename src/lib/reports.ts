@@ -12,8 +12,18 @@ interface RawReportTemplate {
   description?: unknown;
 }
 
+type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] } };
+
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
+}
+
+function unwrapList<T>(value: MaybeList<T>): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value.items)) return value.items;
+  if (Array.isArray(value.data)) return value.data;
+  if (value.data && !Array.isArray(value.data) && Array.isArray(value.data.items)) return value.data.items;
+  return [];
 }
 
 function normalizeTemplate(raw: RawReportTemplate): ReportTemplate {
@@ -43,13 +53,13 @@ export function saveDownload(download: DownloadResult) {
 
 export const reportsApi = {
   async listTemplates(): Promise<ReportTemplate[]> {
-    const templates = await api.get<RawReportTemplate[]>('/v1/report-templates');
-    return templates.map(normalizeTemplate).filter(template => template.id && template.name);
+    const templates = await api.get<MaybeList<RawReportTemplate>>('/v1/report-templates');
+    return unwrapList(templates).map(normalizeTemplate).filter(template => template.id && template.name);
   },
 
   async generateTaskReport(taskId: string, template: ReportTemplate): Promise<DownloadResult> {
     return api.download(
-      `/v1/tasks/${taskId}/reports`,
+      `/v1/tasks/${encodeURIComponent(taskId)}/reports`,
       {
         name: template.name,
         templateName: template.name,
@@ -71,7 +81,7 @@ export const reportsApi = {
       'mt-vcf': `task-${taskId}-mt.vcf`,
     };
     return api.download(
-      `/v1/tasks/${taskId}/export/${kind}`,
+      `/v1/tasks/${encodeURIComponent(taskId)}/export/${encodeURIComponent(kind)}`,
       undefined,
       {
         method: 'GET',

@@ -46,7 +46,7 @@ export function useTabState(uuid: string): UseTabStateReturn {
   const setActiveTab = React.useCallback((tab: TabType) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
-    router.push(`/tasks/${uuid}?${params.toString()}`);
+    router.push(`/tasks/${encodeURIComponent(uuid)}?${params.toString()}`);
   }, [router, uuid, searchParams]);
 
   // 获取指定标签页的筛选状态

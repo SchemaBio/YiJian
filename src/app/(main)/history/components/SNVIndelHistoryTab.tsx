@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
 import type { GroupedSNVIndel, HistoryTableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
-import { getGroupedSNVIndels, ACMG_CONFIG } from '../mock-data';
+import { getGroupedSNVIndels, ACMG_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
 
 interface SNVIndelHistoryTabProps {
@@ -38,9 +38,14 @@ export function SNVIndelHistoryTab({
   React.useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const data = await getGroupedSNVIndels(filterState);
-      setResult(data);
-      setLoading(false);
+      try {
+        const data = await getGroupedSNVIndels(filterState);
+        setResult(data);
+      } catch {
+        setResult({ data: [], total: 0, page: filterState.page, pageSize: filterState.pageSize });
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [filterState]);

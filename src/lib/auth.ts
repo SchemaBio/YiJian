@@ -29,12 +29,14 @@ interface BackendLoginData {
     updated_at: string;
   };
   organization?: BackendOrganization | null;
+  organizations?: BackendOrganization[];
+  current_org?: BackendOrganization | null;
 }
 
 type BackendUser = BackendLoginData['user'];
 
 function mapSystemRole(role: string): SystemRole {
-  return role === 'PLATFORM_ADMIN' ? 'PLATFORM_ADMIN' : 'ORG_USER';
+  return role === 'PLATFORM_ADMIN' || role === 'SUPER_ADMIN' ? 'PLATFORM_ADMIN' : 'ORG_USER';
 }
 
 function mapUser(user: BackendUser) {
@@ -67,11 +69,15 @@ function mapOrganization(org: BackendOrganization, role: SystemRole): UserOrgani
 
 function mapLoginResponse(data: BackendLoginData): LoginResponse {
   const systemRole = mapSystemRole(data.user.system_role);
-  const currentOrg = data.organization ? mapOrganization(data.organization, systemRole) : undefined;
+  const rawCurrentOrg = data.organization ?? data.current_org ?? data.organizations?.[0] ?? null;
+  const currentOrg = rawCurrentOrg ? mapOrganization(rawCurrentOrg, systemRole) : undefined;
+  const organizations = data.organizations?.length
+    ? data.organizations.map(org => mapOrganization(org, systemRole))
+    : currentOrg ? [currentOrg] : [];
 
   return {
     user: mapUser(data.user),
-    organizations: currentOrg ? [currentOrg] : [],
+    organizations,
     currentOrg,
   };
 }
@@ -80,7 +86,8 @@ export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const backendData = await api.post<BackendLoginData>(
       '/v1/auth/login',
-      data
+      data,
+      { coreApi: false }
     );
     const response = mapLoginResponse(backendData);
     clearLegacyAuthTokens();
@@ -89,19 +96,35 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     try {
-      await api.post('/v1/auth/logout');
+      await api.post('/v1/auth/logout', undefined, { coreApi: false });
     } finally {
       clearAuthSession();
     }
   },
 
+  forgotPassword: async (email: string): Promise<{ message?: string }> => {
+    return api.post<{ message?: string }>(
+      '/v1/auth/forgot-password',
+      { email },
+      { coreApi: false }
+    );
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message?: string }> => {
+    return api.post<{ message?: string }>(
+      '/v1/auth/reset-password',
+      { token, new_password: newPassword },
+      { coreApi: false }
+    );
+  },
+
   getCurrentUser: async () => {
-    const backendData = await api.get<BackendUser>('/v1/auth/me');
+    const backendData = await api.get<BackendUser>('/v1/auth/me', { coreApi: false });
     return mapUser(backendData);
   },
 
   getCurrentOrganization: async (): Promise<Organization> => {
-    const backendData = await api.get<BackendOrganization>('/v1/orgs/me');
+    const backendData = await api.get<BackendOrganization>('/v1/orgs/me', { coreApi: false });
     return {
       id: backendData.id,
       name: backendData.name,
@@ -122,7 +145,7 @@ export const authApi = {
     orgRole: string;
     joinedAt?: string;
   }> }> => {
-    const backendData = await api.get<BackendOrganization>('/v1/orgs/me');
+    const backendData = await api.get<BackendOrganization>('/v1/orgs/me', { coreApi: false });
     return {
       organizations: [mapOrganization(backendData, 'ORG_USER')],
     };

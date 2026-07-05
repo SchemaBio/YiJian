@@ -1,340 +1,173 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Input, Select, FormItem, Modal, ModalHeader, ModalBody, ModalFooter, DataTable, Tag, Checkbox } from '@schema/ui-kit';
+import { Button, Input, Select, FormItem, Modal, ModalHeader, ModalBody, ModalFooter, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Plus, Pencil, Trash2, Search, Users, Shield } from 'lucide-react';
+import { CheckCircle2, Loader2, Pencil, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
+import type { SystemRole, User } from '@/types/user';
+import { approveUser, deleteUser, listPendingUsers, listUsers, rejectUser, updateUser } from '@/lib/users';
 
-// 角色定义
-export const ROLES = [
-  { id: 'admin', name: '管理员', description: '拥有所有权限，可管理用户和系统配置' },
-  { id: 'interpreter', name: '解读工程师', description: '可对任务结果进行调整和审核' },
-  { id: 'bioinformatics', name: '生信工程师', description: '可对流程中心中的配置进行修改' },
-] as const;
-
-export type RoleId = typeof ROLES[number]['id'];
-
-// 按需分配的权限（可单独授予给用户）
-export const ASSIGNABLE_PERMISSIONS = [
-  { id: 'task_submit', name: '任务投递', category: '任务操作' },
-  { id: 'data_upload', name: '数据上传', category: '数据操作' },
-  { id: 'data_download', name: '数据下载', category: '数据操作' },
-  { id: 'report_generate', name: '生成报告', category: '报告操作' },
-] as const;
-
-export type AssignablePermissionId = typeof ASSIGNABLE_PERMISSIONS[number]['id'];
-
-// 用户接口
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: RoleId;
-  additionalPermissions: AssignablePermissionId[]; // 按需分配的额外权限
-  createdAt: string;
-  status: 'active' | 'inactive';
-}
-
-// 角色权限说明
-const rolePermissionDescriptions: Record<RoleId, string[]> = {
-  admin: [
-    '所有页面的完整访问权限',
-    '用户管理：创建、编辑、删除用户',
-    '系统设置：所有配置项的修改权限',
-    '流程中心：所有配置的修改权限',
-    '任务结果：调整和审核权限',
-    '所有按需分配权限默认开启',
-  ],
-  interpreter: [
-    '所有页面的查看权限',
-    '任务结果：可进行调整和审核',
-    '报告：可生成和审核报告',
-    '流程中心：仅查看，不可修改',
-  ],
-  bioinformatics: [
-    '所有页面的查看权限',
-    '流程中心：可修改配置',
-    '任务结果：仅查看，不可调整和审核',
-    '任务投递权限默认开启',
-  ],
-};
-
-// 模拟用户数据
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: '张三',
-    email: 'zhangsan@example.com',
-    role: 'admin',
-    additionalPermissions: [],
-    createdAt: '2024-01-01 09:00:00',
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: '李四',
-    email: 'lisi@example.com',
-    role: 'interpreter',
-    additionalPermissions: ['task_submit', 'data_upload'],
-    createdAt: '2024-02-15 10:30:00',
-    status: 'active',
-  },
-  {
-    id: '3',
-    name: '王五',
-    email: 'wangwu@example.com',
-    role: 'bioinformatics',
-    additionalPermissions: ['data_upload', 'data_download'],
-    createdAt: '2024-03-20 14:15:00',
-    status: 'active',
-  },
-  {
-    id: '4',
-    name: '赵六',
-    email: 'zhaoliu@example.com',
-    role: 'interpreter',
-    additionalPermissions: [],
-    createdAt: '2024-04-10 08:45:00',
-    status: 'inactive',
-  },
-  {
-    id: '5',
-    name: '钱七',
-    email: 'qianqi@example.com',
-    role: 'bioinformatics',
-    additionalPermissions: ['report_generate'],
-    createdAt: '2024-05-05 16:20:00',
-    status: 'active',
-  },
+const SYSTEM_ROLES: Array<{ id: SystemRole; name: string; description: string }> = [
+  { id: 'PLATFORM_ADMIN', name: '平台管理员', description: '可管理租户、用户、计费与系统级配置' },
+  { id: 'ORG_USER', name: '机构用户', description: '机构内普通 SaaS 账号，具体业务权限由后端策略控制' },
 ];
 
+const roleVariant: Record<SystemRole, 'warning' | 'info'> = {
+  PLATFORM_ADMIN: 'warning',
+  ORG_USER: 'info',
+};
+
+function roleName(role: SystemRole): string {
+  return SYSTEM_ROLES.find((item) => item.id === role)?.name ?? role;
+}
+
+function formatTime(value: string): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
 export function PermissionsManagement() {
-  const [users, setUsers] = React.useState<User[]>(mockUsers);
-
-  return (
-    <div className="space-y-6">
-      {/* 权限规则说明 */}
-      <div className="yj-info-panel">
-        <h3 className="text-sm font-medium text-fg-default mb-3">权限规则说明</h3>
-        <div className="space-y-2 text-xs text-fg-muted">
-          <p><strong className="text-fg-default">基础权限：</strong>所有角色都可以查看所有页面</p>
-          <p><strong className="text-fg-default">解读工程师：</strong>可对任务结果进行调整和审核</p>
-          <p><strong className="text-fg-default">生信工程师：</strong>可对流程中心中的配置进行修改</p>
-          <p><strong className="text-fg-default">按需分配：</strong>任务投递、数据上传等权限可单独授予给用户</p>
-        </div>
-      </div>
-
-      {/* 角色说明卡片 */}
-      <div className="grid grid-cols-3 gap-4">
-        {ROLES.map((role) => (
-          <div key={role.id} className="yj-panel p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="w-4 h-4 text-accent-fg" />
-              <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
-            </div>
-            <p className="text-xs text-fg-muted mb-3">{role.description}</p>
-            <div className="space-y-1">
-              {rolePermissionDescriptions[role.id].map((desc, idx) => (
-                <div key={idx} className="text-xs text-fg-muted flex items-start gap-1">
-                  <span className="text-success-fg mt-0.5">•</span>
-                  <span>{desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* 用户管理 */}
-      <UserManagement users={users} setUsers={setUsers} />
-    </div>
-  );
-}
-
-// 用户管理组件
-interface UserManagementProps {
-  users: User[];
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
-}
-
-function UserManagement({ users, setUsers }: UserManagementProps) {
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [pendingUsers, setPendingUsers] = React.useState<User[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [moderatingUserId, setModeratingUserId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
   const [editingUser, setEditingUser] = React.useState<User | null>(null);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
   const [userForm, setUserForm] = React.useState({
     name: '',
-    email: '',
-    role: 'interpreter' as RoleId,
-    additionalPermissions: [] as AssignablePermissionId[],
-    password: '',
+    systemRole: 'ORG_USER' as SystemRole,
+    isActive: true,
   });
 
-  const filteredUsers = React.useMemo(() => {
-    if (!searchQuery) return users;
-    const query = searchQuery.toLowerCase();
-    return users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        ROLES.find(r => r.id === user.role)?.name.toLowerCase().includes(query)
-    );
-  }, [users, searchQuery]);
+  const loadUsers = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [result, pending] = await Promise.all([
+        listUsers({ page: 1, pageSize: 100, search: searchQuery.trim() || undefined }),
+        listPendingUsers(),
+      ]);
+      setUsers(result.items);
+      setPendingUsers(pending);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载用户列表失败');
+      setUsers([]);
+      setPendingUsers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery]);
 
-  const handleAddUser = () => {
-    setEditingUser(null);
-    setUserForm({
-      name: '',
-      email: '',
-      role: 'interpreter',
-      additionalPermissions: [],
-      password: '',
-    });
-    setIsModalOpen(true);
-  };
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadUsers();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [loadUsers]);
 
-  const handleEditUser = (user: User) => {
+  const openEditModal = (user: User) => {
+    setError(null);
     setEditingUser(user);
     setUserForm({
       name: user.name,
-      email: user.email,
-      role: user.role,
-      additionalPermissions: [...user.additionalPermissions],
-      password: '',
+      systemRole: user.systemRole,
+      isActive: user.isActive,
     });
-    setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (user: User) => {
-    setUserToDelete(user);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleSaveUser = () => {
-    if (!userForm.name || !userForm.email || !userForm.role) {
-      alert('请填写必填项');
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+    if (!userForm.name.trim()) {
+      setError('请填写姓名');
       return;
     }
-    if (!editingUser && !userForm.password) {
-      alert('请设置初始密码');
-      return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const updated = await updateUser(editingUser.id, {
+        name: userForm.name.trim(),
+        systemRole: userForm.systemRole,
+        isActive: userForm.isActive,
+      });
+      setUsers((prev) => prev.map((user) => (user.id === updated.id ? updated : user)));
+      setEditingUser(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存用户失败');
+    } finally {
+      setIsSaving(false);
     }
-
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                name: userForm.name,
-                email: userForm.email,
-                role: userForm.role,
-                additionalPermissions: userForm.additionalPermissions,
-              }
-            : u
-        )
-      );
-    } else {
-      const newUser: User = {
-        id: String(Date.now()),
-        name: userForm.name,
-        email: userForm.email,
-        role: userForm.role,
-        additionalPermissions: userForm.additionalPermissions,
-        createdAt: new Date().toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        }).replace(/\//g, '-'),
-        status: 'active',
-      };
-      setUsers((prev) => [...prev, newUser]);
-    }
-    setIsModalOpen(false);
   };
 
-  const handleDeleteUser = () => {
-    if (userToDelete) {
-      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
-      setIsDeleteModalOpen(false);
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      await deleteUser(userToDelete.id);
+      setUsers((prev) => prev.filter((user) => user.id !== userToDelete.id));
       setUserToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除用户失败');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handlePermissionToggle = (permissionId: AssignablePermissionId) => {
-    setUserForm((prev) => ({
-      ...prev,
-      additionalPermissions: prev.additionalPermissions.includes(permissionId)
-        ? prev.additionalPermissions.filter((p) => p !== permissionId)
-        : [...prev.additionalPermissions, permissionId],
-    }));
-  };
-
-  const getRoleName = (roleId: RoleId) => {
-    return ROLES.find((r) => r.id === roleId)?.name || roleId;
+  const handleModerateUser = async (user: User, decision: 'approve' | 'reject') => {
+    setModeratingUserId(user.id);
+    setError(null);
+    try {
+      if (decision === 'approve') {
+        await approveUser(user.id);
+      } else {
+        await rejectUser(user.id);
+      }
+      setPendingUsers((prev) => prev.filter((item) => item.id !== user.id));
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to ${decision} user`);
+    } finally {
+      setModeratingUserId(null);
+    }
   };
 
   const columns: Column<User>[] = [
-    { id: 'name', header: '姓名', accessor: 'name', width: 100, align: 'center' },
-    { id: 'email', header: '邮箱', accessor: 'email', width: 180, align: 'center' },
+    { id: 'name', header: '姓名', accessor: 'name', width: 120, align: 'center' },
+    { id: 'email', header: '邮箱', accessor: 'email', width: 220, align: 'center' },
     {
-      id: 'role',
-      header: '角色',
-      accessor: (row) => {
-        const roleConfig = ROLES.find(r => r.id === row.role);
-        const variant = row.role === 'admin' ? 'warning' : row.role === 'interpreter' ? 'success' : 'info';
-        return <Tag variant={variant}>{roleConfig?.name || row.role}</Tag>;
-      },
-      width: 120,
+      id: 'systemRole',
+      header: '系统角色',
+      accessor: (row) => <Tag variant={roleVariant[row.systemRole]}>{roleName(row.systemRole)}</Tag>,
+      width: 130,
       align: 'center',
     },
-    {
-      id: 'additionalPermissions',
-      header: '附加权限',
-      accessor: (row) => {
-        if (row.role === 'admin') {
-          return <span className="text-xs text-fg-muted">全部权限</span>;
-        }
-        if (row.additionalPermissions.length === 0) {
-          return <span className="text-xs text-fg-muted">无</span>;
-        }
-        return (
-          <div className="flex flex-wrap gap-1 justify-center">
-            {row.additionalPermissions.map((p) => {
-              const perm = ASSIGNABLE_PERMISSIONS.find(ap => ap.id === p);
-              return (
-                <Tag key={p} variant="neutral" className="text-xs">
-                  {perm?.name || p}
-                </Tag>
-              );
-            })}
-          </div>
-        );
-      },
-      width: 180,
-      align: 'center',
-    },
+    { id: 'orgId', header: '机构 ID', accessor: (row) => row.orgId || '-', width: 180, align: 'center' },
     {
       id: 'status',
       header: '状态',
       accessor: (row) => (
-        <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>
-          {row.status === 'active' ? '启用' : '禁用'}
-        </Tag>
+        <Tag variant={row.isActive ? 'success' : 'neutral'}>{row.isActive ? '启用' : '停用'}</Tag>
       ),
-      width: 80,
+      width: 90,
+      align: 'center',
+    },
+    {
+      id: 'approvalStatus',
+      header: '审批状态',
+      accessor: (row) => row.approvalStatus ?? '-',
+      width: 100,
       align: 'center',
     },
     {
       id: 'createdAt',
       header: '创建时间',
-      accessor: 'createdAt',
-      width: 160,
+      accessor: (row) => formatTime(row.createdAt),
+      width: 180,
       align: 'center',
     },
     {
@@ -345,119 +178,168 @@ function UserManagement({ users, setUsers }: UserManagementProps) {
           <button
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
             title="编辑"
-            onClick={() => handleEditUser(row)}
+            onClick={() => openEditModal(row)}
           >
             <Pencil className="w-4 h-4" />
           </button>
           <button
             className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors"
             title="删除"
-            onClick={() => handleDeleteClick(row)}
+            onClick={() => setUserToDelete(row)}
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       ),
-      width: 80,
+      width: 90,
       align: 'center',
     },
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="yj-info-panel">
+        <h3 className="text-sm font-medium text-fg-default mb-3">权限模型说明</h3>
+        <div className="grid grid-cols-2 gap-4">
+          {SYSTEM_ROLES.map((role) => (
+            <div key={role.id} className="yj-panel p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="w-4 h-4 text-accent-fg" />
+                <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
+              </div>
+              <p className="text-xs text-fg-muted">{role.description}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-fg-muted mt-3">
+          当前页面已对齐 Squid 的 `/api/v1/users` 平台管理员接口；后端未提供“额外权限/新增用户”接口时，前端不再伪造本地权限状态。
+        </p>
+      </div>
+
+      {pendingUsers.length > 0 && (
+        <div className="yj-panel p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-medium text-fg-default">待审批注册</h3>
+              <p className="mt-1 text-xs text-fg-muted">
+                数据来自 Squid `GET /api/v1/users/pending`，审批操作会调用真实后端接口。
+              </p>
+            </div>
+            <Tag variant="warning">{pendingUsers.length} pending</Tag>
+          </div>
+          <div className="divide-y divide-border-default">
+            {pendingUsers.map((user) => (
+              <div key={user.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-fg-default">{user.name || user.email}</div>
+                  <div className="truncate text-xs text-fg-muted">
+                    {user.email} · org {user.orgId || '-'} · {formatTime(user.createdAt)}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => void handleModerateUser(user, 'reject')}
+                    disabled={moderatingUserId === user.id}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    拒绝
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => void handleModerateUser(user, 'approve')}
+                    disabled={moderatingUserId === user.id}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    通过
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="yj-toolbar-panel">
-        <div className="w-64">
+        <div className="w-72">
           <Input
-            placeholder="搜索用户..."
+            placeholder="搜索姓名、邮箱或机构 ID..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(event) => setSearchQuery(event.target.value)}
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddUser}>
-          新增用户
+        <Button variant="secondary" onClick={() => void loadUsers()} disabled={isLoading}>
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+          刷新
         </Button>
       </div>
 
-      <DataTable data={filteredUsers} columns={columns} rowKey="id" density="default" striped />
+      {error && (
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+          {error}
+        </div>
+      )}
 
-      {/* 新增/编辑用户弹窗 */}
-      <Modal open={isModalOpen} onOpenChange={setIsModalOpen} size="medium">
-        <ModalHeader>{editingUser ? '编辑用户' : '新增用户'}</ModalHeader>
+      {isLoading ? (
+        <div className="yj-empty-state">
+          <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
+          <p className="text-fg-muted">正在加载用户列表...</p>
+        </div>
+      ) : (
+        <DataTable data={users} columns={columns} rowKey="id" density="default" striped />
+      )}
+
+      <Modal open={Boolean(editingUser)} onOpenChange={(open) => !open && setEditingUser(null)} size="medium">
+        <ModalHeader>编辑用户</ModalHeader>
         <ModalBody>
           <div className="space-y-4">
+            <FormItem label="邮箱">
+              <Input value={editingUser?.email ?? ''} disabled />
+            </FormItem>
             <FormItem label="姓名" required>
               <Input
                 value={userForm.name}
-                onChange={(e) => setUserForm((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={(event) => setUserForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="请输入姓名"
               />
             </FormItem>
-            <FormItem label="邮箱" required>
-              <Input
-                type="email"
-                value={userForm.email}
-                onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))}
-                placeholder="请输入邮箱"
-              />
-            </FormItem>
-            <FormItem label="角色" required hint="角色决定了用户的基础权限范围">
+            <FormItem label="系统角色" required>
               <Select
-                options={ROLES.map((r) => ({ value: r.id, label: r.name }))}
-                value={userForm.role}
-                onChange={(value) => setUserForm((prev) => ({ ...prev, role: value as RoleId }))}
-                placeholder="请选择角色"
+                options={SYSTEM_ROLES.map((role) => ({ value: role.id, label: role.name }))}
+                value={userForm.systemRole}
+                onChange={(value) => {
+                  const nextRole = Array.isArray(value) ? value[0] : value;
+                  setUserForm((prev) => ({ ...prev, systemRole: nextRole as SystemRole }));
+                }}
               />
             </FormItem>
-
-            {/* 按需分配权限 */}
-            {userForm.role !== 'admin' && (
-              <FormItem label="附加权限" hint="任务投递、数据上传等按需分配的权限">
-                <div className="grid grid-cols-2 gap-2">
-                  {ASSIGNABLE_PERMISSIONS.map((permission) => (
-                    <label key={permission.id} className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={userForm.additionalPermissions.includes(permission.id)}
-                        onChange={() => handlePermissionToggle(permission.id)}
-                      />
-                      <span className="text-sm text-fg-default">{permission.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </FormItem>
-            )}
-
-            {/* 管理员自动拥有所有权限 */}
-            {userForm.role === 'admin' && (
-              <div className="bg-canvas-subtle rounded-md p-3 text-xs text-fg-muted">
-                <p>管理员自动拥有所有权限，无需额外配置附加权限</p>
-              </div>
-            )}
-
-            {!editingUser && (
-              <FormItem label="初始密码" required>
-                <Input
-                  type="password"
-                  value={userForm.password}
-                  onChange={(e) => setUserForm((prev) => ({ ...prev, password: e.target.value }))}
-                  placeholder="请设置初始密码"
-                />
-              </FormItem>
-            )}
+            <FormItem label="账号状态" required>
+              <Select
+                options={[
+                  { value: 'active', label: '启用' },
+                  { value: 'inactive', label: '停用' },
+                ]}
+                value={userForm.isActive ? 'active' : 'inactive'}
+                onChange={(value) => {
+                  const nextStatus = Array.isArray(value) ? value[0] : value;
+                  setUserForm((prev) => ({ ...prev, isActive: nextStatus === 'active' }));
+                }}
+              />
+            </FormItem>
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+          <Button variant="secondary" onClick={() => setEditingUser(null)} disabled={isSaving}>
             取消
           </Button>
-          <Button variant="primary" onClick={handleSaveUser}>
-            {editingUser ? '保存' : '创建'}
+          <Button variant="primary" onClick={handleSaveUser} disabled={isSaving}>
+            {isSaving ? '保存中...' : '保存'}
           </Button>
         </ModalFooter>
       </Modal>
 
-      {/* 删除确认弹窗 */}
-      <Modal open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} size="small">
+      <Modal open={Boolean(userToDelete)} onOpenChange={(open) => !open && setUserToDelete(null)} size="small">
         <ModalHeader>确认删除</ModalHeader>
         <ModalBody>
           <div className="flex flex-col items-center text-center py-4">
@@ -467,18 +349,18 @@ function UserManagement({ users, setUsers }: UserManagementProps) {
             <p className="text-fg-default mb-2">确定要删除此用户吗？</p>
             {userToDelete && (
               <p className="text-sm text-fg-muted">
-                {userToDelete.name} ({getRoleName(userToDelete.role)})
+                {userToDelete.name}（{userToDelete.email}）
               </p>
             )}
-            <p className="text-xs text-fg-muted mt-3">此操作不可撤销</p>
+            <p className="text-xs text-fg-muted mt-3">该操作会调用 Squid `DELETE /api/v1/users/:id`，不可撤销。</p>
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+          <Button variant="secondary" onClick={() => setUserToDelete(null)} disabled={isSaving}>
             取消
           </Button>
-          <Button variant="danger" onClick={handleDeleteUser}>
-            删除
+          <Button variant="danger" onClick={handleDeleteUser} disabled={isSaving}>
+            {isSaving ? '删除中...' : '删除'}
           </Button>
         </ModalFooter>
       </Modal>

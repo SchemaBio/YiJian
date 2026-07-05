@@ -14,9 +14,9 @@ export const STORAGE_KEYS = {
   ORGANIZATIONS: `${PREFIX}_auth_orgs`,
   /** Currently active organization */
   CURRENT_ORG: `${PREFIX}_auth_current_org`,
-  /** AI configuration (encrypted) */
+  /** Non-sensitive AI UI configuration (model/enabled only; no API key). */
   AI_CONFIG: `${PREFIX}_ai_config`,
-  /** AI chat history */
+  /** Legacy AI chat history key; cleared on startup because chat may contain patient data. */
   AI_HISTORY: `${PREFIX}_ai_history`,
   /** Sidebar collapsed state */
   SIDEBAR_STATE: `${PREFIX}_sidebar_state`,

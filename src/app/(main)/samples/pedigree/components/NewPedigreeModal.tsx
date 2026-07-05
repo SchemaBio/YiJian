@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Button, Input, TextArea, Tag } from '@schema/ui-kit';
 import { X, Search, Check } from 'lucide-react';
 import { AppModal } from '@/components/shared';
-import { getAvailableSamples } from '../mock-data';
+import { listSamples } from '@/lib/samples';
 
 interface Sample {
   id: string;
@@ -15,7 +15,7 @@ interface Sample {
 interface NewPedigreeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: NewPedigreeFormData) => void;
+  onSubmit: (data: NewPedigreeFormData) => void | Promise<void>;
 }
 
 export interface NewPedigreeFormData {
@@ -35,6 +35,8 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
     remark: '',
   });
 
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [samples, setSamples] = React.useState<Sample[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -43,10 +45,14 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
   React.useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      getAvailableSamples().then(data => {
-        setSamples(data);
-        setLoading(false);
-      });
+      listSamples()
+        .then(data => setSamples(data.map(sample => ({
+          id: sample.id,
+          internalId: sample.internalId,
+          gender: sample.gender,
+        }))))
+        .catch(() => setSamples([]))
+        .finally(() => setLoading(false));
     }
   }, [isOpen]);
 
@@ -69,20 +75,28 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!formData.probandSampleId) return;
-    onSubmit(formData);
-    onClose();
-    // 重置表单
-    setFormData({
-      internalId: '',
-      clinicalDiagnosis: '',
-      batch: '',
-      probandSampleId: '',
-      remark: '',
-    });
-    setSearchQuery('');
+    if (!formData.probandSampleId || submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit(formData);
+      onClose();
+      // Reset form only after all pedigree creation API steps succeed.
+      setFormData({
+        internalId: '',
+        clinicalDiagnosis: '',
+        batch: '',
+        probandSampleId: '',
+        remark: '',
+      });
+      setSearchQuery('');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to create pedigree');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const selectedSample = samples.find(s => s.id === formData.probandSampleId);
@@ -96,18 +110,18 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="新建家系"
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
           <Button
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
-            disabled={!formData.probandSampleId}
+            disabled={!formData.probandSampleId || submitting}
           >
             创建家系
           </Button>
@@ -115,6 +129,11 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
       }
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         {/* 家系信息 */}
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-3">家系信息</h3>

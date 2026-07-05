@@ -15,7 +15,8 @@ import {
   TextArea,
   type Column,
 } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, TestTube2, CheckCircle, XCircle, Loader2, Eye, EyeOff, AlertTriangle, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, Link, TestTube2, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff } from 'lucide-react';
+import { api } from '@/lib/api';
 
 type TemplateStatus = 'active' | 'inactive';
 
@@ -24,88 +25,127 @@ interface ReportTemplate {
   name: string;
   description: string;
   apiEndpoint: string;
-  apiToken?: string;
+  hasApiKey: boolean;
   status: TemplateStatus;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const mockTemplates: ReportTemplate[] = [
-  {
-    id: 'TPL001',
-    name: 'wes-germline-report',
-    description: '全外显子遗传病检测报告模板',
-    apiEndpoint: 'https://api.example.com/reports/wes/generate',
-    apiToken: 'sk-xxxx****xxxx',
-    status: 'active',
-    createdBy: '张三',
-    createdAt: '2024-06-15 10:30:00',
-    updatedAt: '2024-12-01 14:25:36',
-  },
-  {
-    id: 'TPL002',
-    name: 'cardio-panel-report',
-    description: '心血管疾病基因检测专用报告',
-    apiEndpoint: 'https://api.example.com/reports/panel/cardio',
-    status: 'active',
-    createdBy: '李四',
-    createdAt: '2024-08-20 09:15:22',
-    updatedAt: '2024-11-15 16:40:18',
-  },
-  {
-    id: 'TPL003',
-    name: 'cnv-detection-report',
-    description: '拷贝数变异检测报告',
-    apiEndpoint: 'https://api.example.com/reports/cnv/generate',
-    apiToken: 'token-yyyy****yyyy',
-    status: 'active',
-    createdBy: '王五',
-    createdAt: '2024-10-01 11:20:45',
-    updatedAt: '2024-10-01 11:20:45',
-  },
-  {
-    id: 'TPL004',
-    name: 'wgs-full-report',
-    description: '全基因组测序报告（开发中）',
-    apiEndpoint: 'https://api.example.com/reports/wgs',
-    status: 'inactive',
-    createdBy: '张三',
-    createdAt: '2024-12-10 08:05:30',
-    updatedAt: '2024-12-10 08:05:30',
-  },
-];
-
 const statusConfig: Record<TemplateStatus, { label: string; variant: 'success' | 'neutral' }> = {
   active: { label: '启用', variant: 'success' },
   inactive: { label: '停用', variant: 'neutral' },
 };
 
+type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] } };
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+}
+
+function unwrapList<T>(value: MaybeList<T>): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value.items)) return value.items;
+  if (Array.isArray(value.data)) return value.data;
+  if (value.data && !Array.isArray(value.data) && Array.isArray(value.data.items)) return value.data.items;
+  return [];
+}
+
+function normalizeTemplate(value: unknown): ReportTemplate {
+  const raw = asRecord(value);
+  const isActive = raw.isActive ?? raw.is_active;
+  return {
+    id: String(raw.id ?? ''),
+    name: typeof raw.name === 'string' ? raw.name : '',
+    description: typeof raw.description === 'string' ? raw.description : '',
+    // Octopus intentionally does not expose apiEndpoint/apiKey on list responses.
+    apiEndpoint: typeof raw.apiEndpoint === 'string' ? raw.apiEndpoint : '',
+    hasApiKey: raw.hasApiKey === true,
+    status: isActive === false ? 'inactive' : 'active',
+    createdBy: typeof raw.createdBy === 'string' ? raw.createdBy : '',
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : typeof raw.created_at === 'string' ? raw.created_at : '',
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : typeof raw.updated_at === 'string' ? raw.updated_at : '',
+  };
+}
+
+function isValidReportEndpoint(value: string): boolean {
+  value = value.trim();
+  if (/[\u0000-\u001f]/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const isPrivateIPv4 = /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
+    const isLocalHost = host === 'localhost' || host.endsWith('.localhost') || host === '[::1]' || host === '::1';
+    return url.protocol === 'https:'
+      && !url.username
+      && !url.password
+      && !url.hash
+      && !isLocalHost
+      && !isPrivateIPv4;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchReportTemplates(): Promise<ReportTemplate[]> {
+  const response = await api.get<MaybeList<unknown>>('/v1/report-templates');
+  return unwrapList(response).map(normalizeTemplate).filter(template => template.id && template.name);
+}
+
+async function createReportTemplate(data: FormData): Promise<ReportTemplate> {
+  const response = await api.post<unknown>('/v1/report-templates', {
+    name: data.name.trim(),
+    description: data.description.trim(),
+    apiEndpoint: data.apiEndpoint.trim(),
+    ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
+  });
+  return normalizeTemplate(response);
+}
+
 interface FormData {
   name: string;
   description: string;
   apiEndpoint: string;
-  apiToken: string;
+  apiKey: string;
 }
 
 const initialFormData: FormData = {
   name: '',
   description: '',
   apiEndpoint: '',
-  apiToken: '',
+  apiKey: '',
 };
 
 export default function ReportTemplatesPage() {
-  const [templates, setTemplates] = React.useState<ReportTemplate[]>(mockTemplates);
+  const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [formData, setFormData] = React.useState<FormData>(initialFormData);
   const [testingApi, setTestingApi] = React.useState(false);
   const [apiTestResult, setApiTestResult] = React.useState<'success' | 'error' | null>(null);
-  const [showToken, setShowToken] = React.useState(false);
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<ReportTemplate | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const refreshTemplates = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setTemplates(await fetchReportTemplates());
+    } catch (err) {
+      console.error('加载报告模板失败', err);
+      setTemplates([]);
+      setError('加载报告模板失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshTemplates();
+  }, [refreshTemplates]);
 
   const filteredTemplates = React.useMemo(() => {
     if (!searchQuery) return templates;
@@ -140,23 +180,12 @@ export default function ReportTemplatesPage() {
     setEditingId(null);
     setFormData(initialFormData);
     setApiTestResult(null);
-    setShowToken(false);
     setNameError(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (template: ReportTemplate) => {
-    setEditingId(template.id);
-    setFormData({
-      name: template.name,
-      description: template.description,
-      apiEndpoint: template.apiEndpoint,
-      apiToken: template.apiToken || '',
-    });
-    setApiTestResult(null);
-    setShowToken(false);
-    setNameError(null);
-    setIsModalOpen(true);
+    setError('当前 Octopus 仅暴露报告模板列表与管理员新建接口，暂不支持前端编辑。');
   };
 
   const handleDelete = (template: ReportTemplate) => {
@@ -164,21 +193,12 @@ export default function ReportTemplatesPage() {
   };
 
   const confirmDelete = () => {
-    if (deleteTarget) {
-      setTemplates((prev) => prev.filter((t) => t.id !== deleteTarget.id));
-      setDeleteTarget(null);
-    }
+    setError('当前 Octopus 暂未提供报告模板删除接口，未执行删除。');
+    setDeleteTarget(null);
   };
 
   const handleToggleStatus = (template: ReportTemplate) => {
-    const newStatus: TemplateStatus = template.status === 'active' ? 'inactive' : 'active';
-    setTemplates((prev) =>
-      prev.map((t) =>
-        t.id === template.id
-          ? { ...t, status: newStatus, updatedAt: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '-') }
-          : t
-      )
-    );
+    setError('当前 Octopus 暂未提供报告模板启停接口，未修改状态。');
   };
 
   const handleTestApi = async () => {
@@ -187,53 +207,35 @@ export default function ReportTemplatesPage() {
     setTestingApi(true);
     setApiTestResult(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
     try {
-      new URL(formData.apiEndpoint);
-      setApiTestResult(Math.random() > 0.2 ? 'success' : 'error');
+      setApiTestResult(isValidReportEndpoint(formData.apiEndpoint) ? 'success' : 'error');
     } catch {
       setApiTestResult('error');
+    } finally {
+      setTestingApi(false);
     }
-
-    setTestingApi(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateName(formData.name)) return;
-    if (!formData.apiEndpoint) return;
-
-    if (editingId) {
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === editingId
-            ? {
-                ...t,
-                name: formData.name.trim(),
-                description: formData.description,
-                apiEndpoint: formData.apiEndpoint,
-                apiToken: formData.apiToken || undefined,
-                updatedAt: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '-'),
-              }
-            : t
-        )
-      );
-    } else {
-      const newTemplate: ReportTemplate = {
-        id: `TPL${String(templates.length + 1).padStart(3, '0')}`,
-        name: formData.name.trim(),
-        description: formData.description,
-        apiEndpoint: formData.apiEndpoint,
-        apiToken: formData.apiToken || undefined,
-        status: 'inactive',
-        createdBy: '当前用户',
-        createdAt: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '-'),
-        updatedAt: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '-'),
-      };
-      setTemplates((prev) => [newTemplate, ...prev]);
+    if (!isValidReportEndpoint(formData.apiEndpoint)) {
+      setApiTestResult('error');
+      setError('Please enter a HTTPS report API URL without credentials or fragment.');
+      return;
     }
 
-    setIsModalOpen(false);
+    if (editingId) {
+      setError('当前 Octopus 暂未提供报告模板编辑接口，未保存修改。');
+    } else {
+      try {
+        const newTemplate = await createReportTemplate(formData);
+        setTemplates((prev) => [newTemplate, ...prev]);
+        setIsModalOpen(false);
+      } catch (err) {
+        console.error('创建报告模板失败', err);
+        setError('创建报告模板失败：需要管理员权限，或请稍后重试');
+      }
+    }
   };
 
   const columns: Column<ReportTemplate>[] = [
@@ -263,10 +265,21 @@ export default function ReportTemplatesPage() {
       header: 'API 端点',
       accessor: (row) => (
         <span className="text-sm text-fg-muted font-mono truncate block max-w-[250px]" title={row.apiEndpoint}>
-          {row.apiEndpoint}
+          {row.apiEndpoint || '由后端托管（未向前端暴露）'}
         </span>
       ),
       width: 260,
+      align: 'center',
+    },
+    {
+      id: 'credential',
+      header: 'Credential',
+      accessor: (row) => (
+        <Tag variant={row.hasApiKey ? 'success' : 'neutral'}>
+          {row.hasApiKey ? 'Configured' : 'None'}
+        </Tag>
+      ),
+      width: 120,
       align: 'center',
     },
     {
@@ -346,6 +359,16 @@ export default function ReportTemplatesPage() {
         </Button>
       </div>
 
+      {error && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-sm text-fg-muted">加载报告模板...</div>
+      )}
+
       <DataTable
         data={filteredTemplates}
         columns={columns}
@@ -416,42 +439,38 @@ export default function ReportTemplatesPage() {
                   {apiTestResult === 'success' ? (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span>连接成功</span>
+                      <span>URL 格式有效（仅本地校验，未从浏览器发起连接）</span>
                     </>
                   ) : (
                     <>
                       <XCircle className="w-4 h-4" />
-                      <span>连接失败</span>
+                      <span>请输入有效的 HTTPS URL</span>
                     </>
                   )}
                 </div>
               )}
             </FormItem>
 
-            <FormItem label="API Token" hint="访问令牌，不加密传输时可留空">
-              <div className="relative">
-                <Input
-                  type={showToken ? 'text' : 'password'}
-                  value={formData.apiToken}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, apiToken: e.target.value }))}
-                  placeholder="可选，用于 API 认证"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken(!showToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-fg-muted hover:text-fg-default"
-                >
-                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+            <FormItem label="API Key" hint="Optional; sent once to Octopus and never stored in browser state.">
+              <Input
+                type="password"
+                value={formData.apiKey}
+                onChange={(e) => setFormData((prev) => ({ ...prev, apiKey: e.target.value }))}
+                placeholder="Optional report API token"
+                autoComplete="off"
+              />
             </FormItem>
+
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              API tokens are not stored or echoed by the browser. Configure report-service credentials on the backend or in your secret manager.
+            </div>
 
             <div className="bg-canvas-subtle rounded-md p-3 text-xs text-fg-muted">
               <p className="font-medium text-fg-default mb-1">说明</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>模板名称必须唯一，用于系统内部标识</li>
                 <li>API 端点需要实现报告生成接口规范</li>
-                <li>新建模板默认为停用状态，测试通过后可启用</li>
+                <li>当前后端仅支持管理员新建；启停与删除需后端提供对应接口后再开放</li>
               </ul>
             </div>
           </div>

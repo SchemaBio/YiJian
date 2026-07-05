@@ -28,11 +28,11 @@ export interface ParquetTableListResult {
 export const parquetApi = {
   /** List available parquet tables for a task */
   listTables: (taskId: string) =>
-    api.get<ParquetTableListResult>(`/v1/tasks/${taskId}/parquet`),
+    api.get<ParquetTableListResult>(`/v1/tasks/${encodeURIComponent(taskId)}/parquet`),
 
   /** Read a page of rows from a specific parquet table */
   getRows: (taskId: string, table: string, offset = 0, limit = 100) =>
-    api.get<ParquetPageResult>(`/v1/tasks/${taskId}/parquet/${table}/rows`, {
+    api.get<ParquetPageResult>(`/v1/tasks/${encodeURIComponent(taskId)}/parquet/${encodeURIComponent(table)}/rows`, {
       params: {
         offset: String(offset),
         limit: String(limit),

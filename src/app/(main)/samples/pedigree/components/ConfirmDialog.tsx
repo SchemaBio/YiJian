@@ -6,7 +6,7 @@ import { ConfirmDialog as SharedConfirmDialog } from '@/components/shared';
 interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   message: string;
   confirmLabel?: string;

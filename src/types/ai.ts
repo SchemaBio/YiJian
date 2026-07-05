@@ -41,7 +41,8 @@ export const DEFAULT_AI_CONFIG: AIConfig = {
 };
 
 /**
- * localStorage 存储键名
+ * localStorage storage keys. HISTORY is legacy-only and is removed at startup;
+ * AI conversations stay in memory because they may contain sample/patient data.
  */
 export const AI_STORAGE_KEYS = {
   CONFIG: 'schema_ai_config',

@@ -11,7 +11,7 @@ import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (member: Omit<PedigreeMember, 'id' | 'generation' | 'position'>) => void;
+  onSubmit: (member: Omit<PedigreeMember, 'id' | 'generation' | 'position'>) => void | Promise<void>;
   existingMembers: PedigreeMember[];
   // 预填充提示（从上下文菜单传入）
   defaultFatherId?: string;
@@ -37,6 +37,8 @@ const affectedOptions = Object.entries(AFFECTED_STATUS_CONFIG)
 const NONE_VALUE = '__none__';
 
 export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, defaultFatherId, defaultMotherId, defaultRelation, defaultSpouseId }: AddMemberModalProps) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState({
     name: '',
     gender: 'unknown' as Gender,
@@ -51,6 +53,7 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
   // 从预填充提示初始化表单
   React.useEffect(() => {
     if (isOpen) {
+      setSubmitError('');
       setFormData({
         name: '',
         gender: 'unknown',
@@ -68,34 +71,41 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    onSubmit({
-      name: formData.name,
-      gender: formData.gender,
-      birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
-      relation: formData.relation,
-      affectedStatus: formData.affectedStatus,
-      fatherId: formData.fatherId === NONE_VALUE ? undefined : formData.fatherId,
-      motherId: formData.motherId === NONE_VALUE ? undefined : formData.motherId,
-      phenotypes: formData.phenotypes ? formData.phenotypes.split(',').map(s => s.trim()) : undefined,
-      // 如果是添加配偶，设置 spouseIds
-      spouseIds: defaultSpouseId ? [defaultSpouseId] : undefined,
-    });
-    onClose();
-    setFormData({
-      name: '',
-      gender: 'unknown',
-      birthYear: '',
-      relation: 'sibling',
-      affectedStatus: 'unknown',
-      fatherId: NONE_VALUE,
-      motherId: NONE_VALUE,
-      phenotypes: '',
-    });
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await onSubmit({
+        name: formData.name,
+        gender: formData.gender,
+        birthYear: formData.birthYear ? parseInt(formData.birthYear) : undefined,
+        relation: formData.relation,
+        affectedStatus: formData.affectedStatus,
+        fatherId: formData.fatherId === NONE_VALUE ? undefined : formData.fatherId,
+        motherId: formData.motherId === NONE_VALUE ? undefined : formData.motherId,
+        phenotypes: formData.phenotypes ? formData.phenotypes.split(',').map(s => s.trim()) : undefined,
+        spouseIds: defaultSpouseId ? [defaultSpouseId] : undefined,
+      });
+      onClose();
+      setFormData({
+        name: '',
+        gender: 'unknown',
+        birthYear: '',
+        relation: 'sibling',
+        affectedStatus: 'unknown',
+        fatherId: NONE_VALUE,
+        motherId: NONE_VALUE,
+        phenotypes: '',
+      });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to add pedigree member');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // 获取可选的父母
   const maleMembers = existingMembers.filter(m => m.gender === 'male');
   const femaleMembers = existingMembers.filter(m => m.gender === 'female');
 
@@ -114,17 +124,22 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting && onClose()}
       title="添加家系成员"
       size="small"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)}>添加成员</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
+          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>添加成员</Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div>
           <label className="block text-xs text-fg-muted mb-1">姓名 *</label>
           <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入姓名" required />

@@ -1,170 +1,226 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
 import { Play, Info } from 'lucide-react';
-import { generateUUID } from '@/lib/uuid';
-
-interface SampleOption {
-  id: string;
-  internalId: string;
-  hasData: boolean;
-  previousTasks: number;
-}
-
-const mockSamples: SampleOption[] = [
-  { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', internalId: 'INT-001', hasData: true, previousTasks: 2 },
-  { id: 'b2c3d4e5-f678-90ab-cdef-123456789012', internalId: 'INT-002', hasData: true, previousTasks: 1 },
-  { id: 'c3d4e5f6-7890-abcd-ef12-345678901234', internalId: 'INT-003', hasData: true, previousTasks: 1 },
-  { id: 'd4e5f678-90ab-cdef-1234-567890123456', internalId: 'INT-004', hasData: true, previousTasks: 1 },
-  { id: 'e5f67890-abcd-ef12-3456-789012345678', internalId: 'INT-005', hasData: true, previousTasks: 0 },
-  { id: 'f6789012-abcd-ef12-3456-789012345678', internalId: 'INT-006', hasData: false, previousTasks: 0 },
-];
-
-const mockPipelines = [
-  { value: 'wes-germline-v1', label: 'WES-Germline-v1 (全外显子遗传病)', version: 'v1.2.0' },
-  { value: 'panel-cardio', label: 'Panel-Cardio (心血管疾病)', version: 'v2.0.1' },
-  { value: 'panel-neuro', label: 'Panel-Neuro (神经系统疾病)', version: 'v1.0.0' },
-];
+import { tasksApi } from '@/lib/tasks';
+import {
+  pipelinesApi,
+  samplesApi,
+  templatesApi,
+  type TaskPipelineOption,
+  type TaskSampleListItem,
+  type TaskTemplateOption,
+} from '@/lib/task-resources';
 
 export default function NewAnalysisPage() {
-  const [taskId] = React.useState(() => generateUUID());
+  const router = useRouter();
+  const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
+  const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
+  const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
+  const [loadError, setLoadError] = React.useState('');
   const [selectedSample, setSelectedSample] = React.useState('');
-  const [selectedPipeline, setSelectedPipeline] = React.useState('wes-germline-v1');
+  const [selectedPipeline, setSelectedPipeline] = React.useState('');
   const [taskName, setTaskName] = React.useState('');
   const [enableCNV, setEnableCNV] = React.useState(true);
   const [enableSV, setEnableSV] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState('');
 
-  const selectedSampleInfo = mockSamples.find((s) => s.id === selectedSample);
+  const selectedSampleInfo = samples.find((sample) => sample.id === selectedSample);
+  const selectedPipelineInfo = pipelines.find((pipeline) => pipeline.id === selectedPipeline);
 
-  // 自动生成任务名称
   React.useEffect(() => {
-    if (selectedSample && selectedPipeline) {
-      const pipeline = mockPipelines.find((p) => p.value === selectedPipeline);
-      const pipelineName = pipeline?.label.split(' ')[0] || '';
-      const sample = mockSamples.find(s => s.id === selectedSample);
-      setTaskName(`${sample?.internalId || ''} ${pipelineName}分析`);
+    let cancelled = false;
+
+    async function loadOptions() {
+      try {
+        const [sampleOptions, pipelineOptions, templateOptions] = await Promise.all([
+          samplesApi.list({ page: 1, page_size: 100 }),
+          pipelinesApi.list(),
+          templatesApi.list().catch(() => []),
+        ]);
+        if (cancelled) return;
+        setSamples(sampleOptions);
+        setPipelines(pipelineOptions);
+        setTemplates(templateOptions);
+        setSelectedPipeline((current) => current || pipelineOptions[0]?.id || '');
+        setLoadError('');
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load task options');
+        }
+      }
     }
-  }, [selectedSample, selectedPipeline]);
+
+    loadOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resolvePipelineTemplate = React.useCallback((pipeline: TaskPipelineOption): string => {
+    if (pipeline.template) return pipeline.template;
+    const byBaseType: Record<string, string> = {
+      wes_single: 'single',
+      wes_family: 'trio',
+      panel: 'panel',
+    };
+    const baseTemplate = pipeline.baseType ? byBaseType[pipeline.baseType] : '';
+    if (baseTemplate && (templates.length === 0 || templates.some(template => template.name === baseTemplate))) {
+      return baseTemplate;
+    }
+
+    const target = `${pipeline.id} ${pipeline.name}`.toLowerCase();
+    const matchedTemplate = templates.find(template => target.includes(template.name.toLowerCase()));
+    return matchedTemplate?.name || templates[0]?.name || '';
+  }, [templates]);
+
+  React.useEffect(() => {
+    if (selectedSampleInfo && selectedPipelineInfo) {
+      setTaskName(`${selectedSampleInfo.internalId || selectedSampleInfo.id} ${selectedPipelineInfo.name} analysis`);
+    }
+  }, [selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
-    if (!selectedSample || !selectedPipeline) {
-      alert('请选择样本和分析流程');
+    setFormError('');
+    if (!selectedSampleInfo || !selectedPipelineInfo) {
+      setFormError('Please select a sample and a pipeline.');
       return;
     }
-    if (!selectedSampleInfo?.hasData) {
-      alert('所选样本暂无测序数据，无法创建分析任务');
+    if (!selectedSampleInfo.matchedPair) {
+      setFormError('The selected sample has no matched sequencing data.');
+      return;
+    }
+    const template = resolvePipelineTemplate(selectedPipelineInfo);
+    if (!template) {
+      setFormError('No compatible WDL template is available for the selected pipeline.');
       return;
     }
 
     setSubmitting(true);
-    // 模拟提交
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setSubmitting(false);
-    alert(`任务创建成功！\n任务ID: ${taskId}`);
+    try {
+      const task = await tasksApi.create({
+        sampleId: selectedSampleInfo.id,
+        internalId: selectedSampleInfo.internalId,
+        pipelineId: selectedPipelineInfo.id,
+        pipelineName: selectedPipelineInfo.name,
+        pipelineVersion: selectedPipelineInfo.version,
+        remark: taskName,
+        template,
+        inputs: {
+          enable_cnv: enableCNV,
+          enable_sv: enableSV,
+        },
+      });
+      router.push(`/tasks/${encodeURIComponent(task.id)}`);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create analysis task');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">新建分析任务</h2>
+        <h2 className="yj-page-title">New analysis task</h2>
       </div>
 
       <div className="yj-panel yj-form-card space-y-6">
-        {/* 任务ID显示 */}
         <div className="yj-info-panel">
           <div className="flex items-center gap-2 mb-2">
             <Info className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm font-medium text-fg-default">任务ID</span>
+            <span className="text-sm font-medium text-fg-default">Task ID</span>
           </div>
-          <code className="text-sm font-mono text-fg-muted bg-canvas-inset px-2 py-1 rounded">
-            {taskId}
-          </code>
-          <p className="text-xs text-fg-muted mt-2">
-            每个分析任务都有唯一的 UUID，同一样本可以多次投递分析任务
+          <p className="text-xs text-fg-muted">
+            The backend will assign the task UUID after creation.
           </p>
         </div>
 
-        {/* 选择样本 */}
-        <FormItem label="选择样本" required>
+        {loadError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {loadError}
+          </div>
+        )}
+
+        {formError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {formError}
+          </div>
+        )}
+
+        <FormItem label="Sample" required>
           <Select
-            options={mockSamples.map((s) => ({
-              value: s.id,
-              label: `${s.internalId}${!s.hasData ? ' (无数据)' : ''}`,
-              disabled: !s.hasData,
+            options={samples.map((sample) => ({
+              value: sample.id,
+              label: `${sample.internalId || sample.id}${!sample.matchedPair ? ' (no sequencing data)' : ''}`,
+              disabled: !sample.matchedPair,
             }))}
             value={selectedSample}
-            onChange={(v) => setSelectedSample(v as string)}
-            placeholder="请选择样本"
+            onChange={(value) => setSelectedSample(Array.isArray(value) ? value[0] : value)}
+            placeholder="Select a sample"
             searchable
           />
           {selectedSampleInfo && (
             <div className="mt-2 text-xs text-fg-muted">
-              {selectedSampleInfo.hasData ? (
-                selectedSampleInfo.previousTasks > 0 ? (
-                  <span className="text-warning-fg">
-                    该样本已有 {selectedSampleInfo.previousTasks} 个分析任务
-                  </span>
-                ) : (
-                  <span className="text-success-fg">该样本首次分析</span>
-                )
+              {selectedSampleInfo.matchedPair ? (
+                <span className="text-success-fg">Sequencing data is available.</span>
               ) : (
-                <span className="text-danger-fg">该样本暂无测序数据</span>
+                <span className="text-danger-fg">No matched sequencing data.</span>
               )}
             </div>
           )}
         </FormItem>
 
-        {/* 选择流程 */}
-        <FormItem label="分析流程" required>
+        <FormItem label="Pipeline" required>
           <Select
-            options={mockPipelines.map((p) => ({
-              value: p.value,
-              label: `${p.label} (${p.version})`,
+            options={pipelines.map((pipeline) => ({
+              value: pipeline.id,
+              label: `${pipeline.name}${pipeline.version ? ` (${pipeline.version})` : ''}`,
             }))}
             value={selectedPipeline}
-            onChange={(v) => setSelectedPipeline(v as string)}
+            onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}
+            placeholder="Select a pipeline"
+            searchable
           />
         </FormItem>
 
-        {/* 任务名称 */}
-        <FormItem label="任务名称">
+        <FormItem label="Task note">
           <Input
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
-            placeholder="自动生成或手动输入"
+            placeholder="Optional task note"
           />
         </FormItem>
 
-        {/* 高级选项 */}
         <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">高级选项</h3>
+          <h3 className="text-sm font-medium text-fg-default mb-3">Advanced options</h3>
           <div className="space-y-2">
             <Checkbox
               checked={enableCNV}
               onCheckedChange={(checked) => setEnableCNV(checked === true)}
-              label="启用 CNV 检测"
+              label="Enable CNV analysis"
             />
             <Checkbox
               checked={enableSV}
               onCheckedChange={(checked) => setEnableSV(checked === true)}
-              label="启用 SV 检测"
+              label="Enable SV analysis"
             />
           </div>
         </div>
 
-        {/* 提交按钮 */}
         <div className="pt-5 border-t border-[var(--yj-border-subtle)] flex items-center justify-end">
           <Button
             variant="primary"
             leftIcon={<Play className="w-4 h-4" />}
             onClick={handleSubmit}
             loading={submitting}
-            disabled={!selectedSample || !selectedSampleInfo?.hasData}
+            disabled={!selectedSampleInfo?.matchedPair || !selectedPipelineInfo}
           >
-            {submitting ? '提交中...' : '提交任务'}
+            {submitting ? 'Submitting...' : 'Submit task'}
           </Button>
         </div>
       </div>

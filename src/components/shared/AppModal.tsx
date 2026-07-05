@@ -103,7 +103,7 @@ interface ConfirmDialogProps {
   /** Cancel button label */
   cancelLabel?: string;
   /** Callback when user confirms */
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   /** Visual variant */
   variant?: 'danger' | 'warning' | 'info';
 }
@@ -132,9 +132,28 @@ export function ConfirmDialog({
   onConfirm,
   variant = 'info',
 }: ConfirmDialogProps) {
-  const handleConfirm = () => {
-    onConfirm();
-    onOpenChange(false);
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  React.useEffect(() => {
+    if (!open) {
+      setPending(false);
+      setError('');
+    }
+  }, [open]);
+
+  const handleConfirm = async () => {
+    if (pending) return;
+    setPending(true);
+    setError('');
+    try {
+      await onConfirm();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '操作失败，请稍后重试');
+    } finally {
+      setPending(false);
+    }
   };
 
   const buttonVariant = variant === 'danger' ? 'danger' : 'primary';
@@ -142,27 +161,39 @@ export function ConfirmDialog({
   return (
     <AppModal
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(nextOpen) => {
+        if (pending && !nextOpen) return;
+        onOpenChange(nextOpen);
+      }}
       title={title}
       size="small"
       footer={
         <>
           <Button
             variant="secondary"
+            disabled={pending}
             onClick={() => onOpenChange(false)}
           >
             {cancelLabel}
           </Button>
           <Button
             variant={buttonVariant}
+            disabled={pending}
             onClick={handleConfirm}
           >
-            {confirmLabel}
+            {pending ? '处理中...' : confirmLabel}
           </Button>
         </>
       }
     >
-      <p className="text-sm text-fg-default">{message}</p>
+      <div className="space-y-3">
+        <p className="text-sm text-fg-default">{message}</p>
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+      </div>
     </AppModal>
   );
 }

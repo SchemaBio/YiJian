@@ -47,7 +47,15 @@ pnpm lint       # 代码检查
 
 ```bash
 docker build -t yijian .
-docker run -p 3000:3000 -e NEXT_PUBLIC_API_URL=http://backend:8080 yijian
+# Direct Octopus
+docker run -p 3000:3000 -e YIJIAN_API_URL=http://octopus:8080 yijian
+
+# Squid SaaS gateway + Octopus core proxy
+docker run -p 3000:3000 \
+  -e YIJIAN_API_URL=http://squid:8080 \
+  -e YIJIAN_CORE_API_PREFIX=/v1/octopus \
+  -e YIJIAN_BACKEND_FLAVOR=squid \
+  yijian
 ```
 
 ## 环境变量

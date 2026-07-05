@@ -1,54 +1,64 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { AIConfig, ConversationMessage } from '@/types/ai';
-import { DEFAULT_AI_CONFIG, AI_STORAGE_KEYS, MAX_HISTORY_MESSAGES } from '@/types/ai';
+import { AI_STORAGE_KEYS, DEFAULT_AI_CONFIG, MAX_HISTORY_MESSAGES } from '@/types/ai';
 import { createPageAgent, PageAgentWrapper } from '@/lib/pageAgent';
 
 interface AIContextType {
-  /** AI 配置 */
+  /** AI 配置（仅保存非敏感 UI 配置；LLM Key 由 Squid 代理管理） */
   config: AIConfig;
-  /** 更新配置 */
+  /** 更新 AI 配置 */
   setConfig: (config: Partial<AIConfig>) => void;
-  /** 配置是否完整（endpoint + apiKey + model 都已填写） */
+  /** 配置是否满足启用条件 */
   isConfigured: boolean;
   /** AI 助手是否启用 */
   isEnabled: boolean;
-  /** 对话历史 */
+  /** 当前页面内存中的对话历史，不持久化患者/样本信息 */
   history: ConversationMessage[];
-  /** 添加消息到历史 */
+  /** 添加一条对话消息 */
   addMessage: (message: ConversationMessage) => void;
   /** 清空对话历史 */
   clearHistory: () => void;
-  /** 执行自然语言指令 */
+  /** 执行自然语言命令 */
   executeCommand: (command: string) => Promise<void>;
-  /** 是否正在执行指令 */
+  /** 是否正在执行命令 */
   isExecuting: boolean;
-  /** page-agent 实例 */
+  /** page-agent 包装实例 */
   agent: PageAgentWrapper | null;
 }
 
 const AIContext = createContext<AIContextType | undefined>(undefined);
 
-/**
- * 生成唯一 ID
- */
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function normalizeStoredConfig(value: unknown): AIConfig {
   if (!value || typeof value !== 'object') {
     return DEFAULT_AI_CONFIG;
   }
+
   const raw = value as Partial<AIConfig>;
   return {
-    openaiModel: typeof raw.openaiModel === 'string' ? raw.openaiModel : DEFAULT_AI_CONFIG.openaiModel,
-    aiAssistantEnabled:
-      typeof raw.aiAssistantEnabled === 'boolean'
-        ? raw.aiAssistantEnabled
-        : DEFAULT_AI_CONFIG.aiAssistantEnabled,
+    openaiModel: typeof raw.openaiModel === 'string' && raw.openaiModel.trim()
+      ? raw.openaiModel.trim()
+      : DEFAULT_AI_CONFIG.openaiModel,
+    aiAssistantEnabled: typeof raw.aiAssistantEnabled === 'boolean'
+      ? raw.aiAssistantEnabled
+      : DEFAULT_AI_CONFIG.aiAssistantEnabled,
   };
+}
+
+function clearLegacyAIHistory() {
+  try {
+    localStorage.removeItem(AI_STORAGE_KEYS.HISTORY);
+  } catch {
+    // localStorage may be unavailable in strict privacy modes.
+  }
 }
 
 export function AIProvider({ children }: { children: React.ReactNode }) {
@@ -57,31 +67,24 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const agentRef = useRef<PageAgentWrapper | null>(null);
 
-  // 计算派生状态 (API key 由后端代理管理，前端只需 model 和端点)
   const isConfigured = Boolean(config.openaiModel);
   const isEnabled = config.aiAssistantEnabled && isConfigured;
 
-  // 从 localStorage 加载配置和历史
+  // 只从 localStorage 读取非敏感 AI UI 配置；历史可能包含患者/样本信息，启动时清理旧缓存。
   useEffect(() => {
     try {
       const storedConfig = localStorage.getItem(AI_STORAGE_KEYS.CONFIG);
-      const storedHistory = localStorage.getItem(AI_STORAGE_KEYS.HISTORY);
-
       if (storedConfig) {
-        const parsedConfig = JSON.parse(storedConfig);
-        setConfigState(normalizeStoredConfig(parsedConfig));
-      }
-
-      if (storedHistory) {
-        const parsedHistory = JSON.parse(storedHistory);
-        setHistory(parsedHistory.slice(-MAX_HISTORY_MESSAGES));
+        setConfigState(normalizeStoredConfig(JSON.parse(storedConfig)));
       }
     } catch (error) {
-      console.error('Failed to load stored AI data:', error);
+      console.error('Failed to load stored AI config:', error);
+    } finally {
+      clearLegacyAIHistory();
     }
   }, []);
 
-  // 配置变化时保存到 localStorage
+  // 仅持久化非敏感配置，不持久化对话历史。
   useEffect(() => {
     try {
       localStorage.setItem(AI_STORAGE_KEYS.CONFIG, JSON.stringify(config));
@@ -90,60 +93,37 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [config]);
 
-  // 历史变化时保存到 localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(AI_STORAGE_KEYS.HISTORY, JSON.stringify(history));
-    } catch (error) {
-      console.error('Failed to save AI history:', error);
-    }
-  }, [history]);
-
-  // 当配置完整且启用时，创建 page-agent 实例
-  useEffect(() => {
-    if (isEnabled) {
-      agentRef.current = createPageAgent(config);
-    } else {
-      agentRef.current = null;
-    }
+    agentRef.current = isEnabled ? createPageAgent(config) : null;
   }, [config, isEnabled]);
 
-  // 更新配置（部分更新）
   const setConfig = useCallback((partialConfig: Partial<AIConfig>) => {
-    setConfigState(prev => ({ ...prev, ...partialConfig }));
+    setConfigState(prev => normalizeStoredConfig({ ...prev, ...partialConfig }));
   }, []);
 
-  // 添加消息到历史
   const addMessage = useCallback((message: ConversationMessage) => {
-    setHistory(prev => {
-      const newHistory = [...prev, message];
-      // 限制历史数量
-      return newHistory.slice(-MAX_HISTORY_MESSAGES);
-    });
+    setHistory(prev => [...prev, message].slice(-MAX_HISTORY_MESSAGES));
   }, []);
 
-  // 清空历史
   const clearHistory = useCallback(() => {
     setHistory([]);
-    localStorage.removeItem(AI_STORAGE_KEYS.HISTORY);
+    clearLegacyAIHistory();
   }, []);
 
-  // 执行自然语言指令
   const executeCommand = useCallback(async (command: string) => {
-    if (!agentRef.current || isExecuting) {
+    const trimmedCommand = command.trim();
+    if (!trimmedCommand || !agentRef.current || isExecuting) {
       return;
     }
 
-    // 添加用户消息
     const userMessage: ConversationMessage = {
       id: generateId(),
       role: 'user',
-      content: command,
+      content: trimmedCommand,
       timestamp: Date.now(),
     };
     addMessage(userMessage);
 
-    // 添加助手消息（执行中状态）
     const assistantMessage: ConversationMessage = {
       id: generateId(),
       role: 'assistant',
@@ -154,39 +134,32 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     addMessage(assistantMessage);
 
     setIsExecuting(true);
-
     try {
-      // 执行指令
-      const result = await agentRef.current.execute(command);
-
-      // 更新助手消息
-      setHistory(prev => prev.map(msg => {
-        if (msg.id === assistantMessage.id) {
-          return {
-            ...msg,
-            content: result.success ? `已执行: ${command}` : `执行失败: ${result.error}`,
-            status: result.success ? 'completed' : 'error',
-            actionResult: result.result,
-          };
-        }
-        return msg;
-      }));
+      const result = await agentRef.current.execute(trimmedCommand);
+      setHistory(prev => prev.map(msg => (
+        msg.id === assistantMessage.id
+          ? {
+              ...msg,
+              content: result.success ? `已执行：${trimmedCommand}` : `执行失败：${result.error}`,
+              status: result.success ? 'completed' : 'error',
+              actionResult: result.result,
+            }
+          : msg
+      )));
     } catch (error) {
-      // 更新助手消息为错误状态
-      setHistory(prev => prev.map(msg => {
-        if (msg.id === assistantMessage.id) {
-          return {
-            ...msg,
-            content: `执行出错: ${error instanceof Error ? error.message : '未知错误'}`,
-            status: 'error',
-          };
-        }
-        return msg;
-      }));
+      setHistory(prev => prev.map(msg => (
+        msg.id === assistantMessage.id
+          ? {
+              ...msg,
+              content: `执行出错：${error instanceof Error ? error.message : '未知错误'}`,
+              status: 'error',
+            }
+          : msg
+      )));
     } finally {
       setIsExecuting(false);
     }
-  }, [isExecuting, addMessage]);
+  }, [addMessage, isExecuting]);
 
   const value: AIContextType = {
     config,
@@ -201,16 +174,9 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     agent: agentRef.current,
   };
 
-  return (
-    <AIContext.Provider value={value}>
-      {children}
-    </AIContext.Provider>
-  );
+  return <AIContext.Provider value={value}>{children}</AIContext.Provider>;
 }
 
-/**
- * 使用 AI 上下文的 hook
- */
 export function useAI() {
   const context = useContext(AIContext);
   if (context === undefined) {

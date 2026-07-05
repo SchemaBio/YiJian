@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, ListFilter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { MEIVariant, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMEIs, ACMG_CONFIG, getGeneLists, reportVariant, reviewVariant, type GeneListOption } from '../result-api';
+import { getMEIs, ACMG_CONFIG, reportVariant, reviewVariant } from '../result-api';
 import { PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 
@@ -49,7 +49,6 @@ export function MEITab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<MEIVariant> | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [geneLists, setGeneLists] = React.useState<GeneListOption[]>([]);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
 
   const filterState = externalFilterState ?? internalFilterState;
@@ -99,14 +98,6 @@ export function MEITab({
   }, [result?.data, getReviewState]);
 
   // 加载基因列表
-  React.useEffect(() => {
-    async function loadGeneLists() {
-      const lists = await getGeneLists();
-      setGeneLists(lists);
-    }
-    loadGeneLists();
-  }, []);
-
   // 加载数据
   React.useEffect(() => {
     async function loadData() {
@@ -124,20 +115,7 @@ export function MEITab({
   }, [filterState, setFilterState]);
 
   // 处理基因列表筛选
-  const handleGeneListFilter = React.useCallback((geneListId: string) => {
-    setFilterState({
-      ...filterState,
-      geneListId: geneListId || undefined,
-      page: 1
-    });
-  }, [filterState, setFilterState]);
-
   // 获取当前选中的基因列表信息
-  const selectedGeneList = React.useMemo(() => {
-    if (!filterState.geneListId) return null;
-    return geneLists.find(list => list.id === filterState.geneListId);
-  }, [filterState.geneListId, geneLists]);
-
   // 列定义
   const columns: Column<MEIVariant>[] = [
     {
@@ -294,30 +272,10 @@ export function MEITab({
           </div>
 
           {/* 基因列表筛选 */}
-          <div className="relative">
-            <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none" />
-            <select
-              value={filterState.geneListId || ''}
-              onChange={(e) => handleGeneListFilter(e.target.value)}
-              className="pl-9 pr-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default min-w-[180px] appearance-none cursor-pointer"
-            >
-              <option value="">全部基因</option>
-              {geneLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name} ({list.geneCount})
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* 统计信息 */}
         <div className="flex items-center gap-4 text-sm text-fg-muted">
-          {selectedGeneList && (
-            <span className="text-accent-fg">
-              已筛选: {selectedGeneList.name}
-            </span>
-          )}
           <span>共 {result?.total ?? 0} 条 MEI 变异</span>
         </div>
       </div>

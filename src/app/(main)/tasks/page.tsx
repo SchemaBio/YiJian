@@ -137,6 +137,7 @@ function TaskActionsCell({
   task,
   onStart,
   onStop,
+  onRetry,
   onEdit,
   onDelete,
   onView,
@@ -145,6 +146,7 @@ function TaskActionsCell({
   task: AnalysisTask;
   onStart: (id: string) => void;
   onStop: (id: string) => void;
+  onRetry: (id: string) => void;
   onEdit: (task: AnalysisTask) => void;
   onDelete: (id: string) => void;
   onView: (task: AnalysisTask) => void;
@@ -201,7 +203,7 @@ function TaskActionsCell({
         return {
           label: '重试',
           icon: RotateCcw,
-          onClick: () => onStart(task.id),
+          onClick: () => onRetry(task.id),
           className: 'text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300',
         };
       default:
@@ -299,6 +301,7 @@ export default function AnalysisPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<AnalysisTask | null>(null);
+  const [actionError, setActionError] = React.useState('');
 
   // Create fetcher function with current statusFilter
   const fetcher = React.useCallback(async () => {
@@ -335,8 +338,9 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
   };
 
   const handleCreateTask = async (data: NewTaskFormData) => {
+    setActionError('');
     try {
-      const newTask = await tasksApi.create({
+      await tasksApi.create({
         sampleId: data.sampleId,
         internalId: data.internalId,
         pipelineId: data.pipelineId,
@@ -345,16 +349,19 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
         remark: data.remark,
         template: data.template,
         inputs: data.inputs,
-        uploaded_file_ids: data.uploaded_file_ids,
+        ...(data.uploadJobId ? { uploadJobId: data.uploadJobId } : {}),
         estimatedMinutes: data.estimatedMinutes,
       });
       refetch(); // Refresh data after creating
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建任务失败');
+      const message = err instanceof Error ? err.message : 'Failed to create task';
+      setActionError(message);
+      throw new Error(message);
     }
   };
 
   const handleEditTask = async (id: string, data: EditTaskFormData) => {
+    setActionError('');
     try {
       await tasksApi.update(id, {
         internalId: data.internalId,
@@ -363,17 +370,20 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
       });
       refetch(); // Refresh data after updating
     } catch (err) {
-      alert(err instanceof Error ? err.message : '更新任务失败');
+      const message = err instanceof Error ? err.message : 'Failed to update task';
+      setActionError(message);
+      throw new Error(message);
     }
   };
 
   const handleStartTask = async (taskId: string) => {
     setActionLoading(taskId);
+    setActionError('');
     try {
       await tasksApi.start(taskId);
       refetch(); // Refresh data after starting
     } catch (err) {
-      alert(err instanceof Error ? err.message : '启动任务失败');
+      setActionError(err instanceof Error ? err.message : '启动任务失败');
     } finally {
       setActionLoading(null);
     }
@@ -381,22 +391,37 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
 
   const handleStopTask = async (taskId: string) => {
     setActionLoading(taskId);
+    setActionError('');
     try {
-      await tasksApi.cancel(taskId);
+      await tasksApi.stop(taskId);
       refetch(); // Refresh data after stopping
     } catch (err) {
-      alert(err instanceof Error ? err.message : '停止任务失败');
+      setActionError(err instanceof Error ? err.message : '停止任务失败');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRetryTask = async (taskId: string) => {
+    setActionLoading(taskId);
+    setActionError('');
+    try {
+      await tasksApi.retry(taskId);
+      refetch(); // Refresh data after retrying
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : '重试任务失败');
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    setActionError('');
     try {
       await tasksApi.cancel(taskId);
       refetch(); // Refresh data after deleting
     } catch (err) {
-      alert(err instanceof Error ? err.message : '删除任务失败');
+      setActionError(err instanceof Error ? err.message : '删除任务失败');
     }
   };
 
@@ -530,6 +555,7 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
           task={row}
           onStart={handleStartTask}
           onStop={handleStopTask}
+          onRetry={handleRetryTask}
           onEdit={setEditingTask}
           onDelete={handleDeleteTask}
           onView={handleOpenTab}
@@ -636,6 +662,12 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
             <div className="yj-page-header">
               <h2 className="yj-page-title">任务列表</h2>
             </div>
+
+            {actionError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {actionError}
+              </div>
+            )}
 
             {loading && (
               <div className="yj-empty-state">
