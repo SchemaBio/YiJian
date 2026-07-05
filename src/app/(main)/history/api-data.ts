@@ -45,6 +45,20 @@ export const UPD_TYPE_CONFIG: Record<UPDType, { label: string; variant: 'info' |
   Heterodisomy: { label: '异源UPD', variant: 'info' },
 };
 
+const ACMG_ALIASES: Record<string, ACMGClassification> = {
+  pathogenic: 'Pathogenic',
+  likely_pathogenic: 'Likely_Pathogenic',
+  likelypathogenic: 'Likely_Pathogenic',
+  lp: 'Likely_Pathogenic',
+  vus: 'VUS',
+  uncertain_significance: 'VUS',
+  variant_of_uncertain_significance: 'VUS',
+  likely_benign: 'Likely_Benign',
+  likelybenign: 'Likely_Benign',
+  lb: 'Likely_Benign',
+  benign: 'Benign',
+};
+
 type BackendPage<T> = T[] | {
   items?: T[];
   data?: T[] | { items?: T[] };
@@ -61,6 +75,11 @@ function n(value: unknown, fallback = 0): number {
   if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value);
     if (Number.isFinite(parsed)) return parsed;
+    const firstNumber = value.match(/-?\d+(?:\.\d+)?/);
+    if (firstNumber) {
+      const parsedTextNumber = Number(firstNumber[0]);
+      if (Number.isFinite(parsedTextNumber)) return parsedTextNumber;
+    }
   }
   return fallback;
 }
@@ -88,8 +107,12 @@ function arr(value: unknown): string[] {
 }
 
 function acmg(value: unknown): ACMGClassification {
-  const normalized = s(value, 'VUS').replace(/\s+/g, '_') as ACMGClassification;
-  return normalized in ACMG_CONFIG ? normalized : 'VUS';
+  const normalized = s(value, 'VUS')
+    .trim()
+    .replace(/[-\s]+/g, '_')
+    .replace(/__+/g, '_')
+    .toLowerCase();
+  return ACMG_ALIASES[normalized] ?? 'VUS';
 }
 
 function cnvType(value: unknown): GroupedCNVSegment['type'] {
@@ -98,8 +121,10 @@ function cnvType(value: unknown): GroupedCNVSegment['type'] {
 }
 
 function strStatus(value: unknown): STRStatus {
-  const normalized = s(value, 'Normal');
-  return normalized === 'Premutation' || normalized === 'FullMutation' ? normalized : 'Normal';
+  const normalized = s(value, 'Normal').replace(/[-\s]+/g, '').toLowerCase();
+  if (normalized === 'premutation') return 'Premutation';
+  if (normalized === 'fullmutation') return 'FullMutation';
+  return 'Normal';
 }
 
 function meiType(value: unknown): MEIType {
@@ -111,7 +136,16 @@ function meiType(value: unknown): MEIType {
 }
 
 function updType(value: unknown): UPDType {
-  return s(value) === 'Heterodisomy' ? 'Heterodisomy' : 'Isodisomy';
+  return s(value).replace(/[-\s]+/g, '').toLowerCase() === 'heterodisomy'
+    ? 'Heterodisomy'
+    : 'Isodisomy';
+}
+
+function parentOfOrigin(value: unknown): GroupedUPDRegion['parentOfOrigin'] {
+  const normalized = s(value).trim().toLowerCase();
+  if (normalized === 'maternal' || normalized === 'mother') return 'Maternal';
+  if (normalized === 'paternal' || normalized === 'father') return 'Paternal';
+  return 'Unknown';
 }
 
 function normalizeList<T>(response: BackendPage<BackendRow>, filterState: HistoryTableFilterState, mapper: (row: BackendRow) => T): PaginatedResult<T> {
@@ -235,8 +269,8 @@ function mapMT(row: BackendRow): GroupedMTVariant {
     ref: s(row.ref),
     alt: s(row.alt),
     gene: s(row.gene),
-    pathogenicity: acmg(row.pathogenicity),
-    associatedDisease: s(row.associatedDisease),
+    pathogenicity: acmg(row.pathogenicity ?? row.clinvarSig ?? row.clinvarSignificance),
+    associatedDisease: s(row.associatedDisease ?? row.mitophenPhenotypes ?? row.clinvarDN),
     haplogroup: s(row.haplogroup) || undefined,
     minHeteroplasmy: n(row.minHeteroplasmy),
     maxHeteroplasmy: n(row.maxHeteroplasmy),
@@ -248,7 +282,6 @@ function mapMT(row: BackendRow): GroupedMTVariant {
 }
 
 function mapUPD(row: BackendRow): GroupedUPDRegion {
-  const parent = s(row.parentOfOrigin);
   return {
     groupId: s(row.groupId),
     chromosome: s(row.chromosome),
@@ -257,7 +290,7 @@ function mapUPD(row: BackendRow): GroupedUPDRegion {
     length: n(row.length),
     type: updType(row.type),
     genes: arr(row.genes),
-    parentOfOrigin: parent === 'Maternal' || parent === 'Paternal' ? parent : 'Unknown',
+    parentOfOrigin: parentOfOrigin(row.parentOfOrigin),
     detectionCount: n(row.detectionCount),
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
