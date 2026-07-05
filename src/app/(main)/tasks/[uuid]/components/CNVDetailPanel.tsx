@@ -27,6 +27,18 @@ function ensemblRegionURL(chromosome: string, startPosition: number, endPosition
   return `https://www.ensembl.org/Homo_sapiens/Location/View?r=${encodeURIComponent(region)}`;
 }
 
+function cnvTypeLabel(type: CNVSegment['type']): string {
+  if (type === 'Amplification') return '扩增';
+  if (type === 'Deletion') return '缺失';
+  return '正常';
+}
+
+function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
+  if (type === 'Amplification') return 'danger';
+  if (type === 'Deletion') return 'info';
+  return 'neutral';
+}
+
 // 信息项组件
 function InfoItem({ label, value, link }: { label: string; value?: React.ReactNode; link?: string }) {
   if (value === undefined || value === null || value === '' || value === '-') {
@@ -235,7 +247,11 @@ function CNVPlotModal({
     // 高亮当前选中的CNV区域
     const highlightStart = padding.left + (variant.startPosition / chrSize) * plotWidth;
     const highlightEnd = padding.left + (variant.endPosition / chrSize) * plotWidth;
-    ctx.fillStyle = variant.type === 'Amplification' ? 'rgba(207,34,46,0.15)' : 'rgba(9,105,218,0.15)';
+    ctx.fillStyle = variant.type === 'Amplification'
+      ? 'rgba(207,34,46,0.15)'
+      : variant.type === 'Deletion'
+        ? 'rgba(9,105,218,0.15)'
+        : 'rgba(139,148,158,0.15)';
     ctx.fillRect(highlightStart, padding.top, Math.max(highlightEnd - highlightStart, 3), plotHeight);
 
     // Y轴范围和网格线
@@ -273,7 +289,11 @@ function CNVPlotModal({
 
       // 根据是否在CNV区域设置颜色
       if (point.inCNV) {
-        ctx.fillStyle = point.cnvType === 'Amplification' ? '#cf222e' : '#0969da';
+        ctx.fillStyle = point.cnvType === 'Amplification'
+          ? '#cf222e'
+          : point.cnvType === 'Deletion'
+            ? '#0969da'
+            : '#8b949e';
       } else {
         ctx.fillStyle = '#8b949e';
       }
@@ -327,7 +347,7 @@ function CNVPlotModal({
           <GripHorizontal className="w-4 h-4 text-fg-muted" />
           <BarChart3 className="w-4 h-4 text-fg-muted" />
           <span className="font-medium text-sm text-fg-default">{variant.chromosome} CNV图</span>
-          <Tag variant={variant.type === 'Amplification' ? 'danger' : 'info'}>
+          <Tag variant={cnvTypeVariant(variant.type)}>
             {variant.startPosition.toLocaleString()}-{variant.endPosition.toLocaleString()}
           </Tag>
         </div>
@@ -357,8 +377,9 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
   if (!isOpen || !variant) return null;
 
   const isExon = isCNVExon(variant);
-  const isAmplification = variant.type === 'Amplification';
   const showPlot = variantType === 'segment' && allSegments.length > 0;
+  const typeVariant = cnvTypeVariant(variant.type);
+  const typeLabel = cnvTypeLabel(variant.type);
 
   return (
     <>
@@ -376,8 +397,8 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
             <h3 className="text-base font-medium text-fg-default">
               {variantType === 'exon' ? 'CNV外显子详情' : 'CNV区域详情'}
             </h3>
-            <Tag variant={isAmplification ? 'danger' : 'info'}>
-              {isAmplification ? '扩增' : '缺失'}
+            <Tag variant={typeVariant}>
+              {typeLabel}
             </Tag>
           </div>
           <button
@@ -415,8 +436,8 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
             <InfoItem 
               label="类型" 
               value={
-                <Tag variant={isAmplification ? 'danger' : 'info'}>
-                  {isAmplification ? '扩增' : '缺失'}
+                <Tag variant={typeVariant}>
+                  {typeLabel}
                 </Tag>
               } 
             />

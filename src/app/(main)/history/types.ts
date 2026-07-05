@@ -42,13 +42,15 @@ export interface GroupedSNVIndel {
 }
 
 // ============ CNV片段分组位点 ============
+export type CNVType = 'Amplification' | 'Deletion' | 'Normal';
+
 export interface GroupedCNVSegment {
   groupId: string;
   chromosome: string;
   startPosition: number;
   endPosition: number;
   length: number;
-  type: 'Amplification' | 'Deletion';
+  type: CNVType;
   copyNumber: number;
   genes: string[];
   confidence: number;
@@ -67,7 +69,7 @@ export interface GroupedCNVExon {
   chromosome: string;
   startPosition: number;
   endPosition: number;
-  type: 'Amplification' | 'Deletion';
+  type: CNVType;
   copyNumber: number;
   ratio: number;
   confidence: number;

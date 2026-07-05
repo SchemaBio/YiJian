@@ -12,6 +12,18 @@ interface CNVExonHistoryTabProps {
   onFilterChange?: (state: HistoryTableFilterState) => void;
 }
 
+function cnvTypeLabel(type: GroupedCNVExon['type']): string {
+  if (type === 'Amplification') return '扩增';
+  if (type === 'Deletion') return '缺失';
+  return '正常';
+}
+
+function cnvTypeVariant(type: GroupedCNVExon['type']): 'warning' | 'info' | 'neutral' {
+  if (type === 'Deletion') return 'warning';
+  if (type === 'Amplification') return 'info';
+  return 'neutral';
+}
+
 export function CNVExonHistoryTab({
   filterState: externalFilterState,
   onFilterChange
@@ -73,8 +85,8 @@ export function CNVExonHistoryTab({
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => (
-        <Tag variant={row.type === 'Deletion' ? 'warning' : 'info'} className="justify-center">
-          {row.type === 'Deletion' ? '缺失' : '扩增'}
+        <Tag variant={cnvTypeVariant(row.type)} className="justify-center">
+          {cnvTypeLabel(row.type)}
         </Tag>
       ),
     },

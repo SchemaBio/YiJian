@@ -115,13 +115,15 @@ export interface SNVIndel extends VariantReviewStatus {
 }
 
 // ============ CNV变异(片段级别) ============
+export type CNVType = 'Amplification' | 'Deletion' | 'Normal';
+
 export interface CNVSegment extends VariantReviewStatus {
   id: string;
   chromosome: string;
   startPosition: number;
   endPosition: number;
   length: number;
-  type: 'Amplification' | 'Deletion';
+  type: CNVType;
   copyNumber: number;
   genes: string[];
   confidence: number;
@@ -136,7 +138,7 @@ export interface CNVExon extends VariantReviewStatus {
   chromosome: string;
   startPosition: number;
   endPosition: number;
-  type: 'Amplification' | 'Deletion';
+  type: CNVType;
   copyNumber: number;
   ratio: number;
   confidence: number;
@@ -570,7 +572,7 @@ export interface SectionScores {
 export interface CNVAssessment {
   id: string;
   cnvId: string;
-  cnvType: 'Amplification' | 'Deletion';
+  cnvType: CNVType;
   
   // 各部分证据选择
   criteria: LossAssessmentCriteria | GainAssessmentCriteria;

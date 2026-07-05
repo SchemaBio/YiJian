@@ -185,6 +185,7 @@ function params(type: ResultQueryType, filterState: TableFilterState): Record<st
 function toBackendCnvType(type: string): string {
   if (type === 'Amplification') return 'DUP';
   if (type === 'Deletion') return 'DEL';
+  if (type === 'Normal') return 'Normal';
   return type;
 }
 
@@ -193,13 +194,17 @@ function toBackendMEIType(type: string): string {
   return type;
 }
 
-function cnvType(type: unknown): 'Amplification' | 'Deletion' {
+function cnvType(type: unknown): CNVSegment['type'] {
   const value = s(type).toUpperCase();
-  return value === 'DUP' || value === 'AMPLIFICATION' || value === 'GAIN' ? 'Amplification' : 'Deletion';
+  if (value === 'DUP' || value === 'AMPLIFICATION' || value === 'GAIN') return 'Amplification';
+  if (value === 'DEL' || value === 'DELETION' || value === 'LOSS') return 'Deletion';
+  return 'Normal';
 }
 
 function copyNumber(type: unknown, copyRatio: unknown): number {
-  const inferred = Math.round(n(copyRatio, cnvType(type) === 'Amplification' ? 2 : 1) * 2);
+  const normalizedType = cnvType(type);
+  const fallbackRatio = normalizedType === 'Amplification' ? 2 : normalizedType === 'Deletion' ? 1 : 1;
+  const inferred = Math.round(n(copyRatio, fallbackRatio) * 2);
   return Math.max(0, inferred);
 }
 
@@ -371,7 +376,7 @@ function mapMEI(row: BackendRow): MEIVariant {
     frequency: n(row.gnomadAF, undefined as unknown as number),
     acmgClassification: undefined,
     clinvarId: s(row.clinvarId),
-    diseaseAssociation: s(row.clinvarDN),
+    diseaseAssociation: s(row.clinvarDn ?? row.clinvarDN),
     notes: s(row.confidence),
     ...normalizeReview(row),
   };
@@ -386,7 +391,7 @@ function mapMT(row: BackendRow): MitochondrialVariant {
     gene: s(row.mtGene ?? row.gene, '-'),
     heteroplasmy: n(row.heteroplasmy),
     pathogenicity: pathogenicity(row),
-    associatedDisease: s(row.mitophenPhenotypes ?? row.clinvarDN, '-'),
+    associatedDisease: s(row.associatedDisease ?? row.mitophenPhenotypes ?? row.clinvarDn ?? row.clinvarDN, '-'),
     haplogroup: s(row.haplogroup),
     ...normalizeReview(row),
   };

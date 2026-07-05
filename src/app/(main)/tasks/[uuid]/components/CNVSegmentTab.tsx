@@ -19,6 +19,18 @@ interface CNVSegmentTabProps {
   onFilterChange?: (state: TableFilterState) => void;
 }
 
+function cnvTypeLabel(type: CNVSegment['type']): string {
+  if (type === 'Amplification') return '扩增';
+  if (type === 'Deletion') return '缺失';
+  return '正常';
+}
+
+function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
+  if (type === 'Amplification') return 'danger';
+  if (type === 'Deletion') return 'info';
+  return 'neutral';
+}
+
 export function CNVSegmentTab({ 
   taskId, 
   filterState: externalFilterState,
@@ -65,6 +77,7 @@ export function CNVSegmentTab({
 
   // 打开评估面板
   const handleOpenAssessmentPanel = React.useCallback((variant: CNVSegment) => {
+    if (variant.type === 'Normal') return;
     setAssessmentVariant(variant);
     initializeAssessment(variant);
     setAssessmentPanelOpen(true);
@@ -226,10 +239,9 @@ export function CNVSegmentTab({
       id: 'type',
       header: '类型',
       accessor: (row) => {
-        const isAmp = row.type === 'Amplification';
         return (
-          <Tag variant={isAmp ? 'danger' : 'info'}>
-            {isAmp ? '扩增' : '缺失'}
+          <Tag variant={cnvTypeVariant(row.type)}>
+            {cnvTypeLabel(row.type)}
           </Tag>
         );
       },
@@ -240,6 +252,9 @@ export function CNVSegmentTab({
       id: 'pathogenicity',
       header: '致病性',
       accessor: (row) => {
+        if (row.type === 'Normal') {
+          return <Tag variant="neutral">不适用</Tag>;
+        }
         const cachedAssessment = getAssessmentForCNV(row.id);
         // 如果有缓存的评估结果，使用缓存；否则显示默认VUS
         const classification = cachedAssessment?.classification ?? 'VUS';
@@ -305,6 +320,7 @@ export function CNVSegmentTab({
             <option value="">全部类型</option>
             <option value="Amplification">扩增</option>
             <option value="Deletion">缺失</option>
+            <option value="Normal">正常</option>
           </select>
         </div>
 

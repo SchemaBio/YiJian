@@ -117,7 +117,9 @@ function acmg(value: unknown): ACMGClassification {
 
 function cnvType(value: unknown): GroupedCNVSegment['type'] {
   const normalized = s(value).toUpperCase();
-  return normalized === 'DUP' || normalized === 'AMPLIFICATION' || normalized === 'GAIN' ? 'Amplification' : 'Deletion';
+  if (normalized === 'DUP' || normalized === 'AMPLIFICATION' || normalized === 'GAIN') return 'Amplification';
+  if (normalized === 'DEL' || normalized === 'DELETION' || normalized === 'LOSS') return 'Deletion';
+  return 'Normal';
 }
 
 function strStatus(value: unknown): STRStatus {
@@ -270,7 +272,7 @@ function mapMT(row: BackendRow): GroupedMTVariant {
     alt: s(row.alt),
     gene: s(row.gene),
     pathogenicity: acmg(row.pathogenicity ?? row.clinvarSig ?? row.clinvarSignificance),
-    associatedDisease: s(row.associatedDisease ?? row.mitophenPhenotypes ?? row.clinvarDN),
+    associatedDisease: s(row.associatedDisease ?? row.mitophenPhenotypes ?? row.clinvarDn ?? row.clinvarDN),
     haplogroup: s(row.haplogroup) || undefined,
     minHeteroplasmy: n(row.minHeteroplasmy),
     maxHeteroplasmy: n(row.maxHeteroplasmy),

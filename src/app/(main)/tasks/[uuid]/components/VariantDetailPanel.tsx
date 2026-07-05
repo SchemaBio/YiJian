@@ -300,6 +300,7 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
   const [interpretation, setInterpretation] = React.useState('');
+  const canEditACMG = Boolean(onUpdateClassification);
 
   // 当 variant 变化时重置编辑状态
   React.useEffect(() => {
@@ -331,10 +332,14 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
 
   // 保存 ACMG 分类
   const handleSaveACMG = (classification: ACMGClassification, criteria: string[]) => {
+    if (!onUpdateClassification) {
+      setIsEditingACMG(false);
+      return;
+    }
     setLocalClassification(classification);
     setLocalCriteria(criteria);
     setIsEditingACMG(false);
-    onUpdateClassification?.(variant.id, classification, criteria);
+    onUpdateClassification(variant.id, classification, criteria);
   };
 
   return (
@@ -431,7 +436,7 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
             icon={FileText} 
             title="ACMG 分类" 
             action={
-              !isEditingACMG && (
+              canEditACMG && !isEditingACMG && (
                 <button
                   onClick={() => setIsEditingACMG(true)}
                   className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"

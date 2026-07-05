@@ -19,6 +19,18 @@ interface CNVExonTabProps {
   onFilterChange?: (state: TableFilterState) => void;
 }
 
+function cnvTypeLabel(type: CNVExon['type']): string {
+  if (type === 'Amplification') return '扩增';
+  if (type === 'Deletion') return '缺失';
+  return '正常';
+}
+
+function cnvTypeVariant(type: CNVExon['type']): 'danger' | 'info' | 'neutral' {
+  if (type === 'Amplification') return 'danger';
+  if (type === 'Deletion') return 'info';
+  return 'neutral';
+}
+
 export function CNVExonTab({ 
   taskId, 
   filterState: externalFilterState,
@@ -65,6 +77,7 @@ export function CNVExonTab({
 
   // 打开评估面板
   const handleOpenAssessmentPanel = React.useCallback((variant: CNVExon) => {
+    if (variant.type === 'Normal') return;
     setAssessmentVariant(variant);
     initializeAssessment(variant);
     setAssessmentPanelOpen(true);
@@ -224,10 +237,9 @@ export function CNVExonTab({
       id: 'type',
       header: '类型',
       accessor: (row) => {
-        const isAmp = row.type === 'Amplification';
         return (
-          <Tag variant={isAmp ? 'danger' : 'info'}>
-            {isAmp ? '扩增' : '缺失'}
+          <Tag variant={cnvTypeVariant(row.type)}>
+            {cnvTypeLabel(row.type)}
           </Tag>
         );
       },
@@ -238,6 +250,9 @@ export function CNVExonTab({
       id: 'pathogenicity',
       header: '致病性',
       accessor: (row) => {
+        if (row.type === 'Normal') {
+          return <Tag variant="neutral">不适用</Tag>;
+        }
         const cachedAssessment = getAssessmentForCNV(row.id);
         const classification = cachedAssessment?.classification ?? 'VUS';
         const score = cachedAssessment?.totalScore ?? 0;

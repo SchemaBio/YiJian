@@ -12,6 +12,18 @@ interface CNVSegmentHistoryTabProps {
   onFilterChange?: (state: HistoryTableFilterState) => void;
 }
 
+function cnvTypeLabel(type: GroupedCNVSegment['type']): string {
+  if (type === 'Amplification') return '扩增';
+  if (type === 'Deletion') return '缺失';
+  return '正常';
+}
+
+function cnvTypeVariant(type: GroupedCNVSegment['type']): 'warning' | 'info' | 'neutral' {
+  if (type === 'Deletion') return 'warning';
+  if (type === 'Amplification') return 'info';
+  return 'neutral';
+}
+
 export function CNVSegmentHistoryTab({
   filterState: externalFilterState,
   onFilterChange
@@ -72,8 +84,8 @@ export function CNVSegmentHistoryTab({
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedCNVSegment) => (
-        <Tag variant={row.type === 'Deletion' ? 'warning' : 'info'} className="justify-center">
-          {row.type === 'Deletion' ? '缺失' : '扩增'}
+        <Tag variant={cnvTypeVariant(row.type)} className="justify-center">
+          {cnvTypeLabel(row.type)}
         </Tag>
       ),
     },
