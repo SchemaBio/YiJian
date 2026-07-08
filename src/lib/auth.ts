@@ -3,7 +3,7 @@ import type {
   LoginRequest,
   LoginResponse,
 } from '@/types/auth';
-import type { Organization, SystemRole, UserOrganizationInfo } from '@/types/user';
+import type { Organization, SystemRole, User, UserOrganizationInfo } from '@/types/user';
 
 interface BackendOrganization {
   id: string;
@@ -39,7 +39,7 @@ function mapSystemRole(role: string): SystemRole {
   return role === 'PLATFORM_ADMIN' || role === 'SUPER_ADMIN' ? 'PLATFORM_ADMIN' : 'ORG_USER';
 }
 
-function mapUser(user: BackendUser) {
+function mapUser(user: BackendUser): User {
   return {
     id: user.id,
     email: user.email,
@@ -120,6 +120,15 @@ export const authApi = {
 
   getCurrentUser: async () => {
     const backendData = await api.get<BackendUser>('/v1/auth/me', { coreApi: false });
+    return mapUser(backendData);
+  },
+
+  updateProfile: async (data: { name: string }): Promise<User> => {
+    const backendData = await api.put<BackendUser>(
+      '/v1/auth/me',
+      { name: data.name },
+      { coreApi: false }
+    );
     return mapUser(backendData);
   },
 

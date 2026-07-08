@@ -1,6 +1,7 @@
 import { api } from '@/lib/api';
 import type {
   ACMGClassification,
+  CNVAssessment,
   CNVExon,
   CNVSegment,
   MEIVariant,
@@ -466,6 +467,53 @@ export const getMEIs = (taskId: string, filterState: TableFilterState) => getPag
 export const getMitochondrialVariants = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'mt', filterState, mapMT);
 export const getUPDRegions = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'upd', filterState, mapUPD);
 export const getROHRegions = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'roh', filterState, mapROH);
+
+type CNVAssessmentType = 'cnv-segment' | 'cnv-exon';
+
+interface BackendCNVAssessment {
+  variant_id?: string;
+  variantId?: string;
+  assessment?: CNVAssessment;
+}
+
+export async function listCNVAssessments(
+  taskId: string,
+  type: CNVAssessmentType,
+  variantIds: string[] = []
+): Promise<Record<string, CNVAssessment>> {
+  const response = await api.get<BackendCNVAssessment[] | BackendPage<BackendCNVAssessment>>(
+    `/v1/tasks/${encodeURIComponent(taskId)}/results/cnv-assessments`,
+    {
+      params: {
+        type,
+        ...(variantIds.length > 0 ? { variant_ids: variantIds.join(',') } : {}),
+      },
+    }
+  );
+  const items = Array.isArray(response) ? response : response.items ?? response.data ?? [];
+  return items.reduce<Record<string, CNVAssessment>>((acc, item) => {
+    const assessment = item.assessment;
+    const id = assessment?.cnvId ?? s(item.variant_id ?? item.variantId);
+    if (id && assessment) acc[id] = assessment;
+    return acc;
+  }, {});
+}
+
+export async function saveCNVAssessment(
+  taskId: string,
+  type: CNVAssessmentType,
+  variantId: string,
+  assessment: CNVAssessment
+): Promise<CNVAssessment> {
+  const response = await api.put<BackendCNVAssessment>(
+    `/v1/tasks/${encodeURIComponent(taskId)}/results/cnv-assessments/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}`,
+    { assessment }
+  );
+  if (!response.assessment) {
+    throw new Error('Octopus did not return saved CNV assessment');
+  }
+  return response.assessment;
+}
 
 export async function getGeneLists(): Promise<GeneListOption[]> {
   try {

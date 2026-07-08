@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { CNVExon, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getCNVExons, reportVariant, reviewVariant } from '../result-api';
+import { getCNVExons, listCNVAssessments, reportVariant, reviewVariant, saveCNVAssessment } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
@@ -39,6 +39,8 @@ export function CNVExonTab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<CNVExon> | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [assessmentError, setAssessmentError] = React.useState<string | null>(null);
+  const [assessmentSaving, setAssessmentSaving] = React.useState(false);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
 
   // 详情面板状态
@@ -55,6 +57,7 @@ export function CNVExonTab({
     updateCriteria, 
     resetAssessment, 
     saveAssessment,
+    loadAssessment,
     initializeAssessment,
   } = useCNVAssessment(assessmentVariant);
 
@@ -79,9 +82,15 @@ export function CNVExonTab({
   const handleOpenAssessmentPanel = React.useCallback((variant: CNVExon) => {
     if (variant.type === 'Normal') return;
     setAssessmentVariant(variant);
-    initializeAssessment(variant);
+    const cached = assessmentCache[variant.id];
+    if (cached) {
+      loadAssessment(cached);
+    } else {
+      initializeAssessment(variant);
+    }
     setAssessmentPanelOpen(true);
-  }, [initializeAssessment]);
+    setAssessmentError(null);
+  }, [assessmentCache, initializeAssessment, loadAssessment]);
 
   // 关闭评估面板
   const handleCloseAssessmentPanel = React.useCallback(() => {
@@ -89,14 +98,25 @@ export function CNVExonTab({
   }, []);
 
   // 保存评估
-  const handleSaveAssessment = React.useCallback((savedAssessment: CNVAssessment) => {
-    setAssessmentCache(prev => ({
-      ...prev,
-      [savedAssessment.cnvId]: savedAssessment,
-    }));
-    saveAssessment();
-    setAssessmentPanelOpen(false);
-  }, [saveAssessment]);
+  const handleSaveAssessment = React.useCallback(async (_savedAssessment: CNVAssessment) => {
+    if (!assessmentVariant) return;
+    const finalized = saveAssessment();
+    if (!finalized) return;
+    setAssessmentSaving(true);
+    setAssessmentError(null);
+    try {
+      const persisted = await saveCNVAssessment(taskId, 'cnv-exon', assessmentVariant.id, finalized);
+      setAssessmentCache(prev => ({
+        ...prev,
+        [persisted.cnvId]: persisted,
+      }));
+      setAssessmentPanelOpen(false);
+    } catch (err) {
+      setAssessmentError(err instanceof Error ? err.message : '保存 CNV 评估失败');
+    } finally {
+      setAssessmentSaving(false);
+    }
+  }, [assessmentVariant, saveAssessment, taskId]);
 
   // 获取CNV的评估结果
   const getAssessmentForCNV = React.useCallback((cnvId: string): CNVAssessment | null => {
@@ -107,11 +127,19 @@ export function CNVExonTab({
   React.useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const data = await getCNVExons(taskId, filterState);
-      setResult(data);
-      setLoading(false);
+      try {
+        const data = await getCNVExons(taskId, filterState);
+        setResult(data);
+        const ids = data.data.filter(item => item.type !== 'Normal').map(item => item.id);
+        if (ids.length > 0) {
+          const saved = await listCNVAssessments(taskId, 'cnv-exon', ids);
+          setAssessmentCache(prev => ({ ...prev, ...saved }));
+        }
+      } finally {
+        setLoading(false);
+      }
     }
-    loadData();
+    void loadData();
   }, [taskId, filterState]);
 
   const handleSearch = React.useCallback((query: string) => {
@@ -374,6 +402,14 @@ export function CNVExonTab({
       />
 
       {/* CNV 评估面板 */}
+      {assessmentError && (
+        <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+          {assessmentError}
+        </div>
+      )}
+      {assessmentSaving && (
+        <div className="mt-3 text-sm text-fg-muted">???? CNV ??...</div>
+      )}
       <CNVAssessmentPanel
         cnv={assessmentVariant}
         assessment={assessment}

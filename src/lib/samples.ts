@@ -212,3 +212,24 @@ export async function updateSampleMatchedPair(
   }
   return updated;
 }
+
+export async function clearSampleMatchedPair(id: string): Promise<SampleDetail> {
+  const response = await api.delete<unknown>(`/v1/samples/${encodeURIComponent(id)}/matched-pair`);
+  const detail = normalizeSampleDetail(response);
+  if (!detail.id) {
+    throw new Error('Sample match was cleared but the response could not be parsed');
+  }
+  return detail;
+}
+
+export async function bindSampleMatchedPairFromUploadJob(id: string, uploadJobId: string): Promise<SampleDetail> {
+  const response = await api.post<unknown>(
+    `/v1/samples/${encodeURIComponent(id)}/matched-pair/upload-job`,
+    { upload_job_id: uploadJobId.trim() }
+  );
+  const detail = normalizeSampleDetail(response);
+  if (!detail.id) {
+    throw new Error('Sample match was updated but the response could not be parsed');
+  }
+  return detail;
+}

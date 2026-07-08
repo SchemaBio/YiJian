@@ -124,7 +124,7 @@ export class PageAgentWrapper {
       const baseURL = getProxyBaseURL();
 
       this.agent = new PageAgent({
-        model: this.config.openaiModel || 'gpt-4',
+        model: this.config.openaiModel || 'gpt-4o',
         baseURL,
         apiKey: '', // real LLM key is added by Squid; frontend authenticates via cookies
         customFetch: squidAIProxyFetch,

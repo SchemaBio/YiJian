@@ -55,6 +55,37 @@ export interface AdminOrganization {
   is_active: boolean;
 }
 
+export interface ProvisionOrganizationInput {
+  name: string;
+  slug: string;
+  description?: string;
+  max_concurrent_tasks?: number;
+  admin_email: string;
+  admin_password: string;
+  admin_name: string;
+}
+
+export interface ProvisionOrganizationResult {
+  organization: AdminOrganization;
+  account: {
+    id: string;
+    email: string;
+    name: string;
+    system_role: string;
+    org_id: string;
+    is_active: boolean;
+  };
+}
+
+export interface UpdateAdminOrganizationInput {
+  name?: string;
+  description?: string;
+  max_concurrent_tasks?: number;
+  balance_alert_threshold?: number;
+  storage_quota_bytes?: number;
+  is_active?: boolean;
+}
+
 export interface AdminBillingConfig {
   credits_per_minute: number;
   credit_rate_multiplier: number;
@@ -116,6 +147,17 @@ export async function listAdminOrganizations(): Promise<AdminOrganization[]> {
     { coreApi: false }
   );
   return Array.isArray(data) ? data : data.organizations ?? [];
+}
+
+export async function provisionOrganization(input: ProvisionOrganizationInput): Promise<ProvisionOrganizationResult> {
+  return api.post<ProvisionOrganizationResult>('/v1/admin/orgs', input, { coreApi: false });
+}
+
+export async function updateAdminOrganization(
+  orgId: string,
+  input: UpdateAdminOrganizationInput
+): Promise<AdminOrganization> {
+  return api.put<AdminOrganization>(`/v1/admin/orgs/${encodeURIComponent(orgId)}`, input, { coreApi: false });
 }
 
 export async function getAdminBillingConfig(): Promise<AdminBillingConfig> {

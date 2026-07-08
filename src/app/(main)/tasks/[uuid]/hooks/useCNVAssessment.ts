@@ -125,8 +125,8 @@ export function useCNVAssessment(cnv: CNVSegment | CNVExon | null) {
     setAssessment(savedAssessment);
     setOriginalAssessment(savedAssessment);
 
-    // Octopus/Squid 当前没有 CNV assessment 持久化接口；这里只返回
-    // 当前页面内存态，避免伪造“已保存到后端”的状态。
+    // 返回已规范化的评估对象；调用方负责写入 Octopus
+    // `/results/cnv-assessments/:type/:vid`，避免 Hook 内部耦合任务 ID。
 
     return savedAssessment;
   }, [assessment]);

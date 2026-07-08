@@ -88,7 +88,9 @@ function isValidReportEndpoint(value: string): boolean {
 }
 
 async function fetchReportTemplates(): Promise<ReportTemplate[]> {
-  const response = await api.get<MaybeList<unknown>>('/v1/report-templates');
+  const response = await api.get<MaybeList<unknown>>('/v1/report-templates', {
+    params: { include_inactive: 'true' },
+  });
   return unwrapList(response).map(normalizeTemplate).filter(template => template.id && template.name);
 }
 
@@ -100,6 +102,25 @@ async function createReportTemplate(data: FormData): Promise<ReportTemplate> {
     ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
   });
   return normalizeTemplate(response);
+}
+
+async function updateReportTemplate(id: string, data: FormData): Promise<ReportTemplate> {
+  const response = await api.put<unknown>(`/v1/report-templates/${encodeURIComponent(id)}`, {
+    name: data.name.trim(),
+    description: data.description.trim(),
+    apiEndpoint: data.apiEndpoint.trim(),
+    ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
+  });
+  return normalizeTemplate(response);
+}
+
+async function setReportTemplateActive(id: string, isActive: boolean): Promise<ReportTemplate> {
+  const response = await api.put<unknown>(`/v1/report-templates/${encodeURIComponent(id)}/status`, { isActive });
+  return normalizeTemplate(response);
+}
+
+async function deleteReportTemplate(id: string): Promise<void> {
+  await api.delete<void>(`/v1/report-templates/${encodeURIComponent(id)}`);
 }
 
 interface FormData {
@@ -185,20 +206,55 @@ export default function ReportTemplatesPage() {
   };
 
   const handleEdit = (template: ReportTemplate) => {
-    setError('当前 Octopus 仅暴露报告模板列表与管理员新建接口，暂不支持前端编辑。');
+    if (!template.apiEndpoint) {
+      setError('当前账号只能读取公开模板摘要，无法编辑后端未返回的 API 端点。请使用平台管理员账号。');
+      return;
+    }
+    setEditingId(template.id);
+    setFormData({
+      name: template.name,
+      description: template.description,
+      apiEndpoint: template.apiEndpoint,
+      apiKey: '',
+    });
+    setApiTestResult(null);
+    setNameError(null);
+    setError(null);
+    setIsModalOpen(true);
   };
 
   const handleDelete = (template: ReportTemplate) => {
     setDeleteTarget(template);
   };
 
-  const confirmDelete = () => {
-    setError('当前 Octopus 暂未提供报告模板删除接口，未执行删除。');
-    setDeleteTarget(null);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteReportTemplate(deleteTarget.id);
+      setTemplates((prev) => prev.filter((template) => template.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error('删除报告模板失败', err);
+      setError(err instanceof Error ? err.message : '删除报告模板失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleStatus = (template: ReportTemplate) => {
-    setError('当前 Octopus 暂未提供报告模板启停接口，未修改状态。');
+  const handleToggleStatus = async (template: ReportTemplate) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await setReportTemplateActive(template.id, template.status !== 'active');
+      setTemplates((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      console.error('更新报告模板状态失败', err);
+      setError(err instanceof Error ? err.message : '更新报告模板状态失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTestApi = async () => {
@@ -224,17 +280,24 @@ export default function ReportTemplatesPage() {
       return;
     }
 
-    if (editingId) {
-      setError('当前 Octopus 暂未提供报告模板编辑接口，未保存修改。');
-    } else {
-      try {
+    setLoading(true);
+    setError(null);
+    try {
+      if (editingId) {
+        const updated = await updateReportTemplate(editingId, formData);
+        setTemplates((prev) => prev.map((template) => (template.id === updated.id ? updated : template)));
+      } else {
         const newTemplate = await createReportTemplate(formData);
         setTemplates((prev) => [newTemplate, ...prev]);
-        setIsModalOpen(false);
-      } catch (err) {
-        console.error('创建报告模板失败', err);
-        setError('创建报告模板失败：需要管理员权限，或请稍后重试');
       }
+      setIsModalOpen(false);
+      setEditingId(null);
+      setFormData(initialFormData);
+    } catch (err) {
+      console.error('保存报告模板失败', err);
+      setError(err instanceof Error ? err.message : '保存报告模板失败：需要管理员权限，或请稍后重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -470,7 +533,7 @@ export default function ReportTemplatesPage() {
               <ul className="list-disc list-inside space-y-1">
                 <li>模板名称必须唯一，用于系统内部标识</li>
                 <li>API 端点需要实现报告生成接口规范</li>
-                <li>当前后端仅支持管理员新建；启停与删除需后端提供对应接口后再开放</li>
+                <li>管理员可通过 Octopus 创建、编辑、启停和删除未启用模板；API Key 只提交给后端且不会回显</li>
               </ul>
             </div>
           </div>

@@ -43,9 +43,10 @@ function normalizeStoredConfig(value: unknown): AIConfig {
   }
 
   const raw = value as Partial<AIConfig>;
+  const model = typeof raw.openaiModel === 'string' ? raw.openaiModel.trim() : '';
   return {
-    openaiModel: typeof raw.openaiModel === 'string' && raw.openaiModel.trim()
-      ? raw.openaiModel.trim()
+    openaiModel: model && model !== 'gpt-4'
+      ? model
       : DEFAULT_AI_CONFIG.openaiModel,
     aiAssistantEnabled: typeof raw.aiAssistantEnabled === 'boolean'
       ? raw.aiAssistantEnabled

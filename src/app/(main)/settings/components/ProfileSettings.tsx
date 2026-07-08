@@ -3,12 +3,13 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button, FormItem, Input, Tag } from '@schema/ui-kit';
-import { Shield, UserRound } from 'lucide-react';
+import { Loader2, Save, Shield, UserRound } from 'lucide-react';
 import type { User, UserOrganizationInfo } from '@/types/user';
 
 interface ProfileSettingsProps {
   user: User;
   currentOrg: UserOrganizationInfo | null;
+  onUpdateProfile: (data: { name: string }) => Promise<User>;
 }
 
 function roleLabel(role: User['systemRole']): string {
@@ -22,7 +23,37 @@ function formatTime(value?: string): string {
   return date.toLocaleString('zh-CN', { hour12: false });
 }
 
-export function ProfileSettings({ user, currentOrg }: ProfileSettingsProps) {
+export function ProfileSettings({ user, currentOrg, onUpdateProfile }: ProfileSettingsProps) {
+  const [name, setName] = React.useState(user.name);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [message, setMessage] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setName(user.name);
+  }, [user.name]);
+
+  const handleSave = async () => {
+    const nextName = name.trim();
+    if (!nextName) {
+      setError('姓名不能为空');
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await onUpdateProfile({ name: nextName });
+      setMessage('个人资料已保存');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存个人资料失败');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isDirty = name.trim() !== user.name;
+
   return (
     <div className="yj-panel yj-form-card-wide space-y-8">
       <section>
@@ -32,7 +63,7 @@ export function ProfileSettings({ user, currentOrg }: ProfileSettingsProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
           <FormItem label="姓名">
-            <Input value={user.name} disabled />
+            <Input value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
           </FormItem>
           <FormItem label="邮箱">
             <Input type="email" value={user.email} disabled />
@@ -54,6 +85,17 @@ export function ProfileSettings({ user, currentOrg }: ProfileSettingsProps) {
             <Input value={formatTime(user.createdAt)} disabled />
           </FormItem>
         </div>
+        <div className="mt-4 flex items-center gap-3">
+          <Button variant="primary" onClick={() => void handleSave()} disabled={!isDirty || isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            保存资料
+          </Button>
+          {message && <span className="text-sm text-success-fg">{message}</span>}
+          {error && <span className="text-sm text-danger-fg">{error}</span>}
+        </div>
+        <p className="text-xs text-fg-muted mt-3">
+          姓名修改会调用 Squid `PUT /api/v1/auth/me`，邮箱、角色和审批状态由后端权限策略控制。
+        </p>
       </section>
 
       <section>
@@ -70,7 +112,7 @@ export function ProfileSettings({ user, currentOrg }: ProfileSettingsProps) {
           </FormItem>
         </div>
         <p className="text-xs text-fg-muted mt-3">
-          个人资料以 Squid `/api/v1/auth/me` 和 `/api/v1/orgs/me` 为准；当前后端未开放普通用户自助修改资料接口，前端不再伪造本地保存成功。
+          机构信息以 Squid `/api/v1/orgs/me` 为准；普通用户不能在前端伪造机构状态变更。
         </p>
       </section>
 

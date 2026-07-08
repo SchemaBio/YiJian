@@ -36,7 +36,7 @@ export interface ConversationMessage {
  * 默认 AI 配置
  */
 export const DEFAULT_AI_CONFIG: AIConfig = {
-  openaiModel: 'gpt-4',
+  openaiModel: 'gpt-4o',
   aiAssistantEnabled: true,
 };
 

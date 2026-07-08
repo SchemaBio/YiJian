@@ -5,7 +5,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { ProfileSettings } from './components/ProfileSettings';
 
 export default function SettingsProfilePage() {
-  const { user, currentOrg, isLoading } = useAuth();
+  const { user, currentOrg, isLoading, updateProfile } = useAuth();
 
   if (isLoading) {
     return (
@@ -32,7 +32,7 @@ export default function SettingsProfilePage() {
       <div className="yj-page-header">
         <h2 className="yj-page-title">个人设置</h2>
       </div>
-      <ProfileSettings user={user} currentOrg={currentOrg} />
+      <ProfileSettings user={user} currentOrg={currentOrg} onUpdateProfile={updateProfile} />
     </PageContent>
   );
 }

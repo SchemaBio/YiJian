@@ -387,7 +387,6 @@ export interface PresignedUploadResult {
   job_id: string;
   file_id: string;
   upload_url: string;
-  storage_key: string;
   storage_type: string;
 }
 
@@ -395,7 +394,6 @@ interface UploadJobFile {
   id: string;
   file_name?: string;
   read_type?: 'read1' | 'read2' | 'single' | 'bed';
-  storage_key?: string;
   presigned_url?: string;
 }
 
@@ -479,7 +477,6 @@ export async function requestPresignedUploadUrl(
     job_id: job.id,
     file_id: file.id,
     upload_url: file.presigned_url || backendUploadURL(file.id),
-    storage_key: file.storage_key || '',
     storage_type: file.presigned_url ? 'presigned' : 'local',
   };
 }
@@ -521,7 +518,6 @@ export async function requestPairedUploadJob(r1: File, r2: File, sampleId?: stri
     job_id: job.id,
     file_id: file.id,
     upload_url: file.presigned_url || backendUploadURL(file.id),
-    storage_key: file.storage_key || '',
     storage_type: file.presigned_url ? 'presigned' : 'local',
     read_type: readType,
   });

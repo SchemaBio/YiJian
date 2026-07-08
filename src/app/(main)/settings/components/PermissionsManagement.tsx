@@ -212,7 +212,7 @@ export function PermissionsManagement() {
           ))}
         </div>
         <p className="text-xs text-fg-muted mt-3">
-          当前页面已对齐 Squid 的 `/api/v1/users` 平台管理员接口；后端未提供“额外权限/新增用户”接口时，前端不再伪造本地权限状态。
+          当前页面已对齐 Squid 的 `/api/v1/users` 平台管理员接口；SaaS 账号仍按“机构开通/注册审批”流转，不在前端伪造额外权限或本地新增账号状态。
         </p>
       </div>
 

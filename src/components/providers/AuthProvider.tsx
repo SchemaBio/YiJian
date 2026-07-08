@@ -38,6 +38,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: { name: string }) => Promise<User>;
   switchOrganization: (orgId: string) => Promise<void>;
   hasOrgRole: (role: OrgRole) => boolean;
   hasAnyOrgRole: (...roles: OrgRole[]) => boolean;
@@ -175,6 +176,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [resetSession]);
 
+  const updateProfile = useCallback(async (data: { name: string }): Promise<User> => {
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
+    if (DEV_MOCK_AUTH) {
+      const nextUser = { ...user, name: data.name, updatedAt: new Date().toISOString() };
+      setUser(nextUser);
+      persistDevAuthState(nextUser, organizations, currentOrg);
+      return nextUser;
+    }
+    const nextUser = await authApi.updateProfile(data);
+    setUser(nextUser);
+    persistDevAuthState(nextUser, organizations, currentOrg);
+    return nextUser;
+  }, [currentOrg, organizations, user]);
+
   const switchOrganization = useCallback(async (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
@@ -219,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!user,
     login,
     logout,
+    updateProfile,
     switchOrganization,
     hasOrgRole,
     hasAnyOrgRole,

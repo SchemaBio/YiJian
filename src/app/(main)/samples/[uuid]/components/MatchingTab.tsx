@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader } from '@schema/ui-kit';
 import { AlertCircle, CheckCircle, Database, Link2, Link2Off, RefreshCw } from 'lucide-react';
-import { updateSampleMatchedPair } from '@/lib/samples';
+import { bindSampleMatchedPairFromUploadJob, clearSampleMatchedPair, updateSampleMatchedPair } from '@/lib/samples';
 import type { SampleDetail } from '../../types';
 
 interface MatchingTabProps {
@@ -21,30 +21,48 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
   const [unmatchConfirmOpen, setUnmatchConfirmOpen] = React.useState(false);
   const [r1Path, setR1Path] = React.useState(sample.matchedPair?.r1Path ?? '');
   const [r2Path, setR2Path] = React.useState(sample.matchedPair?.r2Path ?? '');
+  const [uploadJobId, setUploadJobId] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
 
   React.useEffect(() => {
     setR1Path(sample.matchedPair?.r1Path ?? '');
     setR2Path(sample.matchedPair?.r2Path ?? '');
+    setUploadJobId('');
     setError('');
   }, [sample.id, sample.matchedPair?.r1Path, sample.matchedPair?.r2Path]);
 
-  const canSave = r1Path.trim() !== '' && r2Path.trim() !== '';
+  const canSave = uploadJobId.trim() !== '' || (r1Path.trim() !== '' && r2Path.trim() !== '');
 
   const handleSaveMatch = async () => {
     if (!canSave) return;
     setSaving(true);
     setError('');
     try {
-      const updated = await updateSampleMatchedPair(sample.id, {
-        r1Path: r1Path.trim(),
-        r2Path: r2Path.trim(),
-      });
+      const updated = uploadJobId.trim()
+        ? await bindSampleMatchedPairFromUploadJob(sample.id, uploadJobId.trim())
+        : await updateSampleMatchedPair(sample.id, {
+            r1Path: r1Path.trim(),
+            r2Path: r2Path.trim(),
+          });
       onSampleUpdated?.(updated);
       setMatchModalOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存测序数据匹配失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearMatch = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await clearSampleMatchedPair(sample.id);
+      onSampleUpdated?.(updated);
+      setUnmatchConfirmOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '解除测序数据匹配失败');
     } finally {
       setSaving(false);
     }
@@ -106,7 +124,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
               <div className="flex-1">
                 <div className="text-sm font-medium text-fg-default">未匹配测序数据</div>
                 <div className="text-xs text-fg-muted mt-1">
-                  Octopus 当前未提供“可用测序池”匹配接口；可在此写入已上传文件的 storage key 或后端允许的文件路径。
+                  推荐填写 Paired FASTQ upload job ID 由后端安全绑定；也可写入后端允许的文件路径。
                 </div>
               </div>
               <Button
@@ -124,8 +142,8 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         <div className="mt-3 flex items-start gap-2 p-3 bg-canvas-default rounded">
           <AlertCircle className="w-4 h-4 text-fg-muted mt-0.5" />
           <div className="text-xs text-fg-muted leading-5">
-            `/upload/jobs` 可创建和查询上传任务，但当前 Octopus 列表响应不返回可直接写入样本的 `storage_key`。
-            因此本页不再伪造“可用测序数据列表”，避免把前端本地状态误当成真实匹配关系。
+            Paired FASTQ 上传完成后可直接填写 Upload job ID，Octopus 会在后端解析 read1/read2 文件并写入样本。
+            解除匹配会调用 Octopus `DELETE /api/v1/samples/:id/matched-pair`，不再通过前端本地状态伪造成功。
           </div>
         </div>
       </div>
@@ -144,6 +162,22 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
               为样本 <span className="font-mono text-fg-default">{sample.internalId || sample.id}</span> 写入 R1/R2。
               后端会按当前用户/组织权限校验文件引用。
             </p>
+            <div className="space-y-2 rounded-md border border-border-default bg-canvas-subtle p-3">
+              <label className="text-sm font-medium text-fg-default">Upload job ID（推荐）</label>
+              <Input
+                value={uploadJobId}
+                onChange={(e) => setUploadJobId(e.target.value)}
+                placeholder="Paired FASTQ upload job UUID"
+              />
+              <p className="text-xs text-fg-muted">
+                填写任务创建页 Paired FASTQ upload 返回的 job ID 后，Octopus 会在服务端绑定已完成的 read1/read2 文件；无需暴露服务端存储路径。
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-fg-muted">
+              <span className="h-px flex-1 bg-border-default" />
+              <span>或手动填写后端允许的文件路径</span>
+              <span className="h-px flex-1 bg-border-default" />
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-fg-default">R1 storage key / 文件路径</label>
               <Input
@@ -178,19 +212,24 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
       </Modal>
 
       <Modal open={unmatchConfirmOpen} onOpenChange={setUnmatchConfirmOpen}>
-        <ModalHeader>当前后端暂不支持清空匹配</ModalHeader>
+        <ModalHeader>确认解除测序数据匹配</ModalHeader>
         <ModalBody>
           <p className="text-sm text-fg-muted">
-            Octopus 的 `PUT /samples/:id` 只在 `r1_path` 或 `r2_path` 非空时更新 `matched_pair`，
-            不能可靠表达“清空匹配”。前端不会再通过本地状态伪造解除匹配成功。
-          </p>
-          <p className="text-sm text-fg-muted mt-2">
-            如需更换数据，请使用“更新匹配”写入新的 R1/R2；如需真正解绑，需要后端增加明确的清空字段或专用接口。
+            将调用 Octopus `DELETE /api/v1/samples/:id/matched-pair` 清空当前样本的 R1/R2 匹配关系。
+            此操作不会删除已上传文件，只会解除样本引用。
           </p>
         </ModalBody>
         <ModalFooter>
-          <Button variant="primary" onClick={() => setUnmatchConfirmOpen(false)}>
-            我知道了
+          <Button variant="secondary" onClick={() => setUnmatchConfirmOpen(false)} disabled={saving}>
+            取消
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => void handleClearMatch()}
+            disabled={saving}
+            leftIcon={saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : undefined}
+          >
+            {saving ? '解除中...' : '确认解除'}
           </Button>
         </ModalFooter>
       </Modal>
