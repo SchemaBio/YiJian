@@ -14,16 +14,16 @@
 
 ## 技术栈
 
-- Next.js 14
-- React 18
+- Next.js 16
+- React 19
 - Tailwind CSS
 - Radix UI
 - IGV.js
 
 ## 环境要求
 
-- Node.js >= 18.0.0
-- pnpm >= 8.0.0
+- Node.js >= 20.9.0
+- pnpm >= 9.0.0
 
 ## 本地开发
 
@@ -32,7 +32,7 @@ pnpm install
 pnpm dev
 ```
 
-开发服务器运行在 http://localhost:3001
+开发服务器运行在 http://localhost:3000
 
 ## 构建
 
@@ -62,7 +62,11 @@ docker run -p 3000:3000 \
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `NEXT_PUBLIC_API_URL` | 后端 API 地址 | `http://localhost:8080` |
+| `YIJIAN_API_URL` | 运行时浏览器可见的后端 API 基址（Docker 部署用）；留空回退 `NEXT_PUBLIC_API_URL` | `/api` |
+| `NEXT_PUBLIC_API_URL` | 本地开发回退的后端 API 基址 | `/api` |
+| `YIJIAN_CORE_API_PREFIX` / `NEXT_PUBLIC_CORE_API_PREFIX` | Octopus 核心 API 前缀；直连 Octopus 留空，走 Squid 网关设为 `/v1/octopus` | 空 |
+| `YIJIAN_BACKEND_FLAVOR` / `NEXT_PUBLIC_BACKEND_FLAVOR` | 后端模式：`auto` / `octopus` / `squid` | `auto` |
+| `NEXT_PUBLIC_PASSWORD_HASH_ENABLED` | 客户端密码 SHA-256 哈希，需与 Squid `CLIENT_PASSWORD_HASH_ENABLED` 一致 | `false` |
 | `PORT` | 服务端口 | `3000` |
 
 ## 项目结构
@@ -94,7 +98,8 @@ src/
 ## 依赖
 
 - [@schema/ui-kit](https://github.com/SchemaBio/ui-kit) — 共享 UI 组件库
-- 后端 API：[Octopus](https://github.com/schemabio/Octopus)
+- 后端 API：[Octopus](https://github.com/schemabio/Octopus)（社区版直连）
+- SaaS 网关：Squid（SaaS 模式下经 `/v1/octopus/*` 代理访问 Octopus 核心）
 
 ## License
 
