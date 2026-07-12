@@ -34,6 +34,29 @@ pnpm dev
 
 开发服务器运行在 http://localhost:3000
 
+### 本地后端（Octopus + Postgres / Supabase）
+
+推荐用真实 Octopus API + seed 数据做 UI 联调（不要依赖 `NEXT_PUBLIC_DEV_MOCK_AUTH` 做业务页）：
+
+1. 启动 Octopus（PostgreSQL 可为本地或 Supabase Cloud Direct 5432）
+2. 在 Octopus 仓库执行：`go run ./cmd/seed -reset`
+3. YiJian `.env.local`：
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+NEXT_PUBLIC_CORE_API_PREFIX=
+NEXT_PUBLIC_BACKEND_FLAVOR=octopus
+NEXT_PUBLIC_DEV_MOCK_AUTH=false
+NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
+```
+
+完整步骤、固定 task UUID、冒烟清单见 Octopus 文档：  
+- [docs/local-development.md](../Octopus/docs/local-development.md)（推荐）  
+- [docs/dev-frontend.md](../Octopus/docs/dev-frontend.md)（速查）
+
+默认演示账号（可由 Octopus env 覆盖）：`admin@octopus.local` / `admin123`  
+结果页示例：`/tasks/11111111-1111-4111-8111-111111111101`
+
 ## 构建
 
 ```bash
