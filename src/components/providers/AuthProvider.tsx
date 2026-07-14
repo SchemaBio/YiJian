@@ -74,11 +74,24 @@ function persistDevAuthState(nextUser: User, nextOrgs: UserOrganizationInfo[], n
   }
 }
 
+/** Public auth pages: unauthenticated users belong here; never hard-reload them. */
+const PUBLIC_AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'] as const;
+
+function isPublicAuthPath(pathname: string): boolean {
+  return PUBLIC_AUTH_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+}
+
 function loginRedirectForCurrentPath(): string {
   if (typeof window === 'undefined') return '/login';
-  if (window.location.pathname === '/login') return '/login';
-  const next = `${window.location.pathname}${window.location.search}`;
-  if (!next) return '/login';
+  const { pathname, search } = window.location;
+  // Already on an auth page — do not bounce to /login (avoids full-page reload loops).
+  if (isPublicAuthPath(pathname)) {
+    return `${pathname}${search}`;
+  }
+  const next = `${pathname}${search}`;
+  if (!next || next === '/') return '/login';
   return `/login?next=${encodeURIComponent(next)}`;
 }
 
@@ -123,10 +136,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const [currentUser, currentOrg] = await Promise.all([
-          authApi.getCurrentUser(),
-          authApi.getCurrentOrganization().catch(() => null),
-        ]);
+        // Probe auth first. /v1/orgs/me is not under /v1/auth/*, so a parallel
+        // unauthenticated 401 would fire schema:auth-expired (refresh + hard
+        // redirect). Only fetch org after we know the session is valid.
+        const currentUser = await authApi.getCurrentUser();
+        if (cancelled) return;
+        const currentOrg = await authApi.getCurrentOrganization().catch(() => null);
         if (cancelled) return;
         applySession(
           currentUser,
@@ -220,9 +235,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleAuthExpired = () => {
       resetSession();
-      if (typeof window !== 'undefined') {
-        window.location.href = loginRedirectForCurrentPath();
-      }
+      if (typeof window === 'undefined') return;
+      // On public auth pages, clear local state only. Assigning location.href
+      // to /login while already there causes a full reload → infinite loop when
+      // session probes still get 401 (e.g. cold visit with no cookies).
+      if (isPublicAuthPath(window.location.pathname)) return;
+      window.location.href = loginRedirectForCurrentPath();
     };
     window.addEventListener('schema:auth-expired', handleAuthExpired);
     return () => window.removeEventListener('schema:auth-expired', handleAuthExpired);
