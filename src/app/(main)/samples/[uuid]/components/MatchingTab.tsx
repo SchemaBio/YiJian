@@ -122,7 +122,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
               <div className="flex-1">
                 <div className="text-sm font-medium text-fg-default">未匹配测序数据</div>
                 <div className="text-xs text-fg-muted mt-1">
-                  推荐填写 Paired FASTQ upload job ID 由后端安全绑定；也可写入后端允许的文件路径。
+                  可使用已完成的双端 FASTQ 上传任务进行绑定，也可填写已有文件路径。
                 </div>
               </div>
               <Button
@@ -140,7 +140,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         <div className="mt-3 flex items-start gap-2 p-3 bg-canvas-default rounded">
           <AlertCircle className="w-4 h-4 text-fg-muted mt-0.5" />
           <div className="text-xs text-fg-muted leading-5">
-            Paired FASTQ 上传完成后可填写 Upload job ID；解除匹配只移除样本引用，不会删除已上传文件。
+            双端 FASTQ 上传完成后可使用上传任务 ID 绑定；解除匹配不会删除已上传文件。
           </div>
         </div>
       </div>
@@ -160,23 +160,23 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
               文件引用必须属于当前用户或机构。
             </p>
             <div className="space-y-2 rounded-md border border-border-default bg-canvas-subtle p-3">
-              <label className="text-sm font-medium text-fg-default">Upload job ID（推荐）</label>
+              <label className="text-sm font-medium text-fg-default">上传任务 ID（推荐）</label>
               <Input
                 value={uploadJobId}
                 onChange={(e) => setUploadJobId(e.target.value)}
-                placeholder="Paired FASTQ upload job UUID"
+                placeholder="已完成的双端 FASTQ 上传任务 UUID"
               />
               <p className="text-xs text-fg-muted">
-                使用 Paired FASTQ 上传返回的 job ID 绑定已完成的 read1/read2 文件。
+                使用双端 FASTQ 上传返回的任务 ID 绑定 R1/R2 文件。
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-fg-muted">
               <span className="h-px flex-1 bg-border-default" />
-              <span>或手动填写后端允许的文件路径</span>
+              <span>或手动填写已有文件路径</span>
               <span className="h-px flex-1 bg-border-default" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-fg-default">R1 storage key / 文件路径</label>
+              <label className="text-sm font-medium text-fg-default">R1 文件路径或存储键</label>
               <Input
                 value={r1Path}
                 onChange={(e) => setR1Path(e.target.value)}
@@ -184,7 +184,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-fg-default">R2 storage key / 文件路径</label>
+              <label className="text-sm font-medium text-fg-default">R2 文件路径或存储键</label>
               <Input
                 value={r2Path}
                 onChange={(e) => setR2Path(e.target.value)}

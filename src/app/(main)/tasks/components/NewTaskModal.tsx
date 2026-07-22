@@ -158,7 +158,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const handleSubmit = async () => {
     if (!selectedSample || !selectedPipeline || submitting || uploadingFiles) return;
     if (!hasSequencingInput) {
-      setResourceError('Please select a sample with matched_pair or provide an Upload job ID.');
+      setResourceError('请选择已匹配测序数据的样本，或填写上传任务 ID。');
       return;
     }
 
@@ -187,7 +187,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       });
       handleClose();
     } catch (err) {
-      setResourceError(err instanceof Error ? err.message : 'Failed to create task');
+      setResourceError(err instanceof Error ? err.message : '创建任务失败');
     } finally {
       setSubmitting(false);
     }
@@ -195,7 +195,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   const handlePairedUpload = async () => {
     if (!r1File || !r2File || uploadingFiles) {
-      setResourceError('Please choose both R1 and R2 FASTQ files before uploading.');
+      setResourceError('请选择 R1 和 R2 FASTQ 文件后再上传。');
       return;
     }
 
@@ -208,16 +208,16 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       const r1 = job.files.find(file => file.read_type === 'read1');
       const r2 = job.files.find(file => file.read_type === 'read2');
       if (!r1 || !r2) {
-        throw new Error('Upload job did not return both R1 and R2 upload URLs');
+        throw new Error('上传任务未返回完整的 R1/R2 上传地址');
       }
 
       await uploadToCOS(r1.upload_url, r1File, pct => setUploadProgress(Math.round(pct / 2)));
       await uploadToCOS(r2.upload_url, r2File, pct => setUploadProgress(50 + Math.round(pct / 2)));
       setUploadJobId(job.job_id);
       setUploadProgress(100);
-      setUploadNotice(`Upload job ${job.job_id} is ready; Octopus will inject fastq_r1/fastq_r2 from this job.`);
+      setUploadNotice(`上传任务 ${job.job_id} 已就绪`);
     } catch (err) {
-      setResourceError(err instanceof Error ? err.message : 'Failed to upload paired FASTQ files');
+      setResourceError(err instanceof Error ? err.message : '上传双端 FASTQ 文件失败');
     } finally {
       setUploadingFiles(false);
     }
@@ -306,8 +306,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <Input type="number" min="1" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(Math.max(1, Number(e.target.value) || 1))} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">Upload job ID</label>
-            <Input value={uploadJobId} onChange={(e) => setUploadJobId(e.target.value)} placeholder="Upload job UUID (optional)" disabled={uploadingFiles} />
+            <label className="block text-sm font-medium text-fg-default mb-2">上传任务 ID</label>
+            <Input value={uploadJobId} onChange={(e) => setUploadJobId(e.target.value)} placeholder="上传任务 UUID（可选）" disabled={uploadingFiles} />
           </div>
         </div>
 
@@ -330,26 +330,27 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         )}
 
         <div className="rounded-md border border-border bg-canvas-subtle p-3">
-          <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="mb-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-sm font-medium text-fg-default">Paired FASTQ upload</div>
+              <div className="text-sm font-medium text-fg-default">双端 FASTQ 上传</div>
               <div className="text-xs text-fg-muted">
-                Creates one Octopus upload job with read1/read2 files, then fills Upload job ID automatically.
+                上传 R1/R2 文件并自动填写上传任务 ID。
               </div>
             </div>
             <Button
               variant="secondary"
+              className="w-full sm:w-auto"
               onClick={handlePairedUpload}
               disabled={!r1File || !r2File || uploadingFiles || submitting}
               leftIcon={uploadingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             >
-              {uploadingFiles ? `Uploading ${uploadProgress}%` : 'Upload pair'}
+              {uploadingFiles ? `上传中 ${uploadProgress}%` : '上传双端文件'}
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
               <span className="block font-medium text-fg-default">R1 FASTQ</span>
-              <span className="block truncate">{r1File?.name || 'Choose read1 file'}</span>
+              <span className="block truncate">{r1File?.name || '选择 R1 文件'}</span>
               <input
                 type="file"
                 accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
@@ -360,7 +361,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             </label>
             <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
               <span className="block font-medium text-fg-default">R2 FASTQ</span>
-              <span className="block truncate">{r2File?.name || 'Choose read2 file'}</span>
+              <span className="block truncate">{r2File?.name || '选择 R2 文件'}</span>
               <input
                 type="file"
                 accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
@@ -377,7 +378,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
         {selectedSample && !selectedSample.matchedPair && !uploadJobID && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            当前样本没有 Octopus matched_pair。请先在样本详情写入 R1/R2 storage key，或填写 Upload job ID，让后端从上传任务注入 fastq_r1/fastq_r2。
+            当前样本未匹配测序数据，请先在样本详情绑定 R1/R2，或填写上传任务 ID。
           </div>
         )}
 

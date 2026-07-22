@@ -3,7 +3,7 @@
 import { PageContent } from '@/components/layout';
 import { Button, Input, DataTable, Tag, Select } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Plus, Search, Play, Pause, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Play, Pause, Pencil, Trash2, Workflow } from 'lucide-react';
 import * as React from 'react';
 import { AppModal, ConfirmDialog } from '@/components/shared';
 import { api } from '@/lib/api';
@@ -161,7 +161,7 @@ function NewPipelineModal({
       });
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to create pipeline');
+      setSubmitError(err instanceof Error ? err.message : '创建分析流程失败');
     } finally {
       setSubmitting(false);
     }
@@ -271,7 +271,7 @@ function EditPipelineModal({
       await onSubmit(pipeline.id, formData);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to update pipeline');
+      setSubmitError(err instanceof Error ? err.message : '更新分析流程失败');
     } finally {
       setSubmitting(false);
     }
@@ -371,7 +371,7 @@ export default function PipelineListPage() {
       setPipelines(unwrapList(response).map(normalizePipeline).filter(pipeline => pipeline.id));
       setPipelineError('');
     } catch (err) {
-      setPipelineError(err instanceof Error ? err.message : 'Failed to load pipelines');
+      setPipelineError(err instanceof Error ? err.message : '加载分析流程失败');
     }
   }, []);
 
@@ -396,7 +396,7 @@ export default function PipelineListPage() {
       setPipelines(prev => prev.map(p => p.id === pipeline.id ? normalizePipeline(updated) : p));
       setPipelineError('');
     } catch (err) {
-      setPipelineError(err instanceof Error ? err.message : 'Failed to update pipeline status');
+      setPipelineError(err instanceof Error ? err.message : '更新分析流程状态失败');
     }
   };
 
@@ -406,7 +406,7 @@ export default function PipelineListPage() {
       setPipelines(prev => [normalizePipeline(created), ...prev].filter(pipeline => pipeline.id));
       setPipelineError('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create pipeline';
+      const message = err instanceof Error ? err.message : '创建分析流程失败';
       setPipelineError(message);
       throw new Error(message);
     }
@@ -419,7 +419,7 @@ export default function PipelineListPage() {
       setPipelines(prev => prev.map(p => p.id === id ? normalizePipeline(updated) : p));
       setPipelineError('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update pipeline';
+      const message = err instanceof Error ? err.message : '更新分析流程失败';
       setPipelineError(message);
       throw new Error(message);
     }
@@ -432,7 +432,7 @@ export default function PipelineListPage() {
       setDeletingPipeline(null);
       setPipelineError('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete pipeline';
+      const message = err instanceof Error ? err.message : '删除分析流程失败';
       setPipelineError(message);
       throw new Error(message);
     }
@@ -537,13 +537,23 @@ export default function PipelineListPage() {
         </div>
       )}
 
-      <DataTable
-        data={filteredPipelines}
-        columns={columns}
-        rowKey="id"
-        density="default"
-        striped
-      />
+      {filteredPipelines.length > 0 ? (
+        <DataTable
+          data={filteredPipelines}
+          columns={columns}
+          rowKey="id"
+          density="default"
+          striped
+        />
+      ) : (
+        <div className="yj-empty-state">
+          <div>
+            <span className="yj-empty-state-icon"><Workflow className="h-5 w-5" /></span>
+            <p className="text-sm font-medium text-fg-default">暂无分析流程</p>
+            <p className="mt-1 text-xs text-fg-muted">创建流程后可配置 BED、参考基因组与 CNV 基线。</p>
+          </div>
+        </div>
+      )}
 
       <NewPipelineModal
         isOpen={isNewModalOpen}

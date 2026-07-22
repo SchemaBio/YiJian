@@ -448,21 +448,31 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
               {samplesError}
             </div>
           )}
-          <DataTable
-            data={filteredSamples}
-            columns={columns}
-            rowKey="id"
-            selectable
-            selectionMode="single"
-            selectedRows={selectedRows}
-            onSelectionChange={handleSelectionChange}
-            onRowClick={(row) => setSelectedRows(new Set([row.id]))}
-            onRowDoubleClick={(row) => setEditingSample(row)}
-            striped
-            stickyHeader
-            density="compact"
-            className="yj-data-table"
-          />
+          {filteredSamples.length > 0 ? (
+            <DataTable
+              data={filteredSamples}
+              columns={columns}
+              rowKey="id"
+              selectable
+              selectionMode="single"
+              selectedRows={selectedRows}
+              onSelectionChange={handleSelectionChange}
+              onRowClick={(row) => setSelectedRows(new Set([row.id]))}
+              onRowDoubleClick={(row) => setEditingSample(row)}
+              striped
+              stickyHeader
+              density="compact"
+              className="yj-data-table"
+            />
+          ) : (
+            <div className="yj-empty-state">
+              <div>
+                <span className="yj-empty-state-icon"><Database className="h-5 w-5" /></span>
+                <p className="text-sm font-medium text-fg-default">暂无样本</p>
+                <p className="mt-1 text-xs text-fg-muted">调整筛选条件或新建样本。</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

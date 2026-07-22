@@ -266,11 +266,10 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                 )}
               </div>
             </div>
-            {/* Matched sequencing paths */}
             <div className="pt-2 border-t border-gray-100">
-              <label className="block text-xs text-fg-muted mb-2">Matched data (optional; R1/R2 must be provided together)</label>
+              <label className="block text-xs text-fg-muted mb-2">匹配测序数据（可选，R1/R2 需同时填写）</label>
               <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Octopus sample API accepts validated FASTQ storage keys or paths only. For browser local uploads, use Paired FASTQ upload when creating a task and run it with the Upload job ID.
+                此处填写已有文件的存储键或路径。本地文件可在创建任务时直接上传。
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -278,7 +277,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                   <Input
                     value={formData.r1Path ?? ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, r1Path: e.target.value }))}
-                    placeholder="/data/sample_R1.fastq.gz or storage key"
+                    placeholder="文件路径或存储键"
                   />
                 </div>
                 <div>
@@ -286,7 +285,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                   <Input
                     value={formData.r2Path ?? ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, r2Path: e.target.value }))}
-                    placeholder="/data/sample_R2.fastq.gz or storage key"
+                    placeholder="文件路径或存储键"
                   />
                 </div>
               </div>

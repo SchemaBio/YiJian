@@ -66,7 +66,7 @@ export default function NewAnalysisPage() {
         setLoadError('');
       } catch (err) {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : 'Failed to load task options');
+          setLoadError(err instanceof Error ? err.message : '加载任务选项失败');
         }
       }
     }
@@ -118,23 +118,23 @@ export default function NewAnalysisPage() {
 
   React.useEffect(() => {
     if (selectedSampleInfo && selectedPipelineInfo) {
-      setTaskName(`${selectedSampleInfo.internalId || selectedSampleInfo.id} ${selectedPipelineInfo.name} analysis`);
+      setTaskName(`${selectedSampleInfo.internalId || selectedSampleInfo.id} ${selectedPipelineInfo.name} 分析`);
     }
   }, [selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
     setFormError('');
     if (!selectedSampleInfo || !selectedPipelineInfo) {
-      setFormError('Please select a sample and a pipeline.');
+      setFormError('请选择样本和分析流程。');
       return;
     }
     if (!hasSequencingInput) {
-      setFormError('The selected sample has no matched sequencing data. Provide an Upload job ID or upload paired FASTQ files.');
+      setFormError('所选样本没有匹配的测序数据，请填写上传任务 ID 或上传双端 FASTQ 文件。');
       return;
     }
     const template = resolvePipelineTemplate(selectedPipelineInfo);
     if (!template) {
-      setFormError('No compatible WDL template is available for the selected pipeline.');
+      setFormError('当前分析流程没有可用的 WDL 模板。');
       return;
     }
 
@@ -157,7 +157,7 @@ export default function NewAnalysisPage() {
       });
       router.push(`/tasks/${encodeURIComponent(task.id)}`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to create analysis task');
+      setFormError(err instanceof Error ? err.message : '创建分析任务失败');
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +165,7 @@ export default function NewAnalysisPage() {
 
   const handlePairedUpload = async () => {
     if (!r1File || !r2File || uploadingFiles) {
-      setFormError('Please choose both R1 and R2 FASTQ files before uploading.');
+      setFormError('请选择 R1 和 R2 FASTQ 文件后再上传。');
       return;
     }
 
@@ -178,16 +178,16 @@ export default function NewAnalysisPage() {
       const r1 = job.files.find(file => file.read_type === 'read1');
       const r2 = job.files.find(file => file.read_type === 'read2');
       if (!r1 || !r2) {
-        throw new Error('Upload job did not return both R1 and R2 upload URLs');
+        throw new Error('上传任务未返回完整的 R1/R2 上传地址');
       }
 
       await uploadToCOS(r1.upload_url, r1File, pct => setUploadProgress(Math.round(pct / 2)));
       await uploadToCOS(r2.upload_url, r2File, pct => setUploadProgress(50 + Math.round(pct / 2)));
       setUploadJobId(job.job_id);
       setUploadProgress(100);
-      setUploadNotice(`Upload job ${job.job_id} is ready; Octopus will inject fastq_r1/fastq_r2 from this job.`);
+      setUploadNotice(`上传任务 ${job.job_id} 已就绪`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to upload paired FASTQ files');
+      setFormError(err instanceof Error ? err.message : '上传双端 FASTQ 文件失败');
     } finally {
       setUploadingFiles(false);
     }
@@ -196,17 +196,17 @@ export default function NewAnalysisPage() {
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">New analysis task</h2>
+        <h2 className="yj-page-title">新建分析任务</h2>
       </div>
 
       <div className="yj-panel yj-form-card space-y-6">
         <div className="yj-info-panel">
           <div className="flex items-center gap-2 mb-2">
             <Info className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm font-medium text-fg-default">Task ID</span>
+            <span className="text-sm font-medium text-fg-default">任务编号</span>
           </div>
           <p className="text-xs text-fg-muted">
-            The backend will assign the task UUID after creation.
+            任务创建成功后自动分配 UUID。
           </p>
         </div>
 
@@ -222,29 +222,29 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        <FormItem label="Sample" required>
+        <FormItem label="样本" required>
           <Select
             options={samples.map((sample) => ({
               value: sample.id,
-              label: `${sample.internalId || sample.id}${!sample.matchedPair ? ' (no sequencing data)' : ''}`,
+              label: `${sample.internalId || sample.id}${!sample.matchedPair ? '（未匹配测序数据）' : ''}`,
             }))}
             value={selectedSample}
             onChange={(value) => setSelectedSample(Array.isArray(value) ? value[0] : value)}
-            placeholder="Select a sample"
+            placeholder="选择样本"
             searchable
           />
           {selectedSampleInfo && (
             <div className="mt-2 text-xs text-fg-muted">
               {selectedSampleInfo.matchedPair ? (
-                <span className="text-success-fg">Sequencing data is available.</span>
+                <span className="text-success-fg">测序数据已就绪</span>
               ) : (
-                <span className="text-danger-fg">No matched sequencing data.</span>
+                <span className="text-danger-fg">未匹配测序数据</span>
               )}
             </div>
           )}
         </FormItem>
 
-        <FormItem label="Pipeline" required>
+        <FormItem label="分析流程" required>
           <Select
             options={pipelines.map((pipeline) => ({
               value: pipeline.id,
@@ -252,16 +252,16 @@ export default function NewAnalysisPage() {
             }))}
             value={selectedPipeline}
             onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}
-            placeholder="Select a pipeline"
+            placeholder="选择分析流程"
             searchable
           />
         </FormItem>
 
-        <FormItem label="Task note">
+        <FormItem label="任务备注">
           <Input
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
-            placeholder="Optional task note"
+            placeholder="任务备注（可选）"
           />
         </FormItem>
 
@@ -293,26 +293,27 @@ export default function NewAnalysisPage() {
         )}
 
         <div className="rounded-md border border-border bg-canvas-subtle p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-sm font-medium text-fg-default">Paired FASTQ upload / Upload job</div>
+              <div className="text-sm font-medium text-fg-default">双端 FASTQ 上传</div>
               <div className="text-xs text-fg-muted">
-                If the sample has no matched_pair, use a completed Octopus upload job or upload R1/R2 here.
+                可使用已完成的上传任务，或直接上传 R1/R2 文件。
               </div>
             </div>
             <Button
               variant="secondary"
+              className="w-full sm:w-auto"
               onClick={handlePairedUpload}
               disabled={!r1File || !r2File || uploadingFiles || submitting}
               leftIcon={uploadingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             >
-              {uploadingFiles ? `Uploading ${uploadProgress}%` : 'Upload pair'}
+              {uploadingFiles ? `上传中 ${uploadProgress}%` : '上传双端文件'}
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
               <span className="block font-medium text-fg-default">R1 FASTQ</span>
-              <span className="block truncate">{r1File?.name || 'Choose read1 file'}</span>
+              <span className="block truncate">{r1File?.name || '选择 R1 文件'}</span>
               <input
                 type="file"
                 accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
@@ -323,7 +324,7 @@ export default function NewAnalysisPage() {
             </label>
             <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
               <span className="block font-medium text-fg-default">R2 FASTQ</span>
-              <span className="block truncate">{r2File?.name || 'Choose read2 file'}</span>
+              <span className="block truncate">{r2File?.name || '选择 R2 文件'}</span>
               <input
                 type="file"
                 accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
@@ -333,11 +334,11 @@ export default function NewAnalysisPage() {
               />
             </label>
             <label className="block text-xs text-fg-muted">
-              Upload job ID
+              上传任务 ID
               <Input
                 value={uploadJobId}
                 onChange={(e) => setUploadJobId(e.target.value)}
-                placeholder="Completed upload job UUID"
+                placeholder="已完成的上传任务 UUID"
                 disabled={uploadingFiles || submitting}
               />
             </label>
@@ -347,23 +348,23 @@ export default function NewAnalysisPage() {
           )}
           {selectedSampleInfo && !selectedSampleInfo.matchedPair && !uploadJobID && (
             <div className="mt-2 text-xs text-amber-700">
-              This sample has no Octopus matched_pair. A valid Upload job ID is required before creating the task.
+              当前样本未匹配测序数据，创建任务前需要填写有效的上传任务 ID。
             </div>
           )}
         </div>
 
         <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">Advanced options</h3>
+          <h3 className="text-sm font-medium text-fg-default mb-3">高级选项</h3>
           <div className="space-y-2">
             <Checkbox
               checked={enableCNV}
               onCheckedChange={(checked) => setEnableCNV(checked === true)}
-              label="Enable CNV analysis"
+              label="启用 CNV 分析"
             />
             <Checkbox
               checked={enableSV}
               onCheckedChange={(checked) => setEnableSV(checked === true)}
-              label="Enable SV analysis"
+              label="启用 SV 分析"
             />
           </div>
         </div>
@@ -376,7 +377,7 @@ export default function NewAnalysisPage() {
             loading={submitting}
             disabled={!hasSequencingInput || !selectedPipelineInfo || uploadingFiles}
           >
-            {submitting ? 'Submitting...' : 'Submit task'}
+            {submitting ? '提交中...' : '提交任务'}
           </Button>
         </div>
       </div>

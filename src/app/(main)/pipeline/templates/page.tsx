@@ -279,7 +279,7 @@ export default function ReportTemplatesPage() {
     if (!validateName(formData.name)) return;
     if (!isValidReportEndpoint(formData.apiEndpoint)) {
       setApiTestResult('error');
-      setError('Please enter a HTTPS report API URL without credentials or fragment.');
+      setError('请输入不含访问凭据或片段标识的 HTTPS 报告服务地址。');
       return;
     }
 
@@ -339,10 +339,10 @@ export default function ReportTemplatesPage() {
     },
     {
       id: 'credential',
-      header: 'Credential',
+      header: '访问凭据',
       accessor: (row) => (
         <Tag variant={row.hasApiKey ? 'success' : 'neutral'}>
-          {row.hasApiKey ? 'Configured' : 'None'}
+          {row.hasApiKey ? '已配置' : '未配置'}
         </Tag>
       ),
       width: 120,
@@ -410,7 +410,7 @@ export default function ReportTemplatesPage() {
       <div className="yj-page-header">
         <div>
           <h2 className="yj-page-title">报告模板</h2>
-          <p className="yj-page-subtitle">选择报告生成服务；平台管理员可以维护模板和访问凭据。</p>
+          <p className="yj-page-subtitle">报告生成服务与访问凭据。</p>
         </div>
       </div>
 
@@ -440,13 +440,23 @@ export default function ReportTemplatesPage() {
         <div className="text-sm text-fg-muted">加载报告模板...</div>
       )}
 
-      <DataTable
-        data={filteredTemplates}
-        columns={columns}
-        rowKey="id"
-        density="default"
-        striped
-      />
+      {filteredTemplates.length > 0 ? (
+        <DataTable
+          data={filteredTemplates}
+          columns={columns}
+          rowKey="id"
+          density="default"
+          striped
+        />
+      ) : (
+        <div className="yj-empty-state">
+          <div>
+            <span className="yj-empty-state-icon"><FileText className="h-5 w-5" /></span>
+            <p className="text-sm font-medium text-fg-default">暂无报告模板</p>
+            <p className="mt-1 text-xs text-fg-muted">调整搜索条件后重试。</p>
+          </div>
+        </div>
+      )}
 
       {/* 新建/编辑弹窗 */}
       <Modal open={isModalOpen} onOpenChange={setIsModalOpen} size="medium">

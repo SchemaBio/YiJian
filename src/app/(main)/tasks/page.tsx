@@ -745,13 +745,23 @@ export default function AnalysisPage() {
                   </div>
                 </div>
 
-                <DataTable
-                  data={filteredTasks}
-                  columns={columns}
-                  rowKey="id"
-                  striped
-                  density="compact"
-                />
+                {filteredTasks.length > 0 ? (
+                  <DataTable
+                    data={filteredTasks}
+                    columns={columns}
+                    rowKey="id"
+                    striped
+                    density="compact"
+                  />
+                ) : (
+                  <div className="yj-empty-state">
+                    <div>
+                      <span className="yj-empty-state-icon"><List className="h-5 w-5" /></span>
+                      <p className="text-sm font-medium text-fg-default">暂无任务</p>
+                      <p className="mt-1 text-xs text-fg-muted">调整筛选条件或创建新的分析任务。</p>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
