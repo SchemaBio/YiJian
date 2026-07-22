@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Tag, Button } from '@schema/ui-kit';
 import { ArrowLeft, Clock, User } from 'lucide-react';
 import type { AnalysisTaskDetail, AnalysisStatus } from '../types';
+import { TaskCostDetail } from '@/components/billing';
 
 interface TaskHeaderProps {
   task: AnalysisTaskDetail;
@@ -80,6 +81,9 @@ export function TaskHeader({ task, onBack }: TaskHeaderProps) {
           <span className="text-xs text-fg-muted">任务ID</span>
           <div className="font-mono text-xs text-fg-subtle" title={task.id}>
             {task.id.substring(0, 8)}...
+          </div>
+          <div className="mt-3">
+            <TaskCostDetail taskId={task.id} />
           </div>
         </div>
       </div>

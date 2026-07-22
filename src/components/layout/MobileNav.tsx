@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { X } from 'lucide-react';
 import { mainNavItems, sidebarNavConfig, isNavItemActive, getSectionFromPath } from '@/config/navigation';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface MobileNavProps {
   currentSection: string;
@@ -16,11 +18,16 @@ interface MobileNavProps {
  */
 export function MobileNav({ currentSection, onClose }: MobileNavProps) {
   const pathname = usePathname();
+  const { isPlatformAdmin } = useAuth();
   const section = getSectionFromPath(pathname);
-  const sidebarItems = sidebarNavConfig[section] || [];
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const visibleMainNavItems = mainNavItems.filter((item) =>
+    (!item.saasOnly || isSaaS) && (!item.platformAdminOnly || isPlatformAdmin())
+  );
+  const sidebarItems = (sidebarNavConfig[section] || []).filter((item) => !item.saasOnly || isSaaS);
 
   return (
-    <div className="fixed inset-0 z-50 bg-canvas">
+    <div className="fixed inset-0 z-50 bg-[var(--yj-panel-bg)]">
       {/* Header */}
       <div className="flex items-center justify-between h-12 px-4 border-b border-border">
         <span className="font-semibold text-fg-default">导航</span>
@@ -39,7 +46,7 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
         <nav className="p-4 border-b border-border">
           <p className="text-xs text-fg-muted mb-2 uppercase tracking-wider">主导航</p>
           <ul className="space-y-1">
-            {mainNavItems.map((item) => {
+            {visibleMainNavItems.map((item) => {
               const isActive = isNavItemActive(item.href, pathname);
               const Icon = item.icon;
 
@@ -71,7 +78,7 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
         {/* Section navigation */}
         <nav className="p-4">
           <p className="text-xs text-fg-muted mb-2 uppercase tracking-wider">
-            {mainNavItems.find((item) => item.href.includes(section))?.label || '子导航'}
+            {visibleMainNavItems.find((item) => item.href.includes(section))?.label || '子导航'}
           </p>
           <ul className="space-y-1">
             {sidebarItems.map((item) => {

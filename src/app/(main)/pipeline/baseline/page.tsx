@@ -117,13 +117,10 @@ export default function BaselinePage() {
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">CNV Baseline 引用</h2>
-      </div>
-
-      <div className="yj-info-panel mb-4">
-        <p className="text-sm text-fg-muted">
-          Octopus 当前将 CNV baseline 作为 Pipeline 的 `cnv_baseline` 文件引用使用，并未提供独立 baseline 构建/启停/删除 API。本页改为展示真实流程配置中的 baseline 引用，避免前端 mock 构建进度造成误导。
-        </p>
+        <div>
+          <h2 className="yj-page-title">CNV Baseline</h2>
+          <p className="yj-page-subtitle">汇总分析流程正在使用的 CNV baseline 与参考基因组。</p>
+        </div>
       </div>
 
       <div className="yj-toolbar-panel">
@@ -154,7 +151,7 @@ export default function BaselinePage() {
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="yj-empty-state">
-          <p className="text-fg-muted">暂无 CNV baseline 引用。请在流程配置中设置 `cnv_baseline`。</p>
+          <p className="text-fg-muted">暂无 CNV baseline，请先在流程列表中配置资源文件。</p>
         </div>
       ) : (
         <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped />

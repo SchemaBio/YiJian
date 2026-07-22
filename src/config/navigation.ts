@@ -6,6 +6,7 @@
   User,
   Shield,
   Coins,
+  CreditCard,
   Workflow,
   FileCode,
   TrendingUp,
@@ -21,6 +22,8 @@ export interface NavItem {
   label: string;
   href: string;
   icon?: LucideIcon;
+  saasOnly?: boolean;
+  platformAdminOnly?: boolean;
 }
 
 export interface SidebarNavItem {
@@ -29,6 +32,7 @@ export interface SidebarNavItem {
   icon?: LucideIcon;
   badge?: string | number;
   children?: SidebarNavItem[];
+  saasOnly?: boolean;
 }
 
 export interface SidebarNavConfig {
@@ -38,6 +42,7 @@ export interface SidebarNavConfig {
   pipeline: SidebarNavItem[];
   history: SidebarNavItem[];
   admin: SidebarNavItem[];
+  billing: SidebarNavItem[];
   settings: SidebarNavItem[];
 }
 
@@ -48,7 +53,8 @@ export const mainNavItems: NavItem[] = [
   { label: '任务中心', href: '/tasks', icon: ListTodo },
   { label: '历史检出', href: '/history', icon: History },
   { label: '流程中心', href: '/pipeline', icon: Workflow },
-  { label: '管理中心', href: '/admin', icon: ShieldCheck },
+  { label: '费用中心', href: '/billing', icon: Coins, saasOnly: true },
+  { label: '管理中心', href: '/admin', icon: ShieldCheck, saasOnly: true, platformAdminOnly: true },
 ];
 
 /** Sidebar navigation configuration for each section. */
@@ -68,10 +74,13 @@ export const sidebarNavConfig: SidebarNavConfig = {
   ],
   history: [],
   admin: [],
+  billing: [
+    { label: '费用概览', href: '/billing', icon: Coins, saasOnly: true },
+    { label: '充值', href: '/billing/recharge', icon: CreditCard, saasOnly: true },
+  ],
   settings: [
     { label: '个人设置', href: '/settings', icon: User },
     { label: '权限管理', href: '/settings/permissions', icon: Shield },
-    { label: '计费与余额', href: '/settings/billing', icon: Coins },
   ],
 };
 

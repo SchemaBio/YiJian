@@ -173,7 +173,10 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
     if (editData) {
       try {
         const updated = await api.put<unknown>(`/v1/samples/${encodeURIComponent(sampleId)}`, sampleDetailPayload(editData));
-        const next = normalizeSampleDetail({ ...editData, ...updated });
+        const updatedFields = updated && typeof updated === 'object' && !Array.isArray(updated)
+          ? updated as Record<string, unknown>
+          : {};
+        const next = normalizeSampleDetail({ ...editData, ...updatedFields });
         setSample(next);
         setEditData(next);
         setIsEditing(false);

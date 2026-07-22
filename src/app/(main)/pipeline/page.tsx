@@ -561,7 +561,11 @@ export default function PipelineListPage() {
       <DeleteConfirmModal
         isOpen={deletingPipeline !== null}
         onClose={() => setDeletingPipeline(null)}
-        onConfirm={() => deletingPipeline && handleDeletePipeline(deletingPipeline.id)}
+        onConfirm={async () => {
+          if (deletingPipeline) {
+            await handleDeletePipeline(deletingPipeline.id);
+          }
+        }}
         pipelineName={deletingPipeline?.name || ''}
       />
     </PageContent>

@@ -93,6 +93,19 @@ export interface TaskProgressResponse {
   status: string;
   progress: number;
   created_at: string;
+  result_import_status?: string;
+  result_import_error?: string;
+  result_imported_at?: string;
+  result_import_attempts?: number;
   sepiida?: SepiidaWorkflow;
   tasks?: SepiidaTask[];
+}
+
+export interface TaskStatsResponse {
+  total_tasks: number;
+  running_tasks: number;
+  failed_last_24h: number;
+  status_distribution: Record<string, number>;
+  result_import_failed_last_7d: number;
+  window_start: string;
 }

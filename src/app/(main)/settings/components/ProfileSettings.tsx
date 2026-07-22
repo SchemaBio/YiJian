@@ -93,9 +93,6 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile }: ProfileSe
           {message && <span className="text-sm text-success-fg">{message}</span>}
           {error && <span className="text-sm text-danger-fg">{error}</span>}
         </div>
-        <p className="text-xs text-fg-muted mt-3">
-          姓名修改会调用 Squid `PUT /api/v1/auth/me`，邮箱、角色和审批状态由后端权限策略控制。
-        </p>
       </section>
 
       <section>
@@ -111,15 +108,10 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile }: ProfileSe
             <Input value={currentOrg?.slug ?? '-'} disabled />
           </FormItem>
         </div>
-        <p className="text-xs text-fg-muted mt-3">
-          机构信息以 Squid `/api/v1/orgs/me` 为准；普通用户不能在前端伪造机构状态变更。
-        </p>
       </section>
 
       <section className="pt-4 border-t border-[var(--yj-border-subtle)]">
-        <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-          密码找回已接入 Squid `/api/v1/auth/forgot-password` 与 `/api/v1/auth/reset-password`。
-        </div>
+        <p className="mb-3 text-sm text-fg-muted">通过验证邮箱完成密码重置。</p>
         <Link href="/forgot-password">
           <Button variant="secondary">修改密码 / 找回密码</Button>
         </Link>

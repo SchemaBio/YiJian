@@ -3,13 +3,15 @@
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, Info, Shield } from 'lucide-react';
+import Image from 'next/image';
+import { Info, Menu, Settings, Shield, X } from 'lucide-react';
 import { Breadcrumb, type BreadcrumbItem } from '@schema/ui-kit';
 import { SidebarNav } from './SidebarNav';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MobileNav } from './MobileNav';
 import { AssistantButton } from '@/components/assistant';
+import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
 
 interface AppShellProps {
@@ -32,6 +34,8 @@ const pathLabelMap: Record<string, string> = {
   settings: '系统设置',
   about: '关于',
   privacy: '隐私协议',
+  billing: '费用中心',
+  recharge: '充值',
   // 样本管理子页面
   new: '新建',
   import: '批量导入',
@@ -71,6 +75,7 @@ const defaultSubPageMap: Record<string, string> = {
   '/pipeline': '流程列表',
   '/analysis': '任务列表',
   '/reports': '报告列表',
+  '/billing': '费用概览',
   '/settings': '个人设置',
 };
 
@@ -142,34 +147,23 @@ export function AppShell({ children }: AppShellProps) {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen flex flex-col bg-canvas">
+      <div className="min-h-screen flex flex-col yj-modern yj-workspace">
         {/* Mobile Header */}
-        <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-canvas-subtle">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-accent-emphasis rounded-md flex items-center justify-center">
-              <span className="text-fg-on-emphasis font-bold text-sm">🧬</span>
-            </div>
-            <span className="font-semibold text-fg-default">绳墨生物</span>
+            <Image src="/logo.svg" alt="贻鉴" width={30} height={30} />
+            <span className="font-semibold text-fg-default">贻鉴</span>
           </div>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-md hover:bg-canvas-inset"
-            aria-label="Toggle menu"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <div className="flex items-center gap-1">
+            <BillingDisplay />
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-md hover:bg-canvas-inset"
+              aria-label={mobileMenuOpen ? '关闭菜单' : '打开菜单'}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d={mobileMenuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
-              />
-            </svg>
-          </button>
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </header>
         {mobileMenuOpen && (
           <MobileNav
@@ -195,7 +189,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="h-14 flex items-center justify-between px-5 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-workspace-bg)] shrink-0">
+        <header className="h-14 flex items-center justify-between px-5 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] shrink-0">
           {/* Left: Breadcrumbs */}
           <div className="flex-1 min-w-0">
             {breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} />}
@@ -203,6 +197,7 @@ export function AppShell({ children }: AppShellProps) {
 
           {/* Right: Settings + About */}
           <div className="flex items-center gap-1.5 shrink-0">
+            <BillingDisplay />
             <Link
               href="/settings"
               className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"

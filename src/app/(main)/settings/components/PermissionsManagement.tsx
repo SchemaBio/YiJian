@@ -198,11 +198,11 @@ export function PermissionsManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="yj-info-panel">
-        <h3 className="text-sm font-medium text-fg-default mb-3">权限模型说明</h3>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="yj-panel overflow-hidden">
+        <div className="yj-panel-header"><h3 className="yj-section-title">系统角色</h3></div>
+        <div className="grid grid-cols-1 divide-y divide-[var(--yj-border-subtle)] md:grid-cols-2 md:divide-x md:divide-y-0">
           {SYSTEM_ROLES.map((role) => (
-            <div key={role.id} className="yj-panel p-4">
+            <div key={role.id} className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-4 h-4 text-accent-fg" />
                 <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
@@ -211,9 +211,6 @@ export function PermissionsManagement() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-fg-muted mt-3">
-          当前页面已对齐 Squid 的 `/api/v1/users` 平台管理员接口；SaaS 账号仍按“机构开通/注册审批”流转，不在前端伪造额外权限或本地新增账号状态。
-        </p>
       </div>
 
       {pendingUsers.length > 0 && (
@@ -221,9 +218,7 @@ export function PermissionsManagement() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-medium text-fg-default">待审批注册</h3>
-              <p className="mt-1 text-xs text-fg-muted">
-                数据来自 Squid `GET /api/v1/users/pending`，审批操作会调用真实后端接口。
-              </p>
+              <p className="mt-1 text-xs text-fg-muted">审核新注册的平台账号。</p>
             </div>
             <Tag variant="warning">{pendingUsers.length} pending</Tag>
           </div>
@@ -352,7 +347,7 @@ export function PermissionsManagement() {
                 {userToDelete.name}（{userToDelete.email}）
               </p>
             )}
-            <p className="text-xs text-fg-muted mt-3">该操作会调用 Squid `DELETE /api/v1/users/:id`，不可撤销。</p>
+            <p className="text-xs text-fg-muted mt-3">删除后该账号将无法登录，此操作不可撤销。</p>
           </div>
         </ModalBody>
         <ModalFooter>

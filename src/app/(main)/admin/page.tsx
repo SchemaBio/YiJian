@@ -505,7 +505,7 @@ export default function AdminPage() {
         <div>
           <h2 className="yj-page-title">平台管理后台</h2>
           <p className="yj-page-subtitle">
-            数据来自 Squid `/api/v1/admin/stats`、`/api/v1/admin/alerts` 和 `/api/v1/admin/orgs`，不再使用前端 mock 账号或本地机构状态。
+            管理 SaaS 机构、并发额度、Credit 策略与运行风险。
           </p>
         </div>
         <Button variant="secondary" onClick={() => void loadData()}>
@@ -540,7 +540,7 @@ export default function AdminPage() {
               <Plus className="w-4 h-4 text-accent-fg" />
               开通机构与管理员账号
             </h3>
-            <p className="text-xs text-fg-muted mt-1">调用 Squid `POST /api/v1/admin/orgs`，机构和首个账号在后端事务中创建。</p>
+            <p className="text-xs text-fg-muted mt-1">同时创建机构与首个管理员账号。</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="机构名称" value={provisionForm.name} onChange={(value) => setProvisionForm((prev) => ({ ...prev, name: value }))} required />
@@ -566,7 +566,7 @@ export default function AdminPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-base font-medium text-fg-default">编辑机构配置</h3>
-              <p className="text-xs text-fg-muted mt-1">选择机构列表中的“编辑”，保存时调用 Squid `PUT /api/v1/admin/orgs/:id`。</p>
+              <p className="text-xs text-fg-muted mt-1">从机构列表选择需要调整的机构。</p>
             </div>
             {editingOrg && (
               <button type="button" className="rounded p-1 text-fg-muted hover:bg-canvas-subtle" onClick={() => setEditingOrg(null)}>
@@ -612,7 +612,7 @@ export default function AdminPage() {
         <form className="yj-panel p-4 space-y-3" onSubmit={submitRecharge}>
           <div>
             <h3 className="text-base font-medium text-fg-default">机构充值</h3>
-            <p className="text-xs text-fg-muted mt-1">调用 Squid `POST /api/v1/admin/billing/recharge`，不再用本地状态模拟余额。</p>
+            <p className="text-xs text-fg-muted mt-1">充值完成后立即写入机构余额和费用流水。</p>
           </div>
           <label className="block text-xs text-fg-muted">
             机构

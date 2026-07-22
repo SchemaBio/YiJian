@@ -17,6 +17,7 @@ import {
   UPDTab,
   ROHTab,
   ReportTab,
+  TaskRuntimeTab,
 } from '../[uuid]/components';
 import { Tag } from '@schema/ui-kit';
 
@@ -98,6 +99,8 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   // 渲染当前标签页内容
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'runtime':
+        return <TaskRuntimeTab taskId={taskId} initialStatus={task.status} />;
       case 'qc':
         return <QCResultTab taskId={taskId} />;
       case 'snv-indel':

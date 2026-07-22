@@ -15,8 +15,9 @@ import {
   TextArea,
   type Column,
 } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, TestTube2, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 type TemplateStatus = 'active' | 'inactive';
 
@@ -138,6 +139,8 @@ const initialFormData: FormData = {
 };
 
 export default function ReportTemplatesPage() {
+  const { isPlatformAdmin } = useAuth();
+  const canManage = isPlatformAdmin();
   const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -362,7 +365,7 @@ export default function ReportTemplatesPage() {
       width: 160,
       align: 'center',
     },
-    {
+    ...(canManage ? [{
       id: 'actions',
       header: '操作',
       accessor: (row) => (
@@ -396,8 +399,8 @@ export default function ReportTemplatesPage() {
         </div>
       ),
       width: 130,
-      align: 'center',
-    },
+      align: 'center' as const,
+    }] : []),
   ];
 
   const isFormValid = formData.name.trim() && formData.apiEndpoint && !nameError;
@@ -405,7 +408,10 @@ export default function ReportTemplatesPage() {
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">报告模板管理</h2>
+        <div>
+          <h2 className="yj-page-title">报告模板</h2>
+          <p className="yj-page-subtitle">选择报告生成服务；平台管理员可以维护模板和访问凭据。</p>
+        </div>
       </div>
 
       <div className="yj-toolbar-panel">
@@ -417,9 +423,11 @@ export default function ReportTemplatesPage() {
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAdd}>
-          新建模板
-        </Button>
+        {canManage && (
+          <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAdd}>
+            新建模板
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -490,11 +498,8 @@ export default function ReportTemplatesPage() {
                   onClick={handleTestApi}
                   disabled={testingApi || !formData.apiEndpoint}
                 >
-                  {testingApi ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <TestTube2 className="w-4 h-4" />
-                  )}
+                  {testingApi ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  校验
                 </Button>
               </div>
               {apiTestResult && (
@@ -514,19 +519,15 @@ export default function ReportTemplatesPage() {
               )}
             </FormItem>
 
-            <FormItem label="API Key" hint="Optional; sent once to Octopus and never stored in browser state.">
+            <FormItem label="API Key" hint="可选；仅提交给后端且不会回显。">
               <Input
                 type="password"
                 value={formData.apiKey}
                 onChange={(e) => setFormData((prev) => ({ ...prev, apiKey: e.target.value }))}
-                placeholder="Optional report API token"
+                placeholder="报告服务访问令牌（可选）"
                 autoComplete="off"
               />
             </FormItem>
-
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-              API tokens are not stored or echoed by the browser. Configure report-service credentials on the backend or in your secret manager.
-            </div>
 
             <div className="bg-canvas-subtle rounded-md p-3 text-xs text-fg-muted">
               <p className="font-medium text-fg-default mb-1">说明</p>

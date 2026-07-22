@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">找回密码</h2>
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
-            输入账号邮箱后，前端会调用 Squid `/api/v1/auth/forgot-password` 发起真实重置流程。
+            输入账号邮箱，我们会发送密码重置指引。
           </p>
         </div>
 

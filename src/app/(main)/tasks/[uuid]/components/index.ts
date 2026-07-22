@@ -11,6 +11,7 @@ export { MTTab } from './MTTab';
 export { UPDTab } from './UPDTab';
 export { ROHTab } from './ROHTab';
 export { ReportTab } from './ReportTab';
+export { TaskRuntimeTab } from './TaskRuntimeTab';
 export { IGVViewer, PositionLink } from './IGVViewer';
 export { VariantDetailPanel } from './VariantDetailPanel';
 export { CNVDetailPanel } from './CNVDetailPanel';

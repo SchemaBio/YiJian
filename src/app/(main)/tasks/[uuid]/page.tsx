@@ -21,6 +21,7 @@ import {
   UPDTab,
   ROHTab,
   ReportTab,
+  TaskRuntimeTab,
 } from './components';
 
 export default function AnalysisDetailPage() {
@@ -100,6 +101,8 @@ export default function AnalysisDetailPage() {
   // 渲染当前标签页内容
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'runtime':
+        return <TaskRuntimeTab taskId={uuid} initialStatus={task.status} />;
       case 'qc':
         return <QCResultTab taskId={uuid} />;
       case 'snv-indel':

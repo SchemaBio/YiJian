@@ -11,21 +11,21 @@
   --color-accent-emphasis: #1a7f37;
   --color-accent-muted: rgba(63, 185, 80, 0.4);
   --color-accent-subtle: #dafbe1;
-  --yj-workspace-bg: #f8f6f1;
-  --yj-workspace-rail: #f8f6f1;
-  --yj-panel-bg: #fffefa;
-  --yj-panel-subtle: #f3f1ea;
-  --yj-panel-muted: #ede9df;
-  --yj-border-subtle: #e1ddd3;
-  --yj-border-strong: #d3cec2;
-  --yj-text-strong: #111312;
-  --yj-text-muted: #5f6661;
-  --yj-sage: #b8dc8f;
-  --yj-sage-subtle: #eef7e6;
-  --yj-shadow-panel: 0 1px 2px rgba(17, 19, 18, 0.05), 0 10px 24px rgba(17, 19, 18, 0.045);
-  --yj-shadow-raised: 0 18px 50px rgba(17, 19, 18, 0.14);
-  --yj-radius-panel: 16px;
-  --yj-radius-control: 11px;
+  --yj-workspace-bg: #f5f7f6;
+  --yj-workspace-rail: #ffffff;
+  --yj-panel-bg: #ffffff;
+  --yj-panel-subtle: #f1f4f2;
+  --yj-panel-muted: #e8eeea;
+  --yj-border-subtle: #dce4df;
+  --yj-border-strong: #c5d1c9;
+  --yj-text-strong: #17211b;
+  --yj-text-muted: #657269;
+  --yj-sage: #dcecdf;
+  --yj-sage-subtle: #edf6ef;
+  --yj-shadow-panel: 0 1px 2px rgba(23, 33, 27, 0.05);
+  --yj-shadow-raised: 0 12px 32px rgba(23, 33, 27, 0.14);
+  --yj-radius-panel: 8px;
+  --yj-radius-control: 6px;
   --yj-radius-pill: 999px;
 }
 
@@ -34,6 +34,19 @@
   --color-accent-emphasis: #238636;
   --color-accent-muted: rgba(46, 160, 67, 0.4);
   --color-accent-subtle: rgba(46, 160, 67, 0.15);
+  --yj-workspace-bg: #111714;
+  --yj-workspace-rail: #151c18;
+  --yj-panel-bg: #19211c;
+  --yj-panel-subtle: #202a24;
+  --yj-panel-muted: #27332c;
+  --yj-border-subtle: #2d3a32;
+  --yj-border-strong: #405046;
+  --yj-text-strong: #edf4ef;
+  --yj-text-muted: #9faea4;
+  --yj-sage: #244f30;
+  --yj-sage-subtle: #1d3524;
+  --yj-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --yj-shadow-raised: 0 12px 32px rgba(0, 0, 0, 0.34);
 }
 
 /* Base styles */
@@ -159,9 +172,9 @@
   .yj-page-title {
     margin: 0;
     color: var(--yj-text-strong);
-    font-size: 28px;
-    font-weight: 720;
-    line-height: 1.15;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
     letter-spacing: 0;
   }
 
@@ -194,8 +207,8 @@
     padding: 0.75rem;
     border: 1px solid var(--yj-border-subtle);
     border-radius: var(--yj-radius-panel);
-    background: rgba(255, 254, 250, 0.82);
-    box-shadow: var(--yj-shadow-panel);
+    background: var(--yj-panel-bg);
+    box-shadow: none;
   }
 
   .yj-toolbar {
@@ -209,9 +222,9 @@
     padding: 1rem 1.125rem;
     border: 1px solid var(--yj-border-subtle);
     border-radius: var(--yj-radius-panel);
-    background: linear-gradient(180deg, rgba(255, 254, 250, 0.92), rgba(243, 241, 234, 0.78));
+    background: var(--yj-panel-subtle);
     color: var(--yj-text-muted);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    box-shadow: none;
   }
 
   .yj-list-panel {
@@ -227,7 +240,7 @@
   }
 
   .yj-list-row:hover {
-    background: #f5f8ef;
+    background: var(--yj-sage-subtle);
     box-shadow: inset 2px 0 0 rgba(26, 127, 55, 0.42);
   }
 
@@ -276,7 +289,7 @@
     justify-content: center;
     margin-bottom: 0.875rem;
     border: 1px solid var(--yj-border-subtle);
-    border-radius: 14px;
+    border-radius: var(--yj-radius-panel);
     background: var(--yj-panel-subtle);
     color: var(--yj-text-muted);
   }
@@ -287,7 +300,7 @@
     height: 32px;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: var(--yj-radius-control);
     color: #6b7280;
     transition: color 140ms ease, background-color 140ms ease;
   }
@@ -477,7 +490,7 @@
   }
 
   .yj-data-table thead th {
-    background: #f5f2ec;
+    background: var(--yj-panel-subtle);
     border-bottom: 1px solid var(--yj-border-subtle);
     color: var(--yj-text-strong);
     font-size: 12px;
@@ -496,7 +509,7 @@
   }
 
   .yj-data-table tbody tr:hover {
-    background: #f5f8ef;
+    background: var(--yj-sage-subtle);
     box-shadow: inset 2px 0 0 rgba(26, 127, 55, 0.55);
   }
 
@@ -611,7 +624,7 @@
 
   .yj-modern main thead th {
     border-bottom-color: var(--yj-border-subtle) !important;
-    background: #f5f2ec !important;
+    background: var(--yj-panel-subtle) !important;
     color: var(--yj-text-strong);
     font-size: 12px;
     font-weight: 650;
@@ -627,14 +640,14 @@
   }
 
   .yj-modern main tbody tr:hover {
-    background: #f5f8ef !important;
+    background: var(--yj-sage-subtle) !important;
   }
 
   .yj-modern main h2.text-lg.font-medium {
     color: var(--yj-text-strong) !important;
-    font-size: 28px !important;
-    font-weight: 720 !important;
-    line-height: 1.15 !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
     letter-spacing: 0 !important;
     margin-bottom: 1.25rem !important;
   }

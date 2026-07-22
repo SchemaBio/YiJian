@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Button, Input, Select } from '@schema/ui-kit';
-import { Search, Loader2, Upload } from 'lucide-react';
+import { Coins, Search, Loader2, Upload } from 'lucide-react';
 import { AppModal } from '@/components/shared';
 import { requestPairedUploadJob, uploadToCOS } from '@/lib/api';
 import {
@@ -13,6 +14,8 @@ import {
   type TaskSampleListItem,
   type TaskTemplateOption,
 } from '@/lib/task-resources';
+import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 export interface NewTaskFormData {
   sampleId: string;
@@ -34,6 +37,7 @@ interface NewTaskModalProps {
 }
 
 export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [sampleSearch, setSampleSearch] = React.useState('');
   const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
@@ -51,6 +55,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [loadingResources, setLoadingResources] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [resourceError, setResourceError] = React.useState('');
+  const [billingBalance, setBillingBalance] = React.useState<BillingBalance | null>(null);
+  const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -71,6 +77,12 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         setTemplates(templateItems);
         const firstValue = pipelineItems[0]?.id || templateItems[0]?.name || '';
         setSelectedPipeline(prev => prev || firstValue);
+        if (isSaaS) {
+          const [nextBalance, nextConfig] = await Promise.all([getBillingBalance(), getBillingConfig()]);
+          if (cancelled) return;
+          setBillingBalance(nextBalance);
+          setBillingConfig(nextConfig);
+        }
       } catch (err) {
         if (!cancelled) {
           setResourceError(err instanceof Error ? err.message : '加载任务资源失败');
@@ -84,7 +96,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, isSaaS]);
 
   // 筛选样本
   const filteredSamples = React.useMemo(() => {
@@ -129,6 +141,12 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   const uploadJobID = uploadJobId.trim();
   const hasSequencingInput = Boolean(selectedSample?.matchedPair || uploadJobID);
+  const estimatedCredits = calculateEstimatedCredits(estimatedMinutes, billingConfig);
+  const projectedBalance = billingBalance && estimatedCredits !== null
+    ? billingBalance.balance - estimatedCredits
+    : null;
+  const insufficientCredits = projectedBalance !== null && billingConfig !== null
+    && projectedBalance < billingConfig.min_balance;
 
   const buildInputs = (sample: TaskSampleListItem) => {
     return {
@@ -292,6 +310,24 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <Input value={uploadJobId} onChange={(e) => setUploadJobId(e.target.value)} placeholder="Upload job UUID (optional)" disabled={uploadingFiles} />
           </div>
         </div>
+
+        {isSaaS && (
+          <div className={`flex items-center justify-between gap-4 border-y py-3 ${insufficientCredits ? 'border-danger-muted' : 'border-border-default'}`}>
+            <div className="flex items-center gap-2">
+              <Coins className="h-4 w-4 text-accent-fg" />
+              <div>
+                <div className="text-sm font-medium text-fg-default">预计扣费 {estimatedCredits ?? '--'} Credit</div>
+                <div className="text-xs text-fg-muted">启动任务时预扣，完成后按实际运行时间结算</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className={insufficientCredits ? 'text-sm font-medium text-danger-fg' : 'text-sm font-medium text-fg-default'}>
+                余额 {billingBalance?.balance ?? '--'}
+              </div>
+              <Link href="/billing/recharge" className="text-xs text-accent-fg hover:underline">充值</Link>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-md border border-border bg-canvas-subtle p-3">
           <div className="mb-2 flex items-center justify-between gap-3">

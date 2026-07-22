@@ -233,7 +233,7 @@ export interface ROHRegion extends VariantReviewStatus {
 }
 
 // ============ 标签页类型 ============
-export type TabType = 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
+export type TabType = 'runtime' | 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
 
 export interface TabConfig {
   id: TabType;
@@ -241,6 +241,7 @@ export interface TabConfig {
 }
 
 export const TAB_CONFIGS: TabConfig[] = [
+  { id: 'runtime', label: '运行状态' },
   { id: 'qc', label: '质控结果' },
   { id: 'snv-indel', label: 'SNP/InDel' },
   { id: 'cnv-segment', label: 'CNV(Region)' },

@@ -9,6 +9,7 @@ import { ChevronLeft } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 import { OrganizationSwitcher } from './OrganizationSwitcher';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { mainNavItems, sidebarNavConfig, isNavItemActive, type SidebarNavItem, type NavItem } from '@/config/navigation';
 
 interface SidebarNavProps {
@@ -25,6 +26,13 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
   const { isPlatformAdmin } = useAuth();
 
   const isAdmin = isPlatformAdmin();
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const visibleMainNavItems = React.useMemo(
+    () => mainNavItems.filter((item) =>
+      (!item.saasOnly || isSaaS) && (!item.platformAdminOnly || isAdmin)
+    ),
+    [isAdmin, isSaaS]
+  );
 
   // Determine current section from pathname
   const currentSection = React.useMemo(() => {
@@ -34,7 +42,8 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
 
   // Get sub navigation items and filter based on permissions
   const subItems = React.useMemo(() => {
-    const items = sidebarNavConfig[currentSection as keyof typeof sidebarNavConfig] || [];
+    const items = (sidebarNavConfig[currentSection as keyof typeof sidebarNavConfig] || [])
+      .filter((item) => !item.saasOnly || isSaaS);
 
     // For settings page, non-admins hide permissions and AI settings
     if (currentSection === 'settings' && !isAdmin) {
@@ -44,7 +53,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
     }
 
     return items;
-  }, [currentSection, isAdmin]);
+  }, [currentSection, isAdmin, isSaaS]);
 
   return (
     <aside
@@ -113,7 +122,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
       {/* Main Navigation */}
       <nav className="py-2.5 border-b border-[var(--yj-border-subtle)]">
         <ul className="space-y-0.5 px-2">
-          {mainNavItems.map((item) => (
+          {visibleMainNavItems.map((item) => (
             <MainNavItemComponent
               key={item.href}
               item={item}
@@ -129,7 +138,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
         {!collapsed && subItems.length > 0 && (
           <div className="px-3 mb-1.5">
             <span className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">
-              {mainNavItems.find(item => item.href.includes(currentSection))?.label || 
+              {visibleMainNavItems.find(item => item.href.includes(currentSection))?.label ||
                 (currentSection === 'settings' ? '系统设置' : '子菜单')}
             </span>
           </div>
@@ -172,7 +181,7 @@ function MainNavItemComponent({ item, collapsed, currentPath }: MainNavItemCompo
         transition-all duration-fast
         ${
           isActive
-            ? 'bg-[var(--yj-sage)] text-[#17310f] font-medium'
+            ? 'bg-[var(--yj-sage)] text-accent-fg font-medium shadow-[inset_2px_0_0_var(--color-accent-emphasis)]'
             : 'text-fg-default hover:bg-[var(--yj-panel-subtle)] hover:text-fg-default'
         }
         ${collapsed ? 'justify-center' : ''}

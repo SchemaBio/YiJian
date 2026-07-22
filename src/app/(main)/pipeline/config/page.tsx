@@ -53,9 +53,7 @@ export default function PipelineConfigPage() {
       <div className="yj-page-header">
         <div>
           <h2 className="yj-page-title">流程配置</h2>
-          <p className="yj-page-subtitle">
-            数据来自 Octopus `/api/v1/pipelines`。Octopus 当前没有独立“全局流程参数”保存接口，本页不再伪造本地保存成功。
-          </p>
+          <p className="yj-page-subtitle">汇总当前分析流程、参考基因组和资源文件配置。</p>
         </div>
         <Button
           variant="secondary"
@@ -75,19 +73,19 @@ export default function PipelineConfigPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="yj-panel">
+        <div className="yj-panel p-4">
           <div className="text-xs text-fg-muted">流程总数</div>
           <div className="mt-2 text-2xl font-semibold text-fg-default">{pipelines.length}</div>
         </div>
-        <div className="yj-panel">
+        <div className="yj-panel p-4">
           <div className="text-xs text-fg-muted">启用流程</div>
           <div className="mt-2 text-2xl font-semibold text-success-fg">{activeCount}</div>
         </div>
-        <div className="yj-panel">
+        <div className="yj-panel p-4">
           <div className="text-xs text-fg-muted">参考基因组</div>
           <div className="mt-2 text-sm text-fg-default">{references.join(' / ') || '-'}</div>
         </div>
-        <div className="yj-panel">
+        <div className="yj-panel p-4">
           <div className="text-xs text-fg-muted">BED 引用</div>
           <div className="mt-2 text-2xl font-semibold text-fg-default">{bedFiles.length}</div>
         </div>
@@ -103,9 +101,7 @@ export default function PipelineConfigPage() {
             <AlertCircle className="w-5 h-5 text-fg-muted mt-0.5" />
             <div>
               <div className="text-sm font-medium text-fg-default">暂无流程配置</div>
-              <p className="text-sm text-fg-muted mt-1">
-                请在“流程管理”页通过 Octopus `POST /api/v1/pipelines` 创建流程；本页只汇总真实后端配置。
-              </p>
+              <p className="text-sm text-fg-muted mt-1">请先在“流程列表”中创建分析流程。</p>
             </div>
           </div>
         ) : (
@@ -161,13 +157,6 @@ export default function PipelineConfigPage() {
               <ResourceList title="CNV baseline" values={cnvBaselines} emptyText="未配置 CNV baseline" />
             </section>
 
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-canvas-subtle">
-              <AlertCircle className="w-4 h-4 text-fg-muted mt-0.5" />
-              <p className="text-xs text-fg-muted leading-5">
-                QC 阈值、变异 caller 和注释数据库属于后端执行模板/配置文件能力，当前 Octopus API 未暴露可由前端修改的全局配置接口。
-                前端只展示真实 Pipeline 记录，避免本地状态与实际分析参数不一致。
-              </p>
-            </div>
           </>
         )}
       </div>

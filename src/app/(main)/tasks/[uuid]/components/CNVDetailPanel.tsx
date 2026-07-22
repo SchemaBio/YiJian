@@ -360,7 +360,7 @@ function CNVPlotModal({
       </div>
       <div ref={containerRef} className="p-4">
         <p className="mb-2 text-xs text-amber-700">
-          示意图仅基于后端返回的 CNV segment 坐标和 copyNumber 绘制；Octopus 当前未提供原始 coverage/bin 级曲线数据。
+          区间示意图根据 CNV 坐标与拷贝数绘制，用于快速定位变异范围。
         </p>
         <canvas ref={canvasRef} className="rounded" style={{ display: 'block', maxWidth: '100%' }} />
       </div>

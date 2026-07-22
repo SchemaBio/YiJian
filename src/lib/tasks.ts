@@ -6,6 +6,7 @@ import type {
   TaskCreateRequest,
   TaskUpdateRequest,
   TaskProgressResponse,
+  TaskStatsResponse,
   TaskStatus,
 } from '@/types/task';
 import type { SampleDetail } from '@/app/(main)/samples/types';
@@ -216,5 +217,15 @@ export const tasksApi = {
   /** Get task progress (with Sepiida data) */
   async getProgress(id: string): Promise<TaskProgressResponse> {
     return normalizeTaskProgress(await api.get<unknown>(`/v1/tasks/${encodeURIComponent(id)}/progress`));
+  },
+
+  /** Get scoped operational task statistics. */
+  getStats(): Promise<TaskStatsResponse> {
+    return api.get<TaskStatsResponse>('/v1/tasks/stats');
+  },
+
+  /** Get the execution log as plain text. */
+  getLogs(id: string): Promise<string> {
+    return api.get<string>(`/v1/tasks/${encodeURIComponent(id)}/logs`);
   },
 };

@@ -3,13 +3,16 @@
 import * as React from 'react';
 import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, Download, Upload, BookOpen, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, BookOpen, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
 import { AnalysisDetailPanel, NewTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
 import { useApi, usePolling } from '@/hooks';
 import { IdCell, TaskStatusTag } from '@/components/shared';
+import { TaskCostValue } from '@/components/billing';
+import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } from '@/lib/billing';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },
@@ -293,6 +296,7 @@ function TaskActionsCell({
 }
 
 export default function AnalysisPage() {
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
@@ -302,6 +306,8 @@ export default function AnalysisPage() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<AnalysisTask | null>(null);
   const [actionError, setActionError] = React.useState('');
+  const [taskBilling, setTaskBilling] = React.useState<Record<string, TaskBillingSummary>>({});
+  const [billingLoading, setBillingLoading] = React.useState(false);
 
   // Create fetcher function with current statusFilter
   const fetcher = React.useCallback(async () => {
@@ -323,19 +329,24 @@ export default function AnalysisPage() {
     return tasks?.some(t => t.status === 'running') ?? false;
   }, [tasks]);
 
-  const handleDownloadTemplate = () => {
-    const templateContent = `样本编号,内部编号,分析流程,流程版本
-a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
-    const blob = new Blob(['\ufeff' + templateContent], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '任务导入模板.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  const refreshTaskBilling = React.useCallback(async (taskItems: AnalysisTask[]) => {
+    if (!isSaaS || taskItems.length === 0) {
+      setTaskBilling({});
+      return;
+    }
+    setBillingLoading(true);
+    try {
+      setTaskBilling(await getRecentTaskBilling(taskItems.map((task) => task.id)));
+    } catch {
+      setTaskBilling({});
+    } finally {
+      setBillingLoading(false);
+    }
+  }, [isSaaS]);
+
+  React.useEffect(() => {
+    void refreshTaskBilling(tasks ?? []);
+  }, [refreshTaskBilling, tasks]);
 
   const handleCreateTask = async (data: NewTaskFormData) => {
     setActionError('');
@@ -381,6 +392,8 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
     setActionError('');
     try {
       await tasksApi.start(taskId);
+      notifyBillingUpdated();
+      await refreshTaskBilling(tasks ?? []);
       refetch(); // Refresh data after starting
     } catch (err) {
       setActionError(err instanceof Error ? err.message : '启动任务失败');
@@ -407,6 +420,8 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
     setActionError('');
     try {
       await tasksApi.retry(taskId);
+      notifyBillingUpdated();
+      await refreshTaskBilling(tasks ?? []);
       refetch(); // Refresh data after retrying
     } catch (err) {
       setActionError(err instanceof Error ? err.message : '重试任务失败');
@@ -419,6 +434,8 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
     setActionError('');
     try {
       await tasksApi.cancel(taskId);
+      notifyBillingUpdated();
+      await refreshTaskBilling(tasks ?? []);
       refetch(); // Refresh data after deleting
     } catch (err) {
       setActionError(err instanceof Error ? err.message : '删除任务失败');
@@ -535,6 +552,15 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
       width: 120,
       align: 'center',
     },
+    ...(isSaaS ? [{
+      id: 'cost',
+      header: '费用',
+      accessor: (row: AnalysisTask) => (
+        <TaskCostValue summary={taskBilling[row.id]} loading={billingLoading && !taskBilling[row.id]} />
+      ),
+      width: 110,
+      align: 'center' as const,
+    }] : []),
     { id: 'createdAt', header: '创建时间', accessor: 'createdAt', width: 150, align: 'center' },
     {
       id: 'remark',
@@ -713,12 +739,6 @@ a1b2c3d4-e5f6-7890-abcd-ef1234567890,INT-001,WES-Germline-v1,v1.2.0`;
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="secondary" leftIcon={<Download className="w-4 h-4" />} onClick={handleDownloadTemplate}>
-                      下载模板
-                    </Button>
-                    <Button variant="secondary" leftIcon={<Upload className="w-4 h-4" />}>
-                      批量导入
-                    </Button>
                     <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewTaskModalOpen(true)}>
                       新建任务
                     </Button>

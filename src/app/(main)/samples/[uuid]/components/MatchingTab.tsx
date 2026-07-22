@@ -82,9 +82,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
               <CheckCircle className="w-5 h-5 text-success-fg" />
               <div className="flex-1">
                 <div className="text-sm font-medium text-fg-default">已匹配双端测序数据</div>
-                <div className="text-xs text-fg-muted mt-1">
-                  数据来自 Octopus Sample.matched_pair，不再使用前端模拟测序池。
-                </div>
+                <div className="text-xs text-fg-muted mt-1">R1 / R2 文件已就绪，可用于创建分析任务。</div>
               </div>
               <Button
                 variant="secondary"
@@ -142,8 +140,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         <div className="mt-3 flex items-start gap-2 p-3 bg-canvas-default rounded">
           <AlertCircle className="w-4 h-4 text-fg-muted mt-0.5" />
           <div className="text-xs text-fg-muted leading-5">
-            Paired FASTQ 上传完成后可直接填写 Upload job ID，Octopus 会在后端解析 read1/read2 文件并写入样本。
-            解除匹配会调用 Octopus `DELETE /api/v1/samples/:id/matched-pair`，不再通过前端本地状态伪造成功。
+            Paired FASTQ 上传完成后可填写 Upload job ID；解除匹配只移除样本引用，不会删除已上传文件。
           </div>
         </div>
       </div>
@@ -160,7 +157,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
           <div className="space-y-4">
             <p className="text-sm text-fg-muted">
               为样本 <span className="font-mono text-fg-default">{sample.internalId || sample.id}</span> 写入 R1/R2。
-              后端会按当前用户/组织权限校验文件引用。
+              文件引用必须属于当前用户或机构。
             </p>
             <div className="space-y-2 rounded-md border border-border-default bg-canvas-subtle p-3">
               <label className="text-sm font-medium text-fg-default">Upload job ID（推荐）</label>
@@ -170,7 +167,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
                 placeholder="Paired FASTQ upload job UUID"
               />
               <p className="text-xs text-fg-muted">
-                填写任务创建页 Paired FASTQ upload 返回的 job ID 后，Octopus 会在服务端绑定已完成的 read1/read2 文件；无需暴露服务端存储路径。
+                使用 Paired FASTQ 上传返回的 job ID 绑定已完成的 read1/read2 文件。
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-fg-muted">
@@ -215,8 +212,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         <ModalHeader>确认解除测序数据匹配</ModalHeader>
         <ModalBody>
           <p className="text-sm text-fg-muted">
-            将调用 Octopus `DELETE /api/v1/samples/:id/matched-pair` 清空当前样本的 R1/R2 匹配关系。
-            此操作不会删除已上传文件，只会解除样本引用。
+            将清空当前样本的 R1/R2 匹配关系。此操作不会删除已上传文件。
           </p>
         </ModalBody>
         <ModalFooter>

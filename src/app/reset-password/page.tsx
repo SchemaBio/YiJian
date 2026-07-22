@@ -83,8 +83,8 @@ export default function ResetPasswordPage() {
           </div>
           <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">设置新密码</h2>
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
-            本页调用 Squid `/api/v1/auth/reset-password`，不会在浏览器本地伪造密码修改成功。
-            {PASSWORD_HASH_ENABLED ? ' 当前部署已启用前端密码哈希，需要账号邮箱参与哈希。' : ''}
+            输入邮件中的重置令牌并设置新密码。
+            {PASSWORD_HASH_ENABLED ? ' 当前部署需要同时填写账号邮箱。' : ''}
           </p>
         </div>
 

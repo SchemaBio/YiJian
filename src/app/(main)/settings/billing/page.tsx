@@ -1,10 +1,12 @@
 ﻿'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { CreditCard, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, Clock3, Coins, CreditCard, Loader2, RefreshCw } from 'lucide-react';
 import {
   getBillingBalance,
   getBillingConfig,
@@ -13,6 +15,7 @@ import {
   type BillingConfig,
   type BillingTransaction,
 } from '@/lib/billing';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 function formatTime(value: string): string {
   if (!value) return '-';
@@ -64,6 +67,8 @@ function ConfigItem({ label, value, hint }: { label: string; value: React.ReactN
 }
 
 export default function BillingSettingsPage() {
+  const router = useRouter();
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [balance, setBalance] = React.useState<BillingBalance | null>(null);
   const [config, setConfig] = React.useState<BillingConfig | null>(null);
   const [transactions, setTransactions] = React.useState<BillingTransaction[]>([]);
@@ -100,10 +105,14 @@ export default function BillingSettingsPage() {
   }, [page]);
 
   React.useEffect(() => {
+    if (!isSaaS) {
+      router.replace('/dashboard');
+      return;
+    }
     void loadData(1);
     // 初次加载固定第一页，避免 loadData 随 page 改变造成重复请求。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isSaaS, router]);
 
   const columns: Column<BillingTransaction>[] = [
     {
@@ -121,26 +130,56 @@ export default function BillingSettingsPage() {
       align: 'center',
     },
     { id: 'balance_after', header: '变动后余额', accessor: (row) => row.balance_after, width: 120, align: 'center' },
-    { id: 'reference_id', header: '关联对象', accessor: (row) => row.reference_id || '-', width: 180, align: 'center' },
+    {
+      id: 'reference_id',
+      header: '关联任务',
+      accessor: (row) => row.reference_id ? (
+        <Link href={`/tasks/${encodeURIComponent(row.reference_id)}`} className="font-mono text-xs text-accent-fg hover:underline">
+          {row.reference_id.slice(0, 8)}...
+        </Link>
+      ) : '-',
+      width: 150,
+      align: 'center',
+    },
     { id: 'description', header: '说明', accessor: (row) => row.description || '-', width: 260, align: 'center' },
     { id: 'created_at', header: '发生时间', accessor: (row) => formatTime(row.created_at), width: 180, align: 'center' },
   ];
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const creditsPerMinute = config
+    ? config.credits_per_minute * config.credit_rate_multiplier
+    : null;
+  const usableCredits = balance && config
+    ? Math.max(0, balance.balance - config.min_balance)
+    : null;
+  const availableMinutes = creditsPerMinute && usableCredits !== null
+    ? Math.floor(usableCredits / creditsPerMinute)
+    : null;
+
+  if (!isSaaS) return null;
 
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">计费与余额</h2>
+          <h2 className="yj-page-title">费用中心</h2>
           <p className="yj-page-subtitle">
-            数据来自 Squid `/api/v1/billing/balance`、`/api/v1/billing/transactions` 和 `/api/v1/billing/config`；本页只读展示真实后端状态。
+            查看当前 Credit、任务扣费、退款与充值记录。
           </p>
         </div>
-        <Button variant="secondary" onClick={() => void loadData(page)} disabled={isLoading}>
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          刷新
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => void loadData(page)} disabled={isLoading}>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            刷新
+          </Button>
+          <Link
+            href="/billing/recharge"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent-emphasis px-4 text-sm text-fg-on-emphasis hover:opacity-90"
+          >
+            <CreditCard className="w-4 h-4" />
+            充值
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -149,28 +188,42 @@ export default function BillingSettingsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="yj-panel p-4 md:col-span-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="yj-panel p-4">
           <div className="flex items-center gap-2 text-accent-fg">
-            <CreditCard className="w-5 h-5" />
-            <span className="text-sm">当前余额</span>
+            <Coins className="w-5 h-5" />
+            <span className="text-sm">当前 Credit</span>
           </div>
           <p className="mt-3 text-3xl font-semibold text-fg-default">{balance?.balance ?? '--'}</p>
-          <p className="mt-1 text-xs text-fg-muted">Org ID: {balance?.org_id ?? '-'}</p>
+          <p className="mt-1 text-xs text-fg-muted">最低可用余额 {config?.min_balance ?? '--'}</p>
         </div>
-        <div className="yj-panel p-4 md:col-span-3">
-          <h3 className="text-base font-medium text-fg-default mb-3">计费配置</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <ConfigItem label="每分钟点数" value={config?.credits_per_minute ?? '--'} />
-            <ConfigItem label="倍率" value={config?.credit_rate_multiplier ?? '--'} />
-            <ConfigItem label="最低余额" value={config?.min_balance ?? '--'} hint="低于该值时后端会拒绝新的扣费任务" />
+        <div className="yj-panel p-4">
+          <div className="flex items-center gap-2 text-fg-muted">
+            <Clock3 className="w-5 h-5" />
+            <span className="text-sm">预计可运行</span>
           </div>
+          <p className="mt-3 text-3xl font-semibold text-fg-default">{availableMinutes ?? '--'} 分钟</p>
+          <p className="mt-1 text-xs text-fg-muted">按当前费率估算</p>
         </div>
+        <div className="yj-panel p-4">
+          <div className="flex items-center gap-2 text-fg-muted">
+            <ArrowUpRight className="w-5 h-5" />
+            <span className="text-sm">当前费率</span>
+          </div>
+          <p className="mt-3 text-3xl font-semibold text-fg-default">{creditsPerMinute ?? '--'}</p>
+          <p className="mt-1 text-xs text-fg-muted">Credit / 分钟</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <ConfigItem label="基础费率" value={config?.credits_per_minute ?? '--'} hint="Credit / 分钟" />
+        <ConfigItem label="计费倍率" value={config?.credit_rate_multiplier ?? '--'} />
+        <ConfigItem label="最低余额" value={config?.min_balance ?? '--'} hint="扣费后低于该值时不能启动任务" />
       </div>
 
       <div className="yj-panel p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium text-fg-default">交易记录</h3>
+          <h3 className="text-base font-medium text-fg-default">费用明细</h3>
           <span className="text-xs text-fg-muted">共 {total} 条</span>
         </div>
         {isLoading && transactions.length === 0 ? (

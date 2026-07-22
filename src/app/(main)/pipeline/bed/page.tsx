@@ -117,13 +117,10 @@ export default function BedFilesPage() {
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">BED 文件引用</h2>
-      </div>
-
-      <div className="yj-info-panel mb-4">
-        <p className="text-sm text-fg-muted">
-          Octopus 当前没有独立 BED 文件库 CRUD；BED 通过上传文件生成的 storage key 绑定在 Pipeline 的 `bed_file` 字段中。本页展示真实流程配置中正在引用的 BED 文件，不再使用前端 mock 列表或伪造上传/删除。
-        </p>
+        <div>
+          <h2 className="yj-page-title">BED 文件</h2>
+          <p className="yj-page-subtitle">汇总分析流程正在使用的捕获区域文件与参考基因组。</p>
+        </div>
       </div>
 
       <div className="yj-toolbar-panel">
@@ -154,7 +151,7 @@ export default function BedFilesPage() {
         </div>
       ) : filteredFiles.length === 0 ? (
         <div className="yj-empty-state">
-          <p className="text-fg-muted">暂无 BED 引用。请在流程配置中设置 `bed_file`。</p>
+          <p className="text-fg-muted">暂无 BED 文件，请先在流程列表中配置资源文件。</p>
         </div>
       ) : (
         <DataTable data={filteredFiles} columns={columns} rowKey="id" density="default" striped />
