@@ -225,7 +225,8 @@ export const tasksApi = {
   },
 
   /** Get the execution log as plain text. */
-  getLogs(id: string): Promise<string> {
-    return api.get<string>(`/v1/tasks/${encodeURIComponent(id)}/logs`);
+  async getLogs(id: string): Promise<string> {
+    const value = await api.get<unknown>(`/v1/tasks/${encodeURIComponent(id)}/logs`);
+    return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
   },
 };

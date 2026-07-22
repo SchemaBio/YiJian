@@ -15,6 +15,7 @@
   LayoutDashboard,
   ListTodo,
   ShieldCheck,
+  Settings2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -67,6 +68,7 @@ export const sidebarNavConfig: SidebarNavConfig = {
   tasks: [],
   pipeline: [
     { label: '流程列表', href: '/pipeline', icon: List },
+    { label: '配置总览', href: '/pipeline/config', icon: Settings2 },
     { label: '基因列表', href: '/pipeline/gene-list', icon: Library },
     { label: 'BED 文件', href: '/pipeline/bed', icon: FileCode },
     { label: '基线管理', href: '/pipeline/baseline', icon: TrendingUp },

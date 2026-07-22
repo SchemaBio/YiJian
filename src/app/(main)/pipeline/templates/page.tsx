@@ -308,7 +308,7 @@ export default function ReportTemplatesPage() {
     {
       id: 'name',
       header: '模板名称',
-      accessor: (row) => (
+      accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-2">
           <FileText className="w-4 h-4 text-fg-muted" />
           <span className="font-medium font-mono text-fg-default">{row.name}</span>
@@ -368,7 +368,7 @@ export default function ReportTemplatesPage() {
     ...(canManage ? [{
       id: 'actions',
       header: '操作',
-      accessor: (row) => (
+      accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-1">
           <button
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
