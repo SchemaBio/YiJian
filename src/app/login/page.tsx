@@ -67,7 +67,7 @@ export default function LoginPage() {
     <div className="yj-modern yj-public-shell flex min-h-screen">
       <div
         className="relative hidden items-center justify-center overflow-hidden bg-[var(--yj-panel-subtle)] lg:flex lg:w-1/2 xl:w-3/5"
-        style={{ color: 'rgba(26, 127, 55, 0.16)' }}
+        style={{ color: 'rgba(26, 127, 55, 0.28)' }}
       >
         <DnaHelix />
       </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-[var(--yj-text-strong)]">YiJian 分析平台</h2>
+            <h2 className="text-2xl font-semibold text-[var(--yj-text-strong)]">贻鉴分析平台</h2>
             <p className="mt-1 text-[var(--yj-text-muted)]">请登录您的账号</p>
           </div>
 

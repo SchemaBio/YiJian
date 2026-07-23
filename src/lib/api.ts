@@ -67,6 +67,7 @@ const CORE_API_ROOTS = [
   'projects',
   'pedigrees',
   'upload',
+	'data',
 ];
 
 function decodePathSegment(segment: string): string | null {
@@ -607,10 +608,8 @@ export async function uploadToCOS(presignedUrl: string, file: File, onProgress?:
   }
 }
 
-export async function confirmUpload(_fileId: string) {
-  // Current Octopus/Squid upload API marks local uploads complete in /v1/upload/local/:file_uuid.
-  // Kept as a compatibility no-op for callers that still model upload as request/upload/confirm.
-  return undefined;
+export async function confirmUpload(fileId: string) {
+  return api.post(`/v1/upload/files/${encodeURIComponent(fileId)}/complete`, {});
 }
 
 export const api = {

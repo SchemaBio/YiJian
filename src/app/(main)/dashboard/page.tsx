@@ -9,9 +9,7 @@ import {
   CheckCircle2,
   Clock3,
   Database,
-  FileUp,
   FlaskConical,
-  HardDrive,
   Plus,
   RefreshCw,
   Users,
@@ -30,11 +28,6 @@ interface DashboardStats {
   runningTasks: number;
   completedTasks: number;
   failedTasks: number;
-}
-
-interface UploadStats {
-  total: number;
-  total_bytes: number;
 }
 
 const EMPTY_STATS: DashboardStats = {
@@ -65,16 +58,6 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   pending_interpretation: '待解读',
 };
 
-const STATUS_ORDER: TaskStatus[] = [
-  'running',
-  'queued',
-  'waiting_for_data',
-  'pending_interpretation',
-  'completed',
-  'failed',
-  'cancelled',
-];
-
 function statusVariant(status: TaskStatus): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
   if (status === 'completed') return 'success';
   if (status === 'failed' || status === 'cancelled') return 'danger';
@@ -90,33 +73,22 @@ function formatDateTime(value: string): string {
   return date.toLocaleString('zh-CN', { hour12: false });
 }
 
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / 1024 ** index;
-  return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
-}
-
 export default function DashboardPage() {
-  const { user, currentOrg } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = React.useState<DashboardStats>(EMPTY_STATS);
   const [taskStats, setTaskStats] = React.useState<TaskStatsResponse>(EMPTY_TASK_STATS);
-  const [uploadStats, setUploadStats] = React.useState<UploadStats>({ total: 0, total_bytes: 0 });
   const [tasks, setTasks] = React.useState<AnalysisTask[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [lastUpdated, setLastUpdated] = React.useState('');
 
   const loadDashboard = React.useCallback(async () => {
     setLoading(true);
     setError('');
 
-    const [dashboardResult, tasksResult, taskStatsResult, uploadStatsResult] = await Promise.allSettled([
+    const [dashboardResult, tasksResult, taskStatsResult] = await Promise.allSettled([
       api.get<DashboardStats>('/v1/dashboard/stats'),
       tasksApi.list({ page: 1, page_size: 6 }),
       tasksApi.getStats(),
-      api.get<UploadStats>('/v1/upload/files/stats'),
     ]);
 
     const failures: string[] = [];
@@ -138,15 +110,7 @@ export default function DashboardPage() {
       setTaskStats(EMPTY_TASK_STATS);
       failures.push('运行指标');
     }
-    if (uploadStatsResult.status === 'fulfilled') {
-      setUploadStats(uploadStatsResult.value);
-    } else {
-      setUploadStats({ total: 0, total_bytes: 0 });
-      failures.push('文件指标');
-    }
-
     setError(failures.length > 0 ? `${failures.join('、')}暂时不可用` : '');
-    setLastUpdated(new Date().toISOString());
     setLoading(false);
   }, []);
 
@@ -162,19 +126,13 @@ export default function DashboardPage() {
     { title: '失败任务', value: stats.failedTasks, hint: `${taskStats.failed_last_24h} 个发生于 24 小时内`, icon: XCircle, href: '/tasks' },
   ];
 
-  const totalForDistribution = Math.max(
-    1,
-    Object.values(taskStats.status_distribution ?? {}).reduce((sum, value) => sum + value, 0)
-  );
-
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
           <h2 className="yj-page-title">工作台</h2>
           <p className="yj-page-subtitle">
-            {user?.name || user?.email || '当前用户'}{currentOrg?.name ? ` · ${currentOrg.name}` : ''}
-            {lastUpdated ? ` · 更新于 ${formatDateTime(lastUpdated)}` : ''}
+            {user?.name?.trim() || user?.email || '当前用户'} · <RealtimeClock />
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -215,8 +173,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
-        <section className="yj-panel overflow-hidden">
+      <section className="yj-panel overflow-hidden">
           <div className="yj-panel-header">
             <div>
               <h3 className="yj-section-title">最近任务</h3>
@@ -251,49 +208,20 @@ export default function DashboardPage() {
               <p className="mt-1 text-xs text-fg-muted">创建任务后可在这里查看运行状态。</p>
             </div>
           )}
-        </section>
-
-        <aside className="yj-panel overflow-hidden">
-          <div className="yj-panel-header">
-            <div>
-              <h3 className="yj-section-title">运行概况</h3>
-              <p className="mt-1 text-xs text-fg-muted">任务、结果入库与上传文件状态</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 border-b border-[var(--yj-border-subtle)]">
-            <OperationalMetric icon={<FileUp className="h-4 w-4" />} label="已上传文件" value={String(uploadStats.total)} />
-            <OperationalMetric icon={<HardDrive className="h-4 w-4" />} label="数据量" value={formatBytes(uploadStats.total_bytes)} />
-            <OperationalMetric icon={<XCircle className="h-4 w-4" />} label="24h 失败" value={String(taskStats.failed_last_24h)} />
-            <OperationalMetric icon={<Database className="h-4 w-4" />} label="7d 入库失败" value={String(taskStats.result_import_failed_last_7d)} />
-          </div>
-          <div className="space-y-3 p-4">
-            {STATUS_ORDER.map((status) => {
-              const count = taskStats.status_distribution?.[status] ?? 0;
-              const width = `${Math.max(count > 0 ? 4 : 0, (count / totalForDistribution) * 100)}%`;
-              return (
-                <div key={status}>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="text-fg-muted">{STATUS_LABEL[status]}</span>
-                    <span className="font-medium text-fg-default">{count}</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-canvas-inset">
-                    <div className="h-full rounded-full bg-accent-emphasis" style={{ width }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </aside>
-      </div>
+      </section>
     </PageContent>
   );
 }
 
-function OperationalMetric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="border-r border-t border-[var(--yj-border-subtle)] p-4 even:border-r-0 first:border-t-0 [&:nth-child(2)]:border-t-0">
-      <div className="flex items-center gap-2 text-xs text-fg-muted">{icon}{label}</div>
-      <div className="mt-2 text-lg font-semibold text-fg-default">{value}</div>
-    </div>
-  );
+function RealtimeClock() {
+  const [now, setNow] = React.useState<Date | null>(null);
+
+  React.useEffect(() => {
+    const update = () => setNow(new Date());
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return <span suppressHydrationWarning>{now ? formatDateTime(now.toISOString()) : '--'}</span>;
 }

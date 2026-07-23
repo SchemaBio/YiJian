@@ -72,6 +72,9 @@ export function normalizeSample(rawValue: unknown): Sample {
       : rawString(asRecord(clinical), 'mainDiagnosis', 'main_diagnosis'),
     hpoTerms: rawHpoTerms(raw.hpoTerms ?? raw.hpo_terms),
     matchedPair: rawMatchedPair(raw.matchedPair ?? raw.matched_pair),
+    matchStatus: rawString(raw, 'matchStatus', 'match_status', raw.matchedPair ?? raw.matched_pair ? 'matched' : 'unmatched') as Sample['matchStatus'],
+    matchMode: rawString(raw, 'matchMode', 'match_mode') as Sample['matchMode'],
+    autoMatchEnabled: raw.autoMatchEnabled === false || raw.auto_match_enabled === false ? false : true,
     remark: rawString(raw, 'remark', 'remark'),
     createdAt: rawString(raw, 'createdAt', 'created_at'),
     updatedAt: rawString(raw, 'updatedAt', 'updated_at'),
@@ -231,5 +234,15 @@ export async function bindSampleMatchedPairFromUploadJob(id: string, uploadJobId
   if (!detail.id) {
     throw new Error('Sample match was updated but the response could not be parsed');
   }
+  return detail;
+}
+
+export async function bindSampleDataAssets(id: string, read1AssetId: string, read2AssetId: string): Promise<SampleDetail> {
+  const response = await api.put<unknown>(`/v1/samples/${encodeURIComponent(id)}/data-link`, {
+    read1_asset_id: read1AssetId,
+    read2_asset_id: read2AssetId,
+  });
+  const detail = normalizeSampleDetail(response);
+  if (!detail.id) throw new Error('样本数据关联已更新，但无法解析响应');
   return detail;
 }

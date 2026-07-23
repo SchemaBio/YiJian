@@ -47,11 +47,11 @@ export function BillingDisplay() {
     <Link
       href="/billing"
       className="flex h-8 min-w-[112px] items-center justify-center gap-1.5 rounded-md border border-[var(--yj-border-subtle)] px-2.5 text-sm hover:bg-[var(--yj-panel-muted)] transition-colors"
-      aria-label={`费用中心，当前余额 ${balance ?? '--'} Credit`}
+      aria-label={`费用中心，当前余额 ${balance ?? '--'} 积分`}
     >
       <Coins className="w-4 h-4" />
       <span className={isLow ? 'text-danger-fg font-medium' : 'text-fg-default font-medium'}>
-        {balance ?? '--'} Credit
+        {balance ?? '--'} 积分
       </span>
     </Link>
   );

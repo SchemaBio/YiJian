@@ -1,234 +1,83 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader } from '@schema/ui-kit';
-import { AlertCircle, CheckCircle, Database, Link2, Link2Off, RefreshCw } from 'lucide-react';
-import { bindSampleMatchedPairFromUploadJob, clearSampleMatchedPair, updateSampleMatchedPair } from '@/lib/samples';
-import type { SampleDetail } from '../../types';
+import { Button, Modal as UIKitModal, ModalBody, ModalFooter, ModalHeader } from '@schema/ui-kit';
+import { AlertCircle, CheckCircle, Database, Link2, Link2Off, Loader2 } from 'lucide-react';
+import { bindSampleDataAssets, clearSampleMatchedPair } from '@/lib/samples';
+import { listDataAssets, type DataAsset } from '@/lib/data-assets';
+import type { SampleDetail, SampleMatchStatus } from '../../types';
 
-interface MatchingTabProps {
-  sample: SampleDetail;
-  onSampleUpdated?: (sample: SampleDetail) => void;
+interface MatchingTabProps { sample: SampleDetail; onSampleUpdated?: (sample: SampleDetail) => void }
+
+function Modal(props: React.ComponentProps<typeof UIKitModal>) {
+  const { size = 'medium', ...rest } = props;
+  return <UIKitModal size={size} {...rest} />;
 }
 
-function pathFileName(path: string): string {
-  const normalized = path.replace(/\\/g, '/');
-  return normalized.split('/').filter(Boolean).pop() || path;
-}
+const statusCopy: Record<SampleMatchStatus, { title: string; detail: string; tone: string }> = {
+  unmatched: { title: '未匹配测序数据', detail: '系统尚未发现与样本编号一致的完整数据对。', tone: 'border-warning-muted bg-warning-subtle' },
+  partial: { title: '仅匹配到一端数据', detail: '已发现 Read1 或 Read2，请补充另一端文件或手动选择。', tone: 'border-warning-muted bg-warning-subtle' },
+  conflict: { title: '存在多个匹配候选', detail: '系统不会自动猜测，请手动选择正确的 Read1 和 Read2。', tone: 'border-danger-muted bg-danger-subtle' },
+  matched: { title: '已匹配双端测序数据', detail: 'Read1 / Read2 已就绪，可用于创建分析任务。', tone: 'border-success-muted bg-success-subtle' },
+  missing: { title: '已关联文件缺失', detail: '原始数据已到期或无法访问，请重新上传并关联。', tone: 'border-danger-muted bg-danger-subtle' },
+};
+
+function fileName(path: string): string { return path.replace(/\\/g, '/').split('/').filter(Boolean).pop() || path }
 
 export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
-  const [matchModalOpen, setMatchModalOpen] = React.useState(false);
-  const [unmatchConfirmOpen, setUnmatchConfirmOpen] = React.useState(false);
-  const [r1Path, setR1Path] = React.useState(sample.matchedPair?.r1Path ?? '');
-  const [r2Path, setR2Path] = React.useState(sample.matchedPair?.r2Path ?? '');
-  const [uploadJobId, setUploadJobId] = React.useState('');
+  const [matchOpen, setMatchOpen] = React.useState(false);
+  const [clearOpen, setClearOpen] = React.useState(false);
+  const [assets, setAssets] = React.useState<DataAsset[]>([]);
+  const [read1Id, setRead1Id] = React.useState('');
+  const [read2Id, setRead2Id] = React.useState('');
+  const [loadingAssets, setLoadingAssets] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  React.useEffect(() => {
-    setR1Path(sample.matchedPair?.r1Path ?? '');
-    setR2Path(sample.matchedPair?.r2Path ?? '');
-    setUploadJobId('');
-    setError('');
-  }, [sample.id, sample.matchedPair?.r1Path, sample.matchedPair?.r2Path]);
+  const status = statusCopy[sample.matchStatus ?? (sample.matchedPair ? 'matched' : 'unmatched')];
+  const read1Assets = assets.filter((asset) => asset.status === 'completed' && asset.read_type === 'read1');
+  const read2Assets = assets.filter((asset) => asset.status === 'completed' && asset.read_type === 'read2');
 
-  const canSave = uploadJobId.trim() !== '' || (r1Path.trim() !== '' && r2Path.trim() !== '');
-
-  const handleSaveMatch = async () => {
-    if (!canSave) return;
-    setSaving(true);
-    setError('');
-    try {
-      const updated = uploadJobId.trim()
-        ? await bindSampleMatchedPairFromUploadJob(sample.id, uploadJobId.trim())
-        : await updateSampleMatchedPair(sample.id, {
-            r1Path: r1Path.trim(),
-            r2Path: r2Path.trim(),
-          });
-      onSampleUpdated?.(updated);
-      setMatchModalOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '保存测序数据匹配失败');
-    } finally {
-      setSaving(false);
-    }
+  const openMatcher = async () => {
+    setMatchOpen(true); setLoadingAssets(true); setError('');
+    try { const result = await listDataAssets(); setAssets(result.items ?? []); }
+    catch (err) { setError(err instanceof Error ? err.message : '加载数据资产失败'); }
+    finally { setLoadingAssets(false); }
   };
 
-  const handleClearMatch = async () => {
-    setSaving(true);
-    setError('');
+  const save = async () => {
+    if (!read1Id || !read2Id) return;
+    setSaving(true); setError('');
     try {
-      const updated = await clearSampleMatchedPair(sample.id);
-      onSampleUpdated?.(updated);
-      setUnmatchConfirmOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '解除测序数据匹配失败');
-    } finally {
-      setSaving(false);
-    }
+      const updated = await bindSampleDataAssets(sample.id, read1Id, read2Id);
+      onSampleUpdated?.(updated); setMatchOpen(false);
+    } catch (err) { setError(err instanceof Error ? err.message : '保存数据关联失败'); }
+    finally { setSaving(false); }
+  };
+
+  const clear = async () => {
+    setSaving(true); setError('');
+    try { const updated = await clearSampleMatchedPair(sample.id); onSampleUpdated?.(updated); setClearOpen(false); }
+    catch (err) { setError(err instanceof Error ? err.message : '解除数据关联失败'); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-canvas-subtle rounded-lg p-4">
-        <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
-          <Database className="w-4 h-4" />
-          数据匹配状态
-        </h4>
-
-        {sample.matchedPair ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 p-3 bg-success-subtle rounded border border-success-muted">
-              <CheckCircle className="w-5 h-5 text-success-fg" />
-              <div className="flex-1">
-                <div className="text-sm font-medium text-fg-default">已匹配双端测序数据</div>
-                <div className="text-xs text-fg-muted mt-1">R1 / R2 文件已就绪，可用于创建分析任务。</div>
-              </div>
-              <Button
-                variant="secondary"
-                size="small"
-                leftIcon={<Link2 className="w-4 h-4" />}
-                onClick={() => setMatchModalOpen(true)}
-              >
-                更新匹配
-              </Button>
-              <Button
-                variant="secondary"
-                size="small"
-                leftIcon={<Link2Off className="w-4 h-4" />}
-                onClick={() => setUnmatchConfirmOpen(true)}
-              >
-                解除匹配
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 p-3 bg-canvas-default rounded">
-              <div>
-                <span className="text-xs text-fg-muted">R1 文件</span>
-                <p className="text-sm text-fg-default font-mono break-all">{sample.matchedPair.r1Path}</p>
-                <p className="text-xs text-fg-muted mt-1">{pathFileName(sample.matchedPair.r1Path)}</p>
-              </div>
-              <div>
-                <span className="text-xs text-fg-muted">R2 文件</span>
-                <p className="text-sm text-fg-default font-mono break-all">{sample.matchedPair.r2Path}</p>
-                <p className="text-xs text-fg-muted mt-1">{pathFileName(sample.matchedPair.r2Path)}</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 p-3 bg-warning-subtle rounded border border-warning-muted">
-              <AlertCircle className="w-5 h-5 text-warning-fg" />
-              <div className="flex-1">
-                <div className="text-sm font-medium text-fg-default">未匹配测序数据</div>
-                <div className="text-xs text-fg-muted mt-1">
-                  可使用已完成的双端 FASTQ 上传任务进行绑定，也可填写已有文件路径。
-                </div>
-              </div>
-              <Button
-                variant="primary"
-                size="small"
-                leftIcon={<Link2 className="w-4 h-4" />}
-                onClick={() => setMatchModalOpen(true)}
-              >
-                写入匹配
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-3 flex items-start gap-2 p-3 bg-canvas-default rounded">
-          <AlertCircle className="w-4 h-4 text-fg-muted mt-0.5" />
-          <div className="text-xs text-fg-muted leading-5">
-            双端 FASTQ 上传完成后可使用上传任务 ID 绑定；解除匹配不会删除已上传文件。
-          </div>
+    <div className="space-y-5">
+      <div className={`rounded-md border p-4 ${status.tone}`}>
+        <div className="flex flex-wrap items-start gap-3">
+          {sample.matchStatus === 'matched' ? <CheckCircle className="mt-0.5 h-5 w-5 text-success-fg" /> : <AlertCircle className="mt-0.5 h-5 w-5 text-warning-fg" />}
+          <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-medium text-fg-default">{status.title}</p>{sample.matchMode && <span className="rounded bg-canvas-default px-2 py-0.5 text-xs text-fg-muted">{sample.matchMode === 'manual' ? '手动关联' : '自动匹配'}</span>}</div><p className="mt-1 text-xs text-fg-muted">{status.detail}</p></div>
+          <Button variant="secondary" size="small" leftIcon={<Link2 className="h-4 w-4" />} onClick={() => void openMatcher()}>{sample.matchedPair ? '更新关联' : '手动关联'}</Button>
+          {sample.matchedPair && <Button variant="secondary" size="small" leftIcon={<Link2Off className="h-4 w-4" />} onClick={() => setClearOpen(true)}>解除</Button>}
         </div>
       </div>
 
-      {error && (
-        <div className="p-3 rounded border border-danger-muted bg-danger-subtle text-sm text-danger-fg">
-          {error}
-        </div>
-      )}
+      {sample.matchedPair && <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border-default bg-border-default md:grid-cols-2"><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read1</p><p className="mt-1 truncate text-sm font-medium text-fg-default" title={fileName(sample.matchedPair.r1Path)}>{fileName(sample.matchedPair.r1Path)}</p></div><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read2</p><p className="mt-1 truncate text-sm font-medium text-fg-default" title={fileName(sample.matchedPair.r2Path)}>{fileName(sample.matchedPair.r2Path)}</p></div></div>}
+      {error && <div className="rounded-md border border-danger-muted bg-danger-subtle p-3 text-sm text-danger-fg">{error}</div>}
 
-      <Modal open={matchModalOpen} onOpenChange={setMatchModalOpen}>
-        <ModalHeader>{sample.matchedPair ? '更新测序数据匹配' : '写入测序数据匹配'}</ModalHeader>
-        <ModalBody>
-          <div className="space-y-4">
-            <p className="text-sm text-fg-muted">
-              为样本 <span className="font-mono text-fg-default">{sample.internalId || sample.id}</span> 写入 R1/R2。
-              文件引用必须属于当前用户或机构。
-            </p>
-            <div className="space-y-2 rounded-md border border-border-default bg-canvas-subtle p-3">
-              <label className="text-sm font-medium text-fg-default">上传任务 ID（推荐）</label>
-              <Input
-                value={uploadJobId}
-                onChange={(e) => setUploadJobId(e.target.value)}
-                placeholder="已完成的双端 FASTQ 上传任务 UUID"
-              />
-              <p className="text-xs text-fg-muted">
-                使用双端 FASTQ 上传返回的任务 ID 绑定 R1/R2 文件。
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-fg-muted">
-              <span className="h-px flex-1 bg-border-default" />
-              <span>或手动填写已有文件路径</span>
-              <span className="h-px flex-1 bg-border-default" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-fg-default">R1 文件路径或存储键</label>
-              <Input
-                value={r1Path}
-                onChange={(e) => setR1Path(e.target.value)}
-                placeholder="例如 uploads/.../sample_R1.fastq.gz"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-fg-default">R2 文件路径或存储键</label>
-              <Input
-                value={r2Path}
-                onChange={(e) => setR2Path(e.target.value)}
-                placeholder="例如 uploads/.../sample_R2.fastq.gz"
-              />
-            </div>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setMatchModalOpen(false)} disabled={saving}>
-            取消
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSaveMatch}
-            disabled={!canSave || saving}
-            leftIcon={saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : undefined}
-          >
-            {saving ? '保存中...' : '保存匹配'}
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      <Modal open={unmatchConfirmOpen} onOpenChange={setUnmatchConfirmOpen}>
-        <ModalHeader>确认解除测序数据匹配</ModalHeader>
-        <ModalBody>
-          <p className="text-sm text-fg-muted">
-            将清空当前样本的 R1/R2 匹配关系。此操作不会删除已上传文件。
-          </p>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setUnmatchConfirmOpen(false)} disabled={saving}>
-            取消
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => void handleClearMatch()}
-            disabled={saving}
-            leftIcon={saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : undefined}
-          >
-            {saving ? '解除中...' : '确认解除'}
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <Modal open={matchOpen} onOpenChange={setMatchOpen}><ModalHeader>关联数据资产</ModalHeader><ModalBody><div className="space-y-4"><p className="text-sm text-fg-muted">从当前组织的数据中心分别选择 Read1 和 Read2。保存后将作为手动关联，自动匹配不会覆盖。</p>{loadingAssets ? <div className="flex h-28 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载数据资产</div> : <><label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read1</span><select value={read1Id} onChange={(event) => setRead1Id(event.target.value)} className="h-10 w-full rounded-md border border-border-default bg-canvas-default px-3 text-sm text-fg-default"><option value="">请选择 Read1 文件</option>{read1Assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name} · {asset.id.slice(0, 8)}</option>)}</select></label><label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read2</span><select value={read2Id} onChange={(event) => setRead2Id(event.target.value)} className="h-10 w-full rounded-md border border-border-default bg-canvas-default px-3 text-sm text-fg-default"><option value="">请选择 Read2 文件</option>{read2Assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name} · {asset.id.slice(0, 8)}</option>)}</select></label>{read1Assets.length === 0 || read2Assets.length === 0 ? <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-xs text-warning-fg"><Database className="h-4 w-4 shrink-0" />数据中心中没有完整的可用 Read1/Read2，请先上传数据。</div> : null}</>}</div></ModalBody><ModalFooter><Button variant="secondary" disabled={saving} onClick={() => setMatchOpen(false)}>取消</Button><Button variant="primary" disabled={saving || !read1Id || !read2Id} leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} onClick={() => void save()}>{saving ? '保存中' : '保存关联'}</Button></ModalFooter></Modal>
+      <Modal open={clearOpen} onOpenChange={setClearOpen}><ModalHeader>解除数据关联</ModalHeader><ModalBody><p className="text-sm text-fg-muted">解除后不会删除数据中心文件，系统可在下一轮重新进行自动匹配。</p></ModalBody><ModalFooter><Button variant="secondary" disabled={saving} onClick={() => setClearOpen(false)}>取消</Button><Button variant="danger" disabled={saving} onClick={() => void clear()}>{saving ? '处理中' : '确认解除'}</Button></ModalFooter></Modal>
     </div>
   );
 }

@@ -16,6 +16,7 @@
   ListTodo,
   ShieldCheck,
   Settings2,
+	HardDrive,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,6 +41,7 @@ export interface SidebarNavConfig {
   dashboard: SidebarNavItem[];
   samples: SidebarNavItem[];
   tasks: SidebarNavItem[];
+	data: SidebarNavItem[];
   pipeline: SidebarNavItem[];
   history: SidebarNavItem[];
   admin: SidebarNavItem[];
@@ -51,6 +53,7 @@ export interface SidebarNavConfig {
 export const mainNavItems: NavItem[] = [
   { label: '概览', href: '/dashboard', icon: LayoutDashboard },
   { label: '样本管理', href: '/samples', icon: Users },
+	{ label: '数据中心', href: '/data', icon: HardDrive },
   { label: '任务中心', href: '/tasks', icon: ListTodo },
   { label: '历史检出', href: '/history', icon: History },
   { label: '流程中心', href: '/pipeline', icon: Workflow },
@@ -66,6 +69,7 @@ export const sidebarNavConfig: SidebarNavConfig = {
     { label: '家系管理', href: '/samples/pedigree', icon: GitBranch },
   ],
   tasks: [],
+	data: [],
   pipeline: [
     { label: '流程列表', href: '/pipeline', icon: List },
     { label: '配置总览', href: '/pipeline/config', icon: Settings2 },

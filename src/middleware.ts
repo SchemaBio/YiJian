@@ -60,6 +60,7 @@ function contentSecurityPolicy(nonce: string) {
   const connectSrc = [
     `'self'`,
     apiConnectSource(),
+    ...uploadConnectSources(),
     ...(isProduction ? [] : ['http://localhost:*', 'http://backend:*']),
   ]
     .filter(Boolean)
@@ -79,6 +80,22 @@ function contentSecurityPolicy(nonce: string) {
     `base-uri 'self'`,
     `form-action 'self'`,
   ].join('; ');
+}
+
+function uploadConnectSources(): string[] {
+  return (process.env.YIJIAN_UPLOAD_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .flatMap((value) => {
+      try {
+        const parsed = new URL(value);
+        if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.username || parsed.password) return [];
+        return [parsed.origin];
+      } catch {
+        return [];
+      }
+    });
 }
 
 export function middleware(request: NextRequest) {

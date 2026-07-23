@@ -5,6 +5,7 @@ module.exports = {
   presets: [uiKitPreset],
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
+    './node_modules/@schema/ui-kit/dist/**/*.{js,ts}',
   ],
   theme: {
     extend: {},

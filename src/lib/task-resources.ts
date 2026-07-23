@@ -74,6 +74,9 @@ export function normalizeSampleDetail(rawValue: unknown): SampleDetail {
     sampleType: valueOf<SampleDetail['sampleType']>(raw, 'sampleType', 'sample_type', '其他'),
     batch: valueOf<string>(raw, 'batch', 'batch', ''),
     matchedPair: normalizeMatchedPair(raw.matchedPair ?? raw.matched_pair) as SampleDetail['matchedPair'],
+    matchStatus: valueOf<SampleDetail['matchStatus']>(raw, 'matchStatus', 'match_status', raw.matchedPair ?? raw.matched_pair ? 'matched' : 'unmatched'),
+    matchMode: valueOf<SampleDetail['matchMode']>(raw, 'matchMode', 'match_mode', ''),
+    autoMatchEnabled: valueOf<boolean>(raw, 'autoMatchEnabled', 'auto_match_enabled', true),
     remark: valueOf<string>(raw, 'remark', 'remark', ''),
     clinicalDiagnosis: typeof clinicalDiagnosis === 'object' && clinicalDiagnosis !== null
       ? clinicalDiagnosis as SampleDetail['clinicalDiagnosis']

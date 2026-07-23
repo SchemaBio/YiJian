@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Button, Input, Select, TextArea } from '@schema/ui-kit';
-import { X, Search } from 'lucide-react';
+import { FileText, Search, Stethoscope, UserRound, X } from 'lucide-react';
 import { AppModal } from '@/components/shared';
 import type { Gender, SampleType } from '../types';
 
@@ -20,8 +20,6 @@ export interface NewSampleFormData {
   batch: string;
   clinicalDiagnosis: string;
   hpoTerms: { id: string; name: string }[];
-  r1Path?: string;
-  r2Path?: string;
   remark: string;
 }
 
@@ -86,10 +84,19 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     if (submitting) return;
-    setSubmitting(true);
     setSubmitError('');
+
+    if (!formData.internalId.trim()) {
+      setSubmitError('请填写内部编号');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        internalId: formData.internalId.trim(),
+      });
       onClose();
       // Reset form only after the backend confirms creation.
       setFormData({
@@ -104,7 +111,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
       });
       setHpoSearchQuery('');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to create sample');
+      setSubmitError(err instanceof Error ? err.message : '创建样本失败，请稍后重试');
     } finally {
       setSubmitting(false);
     }
@@ -130,30 +137,35 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
       title="新建样本"
-      size="medium"
+      size="large"
+      className="!fixed !left-1/2 !right-auto !top-1/2 !bottom-auto !m-0 !max-h-[calc(100vh-2rem)] !w-[min(920px,calc(100vw-2rem))] !max-w-[920px] !-translate-x-1/2 !-translate-y-1/2"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
           <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
-            创建样本
+            {submitting ? '创建中...' : '创建样本'}
           </Button>
         </>
       }
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         {submitError && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {submitError}
           </div>
         )}
-        {/* 基本信息 */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-fg-default mb-3">基本信息</h3>
-          <div className="grid grid-cols-2 gap-4">
+
+        <section>
+          <SectionHeading
+            icon={<UserRound className="h-4 w-4" />}
+            title="基本信息"
+            description="用于样本检索、分组和基础分析配置"
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="block text-xs text-fg-muted mb-1">内部编号 *</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号 *</label>
               <Input
                 value={formData.internalId}
                 onChange={(e) => handleChange('internalId', e.target.value)}
@@ -162,15 +174,23 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
               />
             </div>
             <div>
-              <label className="block text-xs text-fg-muted mb-1">批次</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">批次</label>
               <Input
                 value={formData.batch}
                 onChange={(e) => handleChange('batch', e.target.value)}
-                placeholder="如：BATCH-2024-001"
+                placeholder="如：BATCH-2026-001"
               />
             </div>
             <div>
-              <label className="block text-xs text-fg-muted mb-1">性别</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">样本类型 *</label>
+              <Select
+                value={formData.sampleType}
+                onChange={(value) => handleChange('sampleType', Array.isArray(value) ? value[0] : value)}
+                options={sampleTypeOptions}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">性别</label>
               <Select
                 value={formData.gender}
                 onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)}
@@ -178,7 +198,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
               />
             </div>
             <div>
-              <label className="block text-xs text-fg-muted mb-1">年龄</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">年龄</label>
               <Input
                 type="number"
                 min="0"
@@ -191,23 +211,18 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                 placeholder="如：35"
               />
             </div>
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">样本类型 *</label>
-              <Select
-                value={formData.sampleType}
-                onChange={(value) => handleChange('sampleType', Array.isArray(value) ? value[0] : value)}
-                options={sampleTypeOptions}
-              />
-            </div>
           </div>
-        </div>
+        </section>
 
-        {/* 临床信息 */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-fg-default mb-3">临床信息</h3>
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <SectionHeading
+            icon={<Stethoscope className="h-4 w-4" />}
+            title="临床信息"
+            description="记录诊断摘要和可用于分析筛选的 HPO 表型"
+          />
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-fg-muted mb-1">临床诊断</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">临床诊断</label>
               <TextArea
                 value={formData.clinicalDiagnosis}
                 onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)}
@@ -215,9 +230,8 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                 rows={2}
               />
             </div>
-            {/* HPO术语 */}
             <div>
-              <label className="block text-xs text-fg-muted mb-1">HPO表型术语</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">HPO 表型术语</label>
               {formData.hpoTerms.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.hpoTerms.map((term) => (
@@ -231,6 +245,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                         type="button"
                         onClick={() => removeHpoTerm(term.id)}
                         className="ml-1 text-blue-400 hover:text-red-500"
+                        aria-label={`移除 ${term.name}`}
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -266,42 +281,45 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                 )}
               </div>
             </div>
-            <div className="pt-2 border-t border-gray-100">
-              <label className="block text-xs text-fg-muted mb-2">匹配测序数据（可选，R1/R2 需同时填写）</label>
-              <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                此处填写已有文件的存储键或路径。本地文件可在创建任务时直接上传。
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-fg-muted mb-1">R1 FASTQ</label>
-                  <Input
-                    value={formData.r1Path ?? ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, r1Path: e.target.value }))}
-                    placeholder="文件路径或存储键"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-fg-muted mb-1">R2 FASTQ</label>
-                  <Input
-                    value={formData.r2Path ?? ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, r2Path: e.target.value }))}
-                    placeholder="文件路径或存储键"
-                  />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-fg-muted mb-1">备注</label>
-              <TextArea
-                value={formData.remark}
-                onChange={(e) => handleChange('remark', e.target.value)}
-                placeholder="请输入备注信息"
-                rows={2}
-              />
-            </div>
           </div>
-        </div>
+        </section>
+
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <SectionHeading
+            icon={<FileText className="h-4 w-4" />}
+            title="备注"
+            description="补充记录送检或分析注意事项"
+          />
+          <TextArea
+            value={formData.remark}
+            onChange={(e) => handleChange('remark', e.target.value)}
+            placeholder="请输入备注信息"
+            rows={2}
+          />
+        </section>
       </form>
     </AppModal>
+  );
+}
+
+function SectionHeading({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-4 flex items-start gap-3">
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--yj-panel-subtle)] text-accent-fg">
+        {icon}
+      </span>
+      <div>
+        <h3 className="text-sm font-semibold text-fg-default">{title}</h3>
+        <p className="mt-0.5 text-xs text-fg-muted">{description}</p>
+      </div>
+    </div>
   );
 }

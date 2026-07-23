@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
 import { Coins, Play, Info, Loader2, Upload } from 'lucide-react';
-import { requestPairedUploadJob, uploadToCOS } from '@/lib/api';
+import { confirmUpload, requestPairedUploadJob, uploadToCOS } from '@/lib/api';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
@@ -182,7 +182,9 @@ export default function NewAnalysisPage() {
       }
 
       await uploadToCOS(r1.upload_url, r1File, pct => setUploadProgress(Math.round(pct / 2)));
+      if (r1.storage_type === 'presigned') await confirmUpload(r1.file_id);
       await uploadToCOS(r2.upload_url, r2File, pct => setUploadProgress(50 + Math.round(pct / 2)));
+      if (r2.storage_type === 'presigned') await confirmUpload(r2.file_id);
       setUploadJobId(job.job_id);
       setUploadProgress(100);
       setUploadNotice(`上传任务 ${job.job_id} 已就绪`);

@@ -519,6 +519,18 @@
     box-shadow: inset 2px 0 0 var(--color-accent-emphasis);
   }
 
+  .sample-management-table table {
+    min-width: 1320px;
+  }
+
+  .sample-management-table tbody tr[aria-selected="true"] td {
+    background: #eef7e6;
+  }
+
+  .sample-management-table tbody td {
+    line-height: 1.35;
+  }
+
   .yj-modern button:not([class*="rounded-full"]) {
     border-radius: var(--yj-radius-control);
     transition-property: color, background-color, border-color, box-shadow;

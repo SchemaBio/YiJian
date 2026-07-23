@@ -2,6 +2,8 @@
 
 export type Gender = 'male' | 'female' | 'unknown';
 export type SampleType = '全血' | '唾液' | 'DNA' | '组织' | '其他';
+export type SampleMatchStatus = 'unmatched' | 'partial' | 'conflict' | 'matched' | 'missing';
+export type SampleMatchMode = 'manual' | 'automatic' | '';
 
 // 匹配数据结构（双端测序数据）
 export interface MatchedPair {
@@ -19,6 +21,9 @@ export interface Sample {
   clinicalDiagnosis: string;  // 临床诊断（简要）
   hpoTerms: { id: string; name: string }[];  // HPO术语
   matchedPair: MatchedPair | null;  // 匹配的双端数据（每组只能匹配一组）
+  matchStatus: SampleMatchStatus;
+  matchMode: SampleMatchMode;
+  autoMatchEnabled: boolean;
   remark: string;  // 备注
   createdAt: string;
   updatedAt: string;
@@ -33,6 +38,9 @@ export interface SampleDetail {
   sampleType: SampleType;
   batch: string;
   matchedPair: MatchedPair | null;
+  matchStatus: SampleMatchStatus;
+  matchMode: SampleMatchMode;
+  autoMatchEnabled: boolean;
   remark: string;
 
   // 临床诊断信息

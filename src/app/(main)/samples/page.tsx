@@ -9,6 +9,7 @@ import {
   Database,
   Download,
   FileCheck,
+  Link2,
   Pencil,
   Plus,
   Search,
@@ -16,8 +17,9 @@ import {
   Upload,
   XCircle,
 } from 'lucide-react';
-import { NewSampleModal, EditSampleModal } from './components';
+import { NewSampleModal, EditSampleModal, DataLinkModal } from './components';
 import type { NewSampleFormData, EditSampleFormData } from './components';
+import { ConfirmDialog, MetricTile } from '@/components/shared';
 import { api } from '@/lib/api';
 import { listSamples, normalizeSample, samplePayload } from '@/lib/samples';
 import type { Sample } from './types';
@@ -32,38 +34,6 @@ function ColumnHeader({ group, label }: { group: string; label: string }) {
       <span className="text-xs font-semibold text-[var(--yj-text-strong)]">
         {label}
       </span>
-    </div>
-  );
-}
-
-function MetricTile({
-  label,
-  value,
-  icon,
-  tone = 'neutral',
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  tone?: 'neutral' | 'success' | 'warning';
-}) {
-  const toneClass = {
-    neutral: 'text-fg-muted bg-[var(--yj-panel-subtle)]',
-    success: 'text-green-700 bg-[var(--yj-sage-subtle)]',
-    warning: 'text-orange-700 bg-orange-50',
-  }[tone];
-
-  return (
-    <div className="min-w-[136px] rounded-2xl border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-4 py-3 shadow-[var(--yj-shadow-panel)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-sm text-fg-muted">{label}</div>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${toneClass}`}>
-          {icon}
-        </div>
-      </div>
-      <div className="mt-4 text-[24px] font-semibold leading-none tracking-tight text-[var(--yj-text-strong)]">
-        {value}
-      </div>
     </div>
   );
 }
@@ -90,6 +60,13 @@ function IdCell({ id }: { id: string }) {
       </span>
     </Tooltip>
   );
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value || '-'
+    : date.toLocaleString('zh-CN', { hour12: false });
 }
 
 function SubjectCell({ sample }: { sample: Sample }) {
@@ -151,30 +128,57 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
 }
 
 function MatchedCell({ sample }: { sample: Sample }) {
-  if (sample.matchedPair) {
-    return (
-      <Tooltip
-        content={
-          <div className="text-xs space-y-1">
-            <div><span className="text-gray-400">R1:</span> {sample.matchedPair.r1Path}</div>
-            <div><span className="text-gray-400">R2:</span> {sample.matchedPair.r2Path}</div>
-          </div>
-        }
-      >
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
-          <CheckCircle className="h-3.5 w-3.5" />
-          已匹配
-        </span>
-      </Tooltip>
-    );
-  }
+  const status = {
+    matched: {
+      label: '已匹配',
+      detail: sample.matchMode === 'manual' ? '已由用户手动选择 Read1/Read2，自动匹配不会覆盖。' : '系统已按样本内部编号自动匹配 Read1/Read2。',
+      className: 'border-green-200 bg-green-50 text-green-700',
+      icon: <CheckCircle className="h-3.5 w-3.5" />,
+    },
+    partial: {
+      label: '部分匹配',
+      detail: '系统只找到 Read1 或 Read2，请补充另一端数据或手动关联。',
+      className: 'border-orange-200 bg-orange-50 text-orange-700',
+      icon: <AlertCircle className="h-3.5 w-3.5" />,
+    },
+    conflict: {
+      label: '匹配冲突',
+      detail: '发现多个同名候选，系统不会自动选择，请手动关联。',
+      className: 'border-red-200 bg-red-50 text-red-700',
+      icon: <AlertCircle className="h-3.5 w-3.5" />,
+    },
+    missing: {
+      label: '文件缺失',
+      detail: '已关联的数据已到期或无法访问，请重新上传并关联。',
+      className: 'border-red-200 bg-red-50 text-red-700',
+      icon: <XCircle className="h-3.5 w-3.5" />,
+    },
+    unmatched: {
+      label: sample.autoMatchEnabled ? '待匹配' : '未启用',
+      detail: sample.autoMatchEnabled
+        ? '系统定时按文件名中的样本编号匹配 Read1/Read2，也可立即手动关联。'
+        : '此样本未启用自动匹配，可手动关联数据。',
+      className: 'border-gray-200 bg-gray-50 text-gray-600',
+      icon: <XCircle className="h-3.5 w-3.5" />,
+    },
+  }[sample.matchStatus];
 
   return (
-    <Tooltip content={<div className="text-xs text-gray-300">暂无匹配测序数据</div>}>
-      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">
-        <XCircle className="h-3.5 w-3.5" />
-        待匹配
-      </span>
+    <Tooltip content={
+      <div className="max-w-xs space-y-1 text-xs">
+        <p>{status.detail}</p>
+        {sample.matchedPair && <><p><span className="text-gray-400">R1:</span> {sample.matchedPair.r1Path}</p><p><span className="text-gray-400">R2:</span> {sample.matchedPair.r2Path}</p></>}
+      </div>
+    }>
+      <div className="inline-flex flex-col items-center gap-1">
+        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium ${status.className}`}>
+          {status.icon}
+          {status.label}
+        </span>
+        {sample.matchStatus === 'matched' && sample.matchMode && (
+          <span className="text-[10px] text-fg-muted">{sample.matchMode === 'manual' ? '手动关联' : '自动匹配'}</span>
+        )}
+      </div>
     </Tooltip>
   );
 }
@@ -183,20 +187,29 @@ export default function SamplesPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isNewSampleModalOpen, setIsNewSampleModalOpen] = React.useState(false);
   const [editingSample, setEditingSample] = React.useState<Sample | null>(null);
+  const [linkingSample, setLinkingSample] = React.useState<Sample | null>(null);
+  const [deleteTargets, setDeleteTargets] = React.useState<Sample[]>([]);
   const [samples, setSamples] = React.useState<Sample[]>([]);
   const [samplesError, setSamplesError] = React.useState('');
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set());
 
   const matchedCount = React.useMemo(
-    () => samples.filter((sample) => sample.matchedPair).length,
+    () => samples.filter((sample) => sample.matchStatus === 'matched').length,
     [samples]
   );
   const unmatchedCount = samples.length - matchedCount;
+  const selectedSamples = React.useMemo(
+    () => samples.filter((sample) => selectedRows.has(sample.id)),
+    [samples, selectedRows]
+  );
 
 
   const loadSamples = React.useCallback(async () => {
     try {
-      setSamples(await listSamples({ page: '1', page_size: '100' }));
+      const loadedSamples = await listSamples({ page: '1', page_size: '100' });
+      const loadedIds = new Set(loadedSamples.map((sample) => sample.id));
+      setSamples(loadedSamples);
+      setSelectedRows((prev) => new Set(Array.from(prev).filter((id) => loadedIds.has(id))));
       setSamplesError('');
     } catch (err) {
       setSamplesError(err instanceof Error ? err.message : 'Failed to load samples');
@@ -204,7 +217,9 @@ export default function SamplesPage() {
   }, []);
 
   React.useEffect(() => {
-    loadSamples();
+    void loadSamples();
+    const timer = window.setInterval(() => void loadSamples(), 15000);
+    return () => window.clearInterval(timer);
   }, [loadSamples]);
 
   const handleDownloadTemplate = () => {
@@ -258,44 +273,60 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     }
   };
 
-  const handleDeleteSample = async (id: string) => {
-    try {
-      await api.delete<void>(`/v1/samples/${encodeURIComponent(id)}`);
-      setSamples((prev) => prev.filter((sample) => sample.id !== id));
+  const handleDeleteSamples = async () => {
+    if (deleteTargets.length === 0) return;
+    const results = await Promise.allSettled(
+      deleteTargets.map((sample) => api.delete<void>(`/v1/samples/${encodeURIComponent(sample.id)}`))
+    );
+    const deletedIds = new Set<string>();
+    const failedTargets: Sample[] = [];
+    results.forEach((result, index) => {
+      const sample = deleteTargets[index];
+      if (result.status === 'fulfilled') deletedIds.add(sample.id);
+      else failedTargets.push(sample);
+    });
+
+    if (deletedIds.size > 0) {
+      setSamples((prev) => prev.filter((sample) => !deletedIds.has(sample.id)));
       setSelectedRows((prev) => {
         const next = new Set(prev);
-        next.delete(id);
+        deletedIds.forEach((id) => next.delete(id));
         return next;
       });
-      setSamplesError('');
-    } catch (err) {
-      setSamplesError(err instanceof Error ? err.message : 'Failed to delete sample');
     }
+    if (failedTargets.length > 0) {
+      setDeleteTargets(failedTargets);
+      const message = `${failedTargets.length} 个样本删除失败，请重试`;
+      setSamplesError(message);
+      throw new Error(message);
+    }
+    setSamplesError('');
   };
 
   const handleSelectionChange = (nextSelection: Set<string>) => {
-    const latest = Array.from(nextSelection).slice(-1);
-    setSelectedRows(new Set(latest));
+    setSelectedRows(new Set(nextSelection));
   };
 
   const columns: Column<Sample>[] = [
     {
       id: 'sample',
-      header: <ColumnHeader group="标识" label="样本 / 内部编号" />,
+      header: <ColumnHeader group="标识" label="内部编号 / UUID" />,
       accessor: (row) => (
-        <div className="flex flex-col gap-1">
-          <IdCell id={row.id} />
-          <span className="font-mono text-xs text-fg-muted">{row.internalId}</span>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-sm font-semibold text-[var(--yj-text-strong)]" title={row.internalId}>{row.internalId}</span>
+          <span className="flex items-center gap-1 text-[11px] text-fg-muted"><span>UUID</span><IdCell id={row.id} /></span>
         </div>
       ),
-      width: 145,
+      width: 180,
       pinned: 'left',
     },
     {
       id: 'batch',
       header: <ColumnHeader group="标识" label="批次" />,
-      accessor: (row) => <span className="font-mono text-xs">{row.batch}</span>,
-      width: 140,
+      accessor: (row) => row.batch
+        ? <span className="inline-flex max-w-[150px] truncate rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-2 py-1 font-mono text-xs text-fg-default" title={row.batch}>{row.batch}</span>
+        : <span className="text-xs text-fg-muted">未分配</span>,
+      width: 165,
     },
     {
       id: 'subject',
@@ -307,11 +338,11 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       id: 'clinicalDiagnosis',
       header: <ColumnHeader group="临床" label="临床诊断" />,
       accessor: (row) => (
-        <span className="block max-w-[220px] truncate text-sm text-fg-default" title={row.clinicalDiagnosis}>
-          {row.clinicalDiagnosis}
+        <span className={`block max-w-[240px] truncate text-sm ${row.clinicalDiagnosis ? 'text-fg-default' : 'text-fg-muted'}`} title={row.clinicalDiagnosis}>
+          {row.clinicalDiagnosis || '未录入'}
         </span>
       ),
-      width: 210,
+      width: 230,
     },
     {
       id: 'hpoTerms',
@@ -323,7 +354,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       id: 'matchedPair',
       header: <ColumnHeader group="数据" label="测序数据" />,
       accessor: (row) => <MatchedCell sample={row} />,
-      width: 132,
+      width: 142,
       align: 'center',
     },
     {
@@ -340,7 +371,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       id: 'createdAt',
       header: <ColumnHeader group="追踪" label="创建时间" />,
       accessor: (row) => (
-        <span className="font-mono text-xs text-fg-muted">{row.createdAt}</span>
+        <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt)}</span>
       ),
       width: 155,
     },
@@ -349,6 +380,14 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       header: <ColumnHeader group="操作" label="动作" />,
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>
+          <button
+            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-700"
+            onClick={() => setLinkingSample(row)}
+            aria-label="关联测序数据"
+            title={row.matchedPair ? '更新数据关联' : '手动关联数据'}
+          >
+            <Link2 className="h-4 w-4" />
+          </button>
           <button
             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
             onClick={() => setEditingSample(row)}
@@ -359,7 +398,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           </button>
           <button
             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-            onClick={() => handleDeleteSample(row.id)}
+            onClick={() => setDeleteTargets([row])}
             aria-label="删除"
             title="删除"
           >
@@ -367,7 +406,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           </button>
         </div>
       ),
-      width: 82,
+      width: 112,
       align: 'center',
       pinned: 'right',
     },
@@ -375,7 +414,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
 
   return (
     <div className="h-full overflow-auto p-6 xl:p-8">
-      <div className="mb-6 flex items-end justify-between gap-6">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="text-[32px] font-semibold leading-tight tracking-tight text-[var(--yj-text-strong)]">
             样本管理
@@ -384,7 +423,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             管理样本登记、临床信息和测序数据匹配状态
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <MetricTile
             label="样本总数"
             value={samples.length}
@@ -406,9 +445,9 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       </div>
 
       <div className="yj-panel overflow-hidden">
-        <div className="yj-panel-header gap-4 px-5 py-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="w-[380px]">
+        <div className="yj-panel-header flex-wrap gap-4 px-5 py-4">
+          <div className="flex min-w-[280px] flex-1 flex-wrap items-center gap-3">
+            <div className="w-full max-w-[380px]">
               <Input
                 id="samples-search"
                 placeholder="搜索样本编号、内部编号、批次或诊断..."
@@ -420,8 +459,21 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             <span className="text-sm text-fg-muted">
               当前显示 {filteredSamples.length} / {samples.length} 条
             </span>
+            {selectedRows.size > 0 && (
+              <span className="whitespace-nowrap rounded-md bg-[var(--yj-sage-subtle)] px-2 py-1 text-xs font-medium text-green-700">
+                已选择 {selectedRows.size} 项
+              </span>
+            )}
           </div>
           <div className="yj-toolbar shrink-0">
+            <Button
+              variant="danger"
+              leftIcon={<Trash2 className="h-4 w-4" />}
+              disabled={selectedSamples.length === 0}
+              onClick={() => setDeleteTargets(selectedSamples)}
+            >
+              批量删除{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
+            </Button>
             <Button
               variant="secondary"
               leftIcon={<Download className="h-4 w-4" />}
@@ -454,15 +506,13 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
               columns={columns}
               rowKey="id"
               selectable
-              selectionMode="single"
+              selectionMode="multiple"
               selectedRows={selectedRows}
               onSelectionChange={handleSelectionChange}
-              onRowClick={(row) => setSelectedRows(new Set([row.id]))}
               onRowDoubleClick={(row) => setEditingSample(row)}
-              striped
               stickyHeader
-              density="compact"
-              className="yj-data-table"
+              density="comfortable"
+              className="yj-data-table sample-management-table"
             />
           ) : (
             <div className="yj-empty-state">
@@ -487,6 +537,29 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
         onClose={() => setEditingSample(null)}
         onSubmit={handleEditSample}
         sample={editingSample}
+      />
+
+      <DataLinkModal
+        open={linkingSample !== null}
+        sample={linkingSample}
+        onOpenChange={(open) => {
+          if (!open) setLinkingSample(null);
+        }}
+        onSaved={loadSamples}
+      />
+
+      <ConfirmDialog
+        open={deleteTargets.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargets([]);
+        }}
+        title={deleteTargets.length > 1 ? '批量删除样本' : '删除样本'}
+        message={deleteTargets.length > 1
+          ? `确定删除选中的 ${deleteTargets.length} 个样本吗？相关的数据关联也会解除，此操作无法撤销。`
+          : `确定删除样本“${deleteTargets[0]?.internalId ?? ''}”吗？相关的数据关联也会解除，此操作无法撤销。`}
+        confirmLabel={deleteTargets.length > 1 ? `删除 ${deleteTargets.length} 个样本` : '确认删除'}
+        variant="danger"
+        onConfirm={handleDeleteSamples}
       />
     </div>
   );

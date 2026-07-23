@@ -2,18 +2,25 @@
 
 import { Shield, ArrowLeft, Clock, Database, Lock, Eye, Trash2, Download, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function PrivacyPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <div className="yj-modern yj-public-shell">
       <div className="yj-legal-page">
-        {/* 返回登录 */}
+        {/* 返回应用或登录页 */}
         <Link
-          href="/login"
-          className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3.5 py-2 text-sm text-fg-muted shadow-sm transition-colors hover:text-fg-default"
+          href={isAuthenticated ? '/dashboard' : '/login'}
+          aria-disabled={isLoading}
+          onClick={(event) => {
+            if (isLoading) event.preventDefault();
+          }}
+          className={`mb-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3.5 py-2 text-sm text-fg-muted shadow-sm transition-colors hover:text-fg-default ${isLoading ? 'cursor-wait opacity-60' : ''}`}
         >
           <ArrowLeft className="w-4 h-4" />
-          返回登录
+          返回
         </Link>
 
         {/* Header */}
