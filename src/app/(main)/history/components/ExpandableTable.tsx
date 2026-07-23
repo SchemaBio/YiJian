@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { Input } from '@schema/ui-kit';
-import { Search, ChevronRight, ChevronDown } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, History } from 'lucide-react';
+import { EmptyState } from '@/components/shared';
 import type { DetectionRecord, HistoryTableFilterState, PaginatedResult } from '../types';
 
 interface ExpandableTableProps<T> {
@@ -209,7 +210,12 @@ export function ExpandableTable<T>({
           )}
         </>
       ) : (
-        <div className="text-center py-12 text-fg-muted">{emptyMessage}</div>
+        <EmptyState
+          className="yj-panel"
+          icon={<History />}
+          title={emptyMessage}
+          description="完成任务审核后，符合条件的历史检出记录会显示在这里。"
+        />
       )}
     </div>
   );

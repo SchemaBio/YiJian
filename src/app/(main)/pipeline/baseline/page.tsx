@@ -6,6 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Database, Loader2, Search } from 'lucide-react';
 import * as React from 'react';
 import { listPipelines, type Pipeline } from '@/lib/pipelines';
+import { EmptyState } from '@/components/shared';
 
 interface BaselineReference {
   id: string;
@@ -150,9 +151,12 @@ export default function BaselinePage() {
           <p className="text-fg-muted">正在加载 CNV baseline 引用...</p>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="yj-empty-state">
-          <p className="text-fg-muted">暂无 CNV baseline，请先在流程列表中配置资源文件。</p>
-        </div>
+        <EmptyState
+          className="yj-panel"
+          icon={<Database />}
+          title="暂无 CNV baseline"
+          description="请先在流程列表中为分析流程配置 CNV baseline 资源。"
+        />
       ) : (
         <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped />
       )}

@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { Button, Input, Select, TextArea } from '@schema/ui-kit';
-import { FileText, Search, Stethoscope, UserRound, X } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { FileText, Loader2, Search, Stethoscope, UserRound, X } from 'lucide-react';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 import type { Gender, SampleType, Sample } from '../types';
 
 interface EditSampleModalProps {
@@ -148,7 +148,12 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
+          <Button
+            variant="primary"
+            onClick={(e: React.MouseEvent) => handleSubmit(e)}
+            disabled={submitting}
+            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+          >
             {submitting ? '保存中...' : '保存修改'}
           </Button>
         </>
@@ -161,7 +166,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
           </div>
         )}
         <section>
-          <SectionHeading
+          <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
             title="基本信息"
             description="用于样本检索、分组和基础分析配置"
@@ -202,7 +207,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
         </section>
 
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
-          <SectionHeading
+          <ModalSectionHeading
             icon={<Stethoscope className="h-4 w-4" />}
             title="临床信息"
             description="记录诊断摘要和可用于分析筛选的 HPO 表型"
@@ -251,7 +256,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
         </section>
 
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
-          <SectionHeading
+          <ModalSectionHeading
             icon={<FileText className="h-4 w-4" />}
             title="备注"
             description="补充记录送检或分析注意事项"
@@ -260,19 +265,5 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
         </section>
       </form>
     </AppModal>
-  );
-}
-
-function SectionHeading({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="mb-4 flex items-start gap-3">
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--yj-panel-subtle)] text-accent-fg">
-        {icon}
-      </span>
-      <div>
-        <h3 className="text-sm font-semibold text-fg-default">{title}</h3>
-        <p className="mt-0.5 text-xs text-fg-muted">{description}</p>
-      </div>
-    </div>
   );
 }

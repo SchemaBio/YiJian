@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { Button, Input, Tag } from '@schema/ui-kit';
-import { Search } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { Link2, Loader2, Search } from 'lucide-react';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listSamples } from '@/lib/samples';
 import type { Sample } from '../../types';
 
@@ -66,14 +66,18 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
         <Button variant="secondary" onClick={onClose} disabled={!!submittingSampleId} className="w-full">取消</Button>
       }
     >
-      <div className="mb-3">
-        <p className="text-sm text-fg-muted">为 {memberName} 选择关联样本</p>
-      </div>
-      {submitError && (
+      <div className="space-y-6">
+        {submitError && (
         <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {submitError}
         </div>
       )}
+      <section>
+        <ModalSectionHeading
+          icon={<Link2 className="h-4 w-4" />}
+          title="选择样本"
+          description={`为 ${memberName} 选择要关联的样本`}
+        />
       <div className="mb-3">
         <Input
           placeholder="搜索样本编号、内部编号..."
@@ -82,9 +86,12 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
           leftElement={<Search className="w-4 h-4" />}
         />
       </div>
-      <div className="max-h-[400px] overflow-y-auto border border-border rounded-lg">
+      <div className="max-h-[400px] overflow-y-auto rounded-md border border-border-default">
         {loading ? (
-          <div className="px-6 py-8 text-center text-fg-muted">加载样本列表...</div>
+          <div className="flex items-center justify-center gap-2 px-6 py-8 text-center text-fg-muted">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            加载样本列表...
+          </div>
         ) : filteredSamples.length > 0 ? (
           <div className="divide-y divide-border">
             {filteredSamples.map((sample) => {
@@ -100,7 +107,7 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
                       <span className="font-mono text-sm text-fg-default">{sample.id.substring(0, 8)}</span>
                       <span className="text-fg-muted ml-2">{sample.internalId}</span>
                       <Tag variant={isMatched ? 'success' : 'warning'} className="ml-2">{isMatched ? '已匹配' : '未匹配'}</Tag>
-                      {submittingSampleId === sample.id && <span className="ml-2 text-xs text-fg-muted">linking...</span>}
+                      {submittingSampleId === sample.id && <span className="ml-2 text-xs text-fg-muted">关联中...</span>}
                     </div>
                     <span className="text-sm text-fg-subtle">{sample.sampleType}</span>
                   </div>
@@ -112,6 +119,8 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
         ) : (
           <div className="px-6 py-8 text-center text-fg-muted">未找到匹配的样本</div>
         )}
+      </div>
+      </section>
       </div>
     </AppModal>
   );

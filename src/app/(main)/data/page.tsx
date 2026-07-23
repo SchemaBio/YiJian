@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader } from '@schema/ui-kit';
+import { Button, Input } from '@schema/ui-kit';
 import {
   AlertTriangle, CheckCircle2, Cloud, Database, Download, HardDrive,
   Loader2, RefreshCw, Search, Trash2, Upload, XCircle,
@@ -10,7 +10,7 @@ import {
   deleteDataAsset, downloadDataAsset, getDataCenterConfig, listDataAssets,
   uploadDataFiles, type DataAsset, type DataCenterConfig,
 } from '@/lib/data-assets';
-import { MetricTile } from '@/components/shared';
+import { AppModal, MetricTile, ModalSectionHeading } from '@/components/shared';
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -200,25 +200,40 @@ export default function DataCenterPage() {
         </div>
       </div>
 
-      <Modal open={uploadOpen} size="medium" onOpenChange={(open) => { if (!uploading) setUploadOpen(open); }}>
-        <ModalHeader>上传测序数据</ModalHeader>
-        <ModalBody>
-          <div className="space-y-5">
-            {config?.temporary && <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载。</span></div>}
-            <p className="text-sm text-fg-muted">Read1 和 Read2 可成对上传，也可以暂时只上传其中一个，之后再从样本管理中手动关联。</p>
-            <label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
-            <label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
-            {uploading && <div><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>上传进度</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></div>}
-          </div>
-        </ModalBody>
-        <ModalFooter><Button variant="secondary" disabled={uploading} onClick={() => setUploadOpen(false)}>取消</Button><Button variant="primary" disabled={uploading || (!read1 && !read2)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中' : '开始上传'}</Button></ModalFooter>
-      </Modal>
+      <AppModal
+        open={uploadOpen}
+        size="large"
+        title="上传测序数据"
+        onOpenChange={(open) => { if (!uploading) setUploadOpen(open); }}
+        footer={
+          <>
+            <Button variant="secondary" disabled={uploading} onClick={() => setUploadOpen(false)}>取消</Button>
+            <Button variant="primary" disabled={uploading || (!read1 && !read2)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          {config?.temporary && <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载。</span></div>}
+          <section>
+            <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
+              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
+            </div>
+          </section>
+          {uploading && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title="上传进度" description="请保持页面打开，文件完成后会自动登记到数据中心。" /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>正在上传</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
+        </div>
+      </AppModal>
 
-      <Modal open={deleting !== null} size="small" onOpenChange={(open) => { if (!open) setDeleting(null); }}>
-        <ModalHeader>删除数据资产</ModalHeader>
-        <ModalBody><p className="text-sm text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p></ModalBody>
-        <ModalFooter><Button variant="secondary" onClick={() => setDeleting(null)}>取消</Button><Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => void handleDelete()}>确认删除</Button></ModalFooter>
-      </Modal>
+      <AppModal
+        open={deleting !== null}
+        size="small"
+        title="删除数据资产"
+        onOpenChange={(open) => { if (!open) setDeleting(null); }}
+        footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>取消</Button><Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => void handleDelete()}>确认删除</Button></>}
+      >
+        <p className="text-sm leading-6 text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p>
+      </AppModal>
     </div>
   );
 }

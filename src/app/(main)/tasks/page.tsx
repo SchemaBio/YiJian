@@ -9,7 +9,7 @@ import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
 import { useApi, usePolling } from '@/hooks';
-import { IdCell, TaskStatusTag } from '@/components/shared';
+import { EmptyState, IdCell, TaskStatusTag } from '@/components/shared';
 import { TaskCostValue } from '@/components/billing';
 import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -753,13 +753,12 @@ export default function AnalysisPage() {
                     density="compact"
                   />
                 ) : (
-                  <div className="yj-empty-state">
-                    <div>
-                      <span className="yj-empty-state-icon"><List className="h-5 w-5" /></span>
-                      <p className="text-sm font-medium text-fg-default">暂无任务</p>
-                      <p className="mt-1 text-xs text-fg-muted">调整筛选条件或创建新的分析任务。</p>
-                    </div>
-                  </div>
+                  <EmptyState
+                    className="yj-panel"
+                    icon={<List />}
+                    title="暂无任务"
+                    description="调整筛选条件，或创建新的分析任务。"
+                  />
                 )}
               </>
             )}

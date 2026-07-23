@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Button } from '@schema/ui-kit';
 import { Database, File, Link2, Link2Off, Loader2 } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { bindSampleDataAssets, clearSampleMatchedPair } from '@/lib/samples';
 import type { Sample } from '../types';
@@ -37,14 +37,14 @@ function AssetSelect({
 
   return (
     <div className="min-w-0 space-y-2">
-      <label className="block text-sm font-semibold text-[var(--yj-text-strong)]" htmlFor={`sample-${label.toLowerCase()}-asset`}>
+      <label className="block text-xs font-medium text-fg-muted" htmlFor={`sample-${label.toLowerCase()}-asset`}>
         {label}
       </label>
       <select
         id={`sample-${label.toLowerCase()}-asset`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3 text-sm text-fg-default outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="h-11 w-full rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3 text-sm text-fg-default outline-none transition-colors focus:border-accent-emphasis focus:ring-2 focus:ring-accent-muted"
       >
         <option value="">请选择 {label} 文件</option>
         {assets.map((asset) => (
@@ -56,7 +56,7 @@ function AssetSelect({
       <div className="h-14 rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-3 py-2">
         {selected ? (
           <div className="flex min-w-0 items-center gap-2">
-            <File className="h-4 w-4 shrink-0 text-blue-600" />
+            <File className="h-4 w-4 shrink-0 text-accent-fg" />
             <div className="min-w-0">
               <p className="truncate text-xs font-medium text-fg-default" title={selected.file_name}>{selected.file_name}</p>
               <p className="mt-0.5 text-[11px] text-fg-muted">{formatBytes(selected.file_size)} · UUID {selected.id.slice(0, 8)}</p>
@@ -158,16 +158,13 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
         </>
       }
     >
-      <div className="space-y-5">
-        <div className="flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 px-4 py-3">
-          <Database className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-blue-900">样本 {sample?.internalId || '-'}</p>
-            <p className="mt-1 text-xs leading-5 text-blue-700">
-              从当前组织的数据中心分别选择 Read1 和 Read2。保存后记为手动关联，后台自动匹配不会覆盖此选择。
-            </p>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <section>
+          <ModalSectionHeading
+            icon={<Database className="h-4 w-4" />}
+            title="选择测序数据"
+            description={`为样本 ${sample?.internalId || '-'} 分别选择 Read1 和 Read2；手动关联不会被自动匹配覆盖`}
+          />
 
         {loading ? (
           <div className="flex h-36 items-center justify-center gap-2 text-sm text-fg-muted">
@@ -189,6 +186,7 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
         {error && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
         )}
+        </section>
       </div>
     </AppModal>
   );

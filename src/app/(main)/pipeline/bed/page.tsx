@@ -6,6 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { FileText, Loader2, Search } from 'lucide-react';
 import * as React from 'react';
 import { listPipelines, type Pipeline } from '@/lib/pipelines';
+import { EmptyState } from '@/components/shared';
 
 interface BedReference {
   id: string;
@@ -150,9 +151,12 @@ export default function BedFilesPage() {
           <p className="text-fg-muted">正在加载 BED 引用...</p>
         </div>
       ) : filteredFiles.length === 0 ? (
-        <div className="yj-empty-state">
-          <p className="text-fg-muted">暂无 BED 文件，请先在流程列表中配置资源文件。</p>
-        </div>
+        <EmptyState
+          className="yj-panel"
+          icon={<FileText />}
+          title="暂无 BED 文件"
+          description="请先在流程列表中为分析流程配置 BED 资源文件。"
+        />
       ) : (
         <DataTable data={filteredFiles} columns={columns} rowKey="id" density="default" striped />
       )}

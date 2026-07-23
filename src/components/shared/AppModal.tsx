@@ -34,6 +34,26 @@ export interface AppModalProps {
   className?: string;
 }
 
+interface ModalSectionHeadingProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+export function ModalSectionHeading({ icon, title, description }: ModalSectionHeadingProps) {
+  return (
+    <div className="mb-4 flex items-start gap-3">
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--yj-panel-subtle)] text-accent-fg">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-fg-default">{title}</h3>
+        <p className="mt-0.5 text-xs leading-5 text-fg-muted">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Unified modal wrapper component for the YiJian application.
  * Wraps @schema/ui-kit's Modal with consistent API and styling.
@@ -72,7 +92,10 @@ export function AppModal({
       size={size}
       closeOnOverlayClick={closeOnOverlayClick}
       closeOnEscape={closeOnEscape}
-      className={cn('rounded-2xl border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]', className)}
+      className={cn(
+        '!fixed !bottom-auto !left-1/2 !right-auto !top-1/2 !m-0 !max-h-[calc(100vh-2rem)] !-translate-x-1/2 !-translate-y-1/2 rounded-md border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]',
+        className
+      )}
     >
       <ModalHeader showCloseButton={showCloseButton}>
         {title}

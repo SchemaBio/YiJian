@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { Button, Input, Select } from '@schema/ui-kit';
-import { X } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { Activity, Loader2, Network, UserRound } from 'lucide-react';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 import type { RelationType, AffectedStatus, PedigreeMember } from '../types';
 import type { Gender } from '../../types';
 import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';
@@ -126,58 +126,88 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
       title="添加家系成员"
-      size="small"
+      size="medium"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>添加成员</Button>
+          <Button
+            variant="primary"
+            onClick={(e: React.MouseEvent) => handleSubmit(e)}
+            disabled={submitting || !formData.name}
+            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+          >
+            {submitting ? '添加中...' : '添加成员'}
+          </Button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {submitError && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {submitError}
           </div>
         )}
+        <section>
+          <ModalSectionHeading
+            icon={<UserRound className="h-4 w-4" />}
+            title="成员信息"
+            description="填写成员姓名、性别和出生年份"
+          />
+          <div className="space-y-4">
         <div>
-          <label className="block text-xs text-fg-muted mb-1">姓名 *</label>
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">姓名 *</label>
           <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入姓名" required />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs text-fg-muted mb-1">性别 *</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">性别 *</label>
             <Select value={formData.gender} onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)} options={genderOptions} />
           </div>
           <div>
-            <label className="block text-xs text-fg-muted mb-1">出生年份</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">出生年份</label>
             <Input type="number" value={formData.birthYear} onChange={(e) => handleChange('birthYear', e.target.value)} placeholder="如 1990" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+          </div>
+        </section>
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<Network className="h-4 w-4" />}
+            title="家系关系"
+            description="设置成员与先证者及父母的关系"
+          />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs text-fg-muted mb-1">与先证者关系 *</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">与先证者关系 *</label>
             <Select value={formData.relation} onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)} options={relationOptions} />
           </div>
           <div>
-            <label className="block text-xs text-fg-muted mb-1">患病状态 *</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">患病状态 *</label>
             <Select value={formData.affectedStatus} onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)} options={affectedOptions} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs text-fg-muted mb-1">父亲</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">父亲</label>
             <Select value={formData.fatherId} onChange={(value) => handleChange('fatherId', Array.isArray(value) ? value[0] : value)} options={fatherOptions} />
           </div>
           <div>
-            <label className="block text-xs text-fg-muted mb-1">母亲</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">母亲</label>
             <Select value={formData.motherId} onChange={(value) => handleChange('motherId', Array.isArray(value) ? value[0] : value)} options={motherOptions} />
           </div>
         </div>
+        </section>
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<Activity className="h-4 w-4" />}
+            title="表型信息"
+            description="记录成员的表型描述，多个表型可用逗号分隔"
+          />
         <div>
-          <label className="block text-xs text-fg-muted mb-1">表型描述</label>
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">表型描述</label>
           <Input value={formData.phenotypes} onChange={(e) => handleChange('phenotypes', e.target.value)} placeholder="多个表型用逗号分隔" />
         </div>
+        </section>
       </form>
     </AppModal>
   );

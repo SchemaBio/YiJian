@@ -15,9 +15,10 @@ import {
   TextArea,
   type Column,
 } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Server } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
 
 type TemplateStatus = 'active' | 'inactive';
 
@@ -436,11 +437,12 @@ export default function ReportTemplatesPage() {
         </div>
       )}
 
-      {loading && (
-        <div className="text-sm text-fg-muted">加载报告模板...</div>
-      )}
-
-      {filteredTemplates.length > 0 ? (
+      {loading ? (
+        <div className="flex min-h-64 items-center justify-center text-sm text-fg-muted">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          加载报告模板...
+        </div>
+      ) : filteredTemplates.length > 0 ? (
         <DataTable
           data={filteredTemplates}
           columns={columns}
@@ -449,20 +451,44 @@ export default function ReportTemplatesPage() {
           striped
         />
       ) : (
-        <div className="yj-empty-state">
-          <div>
-            <span className="yj-empty-state-icon"><FileText className="h-5 w-5" /></span>
-            <p className="text-sm font-medium text-fg-default">暂无报告模板</p>
-            <p className="mt-1 text-xs text-fg-muted">调整搜索条件后重试。</p>
-          </div>
-        </div>
+        <EmptyState
+          className="yj-panel"
+          icon={<FileText />}
+          title="暂无报告模板"
+          description="调整搜索条件，或新建一个报告模板。"
+        />
       )}
 
       {/* 新建/编辑弹窗 */}
-      <Modal open={isModalOpen} onOpenChange={setIsModalOpen} size="medium">
-        <ModalHeader>{editingId ? '编辑报告模板' : '新建报告模板'}</ModalHeader>
-        <ModalBody>
-          <div className="space-y-4">
+      <AppModal
+        open={isModalOpen}
+        onOpenChange={(open) => !loading && setIsModalOpen(open)}
+        title={editingId ? '编辑报告模板' : '新建报告模板'}
+        size="large"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)} disabled={loading}>
+              取消
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={!isFormValid || loading}
+              leftIcon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+            >
+              {loading ? (editingId ? '保存中...' : '创建中...') : (editingId ? '保存' : '创建')}
+            </Button>
+          </>
+        }
+      >
+          <div className="space-y-6">
+            <section>
+              <ModalSectionHeading
+                icon={<FileText className="h-4 w-4" />}
+                title="模板信息"
+                description="设置模板唯一标识和用途说明"
+              />
+              <div className="space-y-4">
             <FormItem
               label="模板名称"
               required
@@ -489,6 +515,17 @@ export default function ReportTemplatesPage() {
                 rows={2}
               />
             </FormItem>
+
+              </div>
+            </section>
+
+            <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+              <ModalSectionHeading
+                icon={<Server className="h-4 w-4" />}
+                title="服务连接"
+                description="配置报告生成服务地址及访问凭据"
+              />
+              <div className="space-y-4">
 
             <FormItem label="API 端点" required hint="报告生成服务的 RESTful API 地址">
               <div className="flex gap-2">
@@ -539,7 +576,10 @@ export default function ReportTemplatesPage() {
               />
             </FormItem>
 
-            <div className="bg-canvas-subtle rounded-md p-3 text-xs text-fg-muted">
+              </div>
+            </section>
+
+            <div className="rounded-md border border-border-default bg-canvas-subtle p-3 text-xs text-fg-muted">
               <p className="font-medium text-fg-default mb-1">说明</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>模板名称必须唯一，用于系统内部标识</li>
@@ -548,16 +588,7 @@ export default function ReportTemplatesPage() {
               </ul>
             </div>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-            取消
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!isFormValid}>
-            {editingId ? '保存' : '创建'}
-          </Button>
-        </ModalFooter>
-      </Modal>
+      </AppModal>
 
       {/* 删除确认弹窗 */}
       <Modal open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} size="small">

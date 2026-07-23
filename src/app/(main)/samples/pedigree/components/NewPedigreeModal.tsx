@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { Button, Input, TextArea, Tag } from '@schema/ui-kit';
-import { X, Search, Check } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { Search, Check, Users, UserRound, FileText, Loader2 } from 'lucide-react';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listSamples } from '@/lib/samples';
 
 interface Sample {
@@ -112,7 +112,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
       title="新建家系"
-      size="medium"
+      size="large"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
@@ -122,8 +122,9 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={!formData.probandSampleId || submitting}
+            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
-            创建家系
+            {submitting ? '创建中...' : '创建家系'}
           </Button>
         </>
       }
@@ -134,12 +135,15 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
             {submitError}
           </div>
         )}
-        {/* 家系信息 */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">家系信息</h3>
-          <div className="grid grid-cols-3 gap-4">
+        <section>
+          <ModalSectionHeading
+            icon={<Users className="h-4 w-4" />}
+            title="家系信息"
+            description="填写家系编号、批次和临床诊断"
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">内部编号 *</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号 *</label>
               <Input
                 value={formData.internalId}
                 onChange={(e) => handleChange('internalId', e.target.value)}
@@ -148,7 +152,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">批次</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">批次</label>
               <Input
                 value={formData.batch}
                 onChange={(e) => handleChange('batch', e.target.value)}
@@ -156,7 +160,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">临床诊断</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">临床诊断</label>
               <Input
                 value={formData.clinicalDiagnosis}
                 onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)}
@@ -164,18 +168,17 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* 先证者选择 */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">
-            先证者样本 *
-            {selectedSample && (
-              <span className="ml-2 text-xs text-green-600 font-normal">
-                已选择: {selectedSample.internalId}
-              </span>
-            )}
-          </h3>
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<UserRound className="h-4 w-4" />}
+            title="先证者样本"
+            description="从当前组织的样本中选择一位先证者"
+          />
+          {selectedSample && (
+            <div className="mb-3 text-xs font-medium text-success-fg">已选择：{selectedSample.internalId}</div>
+          )}
           <div className="mb-3">
             <Input
               placeholder="搜索样本编号、内部编号..."
@@ -184,13 +187,14 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
-          <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+          <div className="max-h-64 overflow-y-auto rounded-md border border-border-default">
             {loading ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="flex items-center justify-center gap-2 p-8 text-center text-fg-muted">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 加载样本列表...
               </div>
             ) : filteredSamples.length > 0 ? (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border-default">
                 {filteredSamples.map((sample) => {
                   const isSelected = formData.probandSampleId === sample.id;
                   return (
@@ -199,23 +203,23 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
                       onClick={() => handleSelectSample(sample.id)}
                       className={`px-4 py-3 cursor-pointer transition-colors ${
                         isSelected
-                          ? 'bg-blue-50 border-l-2 border-l-blue-500'
-                          : 'hover:bg-gray-50'
+                          ? 'border-l-2 border-l-accent-emphasis bg-accent-subtle'
+                          : 'hover:bg-canvas-subtle'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                            isSelected ? 'border-accent-emphasis bg-accent-emphasis' : 'border-border-emphasis'
                           }`}>
                             {isSelected && <Check className="w-3 h-3 text-white" />}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-sm text-gray-900">
+                              <span className="font-mono text-sm text-fg-default">
                                 {sample.id.substring(0, 8)}
                               </span>
-                              <span className="text-gray-500 text-sm">
+                              <span className="text-sm text-fg-muted">
                                 ({sample.internalId})
                               </span>
                               <Tag variant={sample.gender === 'male' ? 'info' : sample.gender === 'female' ? 'warning' : 'neutral'}>
@@ -230,26 +234,30 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
                 })}
               </div>
             ) : (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-fg-muted">
                 未找到匹配的样本
               </div>
             )}
           </div>
-          <p className="mt-2 text-xs text-gray-400">
+          <p className="mt-2 text-xs text-fg-muted">
             提示：先证者样本必须已存在于样本管理中
           </p>
-        </div>
+        </section>
 
-        {/* 备注 */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">备注</label>
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<FileText className="h-4 w-4" />}
+            title="备注"
+            description="补充记录家系相关的分析说明"
+          />
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">备注内容</label>
           <TextArea
             value={formData.remark}
             onChange={(e) => handleChange('remark', e.target.value)}
             placeholder="请输入家系相关备注信息"
             rows={3}
           />
-        </div>
+        </section>
       </form>
     </AppModal>
   );

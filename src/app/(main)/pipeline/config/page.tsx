@@ -5,6 +5,7 @@ import { PageContent } from '@/components/layout';
 import { Button, Select, Tag } from '@schema/ui-kit';
 import { AlertCircle, Database, RefreshCw, Settings } from 'lucide-react';
 import { listPipelines, type Pipeline } from '@/lib/pipelines';
+import { EmptyState } from '@/components/shared';
 
 const BASE_TYPE_LABEL: Record<string, string> = {
   wes_single: 'WES 单样本分析',
@@ -97,13 +98,12 @@ export default function PipelineConfigPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
           </div>
         ) : pipelines.length === 0 ? (
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-canvas-subtle">
-            <AlertCircle className="w-5 h-5 text-fg-muted mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-fg-default">暂无流程配置</div>
-              <p className="text-sm text-fg-muted mt-1">请先在“流程列表”中创建分析流程。</p>
-            </div>
-          </div>
+          <EmptyState
+            className="min-h-[220px]"
+            icon={<Settings />}
+            title="暂无流程配置"
+            description="请先在流程列表中创建分析流程。"
+          />
         ) : (
           <>
             <section className="space-y-3">

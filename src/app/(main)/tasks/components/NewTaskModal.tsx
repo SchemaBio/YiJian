@@ -3,8 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button, Input, Select } from '@schema/ui-kit';
-import { Coins, Search, Loader2, Upload } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { Coins, Search, Loader2, Upload, SlidersHorizontal, Database, FileText } from 'lucide-react';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { confirmUpload, requestPairedUploadJob, uploadToCOS } from '@/lib/api';
 import {
   pipelinesApi,
@@ -244,15 +244,22 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       open={isOpen}
       onOpenChange={(open) => !open && handleClose()}
       title="新建分析任务"
-      size="medium"
+      size="large"
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={submitting || uploadingFiles}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={loadingResources || uploadingFiles || submitting || !selectedSample || !selectedPipeline || !hasSequencingInput}>创建任务</Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={loadingResources || uploadingFiles || submitting || !selectedSample || !selectedPipeline || !hasSequencingInput}
+            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+          >
+            {submitting ? '创建中...' : '创建任务'}
+          </Button>
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-6">
         {loadingResources && (
           <div className="flex items-center gap-2 text-sm text-fg-muted">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -265,6 +272,13 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           </div>
         )}
 
+        <section>
+          <ModalSectionHeading
+            icon={<SlidersHorizontal className="h-4 w-4" />}
+            title="任务配置"
+            description="选择待分析样本和分析流程，系统将根据匹配数据估算运行时长"
+          />
+          <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-fg-default mb-2">选择样本 *</label>
           <div className="relative mb-2">
@@ -327,6 +341,15 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           </div>
         )}
 
+          </div>
+        </section>
+
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<Database className="h-4 w-4" />}
+            title="测序数据"
+            description="可直接上传双端 FASTQ，上传完成后会自动关联到当前任务"
+          />
         <div className="rounded-md border border-border bg-canvas-subtle p-3">
           <div className="mb-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -379,11 +402,19 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             当前样本未匹配测序数据，请先在样本详情绑定 R1/R2，或填写上传任务 ID。
           </div>
         )}
+        </section>
 
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<FileText className="h-4 w-4" />}
+            title="备注"
+            description="补充记录本次分析任务的说明信息"
+          />
         <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">备注</label>
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">备注内容</label>
           <Input value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="请输入备注信息（可选）" />
         </div>
+        </section>
       </div>
     </AppModal>
   );

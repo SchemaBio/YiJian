@@ -1,18 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Modal as UIKitModal, ModalBody, ModalFooter, ModalHeader } from '@schema/ui-kit';
+import { Button } from '@schema/ui-kit';
 import { AlertCircle, CheckCircle, Database, Link2, Link2Off, Loader2 } from 'lucide-react';
 import { bindSampleDataAssets, clearSampleMatchedPair } from '@/lib/samples';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import type { SampleDetail, SampleMatchStatus } from '../../types';
+import { AppModal, ModalSectionHeading } from '@/components/shared';
 
 interface MatchingTabProps { sample: SampleDetail; onSampleUpdated?: (sample: SampleDetail) => void }
-
-function Modal(props: React.ComponentProps<typeof UIKitModal>) {
-  const { size = 'medium', ...rest } = props;
-  return <UIKitModal size={size} {...rest} />;
-}
 
 const statusCopy: Record<SampleMatchStatus, { title: string; detail: string; tone: string }> = {
   unmatched: { title: '未匹配测序数据', detail: '系统尚未发现与样本编号一致的完整数据对。', tone: 'border-warning-muted bg-warning-subtle' },
@@ -76,8 +72,47 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
       {sample.matchedPair && <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border-default bg-border-default md:grid-cols-2"><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read1</p><p className="mt-1 truncate text-sm font-medium text-fg-default" title={fileName(sample.matchedPair.r1Path)}>{fileName(sample.matchedPair.r1Path)}</p></div><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read2</p><p className="mt-1 truncate text-sm font-medium text-fg-default" title={fileName(sample.matchedPair.r2Path)}>{fileName(sample.matchedPair.r2Path)}</p></div></div>}
       {error && <div className="rounded-md border border-danger-muted bg-danger-subtle p-3 text-sm text-danger-fg">{error}</div>}
 
-      <Modal open={matchOpen} onOpenChange={setMatchOpen}><ModalHeader>关联数据资产</ModalHeader><ModalBody><div className="space-y-4"><p className="text-sm text-fg-muted">从当前组织的数据中心分别选择 Read1 和 Read2。保存后将作为手动关联，自动匹配不会覆盖。</p>{loadingAssets ? <div className="flex h-28 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载数据资产</div> : <><label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read1</span><select value={read1Id} onChange={(event) => setRead1Id(event.target.value)} className="h-10 w-full rounded-md border border-border-default bg-canvas-default px-3 text-sm text-fg-default"><option value="">请选择 Read1 文件</option>{read1Assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name} · {asset.id.slice(0, 8)}</option>)}</select></label><label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read2</span><select value={read2Id} onChange={(event) => setRead2Id(event.target.value)} className="h-10 w-full rounded-md border border-border-default bg-canvas-default px-3 text-sm text-fg-default"><option value="">请选择 Read2 文件</option>{read2Assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name} · {asset.id.slice(0, 8)}</option>)}</select></label>{read1Assets.length === 0 || read2Assets.length === 0 ? <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-xs text-warning-fg"><Database className="h-4 w-4 shrink-0" />数据中心中没有完整的可用 Read1/Read2，请先上传数据。</div> : null}</>}</div></ModalBody><ModalFooter><Button variant="secondary" disabled={saving} onClick={() => setMatchOpen(false)}>取消</Button><Button variant="primary" disabled={saving || !read1Id || !read2Id} leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} onClick={() => void save()}>{saving ? '保存中' : '保存关联'}</Button></ModalFooter></Modal>
-      <Modal open={clearOpen} onOpenChange={setClearOpen}><ModalHeader>解除数据关联</ModalHeader><ModalBody><p className="text-sm text-fg-muted">解除后不会删除数据中心文件，系统可在下一轮重新进行自动匹配。</p></ModalBody><ModalFooter><Button variant="secondary" disabled={saving} onClick={() => setClearOpen(false)}>取消</Button><Button variant="danger" disabled={saving} onClick={() => void clear()}>{saving ? '处理中' : '确认解除'}</Button></ModalFooter></Modal>
+      <AppModal
+        open={matchOpen}
+        onOpenChange={(open) => !saving && setMatchOpen(open)}
+        title="关联数据资产"
+        size="large"
+        footer={
+          <>
+            <Button variant="secondary" disabled={saving} onClick={() => setMatchOpen(false)}>取消</Button>
+            <Button variant="primary" disabled={saving || !read1Id || !read2Id} leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} onClick={() => void save()}>{saving ? '保存中...' : '保存关联'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          <section>
+            <ModalSectionHeading
+              icon={<Database className="h-4 w-4" />}
+              title="选择测序数据"
+              description="分别选择 Read1 和 Read2；手动关联保存后不会被自动匹配覆盖"
+            />
+            {loadingAssets ? (
+              <div className="flex h-28 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载数据资产</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1</span><select value={read1Id} onChange={(event) => setRead1Id(event.target.value)} className="h-10 w-full rounded-md border border-border-default bg-canvas-default px-3 text-sm text-fg-default"><option value="">请选择 Read1 文件</option>{read1Assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name} · {asset.id.slice(0, 8)}</option>)}</select></label>
+                <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2</span><select value={read2Id} onChange={(event) => setRead2Id(event.target.value)} className="h-10 w-full rounded-md border border-border-default bg-canvas-default px-3 text-sm text-fg-default"><option value="">请选择 Read2 文件</option>{read2Assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name} · {asset.id.slice(0, 8)}</option>)}</select></label>
+              </div>
+            )}
+          </section>
+          {!loadingAssets && (read1Assets.length === 0 || read2Assets.length === 0) && <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-xs text-warning-fg"><Database className="h-4 w-4 shrink-0" />数据中心中没有完整的可用 Read1/Read2，请先上传数据。</div>}
+        </div>
+      </AppModal>
+
+      <AppModal
+        open={clearOpen}
+        onOpenChange={(open) => !saving && setClearOpen(open)}
+        title="解除数据关联"
+        size="small"
+        footer={<><Button variant="secondary" disabled={saving} onClick={() => setClearOpen(false)}>取消</Button><Button variant="danger" disabled={saving} onClick={() => void clear()}>{saving ? '处理中...' : '确认解除'}</Button></>}
+      >
+        <p className="text-sm text-fg-muted">解除后不会删除数据中心文件，系统可在下一轮重新进行自动匹配。</p>
+      </AppModal>
     </div>
   );
 }

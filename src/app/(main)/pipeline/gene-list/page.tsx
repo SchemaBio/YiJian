@@ -2,9 +2,9 @@
 
 import { PageContent } from '@/components/layout';
 import { Button, Input, Tag } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, ChevronDown, ChevronRight, ListTree, BookOpen, Dna, Loader2 } from 'lucide-react';
 import * as React from 'react';
-import { AppModal, ConfirmDialog } from '@/components/shared';
+import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { createGeneList, deleteGeneList, listGeneLists, updateGeneList, type GeneList } from '@/lib/gene-lists';
 
 // 删除确认弹窗
@@ -100,33 +100,55 @@ function GeneListModal({
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={submitting}>取消</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!formData.name || !formData.disease || !formData.genes || submitting}>
-            {mode === 'add' ? '添加' : '保存'}
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!formData.name || !formData.disease || !formData.genes || submitting}
+            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+          >
+            {submitting ? (mode === 'add' ? '添加中...' : '保存中...') : (mode === 'add' ? '添加' : '保存')}
           </Button>
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-6">
         {submitError && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {submitError}
           </div>
         )}
-        <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">列表名称 *</label>
-          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病Panel" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">关联疾病 *</label>
-          <Input value={formData.disease} onChange={(e) => handleChange('disease', e.target.value)} placeholder="如：遗传性心肌病" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">描述</label>
-          <Input value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="列表用途说明" />
-        </div>
+        <section>
+          <ModalSectionHeading
+            icon={<BookOpen className="h-4 w-4" />}
+            title="列表信息"
+            description="设置基因列表的名称、关联疾病和用途"
+          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-fg-muted">列表名称 *</label>
+                <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病 Panel" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-fg-muted">关联疾病 *</label>
+                <Input value={formData.disease} onChange={(e) => handleChange('disease', e.target.value)} placeholder="如：遗传性心肌病" />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">描述</label>
+              <Input value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="列表用途说明" />
+            </div>
+          </div>
+        </section>
+        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+          <ModalSectionHeading
+            icon={<Dna className="h-4 w-4" />}
+            title="基因内容"
+            description="粘贴或输入标准基因符号，系统会自动识别分隔符"
+          />
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-fg-default">基因列表 *</label>
+            <label className="block text-xs font-medium text-fg-muted">基因列表 *</label>
             {geneCount > 0 && <span className="text-xs text-fg-muted">已识别 {geneCount} 个基因</span>}
           </div>
           <textarea
@@ -138,6 +160,7 @@ function GeneListModal({
           />
           <p className="text-xs text-fg-muted mt-1">支持每行一个基因，或用逗号、空格、Tab 分隔</p>
         </div>
+        </section>
       </div>
     </AppModal>
   );
@@ -352,7 +375,12 @@ export default function GeneListPage() {
                       ))}
                     </div>
                     {list.genes.length === 0 && (
-                      <p className="text-sm text-fg-muted">暂无基因</p>
+                      <EmptyState
+                        className="min-h-[120px] py-6"
+                        icon={<ListTree />}
+                        title="暂无基因"
+                        description="编辑该列表后可添加基因。"
+                      />
                     )}
                   </div>
                 )}
@@ -361,10 +389,13 @@ export default function GeneListPage() {
           })}
         </div>
 
-        {filteredLists.length === 0 && (
-          <div className="yj-empty-state min-h-[220px] text-fg-muted">
-            <p>暂无基因列表</p>
-          </div>
+        {!loading && filteredLists.length === 0 && (
+          <EmptyState
+            className="min-h-[220px]"
+            icon={<ListTree />}
+            title="暂无基因列表"
+            description="调整搜索条件，或添加一个新的基因列表。"
+          />
         )}
       </div>
 

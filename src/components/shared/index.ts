@@ -1,6 +1,7 @@
-export { AppModal, ConfirmDialog } from './AppModal';
+export { AppModal, ConfirmDialog, ModalSectionHeading } from './AppModal';
 export type { AppModalProps } from './AppModal';
 export { MetricTile } from './MetricTile';
+export { EmptyState } from './EmptyState';
 
 export { IdCell } from './IdCell';
 

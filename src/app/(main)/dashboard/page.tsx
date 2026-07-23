@@ -16,6 +16,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { PageContent } from '@/components/layout';
+import { EmptyState } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { api } from '@/lib/api';
 import { tasksApi } from '@/lib/tasks';
@@ -202,11 +203,11 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="flex min-h-64 flex-col items-center justify-center px-6 text-center">
-              <Database className="h-6 w-6 text-fg-muted" />
-              <p className="mt-3 text-sm font-medium text-fg-default">暂无任务</p>
-              <p className="mt-1 text-xs text-fg-muted">创建任务后可在这里查看运行状态。</p>
-            </div>
+            <EmptyState
+              icon={<Database />}
+              title="暂无任务"
+              description="创建任务后可在这里查看运行状态。"
+            />
           )}
       </section>
     </PageContent>
