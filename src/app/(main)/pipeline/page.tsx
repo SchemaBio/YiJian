@@ -11,8 +11,7 @@ import { api } from '@/lib/api';
 // 基础流程类型
 type BasePipelineType =
   | 'wes_single'    // WES单样本分析
-  | 'wes_family'    // WES家系分析
-  | 'panel';        // Panel分析
+  | 'wes_family';   // WES家系分析
 
 interface Pipeline {
   id: string;
@@ -32,7 +31,6 @@ interface Pipeline {
 const BASE_PIPELINE_OPTIONS = [
   { value: 'wes_single', label: 'WES单样本分析' },
   { value: 'wes_family', label: 'WES家系分析' },
-  { value: 'panel', label: 'Panel分析' },
 ];
 
 // 参考基因组选项
@@ -85,7 +83,7 @@ function normalizePipeline(rawValue: unknown): Pipeline {
   return {
     id: String(raw.id ?? ''),
     name: rawString(raw, 'name', 'name'),
-    basePipeline: baseType === 'wes_single' || baseType === 'wes_family' || baseType === 'panel' ? baseType : 'wes_single',
+    basePipeline: baseType === 'wes_single' || baseType === 'wes_family' ? baseType : 'wes_single',
     version: rawString(raw, 'version', 'version'),
     description: rawString(raw, 'description', 'description'),
     bedFile: rawString(raw, 'bedFile', 'bed_file'),

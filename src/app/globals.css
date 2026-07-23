@@ -519,12 +519,55 @@
     box-shadow: inset 2px 0 0 var(--color-accent-emphasis);
   }
 
+  .sample-management-table {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
   .sample-management-table table {
-    min-width: 1320px;
+    overflow: visible !important;
+    min-width: 1650px;
+    table-layout: fixed;
+  }
+
+  .sample-management-table thead th:first-child,
+  .sample-management-table tbody td:first-child {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    padding-left: 8px;
+    padding-right: 8px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .sample-management-table thead th:last-child,
+  .sample-management-table tbody td:last-child {
+    right: 0;
+    box-shadow: -1px 0 0 var(--yj-border-subtle);
+  }
+
+  .sample-management-table thead th:last-child {
+    z-index: 31;
+  }
+
+  .sample-management-table tbody td:last-child {
+    z-index: 21;
+    background: var(--yj-panel-bg);
+  }
+
+  .sample-management-table thead th:first-child > *,
+  .sample-management-table tbody td:first-child > * {
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .sample-management-table tbody tr[aria-selected="true"] td {
     background: #eef7e6;
+  }
+
+  .sample-management-table tbody tr:hover td:last-child {
+    background: var(--yj-sage-subtle);
   }
 
   .sample-management-table tbody td {

@@ -67,7 +67,8 @@ const CORE_API_ROOTS = [
   'projects',
   'pedigrees',
   'upload',
-	'data',
+  'data',
+	'cnv-baselines',
 ];
 
 function decodePathSegment(segment: string): string | null {
@@ -453,7 +454,8 @@ function squidFallbackLocalUploadURL(uploadURL: string): string | null {
 export async function requestPresignedUploadUrl(
   filename: string,
   fileSize: number,
-  readType: 'read1' | 'read2' | 'single' | 'bed' = 'single'
+  readType: 'read1' | 'read2' | 'single' | 'bed' = 'single',
+  referenceGenome?: 'GRCh37' | 'GRCh38'
 ): Promise<PresignedUploadResult> {
   const fileType = readType === 'bed'
     ? 'bed'
@@ -463,6 +465,7 @@ export async function requestPresignedUploadUrl(
   const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
     name: filename,
     file_type: fileType,
+    ...(readType === 'bed' && referenceGenome ? { reference_genome: referenceGenome } : {}),
     provider: 'local',
     files: [{
       file_name: filename,

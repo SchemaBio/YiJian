@@ -19,72 +19,17 @@ import {
 } from 'lucide-react';
 import { NewSampleModal, EditSampleModal, DataLinkModal } from './components';
 import type { NewSampleFormData, EditSampleFormData } from './components';
-import { ConfirmDialog, MetricTile } from '@/components/shared';
+import { ConfirmDialog, IdCell, MetricTile } from '@/components/shared';
 import { api } from '@/lib/api';
 import { listSamples, normalizeSample, samplePayload } from '@/lib/samples';
 import type { Sample } from './types';
 import { GENDER_CONFIG } from './types';
-
-function ColumnHeader({ group, label }: { group: string; label: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-fg-muted">
-        {group}
-      </span>
-      <span className="text-xs font-semibold text-[var(--yj-text-strong)]">
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function IdCell({ id }: { id: string }) {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <Tooltip content={id} placement="top" variant="default">
-      <span
-        className={`font-mono text-xs cursor-pointer ${
-          copied ? 'text-green-600' : 'text-accent-fg hover:underline'
-        }`}
-        onClick={handleClick}
-      >
-        {id.substring(0, 8)}
-      </span>
-    </Tooltip>
-  );
-}
 
 function formatDateTime(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value || '-'
     : date.toLocaleString('zh-CN', { hour12: false });
-}
-
-function SubjectCell({ sample }: { sample: Sample }) {
-  const genderInfo = GENDER_CONFIG[sample.gender];
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className={`text-xs font-medium ${genderInfo.color}`}>
-        {genderInfo.label}
-      </span>
-      <span className="text-xs text-fg-muted">
-        {sample.age !== undefined ? `${sample.age}岁` : '年龄未知'}
-      </span>
-      <span className="rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-1.5 py-0.5 text-xs text-fg-default">
-        {sample.sampleType}
-      </span>
-    </div>
-  );
 }
 
 function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
@@ -309,75 +254,126 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
 
   const columns: Column<Sample>[] = [
     {
-      id: 'sample',
-      header: <ColumnHeader group="标识" label="内部编号 / UUID" />,
+      id: 'internalId',
+      header: '内部编号',
+      accessor: (row) => <span className="block truncate text-sm font-semibold text-[var(--yj-text-strong)]" title={row.internalId}>{row.internalId}</span>,
+      width: 154,
+      minWidth: 140,
+      maxWidth: 220,
+    },
+    {
+      id: 'uuid',
+      header: 'UUID',
+      accessor: (row) => <IdCell id={row.id} truncateLength={12} />,
+      width: 142,
+      minWidth: 132,
+      maxWidth: 190,
+    },
+    {
+      id: 'gender',
+      header: '性别',
+      accessor: (row) => {
+        const gender = GENDER_CONFIG[row.gender];
+        return (
+          <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium ${gender.color}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+            {gender.label}
+          </span>
+        );
+      },
+      width: 72,
+      minWidth: 68,
+      maxWidth: 90,
+      align: 'center',
+    },
+    {
+      id: 'age',
+      header: '年龄',
+      accessor: (row) => row.age !== undefined
+        ? <span className="whitespace-nowrap text-sm tabular-nums text-fg-default">{row.age} 岁</span>
+        : <span className="text-xs text-fg-muted">未录入</span>,
+      width: 78,
+      minWidth: 72,
+      maxWidth: 96,
+      align: 'center',
+    },
+    {
+      id: 'sampleType',
+      header: '样本类型',
       accessor: (row) => (
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="truncate text-sm font-semibold text-[var(--yj-text-strong)]" title={row.internalId}>{row.internalId}</span>
-          <span className="flex items-center gap-1 text-[11px] text-fg-muted"><span>UUID</span><IdCell id={row.id} /></span>
-        </div>
+        <span className="inline-flex whitespace-nowrap rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-2 py-1 text-xs text-fg-default">
+          {row.sampleType}
+        </span>
       ),
-      width: 180,
-      pinned: 'left',
+      width: 96,
+      minWidth: 88,
+      maxWidth: 120,
+      align: 'center',
     },
     {
       id: 'batch',
-      header: <ColumnHeader group="标识" label="批次" />,
+      header: '批次',
       accessor: (row) => row.batch
-        ? <span className="inline-flex max-w-[150px] truncate rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-2 py-1 font-mono text-xs text-fg-default" title={row.batch}>{row.batch}</span>
+        ? <span className="block truncate font-mono text-xs text-fg-default" title={row.batch}>{row.batch}</span>
         : <span className="text-xs text-fg-muted">未分配</span>,
-      width: 165,
-    },
-    {
-      id: 'subject',
-      header: <ColumnHeader group="受检者" label="性别 / 年龄 / 类型" />,
-      accessor: (row) => <SubjectCell sample={row} />,
-      width: 150,
+      width: 132,
+      minWidth: 120,
+      maxWidth: 190,
     },
     {
       id: 'clinicalDiagnosis',
-      header: <ColumnHeader group="临床" label="临床诊断" />,
+      header: '临床诊断',
       accessor: (row) => (
         <span className={`block max-w-[240px] truncate text-sm ${row.clinicalDiagnosis ? 'text-fg-default' : 'text-fg-muted'}`} title={row.clinicalDiagnosis}>
           {row.clinicalDiagnosis || '未录入'}
         </span>
       ),
-      width: 230,
+      width: 210,
+      minWidth: 190,
+      maxWidth: 280,
     },
     {
       id: 'hpoTerms',
-      header: <ColumnHeader group="临床" label="HPO 表型" />,
+      header: 'HPO 表型',
       accessor: (row) => <HpoCell hpoTerms={row.hpoTerms} />,
-      width: 175,
+      width: 176,
+      minWidth: 160,
+      maxWidth: 240,
     },
     {
       id: 'matchedPair',
-      header: <ColumnHeader group="数据" label="测序数据" />,
+      header: '测序数据',
       accessor: (row) => <MatchedCell sample={row} />,
-      width: 142,
+      width: 126,
+      minWidth: 118,
+      maxWidth: 150,
       align: 'center',
     },
     {
       id: 'remark',
-      header: <ColumnHeader group="追踪" label="备注" />,
+      header: '备注',
       accessor: (row) => (
         <span className={row.remark ? 'block max-w-[180px] truncate text-sm text-fg-default' : 'text-xs text-fg-muted'}>
           {row.remark || '无'}
         </span>
       ),
-      width: 170,
+      width: 160,
+      minWidth: 140,
+      maxWidth: 220,
     },
     {
       id: 'createdAt',
-      header: <ColumnHeader group="追踪" label="创建时间" />,
+      header: '创建时间',
       accessor: (row) => (
         <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt)}</span>
       ),
-      width: 155,
+      width: 156,
+      minWidth: 150,
+      maxWidth: 190,
     },
     {
       id: 'actions',
-      header: <ColumnHeader group="操作" label="动作" />,
+      header: '操作',
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>
           <button
@@ -406,7 +402,9 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           </button>
         </div>
       ),
-      width: 112,
+      width: 108,
+      minWidth: 104,
+      maxWidth: 120,
       align: 'center',
       pinned: 'right',
     },
@@ -465,7 +463,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
               </span>
             )}
           </div>
-          <div className="yj-toolbar shrink-0">
+          <div className="yj-toolbar w-full flex-wrap sm:w-auto sm:flex-nowrap">
             <Button
               variant="danger"
               leftIcon={<Trash2 className="h-4 w-4" />}

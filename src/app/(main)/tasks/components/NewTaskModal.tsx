@@ -3,9 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button, Input, Select } from '@schema/ui-kit';
-import { Coins, Search, Loader2, Upload, SlidersHorizontal, Database, FileText } from 'lucide-react';
+import { Coins, Search, Loader2, SlidersHorizontal, Database, FileText } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
-import { confirmUpload, requestPairedUploadJob, uploadToCOS } from '@/lib/api';
 import {
   pipelinesApi,
   samplesApi,
@@ -26,7 +25,6 @@ export interface NewTaskFormData {
   remark: string;
   template: string;
   inputs: Record<string, unknown>;
-  uploadJobId: string;
 }
 
 interface NewTaskModalProps {
@@ -43,13 +41,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem | null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState<string>('');
-  const [uploadJobId, setUploadJobId] = React.useState('');
   const [remark, setRemark] = React.useState('');
-  const [r1File, setR1File] = React.useState<File | null>(null);
-  const [r2File, setR2File] = React.useState<File | null>(null);
-  const [uploadingFiles, setUploadingFiles] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [uploadNotice, setUploadNotice] = React.useState('');
   const [loadingResources, setLoadingResources] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [resourceError, setResourceError] = React.useState('');
@@ -137,8 +129,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     return matchedTemplate?.name || templates[0]?.name || pipeline?.id || selectedPipeline;
   };
 
-  const uploadJobID = uploadJobId.trim();
-  const hasSequencingInput = Boolean(selectedSample?.matchedPair || uploadJobID);
   const estimatedCredits = calculateEstimatedCredits(60, billingConfig);
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
@@ -154,11 +144,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSample || !selectedPipeline || submitting || uploadingFiles) return;
-    if (!hasSequencingInput) {
-      setResourceError('请选择已匹配测序数据的样本，或填写上传任务 ID。');
-      return;
-    }
+    if (!selectedSample || !selectedPipeline || submitting) return;
 
     const pipeline = pipelines.find(p => p.id === selectedPipeline);
     const template = resolveTemplate(pipeline);
@@ -180,7 +166,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         remark,
         template,
         inputs: buildInputs(selectedSample),
-        uploadJobId: uploadJobID,
       });
       handleClose();
     } catch (err) {
@@ -190,49 +175,12 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     }
   };
 
-  const handlePairedUpload = async () => {
-    if (!r1File || !r2File || uploadingFiles) {
-      setResourceError('请选择 R1 和 R2 FASTQ 文件后再上传。');
-      return;
-    }
-
-    setUploadingFiles(true);
-    setUploadProgress(0);
-    setUploadNotice('');
-    setResourceError('');
-    try {
-      const job = await requestPairedUploadJob(r1File, r2File, selectedSample?.id);
-      const r1 = job.files.find(file => file.read_type === 'read1');
-      const r2 = job.files.find(file => file.read_type === 'read2');
-      if (!r1 || !r2) {
-        throw new Error('上传任务未返回完整的 R1/R2 上传地址');
-      }
-
-      await uploadToCOS(r1.upload_url, r1File, pct => setUploadProgress(Math.round(pct / 2)));
-      if (r1.storage_type === 'presigned') await confirmUpload(r1.file_id);
-      await uploadToCOS(r2.upload_url, r2File, pct => setUploadProgress(50 + Math.round(pct / 2)));
-      if (r2.storage_type === 'presigned') await confirmUpload(r2.file_id);
-      setUploadJobId(job.job_id);
-      setUploadProgress(100);
-      setUploadNotice(`上传任务 ${job.job_id} 已就绪`);
-    } catch (err) {
-      setResourceError(err instanceof Error ? err.message : '上传双端 FASTQ 文件失败');
-    } finally {
-      setUploadingFiles(false);
-    }
-  };
-
   const handleClose = () => {
-    if (submitting || uploadingFiles) return;
+    if (submitting) return;
     setSampleSearch('');
     setSelectedSample(null);
     setSelectedPipeline('');
-    setUploadJobId('');
     setRemark('');
-    setR1File(null);
-    setR2File(null);
-    setUploadProgress(0);
-    setUploadNotice('');
     setResourceError('');
     onClose();
   };
@@ -247,11 +195,11 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       size="large"
       footer={
         <>
-          <Button variant="secondary" onClick={handleClose} disabled={submitting || uploadingFiles}>取消</Button>
+          <Button variant="secondary" onClick={handleClose} disabled={submitting}>取消</Button>
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={loadingResources || uploadingFiles || submitting || !selectedSample || !selectedPipeline || !hasSequencingInput}
+            disabled={loadingResources || submitting || !selectedSample || !selectedPipeline}
             leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
             {submitting ? '创建中...' : '创建任务'}
@@ -294,7 +242,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
                 <div className="text-sm font-mono">{sample.id.substring(0, 8)}...</div>
                 <div className="text-xs text-fg-muted">
                   {sample.internalId}
-                  {!sample.matchedPair ? ' · no matched_pair' : ''}
+                  {!sample.matchedPair ? ' · 等待测序数据' : ' · R1/R2 已就绪'}
                 </div>
               </div>
             ))}
@@ -312,15 +260,9 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <Select value={selectedPipeline} onChange={(v) => setSelectedPipeline(Array.isArray(v) ? v[0] : v)} options={pipelineOptions} placeholder="请选择分析流程" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">
-            <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
-            <p className="mt-1 text-xs leading-5 text-fg-muted">按已匹配 R1/R2 的合计大小计算；数据未匹配时为 60 分钟。</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">上传任务 ID</label>
-            <Input value={uploadJobId} onChange={(e) => setUploadJobId(e.target.value)} placeholder="上传任务 UUID（可选）" disabled={uploadingFiles} />
-          </div>
+        <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">
+          <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
+          <p className="mt-1 text-xs leading-5 text-fg-muted">按样本关联的 R1/R2 数据量计算；等待数据时使用基础预估。</p>
         </div>
 
         {isSaaS && (
@@ -348,60 +290,22 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <ModalSectionHeading
             icon={<Database className="h-4 w-4" />}
             title="测序数据"
-            description="可直接上传双端 FASTQ，上传完成后会自动关联到当前任务"
+            description="任务始终读取样本当前生效的 R1/R2 数据关联"
           />
-        <div className="rounded-md border border-border bg-canvas-subtle p-3">
-          <div className="mb-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-sm font-medium text-fg-default">双端 FASTQ 上传</div>
-              <div className="text-xs text-fg-muted">
-                上传 R1/R2 文件并自动填写上传任务 ID。
+          {selectedSample ? (
+            <div className={`rounded-md border px-3 py-3 ${selectedSample.matchedPair ? 'border-success-muted bg-success-subtle' : 'border-warning-muted bg-warning-subtle'}`}>
+              <div className={`text-sm font-medium ${selectedSample.matchedPair ? 'text-success-fg' : 'text-warning-fg'}`}>
+                {selectedSample.matchedPair ? 'R1/R2 已就绪' : '任务将等待测序数据'}
+              </div>
+              <div className="mt-1 text-xs leading-5 text-fg-muted">
+                {selectedSample.matchedPair
+                  ? '创建后任务自动开始分析。'
+                  : '样本自动或手动匹配到完整 R1/R2 后，任务会自动开始分析。'}
               </div>
             </div>
-            <Button
-              variant="secondary"
-              className="w-full sm:w-auto"
-              onClick={handlePairedUpload}
-              disabled={!r1File || !r2File || uploadingFiles || submitting}
-              leftIcon={uploadingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            >
-              {uploadingFiles ? `上传中 ${uploadProgress}%` : '上传双端文件'}
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
-              <span className="block font-medium text-fg-default">R1 FASTQ</span>
-              <span className="block truncate">{r1File?.name || '选择 R1 文件'}</span>
-              <input
-                type="file"
-                accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
-                className="hidden"
-                disabled={uploadingFiles || submitting}
-                onChange={(e) => setR1File(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
-              <span className="block font-medium text-fg-default">R2 FASTQ</span>
-              <span className="block truncate">{r2File?.name || '选择 R2 文件'}</span>
-              <input
-                type="file"
-                accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
-                className="hidden"
-                disabled={uploadingFiles || submitting}
-                onChange={(e) => setR2File(e.target.files?.[0] ?? null)}
-              />
-            </label>
-          </div>
-          {uploadNotice && (
-            <div className="mt-2 text-xs text-success-fg">{uploadNotice}</div>
+          ) : (
+            <div className="text-sm text-fg-muted">选择样本后显示数据就绪状态。</div>
           )}
-        </div>
-
-        {selectedSample && !selectedSample.matchedPair && !uploadJobID && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            当前样本未匹配测序数据，请先在样本详情绑定 R1/R2，或填写上传任务 ID。
-          </div>
-        )}
         </section>
 
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">

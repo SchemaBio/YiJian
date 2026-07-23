@@ -360,7 +360,6 @@ export default function AnalysisPage() {
         remark: data.remark,
         template: data.template,
         inputs: data.inputs,
-        ...(data.uploadJobId ? { uploadJobId: data.uploadJobId } : {}),
       });
       refetch(); // Refresh data after creating
     } catch (err) {

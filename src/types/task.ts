@@ -54,7 +54,6 @@ export interface TaskCreateRequest {
   inputs?: Record<string, unknown>;
   config_file?: string;
   output_dir?: string;
-  uploadJobId?: string;
 }
 
 export interface TaskUpdateRequest {

@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
-import { Coins, Play, Info, Loader2, Upload } from 'lucide-react';
-import { confirmUpload, requestPairedUploadJob, uploadToCOS } from '@/lib/api';
+import { Coins, Play, Info } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
@@ -29,12 +28,6 @@ export default function NewAnalysisPage() {
   const [selectedSample, setSelectedSample] = React.useState('');
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
   const [taskName, setTaskName] = React.useState('');
-  const [uploadJobId, setUploadJobId] = React.useState('');
-  const [r1File, setR1File] = React.useState<File | null>(null);
-  const [r2File, setR2File] = React.useState<File | null>(null);
-  const [uploadingFiles, setUploadingFiles] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [uploadNotice, setUploadNotice] = React.useState('');
   const [enableCNV, setEnableCNV] = React.useState(true);
   const [enableSV, setEnableSV] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -44,8 +37,6 @@ export default function NewAnalysisPage() {
 
   const selectedSampleInfo = samples.find((sample) => sample.id === selectedSample);
   const selectedPipelineInfo = pipelines.find((pipeline) => pipeline.id === selectedPipeline);
-  const uploadJobID = uploadJobId.trim();
-  const hasSequencingInput = Boolean(selectedSampleInfo?.matchedPair || uploadJobID);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -127,10 +118,6 @@ export default function NewAnalysisPage() {
       setFormError('请选择样本和分析流程。');
       return;
     }
-    if (!hasSequencingInput) {
-      setFormError('所选样本没有匹配的测序数据，请填写上传任务 ID 或上传双端 FASTQ 文件。');
-      return;
-    }
     const template = resolvePipelineTemplate(selectedPipelineInfo);
     if (!template) {
       setFormError('当前分析流程没有可用的 WDL 模板。');
@@ -151,45 +138,12 @@ export default function NewAnalysisPage() {
           enable_cnv: enableCNV,
           enable_sv: enableSV,
         },
-        ...(uploadJobID ? { uploadJobId: uploadJobID } : {}),
       });
       router.push(`/tasks/${encodeURIComponent(task.id)}`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : '创建分析任务失败');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handlePairedUpload = async () => {
-    if (!r1File || !r2File || uploadingFiles) {
-      setFormError('请选择 R1 和 R2 FASTQ 文件后再上传。');
-      return;
-    }
-
-    setUploadingFiles(true);
-    setUploadProgress(0);
-    setUploadNotice('');
-    setFormError('');
-    try {
-      const job = await requestPairedUploadJob(r1File, r2File, selectedSampleInfo?.id);
-      const r1 = job.files.find(file => file.read_type === 'read1');
-      const r2 = job.files.find(file => file.read_type === 'read2');
-      if (!r1 || !r2) {
-        throw new Error('上传任务未返回完整的 R1/R2 上传地址');
-      }
-
-      await uploadToCOS(r1.upload_url, r1File, pct => setUploadProgress(Math.round(pct / 2)));
-      if (r1.storage_type === 'presigned') await confirmUpload(r1.file_id);
-      await uploadToCOS(r2.upload_url, r2File, pct => setUploadProgress(50 + Math.round(pct / 2)));
-      if (r2.storage_type === 'presigned') await confirmUpload(r2.file_id);
-      setUploadJobId(job.job_id);
-      setUploadProgress(100);
-      setUploadNotice(`上传任务 ${job.job_id} 已就绪`);
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : '上传双端 FASTQ 文件失败');
-    } finally {
-      setUploadingFiles(false);
     }
   };
 
@@ -226,7 +180,7 @@ export default function NewAnalysisPage() {
           <Select
             options={samples.map((sample) => ({
               value: sample.id,
-              label: `${sample.internalId || sample.id}${!sample.matchedPair ? '（未匹配测序数据）' : ''}`,
+              label: `${sample.internalId || sample.id}${!sample.matchedPair ? '（等待测序数据）' : '（R1/R2 已就绪）'}`,
             }))}
             value={selectedSample}
             onChange={(value) => setSelectedSample(Array.isArray(value) ? value[0] : value)}
@@ -238,7 +192,7 @@ export default function NewAnalysisPage() {
               {selectedSampleInfo.matchedPair ? (
                 <span className="text-success-fg">测序数据已就绪</span>
               ) : (
-                <span className="text-danger-fg">未匹配测序数据</span>
+                <span className="text-warning-fg">任务创建后将等待测序数据</span>
               )}
             </div>
           )}
@@ -267,7 +221,7 @@ export default function NewAnalysisPage() {
 
         <div className="rounded-md border border-border-default bg-canvas-subtle px-4 py-3">
           <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
-          <p className="mt-1 text-xs leading-5 text-fg-muted">按已匹配 R1/R2 的合计大小计算；数据未匹配时为 60 分钟。</p>
+          <p className="mt-1 text-xs leading-5 text-fg-muted">按样本关联的 R1/R2 数据量计算；等待数据时使用基础预估。</p>
         </div>
 
         {isSaaS && (
@@ -288,66 +242,18 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        <div className="rounded-md border border-border bg-canvas-subtle p-3">
-          <div className="mb-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-sm font-medium text-fg-default">双端 FASTQ 上传</div>
-              <div className="text-xs text-fg-muted">
-                可使用已完成的上传任务，或直接上传 R1/R2 文件。
-              </div>
+        {selectedSampleInfo && (
+          <div className={`rounded-md border px-4 py-3 ${selectedSampleInfo.matchedPair ? 'border-success-muted bg-success-subtle' : 'border-warning-muted bg-warning-subtle'}`}>
+            <div className={`text-sm font-medium ${selectedSampleInfo.matchedPair ? 'text-success-fg' : 'text-warning-fg'}`}>
+              {selectedSampleInfo.matchedPair ? 'R1/R2 已就绪' : '等待测序数据'}
             </div>
-            <Button
-              variant="secondary"
-              className="w-full sm:w-auto"
-              onClick={handlePairedUpload}
-              disabled={!r1File || !r2File || uploadingFiles || submitting}
-              leftIcon={uploadingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            >
-              {uploadingFiles ? `上传中 ${uploadProgress}%` : '上传双端文件'}
-            </Button>
+            <p className="mt-1 text-xs leading-5 text-fg-muted">
+              {selectedSampleInfo.matchedPair
+                ? '任务创建后自动开始分析。'
+                : '可以立即创建任务；样本自动或手动匹配到完整 R1/R2 后，任务会自动开始分析。'}
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
-              <span className="block font-medium text-fg-default">R1 FASTQ</span>
-              <span className="block truncate">{r1File?.name || '选择 R1 文件'}</span>
-              <input
-                type="file"
-                accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
-                className="hidden"
-                disabled={uploadingFiles || submitting}
-                onChange={(e) => setR1File(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            <label className="block rounded border border-dashed border-border bg-canvas-default px-3 py-2 text-xs text-fg-muted">
-              <span className="block font-medium text-fg-default">R2 FASTQ</span>
-              <span className="block truncate">{r2File?.name || '选择 R2 文件'}</span>
-              <input
-                type="file"
-                accept=".fq,.fastq,.fq.gz,.fastq.gz,.gz"
-                className="hidden"
-                disabled={uploadingFiles || submitting}
-                onChange={(e) => setR2File(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            <label className="block text-xs text-fg-muted">
-              上传任务 ID
-              <Input
-                value={uploadJobId}
-                onChange={(e) => setUploadJobId(e.target.value)}
-                placeholder="已完成的上传任务 UUID"
-                disabled={uploadingFiles || submitting}
-              />
-            </label>
-          </div>
-          {uploadNotice && (
-            <div className="mt-2 text-xs text-success-fg">{uploadNotice}</div>
-          )}
-          {selectedSampleInfo && !selectedSampleInfo.matchedPair && !uploadJobID && (
-            <div className="mt-2 text-xs text-amber-700">
-              当前样本未匹配测序数据，创建任务前需要填写有效的上传任务 ID。
-            </div>
-          )}
-        </div>
+        )}
 
         <div>
           <h3 className="text-sm font-medium text-fg-default mb-3">高级选项</h3>
@@ -371,7 +277,7 @@ export default function NewAnalysisPage() {
             leftIcon={<Play className="w-4 h-4" />}
             onClick={handleSubmit}
             loading={submitting}
-            disabled={!hasSequencingInput || !selectedPipelineInfo || uploadingFiles}
+            disabled={!selectedSampleInfo || !selectedPipelineInfo}
           >
             {submitting ? '提交中...' : '提交任务'}
           </Button>

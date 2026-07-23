@@ -8,6 +8,7 @@ export interface DataAsset {
   file_name: string;
   file_size: number;
   read_type: DataReadType;
+  reference_genome?: 'GRCh37' | 'GRCh38';
   provider: 'local' | 's3';
   status: DataAssetStatus;
   source: 'upload' | 'scanner';
@@ -31,9 +32,15 @@ interface AssetListResponse {
   total_pages: number;
 }
 
-export async function listDataAssets(search = ''): Promise<AssetListResponse> {
+export async function listDataAssets(search = '', filters?: { readType?: DataReadType; status?: DataAssetStatus; referenceGenome?: 'GRCh37' | 'GRCh38' }): Promise<AssetListResponse> {
   return api.get<AssetListResponse>('/v1/data/assets', {
-    params: { page: '1', page_size: '100', ...(search.trim() ? { search: search.trim() } : {}) },
+    params: {
+      page: '1', page_size: '100',
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(filters?.readType ? { read_type: filters.readType } : {}),
+      ...(filters?.status ? { status: filters.status } : {}),
+      ...(filters?.referenceGenome ? { reference_genome: filters.referenceGenome } : {}),
+    },
   });
 }
 
@@ -65,6 +72,18 @@ export async function uploadDataFiles(
     return;
   }
   await uploadOne((read1 ?? read2) as File, read1 ? 'read1' : 'read2', onProgress);
+}
+
+export async function uploadBEDFile(
+  file: File,
+  referenceGenome: 'GRCh37' | 'GRCh38',
+  onProgress: (value: number) => void
+): Promise<void> {
+  if (file.size > 20 * 1024 * 1024) throw new Error('BED 文件不能超过 20MB');
+  if (!/\.bed(?:\.gz)?$/i.test(file.name)) throw new Error('请选择 .bed 或 .bed.gz 文件');
+  const session = await requestPresignedUploadUrl(file.name, file.size, 'bed', referenceGenome);
+  await uploadToCOS(session.upload_url, file, onProgress);
+  if (session.storage_type === 'presigned') await confirmUpload(session.file_id);
 }
 
 export function deleteDataAsset(id: string): Promise<void> {

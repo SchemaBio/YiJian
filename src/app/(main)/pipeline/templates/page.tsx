@@ -149,6 +149,7 @@ export default function ReportTemplatesPage() {
   const [formData, setFormData] = React.useState<FormData>(initialFormData);
   const [testingApi, setTestingApi] = React.useState(false);
   const [apiTestResult, setApiTestResult] = React.useState<'success' | 'error' | null>(null);
+  const [apiTestMessage, setApiTestMessage] = React.useState('');
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<ReportTemplate | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -262,15 +263,27 @@ export default function ReportTemplatesPage() {
   };
 
   const handleTestApi = async () => {
-    if (!formData.apiEndpoint) return;
+    const endpoint = formData.apiEndpoint.trim();
+    if (!endpoint) return;
 
     setTestingApi(true);
     setApiTestResult(null);
+    setApiTestMessage('');
+    setApiTestMessage('');
 
     try {
-      setApiTestResult(isValidReportEndpoint(formData.apiEndpoint) ? 'success' : 'error');
-    } catch {
+      if (!isValidReportEndpoint(endpoint)) {
+        throw new Error('请输入不含访问凭据或片段标识的 HTTPS 报告服务地址');
+      }
+      const result = await api.post<{ reachable: boolean; status_code: number }>('/v1/report-templates/validate-endpoint', {
+        apiEndpoint: endpoint,
+        ...(formData.apiKey.trim() ? { apiKey: formData.apiKey.trim() } : {}),
+      });
+      setApiTestResult('success');
+      setApiTestMessage(`端点可达（HTTP ${result.status_code}）`);
+    } catch (err) {
       setApiTestResult('error');
+      setApiTestMessage(err instanceof Error ? err.message : '端点连接失败');
     } finally {
       setTestingApi(false);
     }
@@ -533,13 +546,16 @@ export default function ReportTemplatesPage() {
                   value={formData.apiEndpoint}
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, apiEndpoint: e.target.value }));
-                    setApiTestResult(null);
+    setApiTestResult(null);
+    setApiTestMessage('');
+                    setApiTestMessage('');
                   }}
                   placeholder="https://api.example.com/reports/generate"
                   leftElement={<Link className="w-4 h-4" />}
                   className="flex-1"
                 />
                 <Button
+                  type="button"
                   variant="secondary"
                   size="medium"
                   onClick={handleTestApi}
@@ -554,12 +570,12 @@ export default function ReportTemplatesPage() {
                   {apiTestResult === 'success' ? (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span>URL 格式有效（仅本地校验，未从浏览器发起连接）</span>
+                      <span>{apiTestMessage}</span>
                     </>
                   ) : (
                     <>
                       <XCircle className="w-4 h-4" />
-                      <span>请输入有效的 HTTPS URL</span>
+                      <span>{apiTestMessage}</span>
                     </>
                   )}
                 </div>
