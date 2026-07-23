@@ -5,6 +5,7 @@ import { X, Settings, Trash2, AlertCircle } from 'lucide-react';
 import { useAI } from '@/components/providers/AIProvider';
 import { AssistantChat } from './AssistantChat';
 import Link from 'next/link';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 interface AssistantDialogProps {
   onClose: () => void;
@@ -17,6 +18,7 @@ interface AssistantDialogProps {
  */
 export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
   const { isEnabled, isConfigured, clearHistory } = useAI();
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const dialogRef = React.useRef<HTMLDivElement>(null);
 
   // 点击外部关闭
@@ -98,14 +100,16 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
             <p className="text-sm text-fg-muted mb-4">
               请先配置 AI 服务
             </p>
-            <Link
-              href="/admin"
-              onClick={onClose}
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent-emphasis text-white hover:opacity-90 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              前往配置
-            </Link>
+            {!isSaaS && (
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent-emphasis text-white hover:opacity-90 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                前往配置
+              </Link>
+            )}
           </div>
         ) : !isEnabled ? (
           // 已禁用提示
@@ -114,14 +118,16 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
             <p className="text-sm text-fg-muted mb-4">
               小墨已禁用
             </p>
-            <Link
-              href="/admin"
-              onClick={onClose}
-              className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-500 text-white hover:opacity-80 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              前往设置
-            </Link>
+            {!isSaaS && (
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-500 text-white hover:opacity-80 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                前往设置
+              </Link>
+            )}
           </div>
         ) : (
           // 聊天界面

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { ArrowUpRight, Clock3, Coins, CreditCard, Loader2, RefreshCw } from 'lucide-react';
+import { Clock3, Coins, CreditCard, Gauge, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import {
   getBillingBalance,
   getBillingConfig,
@@ -16,6 +16,7 @@ import {
   type BillingTransaction,
 } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { MetricTile } from '@/components/shared';
 
 function formatTime(value: string): string {
   if (!value) return '-';
@@ -56,14 +57,9 @@ function transactionLabel(type: string): string {
   }
 }
 
-function ConfigItem({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
-  return (
-    <div className="rounded-md border border-border-default bg-canvas-subtle p-3">
-      <p className="text-xs text-fg-muted">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-fg-default">{value}</p>
-      {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
-    </div>
-  );
+function formatCredits(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '--';
+  return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 }
 
 export default function BillingSettingsPage() {
@@ -124,12 +120,12 @@ export default function BillingSettingsPage() {
     },
     {
       id: 'amount',
-      header: '点数变动',
-      accessor: (row) => <span className={row.amount >= 0 ? 'text-success-fg' : 'text-warning-fg'}>{row.amount}</span>,
+      header: '积分变动',
+      accessor: (row) => <span className={`font-medium tabular-nums ${row.amount >= 0 ? 'text-success-fg' : 'text-warning-fg'}`}>{row.amount > 0 ? '+' : ''}{formatCredits(row.amount)}</span>,
       width: 120,
       align: 'center',
     },
-    { id: 'balance_after', header: '变动后余额', accessor: (row) => row.balance_after, width: 120, align: 'center' },
+    { id: 'balance_after', header: '变动后积分', accessor: (row) => <span className="tabular-nums">{formatCredits(row.balance_after)}</span>, width: 120, align: 'center' },
     {
       id: 'reference_id',
       header: '关联任务',
@@ -160,16 +156,21 @@ export default function BillingSettingsPage() {
 
   return (
     <PageContent className="yj-page-shell">
-      <div className="yj-page-header">
-        <div>
+      <div className="yj-page-header flex-wrap gap-4">
+        <div className="min-w-0">
           <h2 className="yj-page-title">费用中心</h2>
           <p className="yj-page-subtitle">
-            查看当前 Credit、任务扣费、退款与充值记录。
+            查看组织积分余额、任务费率与收支记录。
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => void loadData(page)} disabled={isLoading}>
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="secondary"
+            className="min-w-[88px] justify-center"
+            leftIcon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            onClick={() => void loadData(page)}
+            disabled={isLoading}
+          >
             刷新
           </Button>
           <Link
@@ -182,77 +183,79 @@ export default function BillingSettingsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="yj-panel p-4">
-          <div className="flex items-center gap-2 text-accent-fg">
-            <Coins className="w-5 h-5" />
-            <span className="text-sm">当前 Credit</span>
+      <div className="space-y-6">
+        {error && (
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+            {error}
           </div>
-          <p className="mt-3 text-3xl font-semibold text-fg-default">{balance?.balance ?? '--'}</p>
-          <p className="mt-1 text-xs text-fg-muted">最低可用余额 {config?.min_balance ?? '--'}</p>
-        </div>
-        <div className="yj-panel p-4">
-          <div className="flex items-center gap-2 text-fg-muted">
-            <Clock3 className="w-5 h-5" />
-            <span className="text-sm">预计可运行</span>
-          </div>
-          <p className="mt-3 text-3xl font-semibold text-fg-default">{availableMinutes ?? '--'} 分钟</p>
-          <p className="mt-1 text-xs text-fg-muted">按当前费率估算</p>
-        </div>
-        <div className="yj-panel p-4">
-          <div className="flex items-center gap-2 text-fg-muted">
-            <ArrowUpRight className="w-5 h-5" />
-            <span className="text-sm">当前费率</span>
-          </div>
-          <p className="mt-3 text-3xl font-semibold text-fg-default">{creditsPerMinute ?? '--'}</p>
-          <p className="mt-1 text-xs text-fg-muted">Credit / 分钟</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <ConfigItem label="基础费率" value={config?.credits_per_minute ?? '--'} hint="Credit / 分钟" />
-        <ConfigItem label="计费倍率" value={config?.credit_rate_multiplier ?? '--'} />
-        <ConfigItem label="最低余额" value={config?.min_balance ?? '--'} hint="扣费后低于该值时不能启动任务" />
-      </div>
-
-      <div className="yj-panel p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium text-fg-default">费用明细</h3>
-          <span className="text-xs text-fg-muted">共 {total} 条</span>
-        </div>
-        {isLoading && transactions.length === 0 ? (
-          <div className="yj-empty-state py-10">
-            <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
-            <p className="text-fg-muted">正在加载交易记录...</p>
-          </div>
-        ) : transactions.length === 0 ? (
-          <p className="text-sm text-fg-muted">暂无交易记录</p>
-        ) : (
-          <DataTable data={transactions} columns={columns} rowKey="id" density="default" striped />
         )}
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <Button
-            variant="secondary"
-            disabled={page <= 1 || isLoading}
-            onClick={() => void loadData(page - 1)}
-          >
-            上一页
-          </Button>
-          <span className="text-sm text-fg-muted">第 {page} / {totalPages} 页</span>
-          <Button
-            variant="secondary"
-            disabled={page >= totalPages || isLoading}
-            onClick={() => void loadData(page + 1)}
-          >
-            下一页
-          </Button>
-        </div>
+
+        <section aria-label="费用概览" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <MetricTile label="当前积分" value={formatCredits(balance?.balance)} icon={<Coins className="h-4 w-4" />} tone="success" />
+          <MetricTile label="可运行时长" value={availableMinutes === null ? '--' : `${availableMinutes} 分钟`} icon={<Clock3 className="h-4 w-4" />} tone="info" />
+          <MetricTile label="每分钟积分" value={formatCredits(creditsPerMinute)} icon={<Gauge className="h-4 w-4" />} />
+        </section>
+
+        <section className="yj-panel px-5 py-5" aria-labelledby="billing-rules-title">
+          <div className="mb-5 flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-accent-fg" />
+            <h3 id="billing-rules-title" className="text-sm font-medium text-fg-default">计费规则</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-border-default">
+            <div className="min-w-0 lg:pr-6">
+              <p className="text-xs text-fg-muted">基础费率</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.credits_per_minute)} <span className="whitespace-nowrap text-xs font-normal text-fg-muted">积分 / 分钟</span></p>
+            </div>
+            <div className="min-w-0 border-t border-border-default pt-5 lg:border-t-0 lg:px-6 lg:pt-0">
+              <p className="text-xs text-fg-muted">计费倍率</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.credit_rate_multiplier)}x</p>
+            </div>
+            <div className="min-w-0 border-t border-border-default pt-5 lg:border-t-0 lg:pl-6 lg:pt-0">
+              <p className="text-xs text-fg-muted">最低保留积分</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.min_balance)}</p>
+              <p className="mt-2 text-xs leading-5 text-fg-muted">预扣后低于此值时不能启动任务</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="yj-panel overflow-hidden" aria-labelledby="billing-details-title">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--yj-border-subtle)] px-5 py-4">
+            <div>
+              <h3 id="billing-details-title" className="text-base font-medium text-fg-default">积分明细</h3>
+              <p className="mt-1 text-xs text-fg-muted">任务预扣、结算、退款与充值流水</p>
+            </div>
+            <span className="shrink-0 text-xs text-fg-muted">共 {total} 条</span>
+          </div>
+          <div className="min-w-0 overflow-x-auto">
+            {isLoading && transactions.length === 0 ? (
+              <div className="yj-empty-state py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-accent-fg" />
+                <p className="text-fg-muted">正在加载交易记录...</p>
+              </div>
+            ) : transactions.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-fg-muted">暂无交易记录</p>
+            ) : (
+              <DataTable data={transactions} columns={columns} rowKey="id" density="default" striped />
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
+            <Button
+              variant="secondary"
+              disabled={page <= 1 || isLoading}
+              onClick={() => void loadData(page - 1)}
+            >
+              上一页
+            </Button>
+            <span className="px-1 text-sm text-fg-muted">第 {page} / {totalPages} 页</span>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages || isLoading}
+              onClick={() => void loadData(page + 1)}
+            >
+              下一页
+            </Button>
+          </div>
+        </section>
       </div>
     </PageContent>
   );

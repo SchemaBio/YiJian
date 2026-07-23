@@ -27,7 +27,6 @@ export interface NewTaskFormData {
   template: string;
   inputs: Record<string, unknown>;
   uploadJobId: string;
-  estimatedMinutes: number;
 }
 
 interface NewTaskModalProps {
@@ -45,7 +44,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem | null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState<string>('');
   const [uploadJobId, setUploadJobId] = React.useState('');
-  const [estimatedMinutes, setEstimatedMinutes] = React.useState(120);
   const [remark, setRemark] = React.useState('');
   const [r1File, setR1File] = React.useState<File | null>(null);
   const [r2File, setR2File] = React.useState<File | null>(null);
@@ -141,7 +139,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   const uploadJobID = uploadJobId.trim();
   const hasSequencingInput = Boolean(selectedSample?.matchedPair || uploadJobID);
-  const estimatedCredits = calculateEstimatedCredits(estimatedMinutes, billingConfig);
+  const estimatedCredits = calculateEstimatedCredits(60, billingConfig);
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
     : null;
@@ -183,7 +181,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         template,
         inputs: buildInputs(selectedSample),
         uploadJobId: uploadJobID,
-        estimatedMinutes,
       });
       handleClose();
     } catch (err) {
@@ -231,7 +228,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     setSelectedSample(null);
     setSelectedPipeline('');
     setUploadJobId('');
-    setEstimatedMinutes(120);
     setRemark('');
     setR1File(null);
     setR2File(null);
@@ -302,10 +298,10 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <Select value={selectedPipeline} onChange={(v) => setSelectedPipeline(Array.isArray(v) ? v[0] : v)} options={pipelineOptions} placeholder="请选择分析流程" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-fg-default mb-2">预计耗时（分钟）</label>
-            <Input type="number" min="1" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(Math.max(1, Number(e.target.value) || 1))} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">
+            <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
+            <p className="mt-1 text-xs leading-5 text-fg-muted">按已匹配 R1/R2 的合计大小计算；数据未匹配时为 60 分钟。</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-fg-default mb-2">上传任务 ID</label>
@@ -318,8 +314,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
-                <div className="text-sm font-medium text-fg-default">预计扣费 {estimatedCredits ?? '--'} Credit</div>
-                <div className="text-xs text-fg-muted">启动任务时预扣，完成后按实际运行时间结算</div>
+                <div className="text-sm font-medium text-fg-default">基础预估扣费 {estimatedCredits ?? '--'} 积分</div>
+                <div className="text-xs text-fg-muted">按 60 分钟展示；提交后由系统按数据量确定预估</div>
               </div>
             </div>
             <div className="text-right">

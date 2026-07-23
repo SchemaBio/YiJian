@@ -22,6 +22,10 @@ export default function LoginPage() {
   const [error, setError] = React.useState('');
 
   const privacyConsentRequired = process.env.NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED !== 'false';
+  const accountDeleted = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('accountDeleted') === '1';
+  }, []);
   const nextPath = React.useMemo(() => {
     if (typeof window === 'undefined') return '/dashboard';
     return safeNextPath(new URLSearchParams(window.location.search).get('next'));
@@ -94,6 +98,11 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="login-form space-y-5">
+            {accountDeleted && !error && (
+              <div className="rounded-md border border-success-muted bg-success-subtle p-3.5 text-sm text-success-fg">
+                账户已删除，当前会话已安全退出。
+              </div>
+            )}
             {error && (
               <div className="yj-public-alert rounded-xl p-3.5 text-sm">
                 {error}

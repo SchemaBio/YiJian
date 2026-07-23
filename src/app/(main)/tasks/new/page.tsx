@@ -39,7 +39,6 @@ export default function NewAnalysisPage() {
   const [enableSV, setEnableSV] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState('');
-  const [estimatedMinutes, setEstimatedMinutes] = React.useState(120);
   const [billingBalance, setBillingBalance] = React.useState<BillingBalance | null>(null);
   const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
 
@@ -92,7 +91,7 @@ export default function NewAnalysisPage() {
     };
   }, [isSaaS]);
 
-  const estimatedCredits = calculateEstimatedCredits(estimatedMinutes, billingConfig);
+  const estimatedCredits = calculateEstimatedCredits(60, billingConfig);
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
     : null;
@@ -153,7 +152,6 @@ export default function NewAnalysisPage() {
           enable_sv: enableSV,
         },
         ...(uploadJobID ? { uploadJobId: uploadJobID } : {}),
-        estimatedMinutes,
       });
       router.push(`/tasks/${encodeURIComponent(task.id)}`);
     } catch (err) {
@@ -267,22 +265,18 @@ export default function NewAnalysisPage() {
           />
         </FormItem>
 
-        <FormItem label="预计耗时（分钟）">
-          <Input
-            type="number"
-            min="1"
-            value={estimatedMinutes}
-            onChange={(event) => setEstimatedMinutes(Math.max(1, Math.trunc(Number(event.target.value)) || 1))}
-          />
-        </FormItem>
+        <div className="rounded-md border border-border-default bg-canvas-subtle px-4 py-3">
+          <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
+          <p className="mt-1 text-xs leading-5 text-fg-muted">按已匹配 R1/R2 的合计大小计算；数据未匹配时为 60 分钟。</p>
+        </div>
 
         {isSaaS && (
           <div className={`flex items-center justify-between gap-4 border-y py-3 ${insufficientCredits ? 'border-danger-muted' : 'border-border-default'}`}>
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
-                <div className="text-sm font-medium text-fg-default">预计扣费 {estimatedCredits ?? '--'} Credit</div>
-                <div className="text-xs text-fg-muted">任务启动时预扣，完成后按实际运行时间结算</div>
+                <div className="text-sm font-medium text-fg-default">基础预估扣费 {estimatedCredits ?? '--'} 积分</div>
+                <div className="text-xs text-fg-muted">按 60 分钟展示；提交后由系统按数据量确定预估</div>
               </div>
             </div>
             <div className="text-right">

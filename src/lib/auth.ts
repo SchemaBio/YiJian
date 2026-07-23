@@ -132,6 +132,14 @@ export const authApi = {
     return mapUser(backendData);
   },
 
+  deleteAccount: async (email: string): Promise<void> => {
+    await api.delete('/v1/auth/me', {
+      coreApi: false,
+      body: JSON.stringify({ email }),
+    });
+    clearAuthSession();
+  },
+
   getCurrentOrganization: async (): Promise<Organization> => {
     const backendData = await api.get<BackendOrganization>('/v1/orgs/me', { coreApi: false });
     return {

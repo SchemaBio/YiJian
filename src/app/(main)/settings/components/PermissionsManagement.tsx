@@ -8,8 +8,8 @@ import type { SystemRole, User } from '@/types/user';
 import { approveUser, deleteUser, listPendingUsers, listUsers, rejectUser, updateUser } from '@/lib/users';
 
 const SYSTEM_ROLES: Array<{ id: SystemRole; name: string; description: string }> = [
-  { id: 'PLATFORM_ADMIN', name: '平台管理员', description: '可管理租户、用户、计费与系统级配置' },
-  { id: 'ORG_USER', name: '机构用户', description: '机构内普通 SaaS 账号，具体业务权限由后端策略控制' },
+  { id: 'PLATFORM_ADMIN', name: '平台管理员', description: '自部署环境的管理员，可创建子用户并分配系统角色' },
+  { id: 'ORG_USER', name: '机构用户', description: '自部署环境的子用户，按管理员授予的角色使用业务功能' },
 ];
 
 const roleVariant: Record<SystemRole, 'warning' | 'info'> = {
@@ -218,7 +218,7 @@ export function PermissionsManagement() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-medium text-fg-default">待审批注册</h3>
-              <p className="mt-1 text-xs text-fg-muted">审核新注册的平台账号。</p>
+              <p className="mt-1 text-xs text-fg-muted">审核并管理新建的子用户账号。</p>
             </div>
             <Tag variant="warning">{pendingUsers.length} pending</Tag>
           </div>

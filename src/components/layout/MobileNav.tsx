@@ -21,10 +21,15 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
   const { isPlatformAdmin } = useAuth();
   const section = getSectionFromPath(pathname);
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const isAdmin = isPlatformAdmin();
   const visibleMainNavItems = mainNavItems.filter((item) =>
-    (!item.saasOnly || isSaaS) && (!item.platformAdminOnly || isPlatformAdmin())
+    (!item.saasOnly || isSaaS) && (!item.selfHostedOnly || !isSaaS) && (!item.platformAdminOnly || isAdmin)
   );
-  const sidebarItems = (sidebarNavConfig[section] || []).filter((item) => !item.saasOnly || isSaaS);
+  const sidebarItems = (sidebarNavConfig[section] || []).filter((item) =>
+    (!item.saasOnly || isSaaS) &&
+    (!item.selfHostedOnly || !isSaaS) &&
+    (!item.platformAdminOnly || isAdmin)
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-[var(--yj-panel-bg)]">

@@ -39,6 +39,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: { name: string }) => Promise<User>;
+  deleteAccount: (email: string) => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
   hasOrgRole: (role: OrgRole) => boolean;
   hasAnyOrgRole: (...roles: OrgRole[]) => boolean;
@@ -207,6 +208,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return nextUser;
   }, [currentOrg, organizations, user]);
 
+  const deleteAccount = useCallback(async (email: string) => {
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
+    if (DEV_MOCK_AUTH) {
+      resetSession();
+      return;
+    }
+    await authApi.deleteAccount(email);
+    resetSession();
+  }, [resetSession, user]);
+
   const switchOrganization = useCallback(async (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
     if (org) {
@@ -255,6 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     updateProfile,
+    deleteAccount,
     switchOrganization,
     hasOrgRole,
     hasAnyOrgRole,

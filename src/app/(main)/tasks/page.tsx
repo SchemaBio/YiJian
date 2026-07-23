@@ -361,7 +361,6 @@ export default function AnalysisPage() {
         template: data.template,
         inputs: data.inputs,
         ...(data.uploadJobId ? { uploadJobId: data.uploadJobId } : {}),
-        estimatedMinutes: data.estimatedMinutes,
       });
       refetch(); // Refresh data after creating
     } catch (err) {

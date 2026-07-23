@@ -29,7 +29,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const visibleMainNavItems = React.useMemo(
     () => mainNavItems.filter((item) =>
-      (!item.saasOnly || isSaaS) && (!item.platformAdminOnly || isAdmin)
+      (!item.saasOnly || isSaaS) && (!item.selfHostedOnly || !isSaaS) && (!item.platformAdminOnly || isAdmin)
     ),
     [isAdmin, isSaaS]
   );
@@ -43,7 +43,11 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
   // Get sub navigation items and filter based on permissions
   const subItems = React.useMemo(() => {
     const items = (sidebarNavConfig[currentSection as keyof typeof sidebarNavConfig] || [])
-      .filter((item) => !item.saasOnly || isSaaS);
+      .filter((item) =>
+        (!item.saasOnly || isSaaS) &&
+        (!item.selfHostedOnly || !isSaaS) &&
+        (!item.platformAdminOnly || isAdmin)
+      );
 
     // For settings page, non-admins hide permissions and AI settings
     if (currentSection === 'settings' && !isAdmin) {

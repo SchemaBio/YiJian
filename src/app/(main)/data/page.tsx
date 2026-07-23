@@ -77,6 +77,22 @@ export default function DataCenterPage() {
   const totalBytes = React.useMemo(() => assets.reduce((sum, asset) => sum + asset.file_size, 0), [assets]);
   const readyCount = React.useMemo(() => assets.filter((asset) => asset.status === 'completed').length, [assets]);
 
+  const handleDownload = async (asset: DataAsset) => {
+    if (!config?.download_allowed) return;
+    setError('');
+    try {
+      const result = await downloadDataAsset(asset.id, asset.file_name);
+      const url = URL.createObjectURL(result.blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = result.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '下载失败');
+    }
+  };
+
   const handleUpload = async () => {
     if (!read1 && !read2) { setError('请至少选择一个 Read1 或 Read2 文件'); return; }
     setUploading(true);
@@ -96,21 +112,6 @@ export default function DataCenterPage() {
     }
   };
 
-  const handleDownload = async (asset: DataAsset) => {
-    setError('');
-    try {
-      const result = await downloadDataAsset(asset.id, asset.file_name);
-      const url = URL.createObjectURL(result.blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = result.filename;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '下载失败');
-    }
-  };
-
   const handleDelete = async () => {
     if (!deleting) return;
     setError('');
@@ -127,7 +128,7 @@ export default function DataCenterPage() {
     <div className="h-full overflow-auto p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h2 className="text-[32px] font-semibold leading-tight tracking-tight text-[var(--yj-text-strong)]">数据中心</h2>
+          <h2 className="yj-page-title">数据中心</h2>
           <p className="mt-2 text-sm text-fg-muted">管理组织内可用于样本匹配和分析的测序数据</p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -143,7 +144,7 @@ export default function DataCenterPage() {
           <div>
             <p className="text-sm font-medium text-fg-default">数据仅保留 {config.retention_days} 天</p>
             <p className="mt-0.5 text-xs leading-5 text-fg-muted">
-              文件到期后将从对象存储自动删除，请在 {config.retention_days} 天内完成分析或下载备份。
+              SaaS 模式仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。
             </p>
           </div>
         </div>
@@ -187,7 +188,7 @@ export default function DataCenterPage() {
                   <td className="whitespace-nowrap px-4 py-3 text-fg-muted">{formatTime(asset.created_at)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</td>
                   <td className="px-5 py-3"><div className="flex justify-end gap-1">
-                    <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}><Download className="h-4 w-4" /></button>
+                    {config?.download_allowed && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}><Download className="h-4 w-4" /></button>}
                     <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label="删除" onClick={() => setDeleting(asset)}><Trash2 className="h-4 w-4" /></button>
                   </div></td>
                 </tr>
@@ -203,7 +204,7 @@ export default function DataCenterPage() {
         <ModalHeader>上传测序数据</ModalHeader>
         <ModalBody>
           <div className="space-y-5">
-            {config?.temporary && <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，请及时完成分析或备份。</span></div>}
+            {config?.temporary && <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载。</span></div>}
             <p className="text-sm text-fg-muted">Read1 和 Read2 可成对上传，也可以暂时只上传其中一个，之后再从样本管理中手动关联。</p>
             <label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
             <label className="block"><span className="mb-1.5 block text-sm font-medium text-fg-default">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>

@@ -14,7 +14,6 @@
   Library,
   LayoutDashboard,
   ListTodo,
-  ShieldCheck,
   Settings2,
 	HardDrive,
   type LucideIcon,
@@ -25,6 +24,7 @@ export interface NavItem {
   href: string;
   icon?: LucideIcon;
   saasOnly?: boolean;
+  selfHostedOnly?: boolean;
   platformAdminOnly?: boolean;
 }
 
@@ -35,6 +35,8 @@ export interface SidebarNavItem {
   badge?: string | number;
   children?: SidebarNavItem[];
   saasOnly?: boolean;
+  selfHostedOnly?: boolean;
+  platformAdminOnly?: boolean;
 }
 
 export interface SidebarNavConfig {
@@ -58,7 +60,7 @@ export const mainNavItems: NavItem[] = [
   { label: '历史检出', href: '/history', icon: History },
   { label: '流程中心', href: '/pipeline', icon: Workflow },
   { label: '费用中心', href: '/billing', icon: Coins, saasOnly: true },
-  { label: '管理中心', href: '/admin', icon: ShieldCheck, saasOnly: true, platformAdminOnly: true },
+  { label: '管理中心', href: '/admin', icon: Shield, selfHostedOnly: true, platformAdminOnly: true },
 ];
 
 /** Sidebar navigation configuration for each section. */
@@ -86,7 +88,7 @@ export const sidebarNavConfig: SidebarNavConfig = {
   ],
   settings: [
     { label: '个人设置', href: '/settings', icon: User },
-    { label: '权限管理', href: '/settings/permissions', icon: Shield },
+    { label: '权限管理', href: '/settings/permissions', icon: Shield, selfHostedOnly: true, platformAdminOnly: true },
   ],
 };
 

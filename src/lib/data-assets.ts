@@ -20,6 +20,7 @@ export interface DataCenterConfig {
   provider: 'local' | 's3';
   retention_days: number;
   temporary: boolean;
+  download_allowed: boolean;
 }
 
 interface AssetListResponse {

@@ -92,7 +92,7 @@ export function AssistantChat() {
             <div className="space-y-2 text-sm">
               <p className="text-fg-muted">• "点击样本列表"</p>
               <p className="text-fg-muted">• "新建一个样本"</p>
-              <p className="text-fg-muted">• "跳转到管理中心"</p>
+              <p className="text-fg-muted">• "跳转到费用中心"</p>
               <p className="text-fg-muted">• "填写表单"</p>
             </div>
           </div>

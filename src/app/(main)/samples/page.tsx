@@ -416,7 +416,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     <div className="h-full overflow-auto p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h2 className="text-[32px] font-semibold leading-tight tracking-tight text-[var(--yj-text-strong)]">
+          <h2 className="yj-page-title">
             样本管理
           </h2>
           <p className="mt-2 text-sm text-fg-muted">

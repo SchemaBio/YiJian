@@ -55,7 +55,6 @@ export interface TaskCreateRequest {
   config_file?: string;
   output_dir?: string;
   uploadJobId?: string;
-  estimatedMinutes?: number;
 }
 
 export interface TaskUpdateRequest {
