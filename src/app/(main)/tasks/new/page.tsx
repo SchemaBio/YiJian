@@ -10,10 +10,8 @@ import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
   samplesApi,
-  templatesApi,
   type TaskPipelineOption,
   type TaskSampleListItem,
-  type TaskTemplateOption,
 } from '@/lib/task-resources';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -23,7 +21,6 @@ export default function NewAnalysisPage() {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
-  const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
   const [loadError, setLoadError] = React.useState('');
   const [selectedSample, setSelectedSample] = React.useState('');
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
@@ -43,15 +40,13 @@ export default function NewAnalysisPage() {
 
     async function loadOptions() {
       try {
-        const [sampleOptions, pipelineOptions, templateOptions] = await Promise.all([
+        const [sampleOptions, pipelineOptions] = await Promise.all([
           samplesApi.list({ page: 1, page_size: 100 }),
           pipelinesApi.list(),
-          templatesApi.list().catch(() => []),
         ]);
         if (cancelled) return;
         setSamples(sampleOptions);
         setPipelines(pipelineOptions);
-        setTemplates(templateOptions);
         setSelectedPipeline((current) => current || pipelineOptions[0]?.id || '');
         setLoadError('');
       } catch (err) {
@@ -89,23 +84,6 @@ export default function NewAnalysisPage() {
   const insufficientCredits = projectedBalance !== null && billingConfig !== null
     && projectedBalance < billingConfig.min_balance;
 
-  const resolvePipelineTemplate = React.useCallback((pipeline: TaskPipelineOption): string => {
-    if (pipeline.template) return pipeline.template;
-    const byBaseType: Record<string, string> = {
-      wes_single: 'single',
-      wes_family: 'trio',
-      panel: 'panel',
-    };
-    const baseTemplate = pipeline.baseType ? byBaseType[pipeline.baseType] : '';
-    if (baseTemplate && (templates.length === 0 || templates.some(template => template.name === baseTemplate))) {
-      return baseTemplate;
-    }
-
-    const target = `${pipeline.id} ${pipeline.name}`.toLowerCase();
-    const matchedTemplate = templates.find(template => target.includes(template.name.toLowerCase()));
-    return matchedTemplate?.name || templates[0]?.name || '';
-  }, [templates]);
-
   React.useEffect(() => {
     if (selectedSampleInfo && selectedPipelineInfo) {
       setTaskName(`${selectedSampleInfo.internalId || selectedSampleInfo.id} ${selectedPipelineInfo.name} 分析`);
@@ -118,12 +96,6 @@ export default function NewAnalysisPage() {
       setFormError('请选择样本和分析流程。');
       return;
     }
-    const template = resolvePipelineTemplate(selectedPipelineInfo);
-    if (!template) {
-      setFormError('当前分析流程没有可用的 WDL 模板。');
-      return;
-    }
-
     setSubmitting(true);
     try {
       const task = await tasksApi.create({
@@ -133,7 +105,6 @@ export default function NewAnalysisPage() {
         pipelineName: selectedPipelineInfo.name,
         pipelineVersion: selectedPipelineInfo.version,
         remark: taskName,
-        template,
         inputs: {
           enable_cnv: enableCNV,
           enable_sv: enableSV,

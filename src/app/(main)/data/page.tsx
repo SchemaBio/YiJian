@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Input } from '@schema/ui-kit';
+import { Button, Checkbox, Input } from '@schema/ui-kit';
 import {
   AlertTriangle, CheckCircle2, Cloud, Database, Download, HardDrive,
   Loader2, RefreshCw, Search, Trash2, Upload, XCircle,
@@ -55,6 +55,7 @@ export default function DataCenterPage() {
   const [read1, setRead1] = React.useState<File | null>(null);
   const [read2, setRead2] = React.useState<File | null>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [uploadPolicyAcknowledged, setUploadPolicyAcknowledged] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [deleting, setDeleting] = React.useState<DataAsset | null>(null);
 
@@ -95,15 +96,19 @@ export default function DataCenterPage() {
 
   const handleUpload = async () => {
     if (!read1 && !read2) { setError('请至少选择一个 Read1 或 Read2 文件'); return; }
+    if (config?.temporary && !uploadPolicyAcknowledged) { setError('请先勾选“我已确认”'); return; }
+    const oversizedFile = [read1, read2].find((file) => file && config?.temporary && config.max_file_size_bytes > 0 && file.size > config.max_file_size_bytes);
+    if (oversizedFile) { setError(`${oversizedFile.name} 超过 SaaS 单文件 20 GB 限制`); return; }
     setUploading(true);
     setProgress(0);
     setError('');
     try {
-      await uploadDataFiles(read1, read2, setProgress);
+      await uploadDataFiles(read1, read2, uploadPolicyAcknowledged, setProgress);
       setProgress(100);
       setUploadOpen(false);
       setRead1(null);
       setRead2(null);
+      setUploadPolicyAcknowledged(false);
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
@@ -144,7 +149,7 @@ export default function DataCenterPage() {
           <div>
             <p className="text-sm font-medium text-fg-default">数据仅保留 {config.retention_days} 天</p>
             <p className="mt-0.5 text-xs leading-5 text-fg-muted">
-              SaaS 模式仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。
+              仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。单个文件不得超过 20 GB。
             </p>
           </div>
         </div>
@@ -162,7 +167,7 @@ export default function DataCenterPage() {
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => setUploadOpen(true)}>上传数据</Button>
+          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>上传数据</Button>
         </div>
 
         <div className="overflow-x-auto">
@@ -204,16 +209,16 @@ export default function DataCenterPage() {
         open={uploadOpen}
         size="large"
         title="上传测序数据"
-        onOpenChange={(open) => { if (!uploading) setUploadOpen(open); }}
+        onOpenChange={(open) => { if (!uploading) { setUploadOpen(open); if (!open) setUploadPolicyAcknowledged(false); } }}
         footer={
           <>
-            <Button variant="secondary" disabled={uploading} onClick={() => setUploadOpen(false)}>取消</Button>
-            <Button variant="primary" disabled={uploading || (!read1 && !read2)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
+            <Button variant="secondary" disabled={uploading} onClick={() => { setUploadOpen(false); setUploadPolicyAcknowledged(false); }}>取消</Button>
+            <Button variant="primary" disabled={uploading || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
           </>
         }
       >
         <div className="space-y-6">
-          {config?.temporary && <div className="flex gap-2 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载。</span></div>}
+          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

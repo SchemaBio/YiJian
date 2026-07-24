@@ -1,17 +1,21 @@
 import { api } from './api';
 
-export type PipelineBaseType = 'wes_single' | 'wes_family' | 'panel';
+export type PipelineBaseType = 'wes_single' | 'wes_family';
 export type PipelineStatus = 'active' | 'inactive';
 
 export interface Pipeline {
   id: string;
   name: string;
+  basePipelineId: string;
   baseType: PipelineBaseType;
   version: string;
   description: string;
   bedFile: string;
   referenceGenome: string;
   cnvBaseline: string;
+  bedAssetId: string;
+  cnvBaselineId: string;
+  isBuiltin: boolean;
   status: PipelineStatus;
   createdAt: string;
   updatedAt: string;
@@ -29,7 +33,7 @@ function rawString(raw: Record<string, unknown>, camel: string, snake: string, f
 }
 
 function normalizeBaseType(value: string): PipelineBaseType {
-  return value === 'wes_family' || value === 'panel' ? value : 'wes_single';
+  return value === 'wes_family' ? value : 'wes_single';
 }
 
 function normalizeStatus(value: string): PipelineStatus {
@@ -52,12 +56,16 @@ export function normalizePipeline(value: unknown): Pipeline {
   return {
     id: String(raw.id ?? ''),
     name: rawString(raw, 'name', 'name'),
+    basePipelineId: rawString(raw, 'basePipelineId', 'base_pipeline_id'),
     baseType: normalizeBaseType(rawString(raw, 'baseType', 'base_type', 'wes_single')),
     version: rawString(raw, 'version', 'version'),
     description: rawString(raw, 'description', 'description'),
     bedFile: rawString(raw, 'bedFile', 'bed_file'),
     referenceGenome: rawString(raw, 'referenceGenome', 'reference_genome'),
     cnvBaseline: rawString(raw, 'cnvBaseline', 'cnv_baseline'),
+    bedAssetId: rawString(raw, 'bedAssetId', 'bed_asset_id'),
+    cnvBaselineId: rawString(raw, 'cnvBaselineId', 'cnv_baseline_id'),
+    isBuiltin: Boolean(raw.isBuiltin ?? raw.is_builtin),
     status: normalizeStatus(rawString(raw, 'status', 'status', 'inactive')),
     createdAt: rawString(raw, 'createdAt', 'created_at'),
     updatedAt: rawString(raw, 'updatedAt', 'updated_at'),

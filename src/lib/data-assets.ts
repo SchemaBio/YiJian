@@ -15,6 +15,7 @@ export interface DataAsset {
   expires_at?: string;
   created_at: string;
   updated_at: string;
+  is_builtin?: boolean;
 }
 
 export interface DataCenterConfig {
@@ -22,6 +23,7 @@ export interface DataCenterConfig {
   retention_days: number;
   temporary: boolean;
   download_allowed: boolean;
+  max_file_size_bytes: number;
 }
 
 interface AssetListResponse {
@@ -48,8 +50,8 @@ export function getDataCenterConfig(): Promise<DataCenterConfig> {
   return api.get<DataCenterConfig>('/v1/data/config');
 }
 
-async function uploadOne(file: File, readType: DataReadType, onProgress: (value: number) => void) {
-  const session = await requestPresignedUploadUrl(file.name, file.size, readType);
+async function uploadOne(file: File, readType: DataReadType, uploadPolicyAcknowledged: boolean, onProgress: (value: number) => void) {
+  const session = await requestPresignedUploadUrl(file.name, file.size, readType, undefined, uploadPolicyAcknowledged);
   await uploadToCOS(session.upload_url, file, onProgress);
   if (session.storage_type === 'presigned') await confirmUpload(session.file_id);
 }
@@ -57,11 +59,12 @@ async function uploadOne(file: File, readType: DataReadType, onProgress: (value:
 export async function uploadDataFiles(
   read1: File | null,
   read2: File | null,
+  uploadPolicyAcknowledged: boolean,
   onProgress: (value: number) => void
 ): Promise<void> {
   if (!read1 && !read2) throw new Error('请至少选择一个文件');
   if (read1 && read2) {
-    const job = await requestPairedUploadJob(read1, read2);
+    const job = await requestPairedUploadJob(read1, read2, uploadPolicyAcknowledged);
     const first = job.files.find((item) => item.read_type === 'read1');
     const second = job.files.find((item) => item.read_type === 'read2');
     if (!first || !second) throw new Error('上传任务没有返回完整的 Read1/Read2 文件');
@@ -71,17 +74,18 @@ export async function uploadDataFiles(
     if (second.storage_type === 'presigned') await confirmUpload(second.file_id);
     return;
   }
-  await uploadOne((read1 ?? read2) as File, read1 ? 'read1' : 'read2', onProgress);
+  await uploadOne((read1 ?? read2) as File, read1 ? 'read1' : 'read2', uploadPolicyAcknowledged, onProgress);
 }
 
 export async function uploadBEDFile(
   file: File,
   referenceGenome: 'GRCh37' | 'GRCh38',
+  uploadPolicyAcknowledged: boolean,
   onProgress: (value: number) => void
 ): Promise<void> {
   if (file.size > 20 * 1024 * 1024) throw new Error('BED 文件不能超过 20MB');
   if (!/\.bed(?:\.gz)?$/i.test(file.name)) throw new Error('请选择 .bed 或 .bed.gz 文件');
-  const session = await requestPresignedUploadUrl(file.name, file.size, 'bed', referenceGenome);
+  const session = await requestPresignedUploadUrl(file.name, file.size, 'bed', referenceGenome, uploadPolicyAcknowledged);
   await uploadToCOS(session.upload_url, file, onProgress);
   if (session.storage_type === 'presigned') await confirmUpload(session.file_id);
 }

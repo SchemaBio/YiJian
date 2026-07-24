@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { Button, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { Database, ExternalLink, Loader2, Plus, Search } from 'lucide-react';
+import { Coins, Database, ExternalLink, Loader2, Plus, Search } from 'lucide-react';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { createCNVBaseline, listCNVBaselines, type CNVBaseline, type CNVBaselineStatus } from '@/lib/cnv-baselines';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { BUILTIN_CNV_BASELINES } from '@/lib/builtin-resources';
 
 type ReferenceGenome = 'GRCh37' | 'GRCh38';
 
@@ -37,6 +39,7 @@ function assetOptions(assets: DataAsset[]) {
 }
 
 export default function BaselinePage() {
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [searchQuery, setSearchQuery] = React.useState('');
   const [items, setItems] = React.useState<CNVBaseline[]>([]);
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
@@ -56,7 +59,7 @@ export default function BaselinePage() {
     setError('');
     try {
       const [baselines, data] = await Promise.all([listCNVBaselines(), listDataAssets('', { status: 'completed' })]);
-      setItems(baselines);
+      setItems([...BUILTIN_CNV_BASELINES, ...baselines]);
       setAssets(data.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载 CNV 基线失败');
@@ -70,6 +73,11 @@ export default function BaselinePage() {
   const read1Options = React.useMemo(() => assetOptions(assets.filter((asset) => asset.read_type === 'read1')), [assets]);
   const read2Options = React.useMemo(() => assetOptions(assets.filter((asset) => asset.read_type === 'read2')), [assets]);
   const bedOptions = React.useMemo(() => assetOptions(assets.filter((asset) => asset.read_type === 'bed' && asset.reference_genome === genome)), [assets, genome]);
+  const selectedInputBytes = React.useMemo(() => {
+    const selected = new Set([...read1IDs, ...read2IDs]);
+    return assets.reduce((total, asset) => total + (selected.has(asset.id) ? asset.file_size : 0), 0);
+  }, [assets, read1IDs, read2IDs]);
+  const estimatedCredits = selectedInputBytes > 0 ? Math.ceil(selectedInputBytes / (1024 ** 3)) : 0;
 
   const filteredItems = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -103,12 +111,13 @@ export default function BaselinePage() {
   const columns: Column<CNVBaseline>[] = [
     { id: 'name', header: '基线名称', accessor: 'name', width: 190, align: 'left' },
     { id: 'reference', header: '参考基因组', accessor: (row) => <Tag variant="info">{row.reference_genome}</Tag>, width: 120, align: 'center' },
-    { id: 'data', header: '数据组', accessor: (row) => `${row.read_pairs.length} 对 R1/R2`, width: 110, align: 'center' },
+    { id: 'data', header: '数据组', accessor: (row) => row.is_builtin ? '-' : `${row.read_pairs.length} 对 R1/R2`, width: 110, align: 'center' },
+    ...(isSaaS ? [{ id: 'credits', header: '积分', accessor: (row: CNVBaseline) => row.is_builtin ? '-' : `${row.credits_charged || row.credit_cost} 积分`, width: 90, align: 'center' as const }] : []),
     { id: 'bed', header: 'BED 文件', accessor: (row) => <span className="block truncate" title={row.bed.file_name}>{row.bed.file_name}</span>, width: 220, align: 'left' },
-    { id: 'status', header: '状态', accessor: (row) => <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
-    { id: 'output', header: '基线输出路径', accessor: (row) => <span className="block max-w-[300px] truncate font-mono text-xs" title={row.output_path || row.error}>{row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span>, width: 300, align: 'left' },
-    { id: 'created', header: '创建时间', accessor: (row) => formatTime(row.created_at), width: 170, align: 'center' },
-    { id: 'task', header: '任务', accessor: (row) => <Link href={`/tasks/${encodeURIComponent(row.task_id)}`} className="inline-flex items-center gap-1 text-accent-fg hover:underline">查看<ExternalLink className="h-3.5 w-3.5" /></Link>, width: 90, align: 'center' },
+    { id: 'status', header: '状态', accessor: (row) => row.is_builtin ? <Tag variant="neutral">内置占位</Tag> : <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
+    { id: 'output', header: '基线输出路径', accessor: (row) => <span className="block max-w-[300px] truncate font-mono text-xs" title={row.output_path || row.error}>{row.is_builtin ? '待替换为正式内置资源' : row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span>, width: 300, align: 'left' },
+    { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
+    { id: 'task', header: '任务', accessor: (row) => row.is_builtin ? '-' : <Link href={`/tasks/${encodeURIComponent(row.task_id)}`} className="inline-flex items-center gap-1 text-accent-fg hover:underline">查看<ExternalLink className="h-3.5 w-3.5" /></Link>, width: 90, align: 'center' },
   ];
 
   return (
@@ -132,6 +141,7 @@ export default function BaselinePage() {
           <FormItem label="R1 数据" required hint="可多选；选择顺序需与 R2 一一对应"><Select multiple searchable value={read1IDs} onChange={(value) => setRead1IDs(Array.isArray(value) ? value : [value])} options={read1Options} placeholder="选择一个或多个 R1 文件" /></FormItem>
           <FormItem label="R2 数据" required hint={`已选择 ${read1IDs.length} 个 R1 / ${read2IDs.length} 个 R2`}><Select multiple searchable value={read2IDs} onChange={(value) => setRead2IDs(Array.isArray(value) ? value : [value])} options={read2Options} placeholder="选择数量一致的 R2 文件" error={read2IDs.length > 0 && read1IDs.length !== read2IDs.length} /></FormItem>
           <FormItem label="BED 文件" required hint={`仅显示 ${genome} 的可用 BED 文件`}><Select searchable value={bedID} onChange={(value) => setBedID(Array.isArray(value) ? value[0] : value)} options={bedOptions} placeholder={bedOptions.length ? '选择 BED 文件' : `暂无 ${genome} BED 文件`} disabled={bedOptions.length === 0} /></FormItem>
+          {isSaaS && <div className="flex items-center justify-between gap-4 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">预计消耗 {estimatedCredits} 积分</div><div className="mt-0.5 text-xs text-fg-muted">按所选 R1 和 R2 总大小计费，每 1 GB 消耗 1 积分，不足 1 GB 按 1 GB 计。</div></div></div><div className="shrink-0 text-xs text-fg-muted">{(selectedInputBytes / (1024 ** 3)).toFixed(2)} GB</div></div>}
         </div>
       </AppModal>
     </PageContent>

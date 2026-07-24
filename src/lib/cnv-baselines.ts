@@ -17,9 +17,13 @@ export interface CNVBaseline {
   status: CNVBaselineStatus;
   progress: number;
   output_path?: string;
+  input_bytes: number;
+  credit_cost: number;
+  credits_charged: number;
   error?: string;
   created_at: string;
   updated_at: string;
+  is_builtin?: boolean;
 }
 
 export interface CreateCNVBaselineInput {

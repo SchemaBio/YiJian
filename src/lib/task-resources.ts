@@ -32,6 +32,7 @@ export interface TaskPipelineOption {
   baseType?: string;
   template?: string;
   status?: string;
+  isBuiltin?: boolean;
 }
 
 export interface TaskTemplateOption {
@@ -114,6 +115,7 @@ function normalizePipeline(rawValue: unknown): TaskPipelineOption {
     baseType: valueOf<string | undefined>(raw, 'baseType', 'base_type', undefined),
     template: valueOf<string | undefined>(raw, 'template', 'template', undefined),
     status: String(raw.status ?? ''),
+    isBuiltin: Boolean(raw.isBuiltin ?? raw.is_builtin),
   };
 }
 

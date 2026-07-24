@@ -1,17 +1,19 @@
 'use client';
 
-import { PageContent } from '@/components/layout';
-import { Button, Input, DataTable, Tag, Select } from '@schema/ui-kit';
-import type { Column } from '@schema/ui-kit';
-import { Plus, Search, Play, Pause, Pencil, Trash2, Workflow, Database, Loader2 } from 'lucide-react';
 import * as React from 'react';
+import { PageContent } from '@/components/layout';
 import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
+import { Button, DataTable, Input, Select, Tag, type Column } from '@schema/ui-kit';
+import { Database, Loader2, Pause, Pencil, Play, Plus, Search, Trash2, Workflow } from 'lucide-react';
 import { api } from '@/lib/api';
+import { listDataAssets, type DataAsset } from '@/lib/data-assets';
+import { listCNVBaselines, type CNVBaseline } from '@/lib/cnv-baselines';
+import { builtinBEDId, builtinBEDLabel, builtinCNVBaselineId, builtinCNVBaselineLabel } from '@/lib/builtin-resources';
 
-// 基础流程类型
-type BasePipelineType =
-  | 'wes_single'    // WES单样本分析
-  | 'wes_family';   // WES家系分析
+type BasePipelineType = 'wes_single' | 'wes_family';
+type BuiltinPipelineID = 'builtin-wes-single' | 'builtin-wes-family' | 'builtin-wes-single-hg38' | 'builtin-wes-family-hg38';
+type PipelineStatus = 'active' | 'inactive';
+type ReferenceGenome = 'hg19' | 'hg38';
 
 interface Pipeline {
   id: string;
@@ -20,48 +22,50 @@ interface Pipeline {
   version: string;
   description: string;
   bedFile: string;
-  referenceGenome: string;
-  cnvBaseline?: string;
-  status: 'active' | 'inactive';
+  bedAssetId: string;
+  referenceGenome: ReferenceGenome;
+  cnvBaseline: string;
+  cnvBaselineId: string;
+  status: PipelineStatus;
+  isBuiltin: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-// 基础流程选项
-const BASE_PIPELINE_OPTIONS = [
-  { value: 'wes_single', label: 'WES单样本分析' },
-  { value: 'wes_family', label: 'WES家系分析' },
-];
+interface PipelineFormData {
+  name: string;
+  basePipelineId: BuiltinPipelineID;
+  description: string;
+  bedAssetId: string;
+  cnvBaselineId: string;
+}
 
-// 参考基因组选项
-const REFERENCE_GENOME_OPTIONS = [
-  { value: 'hg19', label: 'hg19 (GRCh37)' },
-  { value: 'hg38', label: 'hg38 (GRCh38)' },
-];
+type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] } };
 
-// BED 文件选项
-const BED_FILE_OPTIONS = [
-  { value: 'Agilent_SureSelect_V7.bed', label: 'Agilent SureSelect V7' },
-  { value: 'Agilent_SureSelect_V6.bed', label: 'Agilent SureSelect V6' },
-  { value: 'IDT_xGen_V2.bed', label: 'IDT xGen Exome V2' },
-  { value: 'Twist_Exome_V2.bed', label: 'Twist Exome V2' },
-  { value: 'Cardio_Panel_v2.bed', label: '心血管疾病Panel' },
-  { value: 'Neuro_Panel_v1.bed', label: '神经系统疾病Panel' },
-  { value: 'Custom_Panel.bed', label: '自定义Panel' },
+const BASE_OPTIONS = [
+  { value: 'builtin-wes-single', label: 'WES单样本分析' },
+  { value: 'builtin-wes-family', label: 'WES家系分析' },
+  { value: 'builtin-wes-single-hg38', label: 'WES单样本分析（hg38）' },
+  { value: 'builtin-wes-family-hg38', label: 'WES家系分析（hg38）' },
 ];
-
-// CNV 基线选项
-const CNV_BASELINE_OPTIONS = [
-  { value: 'none', label: '不使用' },
-  { value: 'CNV_Baseline_WES_V1.txt', label: 'WES CNV基线 V1' },
-  { value: 'CNV_Baseline_WES_V2.txt', label: 'WES CNV基线 V2' },
-];
-
-const getBasePipelineLabel = (type: BasePipelineType): string => {
-  return BASE_PIPELINE_OPTIONS.find(o => o.value === type)?.label || type;
+const EMPTY_FORM: PipelineFormData = {
+  name: '', basePipelineId: 'builtin-wes-single', description: '', bedAssetId: builtinBEDId('hg19'),
+  cnvBaselineId: builtinCNVBaselineId('hg19'),
 };
 
-type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] }; total?: number };
+function basePipelineDefinition(id: BuiltinPipelineID): { baseType: BasePipelineType; referenceGenome: ReferenceGenome } {
+  return {
+    baseType: id.includes('family') ? 'wes_family' : 'wes_single',
+    referenceGenome: id.endsWith('hg38') ? 'hg38' : 'hg19',
+  };
+}
+
+function builtinPipelineId(baseType: BasePipelineType, referenceGenome: ReferenceGenome): BuiltinPipelineID {
+  if (referenceGenome === 'hg38') {
+    return baseType === 'wes_family' ? 'builtin-wes-family-hg38' : 'builtin-wes-single-hg38';
+  }
+  return baseType === 'wes_family' ? 'builtin-wes-family' : 'builtin-wes-single';
+}
 
 function unwrapList<T>(value: MaybeList<T>): T[] {
   if (Array.isArray(value)) return value;
@@ -71,530 +75,183 @@ function unwrapList<T>(value: MaybeList<T>): T[] {
   return [];
 }
 
-function rawString(raw: Record<string, unknown>, camel: string, snake: string, fallback = ''): string {
+function stringOf(raw: Record<string, unknown>, camel: string, snake: string, fallback = ''): string {
   const value = raw[camel] ?? raw[snake];
   return typeof value === 'string' ? value : fallback;
 }
 
-function normalizePipeline(rawValue: unknown): Pipeline {
-  const raw = (rawValue ?? {}) as Record<string, unknown>;
-  const baseType = rawString(raw, 'baseType', 'base_type', 'wes_single') as BasePipelineType;
-  const status = rawString(raw, 'status', 'status', 'inactive');
+function normalizePipeline(value: unknown): Pipeline {
+  const raw = (value ?? {}) as Record<string, unknown>;
+  const base = stringOf(raw, 'baseType', 'base_type', 'wes_single');
+  const genome = stringOf(raw, 'referenceGenome', 'reference_genome', 'hg19').toLowerCase();
   return {
     id: String(raw.id ?? ''),
-    name: rawString(raw, 'name', 'name'),
-    basePipeline: baseType === 'wes_single' || baseType === 'wes_family' ? baseType : 'wes_single',
-    version: rawString(raw, 'version', 'version'),
-    description: rawString(raw, 'description', 'description'),
-    bedFile: rawString(raw, 'bedFile', 'bed_file'),
-    referenceGenome: rawString(raw, 'referenceGenome', 'reference_genome'),
-    cnvBaseline: rawString(raw, 'cnvBaseline', 'cnv_baseline') || undefined,
-    status: status === 'active' ? 'active' : 'inactive',
-    createdAt: rawString(raw, 'createdAt', 'created_at'),
-    updatedAt: rawString(raw, 'updatedAt', 'updated_at'),
+    name: stringOf(raw, 'name', 'name'),
+    basePipeline: base === 'wes_family' ? 'wes_family' : 'wes_single',
+    version: stringOf(raw, 'version', 'version'),
+    description: stringOf(raw, 'description', 'description'),
+    bedFile: stringOf(raw, 'bedFile', 'bed_file', '内置默认 BED'),
+    bedAssetId: stringOf(raw, 'bedAssetId', 'bed_asset_id'),
+    referenceGenome: genome === 'hg38' || genome === 'grch38' ? 'hg38' : 'hg19',
+    cnvBaseline: stringOf(raw, 'cnvBaseline', 'cnv_baseline', '内置默认 CNV 基线'),
+    cnvBaselineId: stringOf(raw, 'cnvBaselineId', 'cnv_baseline_id'),
+    status: stringOf(raw, 'status', 'status') === 'inactive' ? 'inactive' : 'active',
+    isBuiltin: Boolean(raw.isBuiltin ?? raw.is_builtin),
+    createdAt: stringOf(raw, 'createdAt', 'created_at'),
+    updatedAt: stringOf(raw, 'updatedAt', 'updated_at'),
   };
 }
 
-function pipelinePayload(data: NewPipelineFormData, status?: Pipeline['status'], version = 'v1.0.0') {
+function payload(data: PipelineFormData, status?: PipelineStatus, version = 'v1.0.0') {
   return {
-    name: data.name,
-    base_type: data.basePipeline,
-    version,
-    description: data.description,
-    bed_file: data.bedFile,
-    reference_genome: data.referenceGenome,
-    cnv_baseline: data.cnvBaseline !== 'none' ? data.cnvBaseline : '',
+    name: data.name.trim(), base_pipeline_id: data.basePipelineId, version,
+    description: data.description.trim(),
+    bed_asset_id: data.bedAssetId,
+    cnv_baseline_id: data.cnvBaselineId,
     ...(status ? { status } : {}),
   };
 }
 
-interface NewPipelineFormData {
-  name: string;
-  basePipeline: BasePipelineType;
-  description: string;
-  bedFile: string;
-  referenceGenome: string;
-  cnvBaseline: string;
+function resourceGenome(value: ReferenceGenome): 'GRCh37' | 'GRCh38' {
+  return value === 'hg38' ? 'GRCh38' : 'GRCh37';
 }
 
-function PipelineFormFields({
-  formData,
-  onChange,
-}: {
-  formData: NewPipelineFormData;
-  onChange: (field: keyof NewPipelineFormData, value: string) => void;
+function PipelineFields({ form, setForm, beds, baselines }: {
+  form: PipelineFormData;
+  setForm: React.Dispatch<React.SetStateAction<PipelineFormData>>;
+  beds: DataAsset[];
+  baselines: CNVBaseline[];
 }) {
-  return (
-    <div className="space-y-6">
-      <section>
-        <ModalSectionHeading
-          icon={<Workflow className="h-4 w-4" />}
-          title="流程信息"
-          description="设置流程类型、显示名称与用途说明"
-        />
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">基础流程 *</label>
-            <Select value={formData.basePipeline} onChange={(v) => onChange('basePipeline', Array.isArray(v) ? v[0] : v)} options={BASE_PIPELINE_OPTIONS} />
-            <p className="mt-1.5 text-xs text-fg-muted">选择要基于的分析流程类型</p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">流程名称 *</label>
-              <Input value={formData.name} onChange={(e) => onChange('name', e.target.value)} placeholder="请输入流程名称" required />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">流程描述</label>
-              <Input value={formData.description} onChange={(e) => onChange('description', e.target.value)} placeholder="请输入流程描述" />
-            </div>
-          </div>
-        </div>
-      </section>
+  const { referenceGenome } = basePipelineDefinition(form.basePipelineId);
+  const genome = resourceGenome(referenceGenome);
+  const bedOptions = [
+    { value: builtinBEDId(referenceGenome), label: `${builtinBEDLabel(referenceGenome)}（默认）` },
+    ...beds.filter((item) => item.status === 'completed' && item.reference_genome === genome)
+      .map((item) => ({ value: item.id, label: item.file_name })),
+  ];
+  const baselineOptions = [
+    { value: builtinCNVBaselineId(referenceGenome), label: `${builtinCNVBaselineLabel(referenceGenome)}（默认）` },
+    ...baselines.filter((item) => item.status === 'completed' && item.reference_genome === genome)
+      .map((item) => ({ value: item.id, label: item.name })),
+  ];
+  const change = (field: keyof PipelineFormData, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
 
-      <section className="border-t border-[var(--yj-border-subtle)] pt-5">
-        <ModalSectionHeading
-          icon={<Database className="h-4 w-4" />}
-          title="分析资源"
-          description="选择参考基因组、目标区域和 CNV 分析基线"
-        />
+  return <div className="space-y-6">
+    <section>
+      <ModalSectionHeading icon={<Workflow className="h-4 w-4" />} title="流程信息" description="以系统内置 WES 流程为基础建立组织自己的流程" />
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">基础流程 *</label>
+          <Select value={form.basePipelineId} options={BASE_OPTIONS} onChange={(value) => {
+            const basePipelineId = (Array.isArray(value) ? value[0] : value) as BuiltinPipelineID;
+            const nextGenome = basePipelineDefinition(basePipelineId).referenceGenome;
+            setForm((current) => ({ ...current, basePipelineId, bedAssetId: builtinBEDId(nextGenome), cnvBaselineId: builtinCNVBaselineId(nextGenome) }));
+          }} />
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">参考基因组版本 *</label>
-            <Select value={formData.referenceGenome} onChange={(v) => onChange('referenceGenome', Array.isArray(v) ? v[0] : v)} options={REFERENCE_GENOME_OPTIONS} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">BED 文件 *</label>
-            <Select value={formData.bedFile} onChange={(v) => onChange('bedFile', Array.isArray(v) ? v[0] : v)} options={BED_FILE_OPTIONS} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">CNV 基线文件</label>
-            <Select value={formData.cnvBaseline} onChange={(v) => onChange('cnvBaseline', Array.isArray(v) ? v[0] : v)} options={CNV_BASELINE_OPTIONS} />
-            <p className="mt-1.5 text-xs text-fg-muted">用于拷贝数变异分析的基线文件</p>
-          </div>
+          <div><label className="mb-1.5 block text-xs font-medium text-fg-muted">流程名称 *</label><Input value={form.name} onChange={(event) => change('name', event.target.value)} placeholder="请输入流程名称" /></div>
+          <div><label className="mb-1.5 block text-xs font-medium text-fg-muted">流程描述</label><Input value={form.description} onChange={(event) => change('description', event.target.value)} placeholder="说明该流程的适用场景" /></div>
         </div>
-      </section>
-    </div>
-  );
+      </div>
+    </section>
+    <section className="border-t border-border-default pt-5">
+      <ModalSectionHeading icon={<Database className="h-4 w-4" />} title="分析资源" description="不选择自定义资源时自动使用基础流程的内置 BED 和 CNV 基线" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div><label className="mb-1.5 block text-xs font-medium text-fg-muted">BED 文件</label><Select searchable value={form.bedAssetId} options={bedOptions} onChange={(value) => change('bedAssetId', Array.isArray(value) ? value[0] : value)} /></div>
+        <div><label className="mb-1.5 block text-xs font-medium text-fg-muted">CNV 基线</label><Select searchable value={form.cnvBaselineId} options={baselineOptions} onChange={(value) => change('cnvBaselineId', Array.isArray(value) ? value[0] : value)} /></div>
+      </div>
+    </section>
+  </div>;
 }
 
-// 新建流程弹窗
-function NewPipelineModal({
-  isOpen,
-  onClose,
-  onSubmit
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: NewPipelineFormData) => void | Promise<void>;
+function PipelineModal({ open, title, initial, beds, baselines, onClose, onSubmit }: {
+  open: boolean; title: string; initial: PipelineFormData; beds: DataAsset[]; baselines: CNVBaseline[];
+  onClose: () => void; onSubmit: (data: PipelineFormData) => Promise<void>;
 }) {
+  const [form, setForm] = React.useState(initial);
   const [submitting, setSubmitting] = React.useState(false);
-  const [submitError, setSubmitError] = React.useState('');
-  const [formData, setFormData] = React.useState<NewPipelineFormData>({
-    name: '',
-    basePipeline: 'wes_single',
-    description: '',
-    bedFile: 'Agilent_SureSelect_V7.bed',
-    referenceGenome: 'hg38',
-    cnvBaseline: 'none',
-  });
-
-  const handleChange = (field: keyof NewPipelineFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const [error, setError] = React.useState('');
+  React.useEffect(() => { if (open) { setForm(initial); setError(''); } }, [open, initial]);
+  const submit = async () => {
+    if (!form.name.trim() || submitting) return;
+    setSubmitting(true); setError('');
+    try { await onSubmit(form); onClose(); } catch (err) { setError(err instanceof Error ? err.message : '保存流程失败'); } finally { setSubmitting(false); }
   };
-
-  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
-    e?.preventDefault();
-    if (!formData.name || submitting) return;
-    setSubmitting(true);
-    setSubmitError('');
-    try {
-      await onSubmit(formData);
-      setFormData({
-        name: '',
-        basePipeline: 'wes_single',
-        description: '',
-        bedFile: 'Agilent_SureSelect_V7.bed',
-        referenceGenome: 'hg38',
-        cnvBaseline: 'none',
-      });
-      onClose();
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '创建分析流程失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <AppModal
-      open={isOpen}
-      onOpenChange={(open) => !open && !submitting && onClose()}
-      title="新建分析流程"
-      size="large"
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={!formData.name || submitting}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-          >
-            {submitting ? '创建中...' : '创建流程'}
-          </Button>
-        </>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {submitError}
-          </div>
-        )}
-        <PipelineFormFields formData={formData} onChange={handleChange} />
-      </form>
-    </AppModal>
-  );
-}
-
-// 编辑流程弹窗
-function EditPipelineModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  pipeline,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (id: string, data: NewPipelineFormData) => void | Promise<void>;
-  pipeline: Pipeline | null;
-}) {
-  const [submitting, setSubmitting] = React.useState(false);
-  const [submitError, setSubmitError] = React.useState('');
-  const [formData, setFormData] = React.useState<NewPipelineFormData>({
-    name: '',
-    basePipeline: 'wes_single',
-    description: '',
-    bedFile: 'Agilent_SureSelect_V7.bed',
-    referenceGenome: 'hg38',
-    cnvBaseline: 'none',
-  });
-
-  React.useEffect(() => {
-    if (pipeline) {
-      setSubmitError('');
-      setFormData({
-        name: pipeline.name,
-        basePipeline: pipeline.basePipeline,
-        description: pipeline.description,
-        bedFile: pipeline.bedFile,
-        referenceGenome: pipeline.referenceGenome,
-        cnvBaseline: pipeline.cnvBaseline || 'none',
-      });
-    }
-  }, [pipeline]);
-
-  const handleChange = (field: keyof NewPipelineFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
-    e?.preventDefault();
-    if (!pipeline || !formData.name || submitting) return;
-    setSubmitting(true);
-    setSubmitError('');
-    try {
-      await onSubmit(pipeline.id, formData);
-      onClose();
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '更新分析流程失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (!pipeline) return null;
-
-  return (
-    <AppModal
-      open={isOpen}
-      onOpenChange={(open) => !open && !submitting && onClose()}
-      title="编辑分析流程"
-      size="large"
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={!formData.name || submitting}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-          >
-            {submitting ? '保存中...' : '保存修改'}
-          </Button>
-        </>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {submitError}
-          </div>
-        )}
-        <PipelineFormFields formData={formData} onChange={handleChange} />
-      </form>
-    </AppModal>
-  );
-}
-
-// 删除确认弹窗
-function DeleteConfirmModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  pipelineName,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void | Promise<void>;
-  pipelineName: string;
-}) {
-  return (
-    <ConfirmDialog
-      open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
-      title="确认删除"
-      message={`确定要删除流程「${pipelineName}」吗？此操作不可撤销。`}
-      variant="danger"
-      onConfirm={onConfirm}
-    />
-  );
+  return <AppModal open={open} onOpenChange={(next) => !next && !submitting && onClose()} title={title} size="large" footer={<><Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button><Button variant="primary" onClick={submit} disabled={!form.name.trim() || submitting} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}>{submitting ? '保存中...' : '保存流程'}</Button></>}>
+    {error && <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}</div>}
+    <PipelineFields form={form} setForm={setForm} beds={beds} baselines={baselines} />
+  </AppModal>;
 }
 
 export default function PipelineListPage() {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [search, setSearch] = React.useState('');
   const [pipelines, setPipelines] = React.useState<Pipeline[]>([]);
-  const [pipelineError, setPipelineError] = React.useState('');
-  const [isNewModalOpen, setIsNewModalOpen] = React.useState(false);
-  const [editingPipeline, setEditingPipeline] = React.useState<Pipeline | null>(null);
-  const [deletingPipeline, setDeletingPipeline] = React.useState<Pipeline | null>(null);
+  const [beds, setBeds] = React.useState<DataAsset[]>([]);
+  const [baselines, setBaselines] = React.useState<CNVBaseline[]>([]);
+  const [error, setError] = React.useState('');
+  const [creating, setCreating] = React.useState(false);
+  const [editing, setEditing] = React.useState<Pipeline | null>(null);
+  const [deleting, setDeleting] = React.useState<Pipeline | null>(null);
 
-  const loadPipelines = React.useCallback(async () => {
+  const load = React.useCallback(async () => {
     try {
-      const response = await api.get<MaybeList<unknown>>('/v1/pipelines', {
-        params: { page: '1', page_size: '100' },
-      });
-      setPipelines(unwrapList(response).map(normalizePipeline).filter(pipeline => pipeline.id));
-      setPipelineError('');
-    } catch (err) {
-      setPipelineError(err instanceof Error ? err.message : '加载分析流程失败');
-    }
+      const [pipelineResponse, bedResponse, baselineResponse] = await Promise.all([
+        api.get<MaybeList<unknown>>('/v1/pipelines', { params: { page: '1', page_size: '100' } }),
+        listDataAssets('', { readType: 'bed', status: 'completed' }), listCNVBaselines(),
+      ]);
+      setPipelines(unwrapList(pipelineResponse).map(normalizePipeline).filter((item) => item.id));
+      setBeds(bedResponse.items); setBaselines(baselineResponse); setError('');
+    } catch (err) { setError(err instanceof Error ? err.message : '加载流程与分析资源失败'); }
   }, []);
+  React.useEffect(() => { void load(); }, [load]);
 
-  React.useEffect(() => {
-    loadPipelines();
-  }, [loadPipelines]);
+  const initialEdit = React.useMemo<PipelineFormData>(() => editing ? {
+    name: editing.name, basePipelineId: builtinPipelineId(editing.basePipeline, editing.referenceGenome), description: editing.description,
+    bedAssetId: editing.bedAssetId || builtinBEDId(editing.referenceGenome),
+    cnvBaselineId: editing.cnvBaselineId || builtinCNVBaselineId(editing.referenceGenome),
+  } : EMPTY_FORM, [editing]);
 
-  const handleToggleStatus = async (pipeline: Pipeline) => {
-    const nextStatus = pipeline.status === 'active' ? 'inactive' : 'active';
-    try {
-      const updated = await api.put<unknown>(
-        `/v1/pipelines/${encodeURIComponent(pipeline.id)}`,
-        pipelinePayload({
-          name: pipeline.name,
-          basePipeline: pipeline.basePipeline,
-          description: pipeline.description,
-          bedFile: pipeline.bedFile,
-          referenceGenome: pipeline.referenceGenome,
-          cnvBaseline: pipeline.cnvBaseline || 'none',
-        }, nextStatus, pipeline.version || 'v1.0.0')
-      );
-      setPipelines(prev => prev.map(p => p.id === pipeline.id ? normalizePipeline(updated) : p));
-      setPipelineError('');
-    } catch (err) {
-      setPipelineError(err instanceof Error ? err.message : '更新分析流程状态失败');
-    }
+  const create = async (form: PipelineFormData) => {
+    const created = normalizePipeline(await api.post<unknown>('/v1/pipelines', payload(form)));
+    setPipelines((items) => [...items.filter((item) => item.isBuiltin), created, ...items.filter((item) => !item.isBuiltin)]);
+  };
+  const update = async (form: PipelineFormData, pipeline = editing) => {
+    if (!pipeline) return;
+    const updated = normalizePipeline(await api.put<unknown>(`/v1/pipelines/${encodeURIComponent(pipeline.id)}`, payload(form, pipeline.status, pipeline.version)));
+    setPipelines((items) => items.map((item) => item.id === pipeline.id ? updated : item));
+  };
+  const toggle = async (pipeline: Pipeline) => {
+    const form: PipelineFormData = { name: pipeline.name, basePipelineId: builtinPipelineId(pipeline.basePipeline, pipeline.referenceGenome), description: pipeline.description, bedAssetId: pipeline.bedAssetId || builtinBEDId(pipeline.referenceGenome), cnvBaselineId: pipeline.cnvBaselineId || builtinCNVBaselineId(pipeline.referenceGenome) };
+    const status = pipeline.status === 'active' ? 'inactive' : 'active';
+    const updated = normalizePipeline(await api.put<unknown>(`/v1/pipelines/${encodeURIComponent(pipeline.id)}`, payload(form, status, pipeline.version)));
+    setPipelines((items) => items.map((item) => item.id === pipeline.id ? updated : item));
+  };
+  const remove = async () => {
+    if (!deleting) return;
+    await api.delete(`/v1/pipelines/${encodeURIComponent(deleting.id)}`);
+    setPipelines((items) => items.filter((item) => item.id !== deleting.id)); setDeleting(null);
   };
 
-  const handleCreatePipeline = async (data: NewPipelineFormData) => {
-    try {
-      const created = await api.post<unknown>('/v1/pipelines', pipelinePayload(data));
-      setPipelines(prev => [normalizePipeline(created), ...prev].filter(pipeline => pipeline.id));
-      setPipelineError('');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '创建分析流程失败';
-      setPipelineError(message);
-      throw new Error(message);
-    }
-  };
-
-  const handleEditPipeline = async (id: string, data: NewPipelineFormData) => {
-    try {
-      const current = pipelines.find(p => p.id === id);
-      const updated = await api.put<unknown>(`/v1/pipelines/${encodeURIComponent(id)}`, pipelinePayload(data, current?.status, current?.version || 'v1.0.0'));
-      setPipelines(prev => prev.map(p => p.id === id ? normalizePipeline(updated) : p));
-      setPipelineError('');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '更新分析流程失败';
-      setPipelineError(message);
-      throw new Error(message);
-    }
-  };
-
-  const handleDeletePipeline = async (id: string) => {
-    try {
-      await api.delete<void>(`/v1/pipelines/${encodeURIComponent(id)}`);
-      setPipelines(prev => prev.filter(p => p.id !== id));
-      setDeletingPipeline(null);
-      setPipelineError('');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '删除分析流程失败';
-      setPipelineError(message);
-      throw new Error(message);
-    }
-  };
-
-  const filteredPipelines = React.useMemo(() => {
-    if (!searchQuery) return pipelines;
-    const query = searchQuery.toLowerCase();
-    return pipelines.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query)
-    );
-  }, [searchQuery, pipelines]);
-
+  const filtered = pipelines.filter((item) => `${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()));
   const columns: Column<Pipeline>[] = [
-    { id: 'name', header: '流程名称', accessor: 'name', width: 180, align: 'center' },
-    {
-      id: 'basePipeline',
-      header: '基础流程',
-      accessor: (row) => (
-        <Tag variant="info">{getBasePipelineLabel(row.basePipeline)}</Tag>
-      ),
-      width: 130,
-      align: 'center',
-    },
-    { id: 'version', header: '版本', accessor: 'version', width: 80, align: 'center' },
-    { id: 'referenceGenome', header: '参考基因组', accessor: 'referenceGenome', width: 100, align: 'center' },
-    { id: 'bedFile', header: 'BED 文件', accessor: 'bedFile', width: 180, align: 'center' },
-    {
-      id: 'status',
-      header: '状态',
-      accessor: (row) => (
-        <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>
-          {row.status === 'active' ? '启用' : '停用'}
-        </Tag>
-      ),
-      width: 80,
-      align: 'center',
-    },
-    { id: 'updatedAt', header: '更新时间', accessor: 'updatedAt', width: 110, align: 'center' },
-    {
-      id: 'actions',
-      header: '操作',
-      accessor: (row) => (
-        <div className="flex items-center justify-center gap-1">
-          <button
-            onClick={() => setEditingPipeline(row)}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
-            title="编辑"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleToggleStatus(row)}
-            className={`p-1.5 rounded transition-colors ${
-              row.status === 'active'
-                ? 'hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-600 dark:text-gray-400 hover:text-orange-600'
-                : 'hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-600 dark:text-gray-400 hover:text-green-600'
-            }`}
-            title={row.status === 'active' ? '停用' : '启用'}
-          >
-            {row.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={() => setDeletingPipeline(row)}
-            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors"
-            title="删除"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
-      width: 100,
-      align: 'center',
-    },
+    { id: 'name', header: '流程名称', accessor: (row) => <div className="text-left"><div className="font-medium text-fg-default">{row.name}</div>{row.isBuiltin && <div className="mt-0.5 text-xs text-fg-muted">系统内置</div>}</div>, width: 210, align: 'left' },
+    { id: 'base', header: '基础流程', accessor: (row) => <Tag variant="info">{row.basePipeline === 'wes_family' ? 'WES家系分析' : 'WES单样本分析'}</Tag>, width: 150, align: 'center' },
+    { id: 'genome', header: '参考基因组', accessor: (row) => row.referenceGenome, width: 110, align: 'center' },
+    { id: 'bed', header: 'BED 文件', accessor: (row) => <span className="block truncate" title={row.bedFile}>{row.bedFile}</span>, width: 210, align: 'left' },
+    { id: 'cnv', header: 'CNV 基线', accessor: (row) => <span className="block truncate" title={row.cnvBaseline}>{row.cnvBaseline}</span>, width: 210, align: 'left' },
+    { id: 'status', header: '状态', accessor: (row) => <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>{row.status === 'active' ? '启用' : '停用'}</Tag>, width: 90, align: 'center' },
+    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <div className="flex justify-center gap-1"><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle hover:text-accent-fg" title="编辑" onClick={() => setEditing(row)}><Pencil className="h-4 w-4" /></button><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle" title={row.status === 'active' ? '停用' : '启用'} onClick={() => void toggle(row)}>{row.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button><button className="rounded p-1.5 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></div>, width: 110, align: 'center' },
   ];
 
-  return (
-    <PageContent className="yj-page-shell">
-      <div className="yj-page-header">
-        <h2 className="yj-page-title">流程列表</h2>
-      </div>
-
-      <div className="yj-toolbar-panel">
-        <div className="w-64">
-          <Input
-            placeholder="搜索流程..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            leftElement={<Search className="w-4 h-4" />}
-          />
-        </div>
-        <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewModalOpen(true)}>
-          新建流程
-        </Button>
-      </div>
-
-      {pipelineError && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {pipelineError}
-        </div>
-      )}
-
-      {filteredPipelines.length > 0 ? (
-        <DataTable
-          data={filteredPipelines}
-          columns={columns}
-          rowKey="id"
-          density="default"
-          striped
-        />
-      ) : (
-        <EmptyState
-          className="yj-panel"
-          icon={<Workflow />}
-          title="暂无分析流程"
-          description="创建流程后可配置 BED、参考基因组与 CNV baseline。"
-        />
-      )}
-
-      <NewPipelineModal
-        isOpen={isNewModalOpen}
-        onClose={() => setIsNewModalOpen(false)}
-        onSubmit={handleCreatePipeline}
-      />
-
-      <EditPipelineModal
-        isOpen={editingPipeline !== null}
-        onClose={() => setEditingPipeline(null)}
-        onSubmit={handleEditPipeline}
-        pipeline={editingPipeline}
-      />
-
-      <DeleteConfirmModal
-        isOpen={deletingPipeline !== null}
-        onClose={() => setDeletingPipeline(null)}
-        onConfirm={async () => {
-          if (deletingPipeline) {
-            await handleDeletePipeline(deletingPipeline.id);
-          }
-        }}
-        pipelineName={deletingPipeline?.name || ''}
-      />
-    </PageContent>
-  );
+  return <PageContent className="yj-page-shell">
+    <div className="yj-page-header"><h2 className="yj-page-title">流程列表</h2></div>
+    <div className="yj-toolbar-panel"><div className="w-64"><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索流程..." leftElement={<Search className="h-4 w-4" />} /></div><Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>新建流程</Button></div>
+    {error && <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
+    {filtered.length ? <DataTable data={filtered} columns={columns} rowKey="id" density="default" striped /> : <EmptyState className="yj-panel" icon={<Workflow />} title="暂无分析流程" description="可基于内置 WES 流程建立组织自己的分析流程。" />}
+    <PipelineModal open={creating} title="新建分析流程" initial={EMPTY_FORM} beds={beds} baselines={baselines} onClose={() => setCreating(false)} onSubmit={create} />
+    <PipelineModal open={editing !== null} title="编辑分析流程" initial={initialEdit} beds={beds} baselines={baselines} onClose={() => setEditing(null)} onSubmit={update} />
+    <ConfirmDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)} title="确认删除" message={`确定要删除流程「${deleting?.name ?? ''}」吗？此操作不可撤销。`} variant="danger" onConfirm={remove} />
+  </PageContent>;
 }

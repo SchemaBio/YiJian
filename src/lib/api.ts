@@ -455,7 +455,8 @@ export async function requestPresignedUploadUrl(
   filename: string,
   fileSize: number,
   readType: 'read1' | 'read2' | 'single' | 'bed' = 'single',
-  referenceGenome?: 'GRCh37' | 'GRCh38'
+  referenceGenome?: 'GRCh37' | 'GRCh38',
+  uploadPolicyAcknowledged = false
 ): Promise<PresignedUploadResult> {
   const fileType = readType === 'bed'
     ? 'bed'
@@ -467,6 +468,7 @@ export async function requestPresignedUploadUrl(
     file_type: fileType,
     ...(readType === 'bed' && referenceGenome ? { reference_genome: referenceGenome } : {}),
     provider: 'local',
+    upload_policy_acknowledged: uploadPolicyAcknowledged,
     files: [{
       file_name: filename,
       read_type: readType,
@@ -490,12 +492,13 @@ export interface PairedUploadJobResult {
   files: Array<PresignedUploadResult & { read_type: 'read1' | 'read2' }>;
 }
 
-export async function requestPairedUploadJob(r1: File, r2: File, sampleId?: string): Promise<PairedUploadJobResult> {
+export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAcknowledged: boolean, sampleId?: string): Promise<PairedUploadJobResult> {
   const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
     ...(sampleId ? { sample_id: sampleId } : {}),
     name: `${r1.name} + ${r2.name}`,
     file_type: 'fastq_paired',
     provider: 'local',
+    upload_policy_acknowledged: uploadPolicyAcknowledged,
     files: [
       {
         file_name: r1.name,
