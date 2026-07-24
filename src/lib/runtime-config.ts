@@ -4,6 +4,7 @@ declare global {
       API_URL?: string;
       CORE_API_PREFIX?: string;
       BACKEND_FLAVOR?: 'octopus' | 'squid' | 'auto';
+      SUPPORT_EMAIL?: string;
     };
   }
 }
@@ -119,6 +120,16 @@ export function getRuntimeBackendFlavor(): 'octopus' | 'squid' | 'auto' {
     ? window.__YIJIAN_CONFIG__?.BACKEND_FLAVOR
     : process.env.NEXT_PUBLIC_BACKEND_FLAVOR;
   return value === 'octopus' || value === 'squid' ? value : 'auto';
+}
+
+export function getRuntimeSupportEmail(): string {
+  const value = typeof window !== 'undefined'
+    ? window.__YIJIAN_CONFIG__?.SUPPORT_EMAIL
+    : process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+  const normalized = value?.trim().toLowerCase();
+  return normalized && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)
+    ? normalized
+    : 'support@schemabio.com';
 }
 
 export {};

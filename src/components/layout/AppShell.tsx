@@ -13,6 +13,7 @@ import { MobileNav } from './MobileNav';
 import { AssistantButton } from '@/components/assistant';
 import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
+import { SupportDialog } from '@/components/support/SupportDialog';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -155,6 +156,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
           <div className="flex items-center gap-1">
             <BillingDisplay />
+            <SupportDialog />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-md hover:bg-canvas-inset"
@@ -197,6 +199,7 @@ export function AppShell({ children }: AppShellProps) {
           {/* Right: Settings + About */}
           <div className="flex items-center gap-1.5 shrink-0">
             <BillingDisplay />
+            <SupportDialog />
             <Link
               href="/settings"
               className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"

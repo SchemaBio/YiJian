@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Clock3, Coins, CreditCard, Gauge, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Clock3, Coins, CreditCard, Gauge, LifeBuoy, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import {
   getBillingBalance,
   getBillingConfig,
@@ -17,6 +17,7 @@ import {
 } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { MetricTile } from '@/components/shared';
+import { SupportDialog } from '@/components/support/SupportDialog';
 
 function formatTime(value: string): string {
   if (!value) return '-';
@@ -189,6 +190,19 @@ export default function BillingSettingsPage() {
             {error}
           </div>
         )}
+
+        <section className="yj-panel flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between" aria-label="积分退款与技术支持">
+          <div className="flex min-w-0 gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent-fg">
+              <LifeBuoy className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fg-default">积分退款与技术支持</h3>
+              <p className="mt-1 text-xs leading-5 text-fg-muted">如需申请积分退款、核对扣费或获取其他技术支持，请查看支持邮箱并通过邮件联系我们。</p>
+            </div>
+          </div>
+          <SupportDialog trigger="button" context="billing" />
+        </section>
 
         <section aria-label="费用概览" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <MetricTile label="当前积分" value={formatCredits(balance?.balance)} icon={<Coins className="h-4 w-4" />} tone="success" />
