@@ -119,13 +119,41 @@ export default function DashboardPage() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  const cardToneClasses = {
+    neutral: {
+      card: 'bg-[var(--yj-panel-bg)] border-[var(--yj-border-subtle)]',
+      text: 'text-fg-muted',
+      value: 'text-[var(--yj-text-strong)]',
+    },
+    warning: {
+      card: 'bg-warning-subtle border-warning-muted',
+      text: 'text-warning-fg',
+      value: 'text-warning-fg',
+    },
+    info: {
+      card: 'bg-[var(--color-variant-indel-subtle)] border-[var(--color-variant-indel)]',
+      text: 'text-[var(--color-variant-indel)]',
+      value: 'text-[var(--color-variant-indel)]',
+    },
+    success: {
+      card: 'bg-success-subtle border-success-muted',
+      text: 'text-success-fg',
+      value: 'text-success-fg',
+    },
+    danger: {
+      card: 'bg-danger-subtle border-danger-muted',
+      text: 'text-danger-fg',
+      value: 'text-danger-fg',
+    },
+  } as const;
+
   const cards = [
-    { title: '样本总数', value: stats.totalSamples, hint: '已登记样本', icon: Users, href: '/samples' },
-    { title: '待处理', value: stats.pendingTasks, hint: `${stats.waitingDataTasks} 个等待数据`, icon: FlaskConical, href: '/tasks' },
-    { title: '运行中', value: stats.runningTasks, hint: '正在执行', icon: Clock3, href: '/tasks' },
-    { title: '已完成', value: stats.completedTasks, hint: '累计完成', icon: CheckCircle2, href: '/tasks' },
-    { title: '失败任务', value: stats.failedTasks, hint: `${taskStats.failed_last_24h} 个发生于 24 小时内`, icon: XCircle, href: '/tasks' },
-  ];
+    { title: '样本总数', value: stats.totalSamples, hint: '已登记样本', icon: Users, href: '/samples', tone: 'neutral' },
+    { title: '待处理', value: stats.pendingTasks, hint: `${stats.waitingDataTasks} 个等待数据`, icon: FlaskConical, href: '/tasks', tone: 'warning' },
+    { title: '运行中', value: stats.runningTasks, hint: '正在执行', icon: Clock3, href: '/tasks', tone: 'info' },
+    { title: '已完成', value: stats.completedTasks, hint: '累计完成', icon: CheckCircle2, href: '/tasks', tone: 'success' },
+    { title: '失败任务', value: stats.failedTasks, hint: `${taskStats.failed_last_24h} 个发生于 24 小时内`, icon: XCircle, href: '/tasks', tone: 'danger' },
+  ] as const;
 
   return (
     <PageContent className="yj-page-shell">
@@ -162,16 +190,19 @@ export default function DashboardPage() {
       )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {cards.map(({ title, value, hint, icon: Icon, href }) => (
-          <Link key={title} href={href} className="yj-kpi-card p-4 transition-colors hover:border-[var(--yj-border-strong)]">
+        {cards.map(({ title, value, hint, icon: Icon, href, tone }) => {
+          const toneClasses = cardToneClasses[tone];
+          return (
+          <Link key={title} href={href} className={`yj-kpi-card p-4 transition-colors hover:border-[var(--yj-border-strong)] ${toneClasses.card}`}>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-fg-muted">{title}</span>
-              <Icon className="h-4 w-4 text-fg-muted" />
+              <span className={`text-sm ${toneClasses.text}`}>{title}</span>
+              <Icon className={`h-4 w-4 ${toneClasses.text}`} />
             </div>
-            <div className="mt-4 text-2xl font-semibold text-[var(--yj-text-strong)]">{loading ? '--' : value}</div>
-            <div className="mt-1 truncate text-xs text-fg-muted">{hint}</div>
+            <div className={`mt-4 text-2xl font-semibold ${toneClasses.value}`}>{loading ? '--' : value}</div>
+            <div className={`mt-1 truncate text-xs ${toneClasses.text}`}>{hint}</div>
           </Link>
-        ))}
+          );
+        })}
       </div>
 
       <section className="yj-panel overflow-hidden">
@@ -187,15 +218,24 @@ export default function DashboardPage() {
           {tasks.length > 0 ? (
             <div>
               {tasks.map((task) => (
-                <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_120px_88px] items-center gap-4 px-4 py-3">
+                <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_96px_150px] items-center gap-4 px-4 py-3">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg-default">{task.internalId || task.sampleId || task.id}</div>
                     <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''}</div>
                   </div>
-                  <Tag variant={statusVariant(task.status)}>{STATUS_LABEL[task.status] ?? task.status}</Tag>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-fg-default">{task.progress ?? 0}%</div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-canvas-inset">
+                  <Tag
+                    variant={statusVariant(task.status)}
+                    className={`h-4 w-fit justify-self-start px-1.5 text-[11px] leading-4 ${
+                      task.status === 'running'
+                        ? 'border-[var(--color-variant-indel)] bg-[var(--color-variant-indel-subtle)] text-[var(--color-variant-indel)]'
+                        : ''
+                    }`}
+                  >
+                    {STATUS_LABEL[task.status] ?? task.status}
+                  </Tag>
+                  <div className="flex items-center justify-end gap-2">
+                    <span className="w-8 text-right text-xs font-medium tabular-nums text-fg-default">{task.progress ?? 0}%</span>
+                    <div className="h-1.5 w-[92px] overflow-hidden rounded-full bg-canvas-inset">
                       <div className="h-full rounded-full bg-accent-emphasis" style={{ width: `${Math.min(100, Math.max(0, task.progress ?? 0))}%` }} />
                     </div>
                   </div>

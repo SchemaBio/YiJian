@@ -6,6 +6,7 @@ import type { GroupedCNVSegment, HistoryTableFilterState, PaginatedResult } from
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedCNVSegments } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface CNVSegmentHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -126,14 +127,14 @@ export function CNVSegmentHistoryTab({
       header: '首次检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedCNVSegment) => row.firstDetectedAt,
+      accessor: (row: GroupedCNVSegment) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
       header: '最后检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedCNVSegment) => row.lastDetectedAt,
+      accessor: (row: GroupedCNVSegment) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 

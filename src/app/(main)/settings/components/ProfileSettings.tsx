@@ -3,15 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button, FormItem, Input, Tag } from '@schema/ui-kit';
-import { AppModal } from '@/components/shared';
-import { AlertTriangle, Building2, KeyRound, Loader2, Save, Trash2, UserRound } from 'lucide-react';
+import { AlertTriangle, Building2, KeyRound, Loader2, Save, UserRound } from 'lucide-react';
+import { SupportDialog } from '@/components/support/SupportDialog';
 import type { User, UserOrganizationInfo } from '@/types/user';
 
 interface ProfileSettingsProps {
   user: User;
   currentOrg: UserOrganizationInfo | null;
   onUpdateProfile: (data: { name: string }) => Promise<User>;
-  onDeleteAccount: (email: string) => Promise<void>;
 }
 
 function roleLabel(role: User['systemRole']): string {
@@ -25,15 +24,11 @@ function formatTime(value?: string): string {
   return date.toLocaleString('zh-CN', { hour12: false });
 }
 
-export function ProfileSettings({ user, currentOrg, onUpdateProfile, onDeleteAccount }: ProfileSettingsProps) {
+export function ProfileSettings({ user, currentOrg, onUpdateProfile }: ProfileSettingsProps) {
   const [name, setName] = React.useState(user.name);
   const [isSaving, setIsSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
-  const [deleteEmail, setDeleteEmail] = React.useState('');
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setName(user.name);
@@ -59,20 +54,6 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onDeleteAcc
   };
 
   const isDirty = name.trim() !== user.name;
-  const isDeleteConfirmed = deleteEmail.trim().toLowerCase() === user.email.toLowerCase();
-
-  const handleDelete = async () => {
-    if (!isDeleteConfirmed || isDeleting) return;
-    setIsDeleting(true);
-    setDeleteError(null);
-    try {
-      await onDeleteAccount(user.email);
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : '删除账户失败，请稍后重试');
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
       <section className="yj-panel p-5 xl:col-span-2">
@@ -158,52 +139,12 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onDeleteAcc
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger-fg" />
           <div>
             <h3 className="text-base font-medium text-danger-fg">删除账户</h3>
-            <p className="mt-1 text-sm leading-6 text-fg-muted">删除后将立即退出登录且无法恢复。组织数据将按当前部署的数据保留策略处理。</p>
+            <p className="mt-1 text-sm leading-6 text-fg-muted">账户注销可能涉及剩余积分退费，现阶段需由工作人员核对账户、所属机构及积分余额后处理。</p>
           </div>
         </div>
-        {user.systemRole === 'PLATFORM_ADMIN' ? (
-          <p className="text-xs text-fg-muted">平台管理员账号不能在此处删除，请通过部署管理流程处理。</p>
-        ) : (
-          <Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => { setDeleteEmail(''); setDeleteError(null); setDeleteOpen(true); }}>
-            删除我的账户
-          </Button>
-        )}
+        <SupportDialog trigger="button" context="account" />
       </section>
 
-      <AppModal
-        open={deleteOpen}
-        onOpenChange={(open) => { if (!isDeleting) setDeleteOpen(open); }}
-        title="确认删除账户"
-        size="small"
-        closeOnOverlayClick={!isDeleting}
-        closeOnEscape={!isDeleting}
-        footer={
-          <>
-            <Button variant="secondary" disabled={isDeleting} onClick={() => setDeleteOpen(false)}>取消</Button>
-            <Button
-              variant="danger"
-              leftIcon={isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              disabled={!isDeleteConfirmed || isDeleting}
-              onClick={() => void handleDelete()}
-            >
-              {isDeleting ? '正在删除...' : '确认删除'}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-sm leading-6 text-fg-default">此操作不可撤销。请输入当前登录邮箱 <strong>{user.email}</strong> 以确认。</p>
-          <Input
-            value={deleteEmail}
-            onChange={(event) => setDeleteEmail(event.target.value)}
-            placeholder="输入当前登录邮箱"
-            type="email"
-            disabled={isDeleting}
-            autoComplete="off"
-          />
-          {deleteError && <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{deleteError}</div>}
-        </div>
-      </AppModal>
     </div>
   );
 }

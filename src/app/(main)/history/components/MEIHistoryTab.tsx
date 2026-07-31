@@ -6,6 +6,7 @@ import type { GroupedMEI, HistoryTableFilterState, PaginatedResult } from '../ty
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedMEIs, ACMG_CONFIG, MEI_TYPE_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface MEIHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -118,14 +119,14 @@ export function MEIHistoryTab({
       header: '首次检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedMEI) => row.firstDetectedAt,
+      accessor: (row: GroupedMEI) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
       header: '最后检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedMEI) => row.lastDetectedAt,
+      accessor: (row: GroupedMEI) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 

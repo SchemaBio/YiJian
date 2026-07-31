@@ -32,6 +32,38 @@ function formatDateTime(value: string): string {
     : date.toLocaleString('zh-CN', { hour12: false });
 }
 
+function areSamplesEqual(previous: Sample[], next: Sample[]): boolean {
+  return previous.length === next.length && previous.every((sample, index) => {
+    const candidate = next[index];
+    const hpoTermsEqual = sample.hpoTerms.length === candidate.hpoTerms.length
+      && sample.hpoTerms.every((term, termIndex) => (
+        term.id === candidate.hpoTerms[termIndex].id
+        && term.name === candidate.hpoTerms[termIndex].name
+      ));
+    const matchedPairEqual = sample.matchedPair === candidate.matchedPair
+      || (sample.matchedPair !== null
+        && candidate.matchedPair !== null
+        && sample.matchedPair.r1Path === candidate.matchedPair.r1Path
+        && sample.matchedPair.r2Path === candidate.matchedPair.r2Path);
+
+    return sample.id === candidate.id
+      && sample.internalId === candidate.internalId
+      && sample.gender === candidate.gender
+      && sample.age === candidate.age
+      && sample.sampleType === candidate.sampleType
+      && sample.batch === candidate.batch
+      && sample.clinicalDiagnosis === candidate.clinicalDiagnosis
+      && hpoTermsEqual
+      && matchedPairEqual
+      && sample.matchStatus === candidate.matchStatus
+      && sample.matchMode === candidate.matchMode
+      && sample.autoMatchEnabled === candidate.autoMatchEnabled
+      && sample.remark === candidate.remark
+      && sample.createdAt === candidate.createdAt
+      && sample.updatedAt === candidate.updatedAt;
+  });
+}
+
 function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
   if (!hpoTerms || hpoTerms.length === 0) {
     return <span className="text-xs text-fg-muted">未录入</span>;
@@ -153,8 +185,11 @@ export default function SamplesPage() {
     try {
       const loadedSamples = await listSamples({ page: '1', page_size: '100' });
       const loadedIds = new Set(loadedSamples.map((sample) => sample.id));
-      setSamples(loadedSamples);
-      setSelectedRows((prev) => new Set(Array.from(prev).filter((id) => loadedIds.has(id))));
+      setSamples((previous) => areSamplesEqual(previous, loadedSamples) ? previous : loadedSamples);
+      setSelectedRows((previous) => {
+        const retainedIds = Array.from(previous).filter((id) => loadedIds.has(id));
+        return retainedIds.length === previous.size ? previous : new Set(retainedIds);
+      });
       setSamplesError('');
     } catch (err) {
       setSamplesError(err instanceof Error ? err.message : 'Failed to load samples');

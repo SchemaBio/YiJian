@@ -6,6 +6,7 @@ import type { GroupedCNVExon, HistoryTableFilterState, PaginatedResult } from '.
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedCNVExons } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface CNVExonHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -127,14 +128,14 @@ export function CNVExonHistoryTab({
       header: '首次检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedCNVExon) => row.firstDetectedAt,
+      accessor: (row: GroupedCNVExon) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
       header: '最后检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedCNVExon) => row.lastDetectedAt,
+      accessor: (row: GroupedCNVExon) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 

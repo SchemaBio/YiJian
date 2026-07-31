@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import { Button } from '@schema/ui-kit';
-import { Check, CircleDollarSign, Clipboard, Database, LifeBuoy, Mail, Workflow } from 'lucide-react';
+import { Check, CircleDollarSign, Clipboard, Database, LifeBuoy, Mail, UserRoundX, Workflow } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeSupportEmail } from '@/lib/runtime-config';
 
 interface SupportDialogProps {
   trigger?: 'icon' | 'button';
-  context?: 'general' | 'billing';
+  context?: 'general' | 'billing' | 'account';
 }
 
 const supportTypes = [
@@ -55,8 +55,12 @@ export function SupportDialog({ trigger = 'icon', context = 'general' }: Support
         <LifeBuoy className="h-5 w-5" />
       </button>
     ) : (
-      <Button variant="secondary" leftIcon={<LifeBuoy className="h-4 w-4" />} onClick={openDialog}>
-        查看联系方式
+      <Button
+        variant="secondary"
+        leftIcon={context === 'account' ? <UserRoundX className="h-4 w-4" /> : <LifeBuoy className="h-4 w-4" />}
+        onClick={openDialog}
+      >
+        {context === 'account' ? '联系支持申请删除账户' : '查看联系方式'}
       </Button>
     )}
 
@@ -69,9 +73,11 @@ export function SupportDialog({ trigger = 'icon', context = 'general' }: Support
     >
       <div className="space-y-5">
         <ModalSectionHeading
-          icon={<LifeBuoy className="h-4 w-4" />}
-          title={context === 'billing' ? '积分问题也可以联系我们' : '遇到问题可以联系我们'}
-          description="平台暂不设置独立工单系统。无论是积分退款、计费核对还是技术咨询，都可以发送邮件联系我们。"
+          icon={context === 'account' ? <UserRoundX className="h-4 w-4" /> : <LifeBuoy className="h-4 w-4" />}
+          title={context === 'account' ? '申请删除账户' : context === 'billing' ? '积分问题也可以联系我们' : '遇到问题可以联系我们'}
+          description={context === 'account'
+            ? '账户注销可能涉及剩余积分退费，需要工作人员人工核对后处理。请通过支持邮箱提交申请。'
+            : '平台暂不设置独立工单系统。无论是积分退款、计费核对还是技术咨询，都可以发送邮件联系我们。'}
         />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -82,6 +88,16 @@ export function SupportDialog({ trigger = 'icon', context = 'general' }: Support
               <p className="mt-1.5 text-xs leading-5 text-fg-muted">{item.description}</p>
             </div>;
           })}
+        </div>
+
+        <div className="rounded-md border border-warning-muted bg-warning-subtle px-4 py-3">
+          <div className="flex items-start gap-3">
+            <UserRoundX className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" />
+            <div>
+              <p className="text-sm font-medium text-warning-fg">账户注销与余额退费</p>
+              <p className="mt-1 text-xs leading-5 text-fg-muted">账户注销可能涉及剩余积分退费，现阶段需由工作人员核对账户、所属机构及积分余额后处理。请使用下方支持邮箱提交申请。</p>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-md border border-accent-muted bg-accent-subtle px-4 py-3">

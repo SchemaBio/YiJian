@@ -3,11 +3,9 @@
 import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ProfileSettings } from './components/ProfileSettings';
-import { useRouter } from 'next/navigation';
 
 export default function SettingsProfilePage() {
-  const router = useRouter();
-  const { user, currentOrg, isLoading, updateProfile, deleteAccount } = useAuth();
+  const { user, currentOrg, isLoading, updateProfile } = useAuth();
 
   if (isLoading) {
     return (
@@ -41,10 +39,6 @@ export default function SettingsProfilePage() {
         user={user}
         currentOrg={currentOrg}
         onUpdateProfile={updateProfile}
-        onDeleteAccount={async (email) => {
-          await deleteAccount(email);
-          router.replace('/login?accountDeleted=1');
-        }}
       />
     </PageContent>
   );

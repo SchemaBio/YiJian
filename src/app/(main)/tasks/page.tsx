@@ -13,6 +13,7 @@ import { EmptyState, IdCell, TaskStatusTag } from '@/components/shared';
 import { TaskCostValue } from '@/components/billing';
 import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { formatLocalDateTime } from '@/lib/utils';
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },
@@ -42,6 +43,23 @@ const statusFilterOptions = [
   { value: 'completed', label: '已完成' },
   { value: 'failed', label: '失败' },
 ];
+
+function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): boolean {
+  return previous.length === next.length && previous.every((task, index) => {
+    const candidate = next[index];
+    return task.id === candidate.id
+      && task.sampleId === candidate.sampleId
+      && task.internalId === candidate.internalId
+      && task.pipeline === candidate.pipeline
+      && task.pipelineVersion === candidate.pipelineVersion
+      && task.status === candidate.status
+      && task.progress === candidate.progress
+      && task.createdAt === candidate.createdAt
+      && task.createdBy === candidate.createdBy
+      && task.completedAt === candidate.completedAt
+      && task.remark === candidate.remark;
+  });
+}
 
 // 状态筛选下拉组件
 function StatusFilterDropdown({
@@ -321,13 +339,8 @@ export default function AnalysisPage() {
   const { data: tasks, loading, error, refetch } = usePolling(
     fetcher,
     10000,
-    { enabled: true, immediate: true }
+    { enabled: true, immediate: true, isEqual: areTaskListsEqual }
   );
-
-  // Check if there are running tasks for polling
-  const hasRunningTasks = React.useMemo(() => {
-    return tasks?.some(t => t.status === 'running') ?? false;
-  }, [tasks]);
 
   const refreshTaskBilling = React.useCallback(async (taskItems: AnalysisTask[]) => {
     if (!isSaaS || taskItems.length === 0) {
@@ -559,7 +572,20 @@ export default function AnalysisPage() {
       width: 110,
       align: 'center' as const,
     }] : []),
-    { id: 'createdAt', header: '创建时间', accessor: 'createdAt', width: 150, align: 'center' },
+    {
+      id: 'createdAt',
+      header: '创建时间',
+      accessor: (row) => <span className="whitespace-nowrap tabular-nums">{formatLocalDateTime(row.createdAt)}</span>,
+      width: 170,
+      align: 'center',
+    },
+    {
+      id: 'completedAt',
+      header: '完成时间',
+      accessor: (row) => <span className="whitespace-nowrap tabular-nums">{formatLocalDateTime(row.completedAt)}</span>,
+      width: 170,
+      align: 'center',
+    },
     {
       id: 'remark',
       header: '备注',
@@ -693,7 +719,14 @@ export default function AnalysisPage() {
               </div>
             )}
 
-            {loading && (
+            {error && tasks !== null && (
+              <div className="mb-4 flex items-center gap-2 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                后台刷新失败，当前显示的是上一次成功加载的数据：{error}
+              </div>
+            )}
+
+            {loading && tasks === null && (
               <div className="yj-empty-state">
                 <div>
                   <span className="yj-empty-state-icon">
@@ -704,7 +737,7 @@ export default function AnalysisPage() {
               </div>
             )}
 
-            {error && !loading && (
+            {error && tasks === null && !loading && (
               <div className="yj-empty-state">
                 <div>
                   <span className="yj-empty-state-icon">
@@ -717,7 +750,7 @@ export default function AnalysisPage() {
               </div>
             )}
 
-            {!loading && !error && (
+            {tasks !== null && (
               <>
                 <div className="yj-toolbar-panel">
                   <div className="flex items-center gap-4">

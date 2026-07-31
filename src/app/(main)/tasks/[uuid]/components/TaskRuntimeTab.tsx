@@ -25,6 +25,50 @@ function statusVariant(status?: string): 'success' | 'warning' | 'danger' | 'neu
   return 'neutral';
 }
 
+function areTaskProgressResponsesEqual(
+  previous: TaskProgressResponse,
+  next: TaskProgressResponse
+): boolean {
+  const previousTasks = previous.tasks ?? [];
+  const nextTasks = next.tasks ?? [];
+  const tasksEqual = previousTasks.length === nextTasks.length
+    && previousTasks.every((task, index) => {
+      const candidate = nextTasks[index];
+      return task.id === candidate.id
+        && task.workflow_id === candidate.workflow_id
+        && task.name === candidate.name
+        && task.job_name === candidate.job_name
+        && task.status === candidate.status
+        && task.start_time === candidate.start_time
+        && task.end_time === candidate.end_time
+        && task.stdout === candidate.stdout
+        && task.stderr === candidate.stderr;
+    });
+  const sepiidaEqual = previous.sepiida === next.sepiida
+    || (previous.sepiida !== undefined
+      && next.sepiida !== undefined
+      && previous.sepiida.id === next.sepiida.id
+      && previous.sepiida.uuid === next.sepiida.uuid
+      && previous.sepiida.name === next.sepiida.name
+      && previous.sepiida.status === next.sepiida.status
+      && previous.sepiida.start_time === next.sepiida.start_time
+      && previous.sepiida.end_time === next.sepiida.end_time);
+
+  return previous.id === next.id
+    && previous.uuid === next.uuid
+    && previous.name === next.name
+    && previous.template === next.template
+    && previous.status === next.status
+    && previous.progress === next.progress
+    && previous.created_at === next.created_at
+    && previous.result_import_status === next.result_import_status
+    && previous.result_import_error === next.result_import_error
+    && previous.result_imported_at === next.result_imported_at
+    && previous.result_import_attempts === next.result_import_attempts
+    && sepiidaEqual
+    && tasksEqual;
+}
+
 export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
   const [progress, setProgress] = React.useState<TaskProgressResponse | null>(null);
   const [logs, setLogs] = React.useState('');
@@ -32,8 +76,8 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
   const [error, setError] = React.useState('');
   const [copied, setCopied] = React.useState(false);
 
-  const loadRuntime = React.useCallback(async () => {
-    setLoading(true);
+  const loadRuntime = React.useCallback(async (background = false) => {
+    if (!background) setLoading(true);
     setError('');
     const [progressResult, logsResult] = await Promise.allSettled([
       tasksApi.getProgress(taskId),
@@ -41,14 +85,21 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
     ]);
 
     if (progressResult.status === 'fulfilled') {
-      setProgress(progressResult.value);
+      setProgress((previous) => (
+        previous && areTaskProgressResponsesEqual(previous, progressResult.value)
+          ? previous
+          : progressResult.value
+      ));
     } else {
-      setProgress(null);
       setError('任务运行状态暂时不可用');
     }
 
-    setLogs(logsResult.status === 'fulfilled' ? logsResult.value : '');
-    setLoading(false);
+    if (logsResult.status === 'fulfilled') {
+      setLogs(logsResult.value);
+    } else if (progressResult.status === 'fulfilled') {
+      setError('任务日志暂时不可用');
+    }
+    if (!background) setLoading(false);
   }, [taskId]);
 
   React.useEffect(() => {
@@ -58,7 +109,7 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
   React.useEffect(() => {
     const status = progress?.status || initialStatus;
     if (!['waiting_for_data', 'queued', 'running'].includes(status)) return;
-    const timer = window.setInterval(() => void loadRuntime(), 5000);
+    const timer = window.setInterval(() => void loadRuntime(true), 5000);
     return () => window.clearInterval(timer);
   }, [initialStatus, loadRuntime, progress?.status]);
 

@@ -6,6 +6,7 @@ import type { GroupedMTVariant, HistoryTableFilterState, PaginatedResult } from 
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedMTVariants, ACMG_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface MTHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -120,14 +121,14 @@ export function MTHistoryTab({
       header: '首次检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedMTVariant) => row.firstDetectedAt,
+      accessor: (row: GroupedMTVariant) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
       header: '最后检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedMTVariant) => row.lastDetectedAt,
+      accessor: (row: GroupedMTVariant) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 

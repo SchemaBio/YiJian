@@ -6,6 +6,7 @@ import type { GroupedSTR, HistoryTableFilterState, PaginatedResult } from '../ty
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedSTRs, STR_STATUS_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface STRHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -112,14 +113,14 @@ export function STRHistoryTab({
       header: '首次检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedSTR) => row.firstDetectedAt,
+      accessor: (row: GroupedSTR) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
       header: '最后检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedSTR) => row.lastDetectedAt,
+      accessor: (row: GroupedSTR) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 

@@ -6,6 +6,7 @@ import type { GroupedUPDRegion, HistoryTableFilterState, PaginatedResult } from 
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedUPDRegions, UPD_TYPE_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface UPDHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -112,14 +113,14 @@ export function UPDHistoryTab({
       header: '首次检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedUPDRegion) => row.firstDetectedAt,
+      accessor: (row: GroupedUPDRegion) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
       header: '最后检出',
       width: 120,
       align: 'center' as const,
-      accessor: (row: GroupedUPDRegion) => row.lastDetectedAt,
+      accessor: (row: GroupedUPDRegion) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 

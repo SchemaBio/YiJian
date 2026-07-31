@@ -6,6 +6,7 @@ import type { GroupedSNVIndel, HistoryTableFilterState, PaginatedResult } from '
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedSNVIndels, ACMG_CONFIG } from '../api-data';
 import { ExpandableTable } from './ExpandableTable';
+import { formatLocalDate } from '@/lib/utils';
 
 interface SNVIndelHistoryTabProps {
   filterState?: HistoryTableFilterState;
@@ -102,7 +103,7 @@ export function SNVIndelHistoryTab({
     },
     {
       id: 'gnomadAF',
-      header: 'gnomAD频率',
+      header: 'gnomAD',
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedSNVIndel) => row.gnomadAF !== undefined ? `${(row.gnomadAF * 100).toFixed(4)}%` : '-',
@@ -132,7 +133,7 @@ export function SNVIndelHistoryTab({
       width: 120,
       align: 'center' as const,
       sortable: true,
-      accessor: (row: GroupedSNVIndel) => row.firstDetectedAt,
+      accessor: (row: GroupedSNVIndel) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
@@ -140,7 +141,7 @@ export function SNVIndelHistoryTab({
       width: 120,
       align: 'center' as const,
       sortable: true,
-      accessor: (row: GroupedSNVIndel) => row.lastDetectedAt,
+      accessor: (row: GroupedSNVIndel) => formatLocalDate(row.lastDetectedAt),
     },
   ];
 
