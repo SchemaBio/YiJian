@@ -30,7 +30,10 @@ function transactionVariant(type: string): 'success' | 'warning' | 'info' | 'neu
   switch (type) {
     case 'recharge':
     case 'refund':
+    case 'failure_refund':
       return 'success';
+    case 'pre_deduction':
+      return 'info';
     case 'deduction':
     case 'download':
       return 'warning';
@@ -45,10 +48,14 @@ function transactionLabel(type: string): string {
   switch (type) {
     case 'recharge':
       return '充值';
+    case 'pre_deduction':
+      return '预扣费';
     case 'deduction':
       return '扣费';
     case 'refund':
       return '退款';
+    case 'failure_refund':
+      return '失败退还';
     case 'adjust':
       return '调整';
     case 'download':
@@ -228,6 +235,21 @@ export default function BillingSettingsPage() {
               <p className="text-xs text-fg-muted">最低保留积分</p>
               <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.min_balance)}</p>
               <p className="mt-2 text-xs leading-5 text-fg-muted">预扣后低于此值时不能启动任务</p>
+            </div>
+          </div>
+          <div className="mt-5 border-t border-border-default pt-5">
+            <p className="text-xs font-medium text-fg-default">积分计算公式</p>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-fg-muted">
+              <p>
+                每分钟消耗积分 = 每分钟基础积分 × 计费倍率
+                {config && (
+                  <span className="ml-2 tabular-nums text-fg-default">
+                    （当前：{formatCredits(config.credits_per_minute)} × {formatCredits(config.credit_rate_multiplier)} = {formatCredits(creditsPerMinute)} 积分 / 分钟）
+                  </span>
+                )}
+              </p>
+              <p>任务消耗积分 = 四舍五入（计费分钟数 × 每分钟消耗积分）</p>
+              <p className="text-xs text-fg-muted">最终扣费按计算结果四舍五入取整；运行时长不足 1 分钟按 1 分钟计费，超出整分钟的部分按下一分钟计费。</p>
             </div>
           </div>
         </section>

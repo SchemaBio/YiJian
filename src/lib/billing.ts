@@ -5,7 +5,15 @@ export interface BillingBalance {
   balance: number;
 }
 
-export type BillingTransactionType = 'recharge' | 'deduction' | 'refund' | 'adjust' | 'download' | string;
+export type BillingTransactionType =
+  | 'recharge'
+  | 'pre_deduction'
+  | 'deduction'
+  | 'refund'
+  | 'failure_refund'
+  | 'adjust'
+  | 'download'
+  | string;
 
 export interface BillingTransaction {
   id: number;
@@ -35,6 +43,7 @@ export interface BillingTransactionPage {
 
 export interface TaskBillingSummary {
   taskId: string;
+  preDeducted: number;
   deducted: number;
   refunded: number;
   netCost: number;
@@ -53,7 +62,7 @@ export function notifyBillingUpdated() {
 export function calculateEstimatedCredits(minutes: number, config: BillingConfig | null): number | null {
   if (!config) return null;
   const normalizedMinutes = Math.max(1, Math.trunc(minutes) || 1);
-  const calculated = Math.trunc(
+  const calculated = Math.round(
     normalizedMinutes * config.credits_per_minute * config.credit_rate_multiplier
   );
   return calculated > 0 ? calculated : config.credits_per_minute;
@@ -65,18 +74,23 @@ export function summarizeTaskBilling(
 ): TaskBillingSummary {
   const taskTransactions = transactions.filter((transaction) => transaction.reference_id === taskId);
   let deducted = 0;
+  let preDeducted = 0;
   let refunded = 0;
 
   for (const transaction of taskTransactions) {
-    if (transaction.type === 'deduction' && transaction.amount < 0) {
+    if (transaction.type === 'pre_deduction' && transaction.amount < 0) {
+      preDeducted += -transaction.amount;
       deducted += -transaction.amount;
-    } else if (transaction.type === 'refund' && transaction.amount > 0) {
+    } else if (transaction.type === 'deduction' && transaction.amount < 0) {
+      deducted += -transaction.amount;
+    } else if ((transaction.type === 'refund' || transaction.type === 'failure_refund') && transaction.amount > 0) {
       refunded += transaction.amount;
     }
   }
 
   return {
     taskId,
+    preDeducted,
     deducted,
     refunded,
     netCost: Math.max(0, deducted - refunded),

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Tag, Button, Input } from '@schema/ui-kit';
 import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Pencil, Save, X, Search } from 'lucide-react';
 import { api } from '@/lib/api';
+import { searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
 import { getSampleDetail, normalizeSampleDetail, sampleDetailPayload } from '@/lib/samples';
 import type { SampleDetail } from '../types';
 import { GENDER_CONFIG } from '../types';
@@ -73,32 +74,15 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-// 内置常用 HPO 快捷建议；不是后端样本数据。
-const COMMON_HPO_TERMS = [
-  { id: 'HP:0001250', name: '癫痫发作' },
-  { id: 'HP:0001249', name: '智力障碍' },
-  { id: 'HP:0001252', name: '肌张力减退' },
-  { id: 'HP:0001263', name: '发育迟缓' },
-  { id: 'HP:0000252', name: '小头畸形' },
-  { id: 'HP:0001635', name: '充血性心力衰竭' },
-  { id: 'HP:0001962', name: '心悸' },
-  { id: 'HP:0002094', name: '呼吸困难' },
-  { id: 'HP:0000365', name: '听力损失' },
-  { id: 'HP:0000518', name: '白内障' },
-];
-
 // HPO术语输入组件
 function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) => void }) {
+  const hpoTerms = useHpoTerms();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showDropdown, setShowDropdown] = React.useState(false);
 
   const filteredTerms = React.useMemo(() => {
-    if (!searchQuery) return COMMON_HPO_TERMS.slice(0, 5);
-    const query = searchQuery.toLowerCase();
-    return COMMON_HPO_TERMS.filter(
-      t => t.id.toLowerCase().includes(query) || t.name.includes(query)
-    );
-  }, [searchQuery]);
+    return searchHpoTerms(hpoTerms, searchQuery);
+  }, [hpoTerms, searchQuery]);
 
   return (
     <div className="relative">
@@ -121,7 +105,7 @@ function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) =
                   key={term.id}
                   className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
                   onClick={() => {
-                    onAdd(term);
+                    onAdd({ id: term.id, name: term.name });
                     setSearchQuery('');
                     setShowDropdown(false);
                   }}

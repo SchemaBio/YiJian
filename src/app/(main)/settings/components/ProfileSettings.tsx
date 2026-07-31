@@ -115,8 +115,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile }: ProfileSe
           <FormItem label="机构名称">
             <Input value={currentOrg?.name ?? '-'} disabled />
           </FormItem>
-          <FormItem label="机构标识">
-            <Input value={currentOrg?.slug ?? '-'} disabled />
+          <FormItem label="机构 UUID">
+            <Input value={currentOrg?.id ?? '-'} disabled />
           </FormItem>
         </div>
       </section>

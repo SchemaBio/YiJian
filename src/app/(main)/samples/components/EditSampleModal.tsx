@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Button, Input, Select, TextArea } from '@schema/ui-kit';
 import { FileText, Loader2, Search, Stethoscope, UserRound, X } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
+import { searchHpoTerms, useHpoTerms, type HpoTerm } from '@/lib/hpo-terms';
 import type { Gender, SampleType, Sample } from '../types';
 
 interface EditSampleModalProps {
@@ -38,21 +39,8 @@ const sampleTypeOptions = [
   { value: '其他', label: '其他' },
 ];
 
-// 常用HPO术语列表
-const COMMON_HPO_TERMS = [
-  { id: 'HP:0001250', name: '癫痫发作' },
-  { id: 'HP:0001249', name: '智力障碍' },
-  { id: 'HP:0001252', name: '肌张力减退' },
-  { id: 'HP:0001263', name: '发育迟缓' },
-  { id: 'HP:0000252', name: '小头畸形' },
-  { id: 'HP:0001635', name: '充血性心力衰竭' },
-  { id: 'HP:0001962', name: '心悸' },
-  { id: 'HP:0002094', name: '呼吸困难' },
-  { id: 'HP:0000365', name: '听力损失' },
-  { id: 'HP:0000518', name: '白内障' },
-];
-
 export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampleModalProps) {
+  const hpoTerms = useHpoTerms(isOpen);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<EditSampleFormData>({
@@ -89,20 +77,19 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
   }, [sample]);
 
   const filteredHpoTerms = React.useMemo(() => {
-    if (!hpoSearchQuery) return COMMON_HPO_TERMS.slice(0, 5);
-    const query = hpoSearchQuery.toLowerCase();
-    return COMMON_HPO_TERMS.filter(
-      t => t.id.toLowerCase().includes(query) || t.name.includes(query)
-    );
-  }, [hpoSearchQuery]);
+    return searchHpoTerms(hpoTerms, hpoSearchQuery);
+  }, [hpoSearchQuery, hpoTerms]);
 
   const handleChange = (field: keyof EditSampleFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const addHpoTerm = (term: { id: string; name: string }) => {
+  const addHpoTerm = (term: HpoTerm) => {
     if (!formData.hpoTerms.find(t => t.id === term.id)) {
-      setFormData(prev => ({ ...prev, hpoTerms: [...prev.hpoTerms, term] }));
+      setFormData(prev => ({
+        ...prev,
+        hpoTerms: [...prev.hpoTerms, { id: term.id, name: term.name }],
+      }));
     }
     setHpoSearchQuery('');
     setShowHpoDropdown(false);
