@@ -138,10 +138,8 @@ function shouldRetryViaSquidOctopus(endpoint: string, response: Response, coreAp
     && coreApi !== false
     && backendFlavor !== 'octopus'
     && !getRuntimeCoreApiPrefix()
-    // In Squid deployments, core Octopus routes live under /v1/octopus/*.
-    // Gateways commonly return JSON 404 for the unmounted /v1/* root route, so
-    // do not key fallback on Content-Type. Direct Octopus users can set
-    // BACKEND_FLAVOR=octopus or CORE_API_PREFIX empty with no proxy requirement.
+    // This compatibility branch is unreachable with the canonical explicit
+    // backend configuration, but remains defensive for stale runtime files.
     && isCoreEndpoint(endpoint);
 }
 
