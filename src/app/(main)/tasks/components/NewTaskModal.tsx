@@ -270,15 +270,18 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
-                <div className="text-sm font-medium text-fg-default">基础预估扣费 {estimatedCredits ?? '--'} 积分</div>
-                <div className="text-xs text-fg-muted">按 60 分钟展示；提交后由系统按数据量确定预估</div>
+                <div className="text-sm font-medium text-fg-default">预计预扣 {estimatedCredits ?? '--'} 积分</div>
+                <div className="text-xs text-fg-muted">按 60 分钟展示；最终按实际运行分钟结算</div>
               </div>
             </div>
             <div className="text-right">
               <div className={insufficientCredits ? 'text-sm font-medium text-danger-fg' : 'text-sm font-medium text-fg-default'}>
                 余额 {billingBalance?.balance ?? '--'}
               </div>
-              <Link href="/billing/recharge" className="text-xs text-accent-fg hover:underline">充值</Link>
+              <div className="flex items-center justify-end gap-3 text-xs">
+                <Link href="/billing" className="text-accent-fg hover:underline">计费规则</Link>
+                <Link href="/billing/recharge" className="text-accent-fg hover:underline">充值</Link>
+              </div>
             </div>
           </div>
         )}

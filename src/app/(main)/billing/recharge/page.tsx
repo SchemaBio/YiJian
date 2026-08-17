@@ -147,7 +147,7 @@ export default function RechargePage() {
               <span className="text-sm">本次充值可运行</span>
             </div>
             <p className="mt-2 text-2xl font-semibold text-fg-default">约 {estimatedMinutes ?? '--'} 分钟</p>
-            <p className="mt-2 text-xs text-fg-muted">默认 60 分钟任务预计扣费 {exampleTaskCost ?? '--'} 积分</p>
+            <p className="mt-2 text-xs text-fg-muted">默认 60 分钟任务预计预扣 {exampleTaskCost ?? '--'} 积分，最终按实际运行分钟结算</p>
           </div>
           <div className="yj-panel p-4 text-sm text-fg-muted">
             <p className="font-medium text-fg-default">入账方式</p>

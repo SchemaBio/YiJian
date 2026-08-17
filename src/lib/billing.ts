@@ -30,6 +30,8 @@ export interface BillingTransaction {
 export interface BillingConfig {
   credits_per_minute: number;
   credit_rate_multiplier: number;
+  download_credits: number;
+  cnv_baseline_credits_per_gib?: number;
   min_balance: number;
 }
 

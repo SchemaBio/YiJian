@@ -211,10 +211,11 @@ export default function BillingSettingsPage() {
           <SupportDialog trigger="button" context="billing" />
         </section>
 
-        <section aria-label="费用概览" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <section aria-label="费用概览" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricTile label="当前积分" value={formatCredits(balance?.balance)} icon={<Coins className="h-4 w-4" />} tone="success" />
           <MetricTile label="可运行时长" value={availableMinutes === null ? '--' : `${availableMinutes} 分钟`} icon={<Clock3 className="h-4 w-4" />} tone="info" />
           <MetricTile label="每分钟积分" value={formatCredits(creditsPerMinute)} icon={<Gauge className="h-4 w-4" />} />
+          <MetricTile label="下载单价" value={config?.download_credits == null ? '--' : `${formatCredits(config.download_credits)} 积分 / 次`} icon={<CreditCard className="h-4 w-4" />} />
         </section>
 
         <section className="yj-panel px-5 py-5" aria-labelledby="billing-rules-title">
@@ -248,8 +249,11 @@ export default function BillingSettingsPage() {
                   </span>
                 )}
               </p>
-              <p>任务消耗积分 = 四舍五入（计费分钟数 × 每分钟消耗积分）</p>
-              <p className="text-xs text-fg-muted">最终扣费按计算结果四舍五入取整；运行时长不足 1 分钟按 1 分钟计费，超出整分钟的部分按下一分钟计费。</p>
+              <p>任务启动或重试时先按预估运行时间预扣，最终按实际计费分钟结算。</p>
+              <p>任务完成或运行中取消：按 started_at 到 finished_at 的时长计费，不足 1 分钟按 1 分钟；排队中取消不产生运行费并退回预扣。</p>
+              <p>任务失败或启动失败：退回该任务的净扣费；下载结果或报告按 {formatCredits(config?.download_credits)} 积分 / 次计费。</p>
+              <p>CNV 基线任务按输入数据量计费，当前单价为 {formatCredits(config?.cnv_baseline_credits_per_gib)} 积分 / GiB。</p>
+              <p className="text-xs text-fg-muted">预扣不是最终扣费，差额会在任务终态结算；账单明细会显示预扣、扣费、退款和下载流水。</p>
             </div>
           </div>
         </section>
