@@ -1,5 +1,7 @@
+# syntax=docker/dockerfile:1.7
+
 # ============ 构建阶段 ============
-FROM node:22-alpine AS builder
+FROM node:22-alpine3.22 AS builder
 
 # 安装 pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
@@ -16,7 +18,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # 安装依赖
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # 复制源码
 COPY . .
@@ -25,7 +28,7 @@ COPY . .
 RUN pnpm build
 
 # ============ 运行时阶段 ============
-FROM node:22-alpine AS runner
+FROM node:22-alpine3.22 AS runner
 
 ARG NEXT_PUBLIC_PASSWORD_HASH_ENABLED=false
 ARG NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED=true
@@ -61,5 +64,13 @@ USER nextjs
 
 EXPOSE 3000
 
+LABEL org.opencontainers.image.title="YiJian" \
+      org.opencontainers.image.description="SchemaBio germline analysis web application" \
+      org.opencontainers.image.source="https://github.com/SchemaBio/YiJian"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+
+STOPSIGNAL SIGTERM
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
