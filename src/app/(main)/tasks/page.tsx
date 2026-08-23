@@ -613,7 +613,10 @@ export default function AnalysisPage() {
         />
       ),
       width: 130,
+      minWidth: 126,
+      maxWidth: 150,
       align: 'center',
+      pinned: 'right',
     },
   ];
 
@@ -783,6 +786,7 @@ export default function AnalysisPage() {
                     rowKey="id"
                     striped
                     density="compact"
+                    className="actions-pinned-table"
                   />
                 ) : (
                   <EmptyState

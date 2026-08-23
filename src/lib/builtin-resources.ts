@@ -12,11 +12,11 @@ export function builtinCNVBaselineId(genome: BuiltinGenome): string {
 }
 
 export function builtinBEDLabel(genome: BuiltinGenome): string {
-  return `内置 WES BED（${genome}，占位）`;
+  return `内置 WES BED（${genome}）`;
 }
 
 export function builtinCNVBaselineLabel(genome: BuiltinGenome): string {
-  return `内置 WES CNV 基线（${genome}，占位）`;
+  return `内置 WES CNV 基线（${genome}）`;
 }
 
 export const BUILTIN_BED_ASSETS: DataAsset[] = (['hg19', 'hg38'] as const).map((genome) => ({

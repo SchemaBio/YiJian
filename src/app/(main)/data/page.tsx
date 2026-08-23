@@ -88,7 +88,7 @@ export default function DataCenterPage() {
         getUploadStorageStats(),
       ]);
       if (requestId !== loadRequestRef.current) return;
-      setAssets(assetResult.items ?? []);
+      setAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed'));
       setConfig(configResult);
       setStorageStats(statsResult);
     } catch (err) {
@@ -287,7 +287,7 @@ export default function DataCenterPage() {
           <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { if (!uploading) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="actions-pinned-table overflow-x-auto">
           <table className="w-full min-w-[1470px] table-fixed border-collapse text-sm">
             <colgroup>
               <col className="w-[260px]" /><col className="w-[160px]" /><col className="w-[150px]" />
@@ -301,7 +301,7 @@ export default function DataCenterPage() {
                 <th className="px-4 py-3 text-center align-middle font-medium">Read</th><th className="px-4 py-3 text-right align-middle font-medium">大小</th>
                 <th className="px-4 py-3 text-left align-middle font-medium">存储</th><th className="px-4 py-3 text-left align-middle font-medium">状态</th>
                 <th className="px-4 py-3 text-left align-middle font-medium">上传时间</th><th className="px-4 py-3 text-left align-middle font-medium">到期时间</th>
-                <th className="whitespace-nowrap px-5 py-3 text-center align-middle font-medium">操作</th>
+                <th className="sticky right-0 z-20 whitespace-nowrap bg-canvas-subtle px-5 py-3 text-center align-middle font-medium">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-default">
@@ -316,7 +316,7 @@ export default function DataCenterPage() {
                   <td className="px-4 py-3 align-middle">{assetStatus(asset, fileProgress[asset.id])}</td>
                   <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{formatTime(asset.created_at)}</td>
                   <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</td>
-                  <td className="whitespace-nowrap px-5 py-3 text-center align-middle"><div className="inline-flex items-center justify-center gap-1">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-canvas-default px-5 py-3 text-center align-middle"><div className="inline-flex items-center justify-center gap-1">
                     {config?.download_allowed && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}><Download className="h-4 w-4" /></button>}
                     {(asset.status === 'pending' || asset.status === 'failed') && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="重新上传" aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}><Upload className="h-4 w-4" /></button>}
                     <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg" title="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}><Pencil className="h-4 w-4" /></button>

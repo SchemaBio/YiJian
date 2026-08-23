@@ -44,6 +44,7 @@ export interface TaskListResponse {
 
 export interface TaskCreateRequest {
   sampleId: string;
+  pedigreeId?: string;
   internalId: string;
   pipelineId: string;
   pipelineName: string;

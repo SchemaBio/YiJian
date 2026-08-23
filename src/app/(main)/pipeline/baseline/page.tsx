@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { Button, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { Coins, Database, ExternalLink, Loader2, Plus, Search } from 'lucide-react';
+import { AlertTriangle, Coins, Database, ExternalLink, Loader2, Plus, Search } from 'lucide-react';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { createCNVBaseline, listCNVBaselines, type CNVBaseline, type CNVBaselineStatus } from '@/lib/cnv-baselines';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -114,25 +114,30 @@ export default function BaselinePage() {
     { id: 'data', header: '数据组', accessor: (row) => row.is_builtin ? '-' : `${row.read_pairs.length} 对 R1/R2`, width: 110, align: 'center' },
     ...(isSaaS ? [{ id: 'credits', header: '积分', accessor: (row: CNVBaseline) => row.is_builtin ? '-' : `${row.credits_charged || row.credit_cost} 积分`, width: 90, align: 'center' as const }] : []),
     { id: 'bed', header: 'BED 文件', accessor: (row) => <span className="block truncate" title={row.bed.file_name}>{row.bed.file_name}</span>, width: 220, align: 'left' },
-    { id: 'status', header: '状态', accessor: (row) => row.is_builtin ? <Tag variant="neutral">内置占位</Tag> : <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
-    { id: 'output', header: '基线输出路径', accessor: (row) => <span className="block max-w-[300px] truncate font-mono text-xs" title={row.output_path || row.error}>{row.is_builtin ? '待替换为正式内置资源' : row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span>, width: 300, align: 'left' },
+    { id: 'status', header: '状态', accessor: (row) => row.is_builtin ? <Tag variant="success">内置可用</Tag> : <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
+    { id: 'output', header: '基线输出', accessor: (row) => <span className="block max-w-[300px] truncate font-mono text-xs" title={row.output_path || row.error}>{row.is_builtin ? '系统内置资源' : row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span>, width: 300, align: 'left' },
     { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
     { id: 'task', header: '任务', accessor: (row) => row.is_builtin ? '-' : <Link href={`/tasks/${encodeURIComponent(row.task_id)}`} className="inline-flex items-center gap-1 text-accent-fg hover:underline">查看<ExternalLink className="h-3.5 w-3.5" /></Link>, width: 90, align: 'center' },
   ];
 
   return (
     <PageContent className="yj-page-shell">
-      <div className="yj-page-header"><div><h2 className="yj-page-title">CNV 基线</h2><p className="yj-page-subtitle">直接使用已上传数据建立 CNV 分析基线。</p></div></div>
+      <div className="yj-page-header"><div><h2 className="yj-page-title">CNV 基线</h2><p className="yj-page-subtitle">使用所选正常样本对系统内置 CNV 基线进行校正。</p></div></div>
+      <div className="mb-2 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-fg">
+        <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
+        <span>CNV 基线由系统内置基线结合所选样本进行校正生成。该结果仅供分析参考，准确度尚未经充分验证，请结合其他检测方法和临床证据综合判断。</span>
+      </div>
       <div className="yj-toolbar-panel">
         <div className="w-72"><Input placeholder="搜索名称、基因组或 BED..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setModalOpen(true)}>建立 CNV 基线</Button>
+        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
       </div>
       {error && <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
       {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title="暂无 CNV 基线" description="选择已上传的 R1/R2 数据和 BED 文件建立基线。" /> : <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped />}
 
-      <AppModal open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="建立 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}>{submitting ? '正在投递...' : '启动建立流程'}</Button></>}>
+      <AppModal open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}>{submitting ? '正在投递...' : '启动校正流程'}</Button></>}>
         <div className="space-y-5">
-          <ModalSectionHeading icon={<Database className="h-4 w-4" />} title="CNV 基线建立流程" description="此任务不关联样本，只使用已上传且状态可用的数据文件。" />
+          <ModalSectionHeading icon={<Database className="h-4 w-4" />} title="CNV 基线校正流程" description="系统将内置基线与所选正常样本合并校正，不会从零建立基线。" />
+          <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">CNV 基线由系统内置基线结合所选样本进行校正生成。结果仅供参考，准确度尚未经充分验证。</div>
           {formError && <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormItem label="基线名称" required><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>

@@ -15,15 +15,19 @@ import {
 } from '@/lib/task-resources';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { getPedigree, listPedigrees } from '@/lib/pedigrees';
+import type { Pedigree } from '@/app/(main)/samples/pedigree/types';
 
 export default function NewAnalysisPage() {
   const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
+  const [pedigrees, setPedigrees] = React.useState<Pedigree[]>([]);
   const [loadError, setLoadError] = React.useState('');
   const [selectedSample, setSelectedSample] = React.useState('');
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
+  const [selectedPedigree, setSelectedPedigree] = React.useState('');
   const [taskName, setTaskName] = React.useState('');
   const [enableCNV, setEnableCNV] = React.useState(true);
   const [enableSV, setEnableSV] = React.useState(false);
@@ -34,19 +38,24 @@ export default function NewAnalysisPage() {
 
   const selectedSampleInfo = samples.find((sample) => sample.id === selectedSample);
   const selectedPipelineInfo = pipelines.find((pipeline) => pipeline.id === selectedPipeline);
+  const selectedPedigreeInfo = pedigrees.find((pedigree) => pedigree.id === selectedPedigree);
+  const isTrio = selectedPipelineInfo?.baseType === 'wes_family' || selectedPipelineInfo?.template === 'trio';
 
   React.useEffect(() => {
     let cancelled = false;
 
     async function loadOptions() {
       try {
-        const [sampleOptions, pipelineOptions] = await Promise.all([
+        const [sampleOptions, pipelineOptions, pedigreeOptions] = await Promise.all([
           samplesApi.list({ page: 1, page_size: 100 }),
           pipelinesApi.list(),
+          listPedigrees(),
         ]);
+        const pedigreeDetails = (await Promise.all(pedigreeOptions.map((item) => getPedigree(item.id)))).filter((item): item is Pedigree => item !== null);
         if (cancelled) return;
         setSamples(sampleOptions);
         setPipelines(pipelineOptions);
+        setPedigrees(pedigreeDetails);
         setSelectedPipeline((current) => current || pipelineOptions[0]?.id || '');
         setLoadError('');
       } catch (err) {
@@ -85,22 +94,24 @@ export default function NewAnalysisPage() {
     && projectedBalance < billingConfig.min_balance;
 
   React.useEffect(() => {
-    if (selectedSampleInfo && selectedPipelineInfo) {
-      setTaskName(`${selectedSampleInfo.internalId || selectedSampleInfo.id} ${selectedPipelineInfo.name} 分析`);
+    const subject = isTrio ? selectedPedigreeInfo?.internalId : (selectedSampleInfo?.internalId || selectedSampleInfo?.id);
+    if (subject && selectedPipelineInfo) {
+      setTaskName(`${subject} ${selectedPipelineInfo.name} 分析`);
     }
-  }, [selectedSampleInfo, selectedPipelineInfo]);
+  }, [isTrio, selectedPedigreeInfo, selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
     setFormError('');
-    if (!selectedSampleInfo || !selectedPipelineInfo) {
-      setFormError('请选择样本和分析流程。');
+    if (!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)) {
+      setFormError(isTrio ? '请选择符合父母-先证者结构的家系。' : '请选择样本和分析流程。');
       return;
     }
     setSubmitting(true);
     try {
       const task = await tasksApi.create({
-        sampleId: selectedSampleInfo.id,
-        internalId: selectedSampleInfo.internalId,
+        sampleId: isTrio ? '' : selectedSampleInfo!.id,
+        pedigreeId: isTrio ? selectedPedigreeInfo!.id : undefined,
+        internalId: isTrio ? selectedPedigreeInfo!.internalId : selectedSampleInfo!.internalId,
         pipelineId: selectedPipelineInfo.id,
         pipelineName: selectedPipelineInfo.name,
         pipelineVersion: selectedPipelineInfo.version,
@@ -147,7 +158,7 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        <FormItem label="样本" required>
+        {!isTrio && <FormItem label="样本" required>
           <Select
             options={samples.map((sample) => ({
               value: sample.id,
@@ -167,7 +178,24 @@ export default function NewAnalysisPage() {
               )}
             </div>
           )}
-        </FormItem>
+        </FormItem>}
+
+        {isTrio && <FormItem label="家系（父母 + 先证者）" required>
+          <Select
+            options={pedigrees.map((pedigree) => {
+              const proband = pedigree.members.find((member) => member.id === pedigree.probandId || member.relation === 'proband');
+              const father = pedigree.members.find((member) => member.id === proband?.fatherId);
+              const mother = pedigree.members.find((member) => member.id === proband?.motherId);
+              const ready = Boolean(proband?.sampleId && father?.sampleId && mother?.sampleId);
+              return { value: pedigree.id, label: `${pedigree.internalId}${ready ? '（三人样本已关联）' : '（家系不完整）'}`, disabled: !ready };
+            })}
+            value={selectedPedigree}
+            onChange={(value) => setSelectedPedigree(Array.isArray(value) ? value[0] : value)}
+            placeholder="选择已存在的父母-先证者家系"
+            searchable
+          />
+          <div className="mt-2 text-xs text-fg-muted">系统将读取先证者及其父母关联的 R1/R2，并自动生成 PED 文件；完整性会由后端再次校验。</div>
+        </FormItem>}
 
         <FormItem label="分析流程" required>
           <Select
@@ -216,7 +244,7 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {selectedSampleInfo && (
+        {!isTrio && selectedSampleInfo && (
           <div className={`rounded-md border px-4 py-3 ${selectedSampleInfo.matchedPair ? 'border-success-muted bg-success-subtle' : 'border-warning-muted bg-warning-subtle'}`}>
             <div className={`text-sm font-medium ${selectedSampleInfo.matchedPair ? 'text-success-fg' : 'text-warning-fg'}`}>
               {selectedSampleInfo.matchedPair ? 'R1/R2 已就绪' : '等待测序数据'}
@@ -251,7 +279,7 @@ export default function NewAnalysisPage() {
             leftIcon={<Play className="w-4 h-4" />}
             onClick={handleSubmit}
             loading={submitting}
-            disabled={!selectedSampleInfo || !selectedPipelineInfo}
+            disabled={!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)}
           >
             {submitting ? '提交中...' : '提交任务'}
           </Button>

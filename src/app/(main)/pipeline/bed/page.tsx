@@ -4,9 +4,11 @@ import * as React from 'react';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { Button, Checkbox, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { AlertTriangle, FileText, HardDrive, Loader2, Search, Upload } from 'lucide-react';
-import { getDataCenterConfig, listDataAssets, uploadBEDFile, type DataAsset, type DataCenterConfig } from '@/lib/data-assets';
+import { AlertTriangle, FileText, HardDrive, Loader2, Search, Trash2, Upload } from 'lucide-react';
+import { deleteDataAsset, getDataCenterConfig, getUploadStorageStats, listDataAssets, uploadBEDFile, type DataAsset, type DataCenterConfig, type UploadStorageStats } from '@/lib/data-assets';
 import { BUILTIN_BED_ASSETS } from '@/lib/builtin-resources';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 type ReferenceGenome = 'GRCh37' | 'GRCh38';
 
@@ -23,13 +25,17 @@ function formatTime(value: string): string {
 function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  if (value < 1024 ** 4) return `${(value / 1024 ** 3).toFixed(1)} GB`;
+  return `${(value / 1024 ** 4).toFixed(1)} TB`;
 }
 
 export default function BedFilesPage() {
+  const { currentOrg } = useAuth();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [items, setItems] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
+  const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -39,17 +45,21 @@ export default function BedFilesPage() {
   const [uploadPolicyAcknowledged, setUploadPolicyAcknowledged] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [uploadError, setUploadError] = React.useState('');
+  const [deleting, setDeleting] = React.useState<DataAsset | null>(null);
+  const [deleteBusy, setDeleteBusy] = React.useState(false);
 
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [response, dataCenterConfig] = await Promise.all([
+      const [response, dataCenterConfig, uploadStorageStats] = await Promise.all([
         listDataAssets('', { readType: 'bed' }),
         getDataCenterConfig(),
+        getUploadStorageStats(),
       ]);
       setItems([...BUILTIN_BED_ASSETS, ...response.items]);
       setConfig(dataCenterConfig);
+      setStorageStats(uploadStorageStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载 BED 文件失败');
       setItems([]);
@@ -59,6 +69,13 @@ export default function BedFilesPage() {
   }, []);
 
   React.useEffect(() => { void loadData(); }, [loadData]);
+
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const storageQuotaBytes = isSaaS && (currentOrg?.storageQuotaBytes ?? 0) > 0
+    ? currentOrg?.storageQuotaBytes ?? null
+    : null;
+  const totalStorageBytes = storageStats?.total_bytes ?? 0;
+  const storageQuotaReached = storageQuotaBytes !== null && totalStorageBytes >= storageQuotaBytes;
 
   const filteredFiles = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -81,6 +98,10 @@ export default function BedFilesPage() {
       setUploadError('请先勾选“我已确认”');
       return;
     }
+    if (storageQuotaBytes !== null && totalStorageBytes + file.size > storageQuotaBytes) {
+      setUploadError(`所选 BED 文件将超过组织存储总容量（已用 ${formatBytes(totalStorageBytes)}，总容量 ${formatBytes(storageQuotaBytes)}）`);
+      return;
+    }
     setUploading(true);
     setUploadError('');
     setProgress(0);
@@ -99,10 +120,25 @@ export default function BedFilesPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
+    setError(null);
+    try {
+      await deleteDataAsset(deleting.id);
+      setDeleting(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除 BED 文件失败');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
   const columns: Column<DataAsset>[] = [
     {
       id: 'fileName', header: '文件名', width: 280, align: 'left',
-      accessor: (row) => <span className="block truncate font-medium text-fg-default" title={row.file_name}>{row.file_name}{row.is_builtin && <Tag className="ml-2" variant="neutral">内置占位</Tag>}</span>,
+      accessor: (row) => <span className="block truncate font-medium text-fg-default" title={row.file_name}>{row.file_name}{row.is_builtin && <Tag className="ml-2" variant="success">内置</Tag>}</span>,
     },
     {
       id: 'referenceGenome', header: '参考基因组', width: 130, align: 'center',
@@ -115,9 +151,10 @@ export default function BedFilesPage() {
     },
     {
       id: 'status', header: '状态', width: 100, align: 'center',
-      accessor: (row) => row.is_builtin ? <Tag variant="neutral">占位</Tag> : <Tag variant={row.status === 'completed' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? '可用' : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
+      accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? '可用' : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
     },
     { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
+    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button> },
   ];
 
   return (
@@ -151,7 +188,7 @@ export default function BedFilesPage() {
         onOpenChange={(open) => !open && closeModal()}
         title="上传 BED 文件"
         size="medium"
-        footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>取消</Button><Button variant="primary" onClick={handleUpload} disabled={!file || uploading || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}>{uploading ? `上传中 ${progress}%` : '开始上传'}</Button></>}
+        footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>取消</Button><Button variant="primary" onClick={handleUpload} disabled={!file || uploading || storageQuotaReached || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}>{uploading ? `上传中 ${progress}%` : '开始上传'}</Button></>}
       >
         <div className="space-y-5">
           <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title="文件信息" description="BED 文件最大 20MB，上传后仅用于所选参考基因组。" />
@@ -168,9 +205,20 @@ export default function BedFilesPage() {
               className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium"
             />
           </FormItem>
-          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
+          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>允许系统长期保存此 BED 文件。我已知晓系统不提供 BED 文件下载；如不再使用，可在 BED 文件管理中手动删除。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已阅读并同意" /></div>}
+          {storageQuotaBytes !== null && <p className="text-xs text-fg-muted">组织全部数据共用存储容量：已用 {formatBytes(totalStorageBytes)}，总容量 {formatBytes(storageQuotaBytes)}。</p>}
           {uploading && <div className="h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div>}
         </div>
+      </AppModal>
+
+      <AppModal
+        open={deleting !== null}
+        size="small"
+        title="删除 BED 文件"
+        onOpenChange={(open) => { if (!open && !deleteBusy) setDeleting(null); }}
+        footer={<><Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleting(null)}>取消</Button><Button variant="danger" disabled={deleteBusy} loading={deleteBusy} leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => void handleDelete()}>确认删除</Button></>}
+      >
+        <p className="text-sm leading-6 text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p>
       </AppModal>
     </PageContent>
   );
