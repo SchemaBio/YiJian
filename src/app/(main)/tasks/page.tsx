@@ -624,7 +624,7 @@ export default function AnalysisPage() {
   const hasOpenTabs = openTabs.length > 0;
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-w-0 w-full">
       {/* 左侧任务列表 */}
       {hasOpenTabs ? (
         // 收起/展开状态
@@ -710,8 +710,8 @@ export default function AnalysisPage() {
         )
       ) : (
         // 展开状态：完整表格
-        <div className="flex-1">
-          <div className="p-6 xl:p-8 h-full overflow-auto yj-page-shell">
+        <div className="min-w-0 flex-1">
+          <div className="yj-page-shell h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
             <div className="yj-page-header">
               <h2 className="yj-page-title">任务列表</h2>
             </div>
@@ -786,7 +786,7 @@ export default function AnalysisPage() {
                     rowKey="id"
                     striped
                     density="compact"
-                    className="actions-pinned-table"
+                    className="yj-data-table right-pinned-actions-table task-center-table"
                   />
                 ) : (
                   <EmptyState

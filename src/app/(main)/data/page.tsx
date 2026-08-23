@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Checkbox, Input } from '@schema/ui-kit';
+import { Button, Checkbox, DataTable, Input, type Column } from '@schema/ui-kit';
 import {
   AlertTriangle, CheckCircle2, Cloud, Database, Download, HardDrive,
   Loader2, Pencil, RefreshCw, Search, Trash2, Upload, XCircle,
@@ -34,6 +34,7 @@ const statusMeta = {
   completed: { label: '可用', className: 'bg-success-subtle text-success-fg', icon: CheckCircle2 },
   failed: { label: '失败', className: 'bg-danger-subtle text-danger-fg', icon: XCircle },
   missing: { label: '文件缺失', className: 'bg-danger-subtle text-danger-fg', icon: AlertTriangle },
+  deleting: { label: '删除中', className: 'bg-canvas-subtle text-fg-muted', icon: Loader2 },
   deleted: { label: '已删除', className: 'bg-canvas-subtle text-fg-muted', icon: Trash2 },
 } as const;
 
@@ -44,7 +45,7 @@ function assetStatus(asset: DataAsset, progress?: number) {
   return (
     <div className="min-w-[112px]">
       <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${isActiveUpload ? statusMeta.uploading.className : meta.className}`}>
-        <Icon className={`h-3.5 w-3.5 ${isActiveUpload || asset.status === 'uploading' ? 'animate-spin' : ''}`} />
+        <Icon className={`h-3.5 w-3.5 ${isActiveUpload || asset.status === 'uploading' || asset.status === 'deleting' ? 'animate-spin' : ''}`} />
         {isActiveUpload ? `上传中 ${progress}%` : meta.label}
       </span>
       {isActiveUpload && <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div>}
@@ -88,6 +89,8 @@ export default function DataCenterPage() {
         getUploadStorageStats(),
       ]);
       if (requestId !== loadRequestRef.current) return;
+      // BED files are managed only in Workflow Center. Storage stats remain
+      // the unfiltered organization aggregate so BED still consumes quota.
       setAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed'));
       setConfig(configResult);
       setStorageStats(statsResult);
@@ -232,8 +235,111 @@ export default function DataCenterPage() {
     }
   };
 
+  const columns: Column<DataAsset>[] = [
+    {
+      id: 'file',
+      header: '文件',
+      accessor: (asset) => <HoverText value={asset.file_name} className="font-medium text-fg-default" />,
+      width: 260,
+      minWidth: 260,
+    },
+    {
+      id: 'internalId',
+      header: '内部编号',
+      accessor: (asset) => asset.internal_id
+        ? <HoverText value={asset.internal_id} className="font-medium text-fg-default" />
+        : <span className="text-fg-muted">-</span>,
+      width: 160,
+      minWidth: 160,
+    },
+    {
+      id: 'uuid',
+      header: 'UUID',
+      accessor: (asset) => <IdCell id={asset.id} truncateLength={8} />,
+      width: 150,
+      minWidth: 150,
+    },
+    {
+      id: 'readType',
+      header: 'Read',
+      accessor: (asset) => <span className="uppercase">{asset.read_type}</span>,
+      width: 80,
+      minWidth: 80,
+      align: 'center',
+    },
+    {
+      id: 'size',
+      header: '大小',
+      accessor: (asset) => <span className="tabular-nums text-fg-muted">{formatBytes(asset.file_size)}</span>,
+      width: 100,
+      minWidth: 100,
+      align: 'right',
+    },
+    {
+      id: 'provider',
+      header: '存储',
+      accessor: (asset) => (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-fg-muted">
+          {asset.provider === 's3' ? <Cloud className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}
+          {asset.provider === 's3' ? '对象存储' : '本地'}
+        </span>
+      ),
+      width: 120,
+      minWidth: 120,
+    },
+    {
+      id: 'status',
+      header: '状态',
+      accessor: (asset) => assetStatus(asset, fileProgress[asset.id]),
+      width: 140,
+      minWidth: 140,
+    },
+    {
+      id: 'createdAt',
+      header: '上传时间',
+      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{formatTime(asset.created_at)}</span>,
+      width: 170,
+      minWidth: 170,
+    },
+    {
+      id: 'expiresAt',
+      header: '到期时间',
+      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</span>,
+      width: 170,
+      minWidth: 170,
+    },
+    {
+      id: 'actions',
+      header: '操作',
+      accessor: (asset) => (
+        <div className="inline-flex items-center justify-center gap-1">
+          {config?.download_allowed && (
+            <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}>
+              <Download className="h-4 w-4" />
+            </button>
+          )}
+          {(asset.status === 'pending' || asset.status === 'failed') && (
+            <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="重新上传" aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}>
+              <Upload className="h-4 w-4" />
+            </button>
+          )}
+          <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg" title="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}>
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label="删除" onClick={() => setDeleting(asset)}>
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+      width: 120,
+      minWidth: 120,
+      align: 'center',
+      pinned: 'right',
+    },
+  ];
+
   return (
-    <div className="h-full overflow-auto p-6 xl:p-8">
+    <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="yj-page-title">数据中心</h2>
@@ -274,7 +380,7 @@ export default function DataCenterPage() {
         </div>
       )}
 
-      <div className="yj-panel overflow-hidden">
+      <div className="yj-panel min-w-0 overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
           <div className="flex min-w-[280px] flex-1 items-center gap-2">
             <div className="w-full max-w-[420px]">
@@ -287,48 +393,19 @@ export default function DataCenterPage() {
           <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { if (!uploading) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
         </div>
 
-        <div className="actions-pinned-table overflow-x-auto">
-          <table className="w-full min-w-[1470px] table-fixed border-collapse text-sm">
-            <colgroup>
-              <col className="w-[260px]" /><col className="w-[160px]" /><col className="w-[150px]" />
-              <col className="w-[80px]" /><col className="w-[100px]" /><col className="w-[120px]" />
-              <col className="w-[140px]" /><col className="w-[170px]" /><col className="w-[170px]" />
-              <col className="w-[120px]" />
-            </colgroup>
-            <thead className="border-y border-border-default bg-canvas-subtle text-xs text-fg-muted">
-              <tr>
-                <th className="px-5 py-3 text-left align-middle font-medium">文件</th><th className="px-4 py-3 text-left align-middle font-medium">内部编号</th><th className="px-4 py-3 text-left align-middle font-medium">UUID</th>
-                <th className="px-4 py-3 text-center align-middle font-medium">Read</th><th className="px-4 py-3 text-right align-middle font-medium">大小</th>
-                <th className="px-4 py-3 text-left align-middle font-medium">存储</th><th className="px-4 py-3 text-left align-middle font-medium">状态</th>
-                <th className="px-4 py-3 text-left align-middle font-medium">上传时间</th><th className="px-4 py-3 text-left align-middle font-medium">到期时间</th>
-                <th className="sticky right-0 z-20 whitespace-nowrap bg-canvas-subtle px-5 py-3 text-center align-middle font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-default">
-              {!loading && assets.map((asset) => (
-                <tr key={asset.id} className="hover:bg-canvas-subtle">
-                  <td className="max-w-0 px-5 py-3 align-middle font-medium text-fg-default"><HoverText value={asset.file_name} className="font-medium text-fg-default" /></td>
-                  <td className="max-w-0 px-4 py-3 align-middle">{asset.internal_id ? <HoverText value={asset.internal_id} className="font-medium text-fg-default" /> : <span className="text-fg-muted">-</span>}</td>
-                  <td className="px-4 py-3 align-middle"><IdCell id={asset.id} truncateLength={8} /></td>
-                  <td className="px-4 py-3 text-center align-middle uppercase text-fg-default">{asset.read_type}</td>
-                  <td className="px-4 py-3 text-right align-middle tabular-nums text-fg-muted">{formatBytes(asset.file_size)}</td>
-                  <td className="px-4 py-3 align-middle"><span className="inline-flex items-center gap-1.5 text-fg-muted">{asset.provider === 's3' ? <Cloud className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}{asset.provider === 's3' ? '对象存储' : '本地'}</span></td>
-                  <td className="px-4 py-3 align-middle">{assetStatus(asset, fileProgress[asset.id])}</td>
-                  <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{formatTime(asset.created_at)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</td>
-                  <td className="sticky right-0 z-10 whitespace-nowrap bg-canvas-default px-5 py-3 text-center align-middle"><div className="inline-flex items-center justify-center gap-1">
-                    {config?.download_allowed && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}><Download className="h-4 w-4" /></button>}
-                    {(asset.status === 'pending' || asset.status === 'failed') && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="重新上传" aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}><Upload className="h-4 w-4" /></button>}
-                    <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg" title="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}><Pencil className="h-4 w-4" /></button>
-                    <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label="删除" onClick={() => setDeleting(asset)}><Trash2 className="h-4 w-4" /></button>
-                  </div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {loading && <div className="flex h-48 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />正在加载数据资产</div>}
-          {!loading && assets.length === 0 && <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">暂无数据资产</p></div>}
-        </div>
+        {loading ? (
+          <div className="flex h-48 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />正在加载数据资产</div>
+        ) : assets.length > 0 ? (
+          <DataTable
+            data={assets}
+            columns={columns}
+            rowKey="id"
+            density="compact"
+            className="yj-data-table right-pinned-actions-table data-center-table"
+          />
+        ) : (
+          <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">暂无数据资产</p></div>
+        )}
       </div>
       <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />
 

@@ -1,6 +1,6 @@
 import { api, requestPairedUploadJob, requestPresignedUploadUrl, uploadToCOS, confirmUpload } from './api';
 
-export type DataAssetStatus = 'pending' | 'uploading' | 'completed' | 'failed' | 'missing' | 'deleted';
+export type DataAssetStatus = 'pending' | 'uploading' | 'completed' | 'failed' | 'missing' | 'deleting' | 'deleted';
 export type DataReadType = 'read1' | 'read2' | 'single' | 'bed';
 
 export interface DataAsset {

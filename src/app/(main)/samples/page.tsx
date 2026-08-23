@@ -545,7 +545,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
               onRowDoubleClick={(row) => setEditingSample(row)}
               stickyHeader
               density="comfortable"
-              className="yj-data-table sample-management-table"
+              className="yj-data-table right-pinned-actions-table sample-management-table"
             />
           ) : (
             <div className="yj-empty-state">

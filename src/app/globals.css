@@ -574,35 +574,51 @@
     line-height: 1.35;
   }
 
-  .actions-pinned-table thead th:last-child,
-  .actions-pinned-table tbody td:last-child {
+  .right-pinned-actions-table thead th:last-child,
+  .right-pinned-actions-table tbody td:last-child {
     position: sticky !important;
     right: 0 !important;
     box-shadow: -1px 0 0 var(--yj-border-subtle);
   }
 
-  .actions-pinned-table {
+  .right-pinned-actions-table {
     position: relative;
-    overflow-x: auto;
-    overflow-y: hidden;
+    isolation: isolate;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-x: contain;
   }
 
-  .actions-pinned-table table {
+  .right-pinned-actions-table table {
     overflow: visible !important;
     border-collapse: separate !important;
     border-spacing: 0;
   }
 
-  .actions-pinned-table thead th:last-child {
-    z-index: 31;
+  .data-center-table table {
+    min-width: 1470px;
+    table-layout: fixed;
   }
 
-  .actions-pinned-table tbody td:last-child {
+  .task-center-table table {
+    min-width: 1170px;
+    table-layout: fixed;
+  }
+
+  .right-pinned-actions-table thead th:last-child {
+    z-index: 31;
+    background: var(--yj-panel-subtle);
+  }
+
+  .right-pinned-actions-table tbody td:last-child {
     z-index: 21;
     background: var(--yj-panel-bg);
   }
 
-  .actions-pinned-table tbody tr:hover td:last-child {
+  .right-pinned-actions-table tbody tr:hover td:last-child {
     background: var(--yj-panel-subtle);
   }
 
