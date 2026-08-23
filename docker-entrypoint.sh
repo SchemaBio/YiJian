@@ -2,7 +2,10 @@
 set -eu
 
 API_URL="${YIJIAN_API_URL:-${NEXT_PUBLIC_API_URL:-/api}}"
-BACKEND="${YIJIAN_BACKEND:-octopus}"
+# Prefer the canonical variable, but keep the deployed legacy flavor variable
+# authoritative when it is explicitly present. Older compose files set a
+# Dockerfile default for YIJIAN_BACKEND and override only BACKEND_FLAVOR.
+BACKEND="${YIJIAN_BACKEND_FLAVOR:-${YIJIAN_BACKEND:-octopus}}"
 SUPPORT_EMAIL="${YIJIAN_SUPPORT_EMAIL:-${NEXT_PUBLIC_SUPPORT_EMAIL:-support@schemabio.com}}"
 case "$BACKEND" in
   octopus|squid) ;;

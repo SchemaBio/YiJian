@@ -35,6 +35,11 @@ interface AssetListResponse {
   total_pages: number;
 }
 
+export interface UploadStorageStats {
+  total: number;
+  total_bytes: number;
+}
+
 export interface UploadFileProgress {
   fileId: string;
   fileName: string;
@@ -61,6 +66,10 @@ export async function listDataAssets(search = '', filters?: { readType?: DataRea
 
 export function getDataCenterConfig(): Promise<DataCenterConfig> {
   return api.get<DataCenterConfig>('/v1/data/config');
+}
+
+export function getUploadStorageStats(): Promise<UploadStorageStats> {
+  return api.get<UploadStorageStats>('/v1/upload/files/stats');
 }
 
 async function uploadOne(file: File, readType: DataReadType, uploadPolicyAcknowledged: boolean, internalId: string, onProgress: (value: number) => void, callbacks?: UploadCallbacks) {

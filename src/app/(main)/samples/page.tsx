@@ -299,10 +299,10 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     {
       id: 'uuid',
       header: 'UUID',
-      accessor: (row) => <IdCell id={row.id} truncateLength={12} />,
-      width: 142,
-      minWidth: 132,
-      maxWidth: 190,
+      accessor: (row) => <IdCell id={row.id} truncateLength={row.id.split('-', 1)[0].length} />,
+      width: 112,
+      minWidth: 104,
+      maxWidth: 140,
     },
     {
       id: 'gender',

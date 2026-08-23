@@ -94,7 +94,7 @@ export function getRuntimeCoreApiPrefix(): string {
 export function getRuntimeBackendFlavor(): 'octopus' | 'squid' {
   const value = typeof window !== 'undefined'
     ? window.__YIJIAN_CONFIG__?.BACKEND
-    : process.env.YIJIAN_BACKEND || process.env.NEXT_PUBLIC_BACKEND;
+    : process.env.YIJIAN_BACKEND_FLAVOR || process.env.YIJIAN_BACKEND || process.env.NEXT_PUBLIC_BACKEND;
   return value === 'squid' ? 'squid' : 'octopus';
 }
 

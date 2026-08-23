@@ -7,11 +7,13 @@ import {
   Loader2, Pencil, RefreshCw, Search, Trash2, Upload, XCircle,
 } from 'lucide-react';
 import {
-  deleteDataAsset, downloadDataAsset, getDataCenterConfig, listDataAssets,
+  deleteDataAsset, downloadDataAsset, getDataCenterConfig, getUploadStorageStats, listDataAssets,
   retryDataAsset, updateDataAsset, uploadDataFiles, type DataAsset, type DataCenterConfig,
-  type UploadFileProgress,
+  type UploadFileProgress, type UploadStorageStats,
 } from '@/lib/data-assets';
 import { AppModal, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/components/shared';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -51,8 +53,10 @@ function assetStatus(asset: DataAsset, progress?: number) {
 }
 
 export default function DataCenterPage() {
+  const { currentOrg } = useAuth();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
+  const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
   const [search, setSearch] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -78,10 +82,15 @@ export default function DataCenterPage() {
     setLoading(true);
     setError('');
     try {
-      const [assetResult, configResult] = await Promise.all([listDataAssets(query), getDataCenterConfig()]);
+      const [assetResult, configResult, statsResult] = await Promise.all([
+        listDataAssets(query),
+        getDataCenterConfig(),
+        getUploadStorageStats(),
+      ]);
       if (requestId !== loadRequestRef.current) return;
       setAssets(assetResult.items ?? []);
       setConfig(configResult);
+      setStorageStats(statsResult);
     } catch (err) {
       if (requestId !== loadRequestRef.current) return;
       setError(err instanceof Error ? err.message : '加载数据资产失败');
@@ -102,8 +111,22 @@ export default function DataCenterPage() {
     return () => window.removeEventListener('beforeunload', warnAboutActiveUpload);
   }, [uploading]);
 
-  const totalBytes = React.useMemo(() => assets.reduce((sum, asset) => sum + asset.file_size, 0), [assets]);
+  const totalBytes = storageStats?.total_bytes ?? 0;
   const readyCount = React.useMemo(() => assets.filter((asset) => asset.status === 'completed').length, [assets]);
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const storageQuotaBytes = isSaaS && (currentOrg?.storageQuotaBytes ?? 0) > 0
+    ? currentOrg?.storageQuotaBytes ?? null
+    : null;
+  const storageQuotaLabel = storageQuotaBytes ? formatBytes(storageQuotaBytes) : '无限制';
+  const storageQuotaReached = storageQuotaBytes !== null && totalBytes >= storageQuotaBytes;
+  const storageUsagePercent = storageQuotaBytes === null ? null : (totalBytes / storageQuotaBytes) * 100;
+  const storageUsageTone = storageUsagePercent === null
+    ? null
+    : storageUsagePercent >= 90
+      ? 'danger' as const
+      : storageUsagePercent >= 60
+        ? 'warning' as const
+        : 'safe' as const;
 
   const handleDownload = async (asset: DataAsset) => {
     if (!config?.download_allowed) return;
@@ -126,6 +149,11 @@ export default function DataCenterPage() {
     if (config?.temporary && !uploadPolicyAcknowledged) { setError('请先勾选“我已确认”'); return; }
     const oversizedFile = [read1, read2].find((file) => file && config?.temporary && config.max_file_size_bytes > 0 && file.size > config.max_file_size_bytes);
     if (oversizedFile) { setError(`${oversizedFile.name} 超过 SaaS 单文件 20 GB 限制`); return; }
+    const selectedBytes = (read1?.size ?? 0) + (read2?.size ?? 0);
+    if (storageQuotaBytes !== null && totalBytes + selectedBytes > storageQuotaBytes) {
+      setError(`所选文件将超过存储总容量（已用 ${formatBytes(totalBytes)}，总容量 ${formatBytes(storageQuotaBytes)}）`);
+      return;
+    }
     setUploading(true);
     setProgress(0);
     setError('');
@@ -214,7 +242,15 @@ export default function DataCenterPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <MetricTile label="数据资产" value={assets.length} icon={<Database className="h-4 w-4" />} />
           <MetricTile label="可用文件" value={readyCount} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
-          <MetricTile label="占用空间" value={formatBytes(totalBytes)} icon={<HardDrive className="h-4 w-4" />} tone="info" />
+          <MetricTile
+            label="占用空间 / 总容量"
+            value={`${formatBytes(totalBytes)} / ${storageQuotaLabel}`}
+            icon={<HardDrive className="h-4 w-4" />}
+            tone="info"
+            capacityFill={storageUsagePercent !== null && storageUsageTone
+              ? { percent: storageUsagePercent, tone: storageUsageTone }
+              : undefined}
+          />
         </div>
       </div>
 
@@ -231,6 +267,12 @@ export default function DataCenterPage() {
       )}
 
       {error && <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
+
+      {storageQuotaReached && (
+        <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+          存储总容量已用尽，请删除不再需要的数据，或联系 SaaS 管理员调整容量。
+        </div>
+      )}
 
       <div className="yj-panel overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
@@ -298,12 +340,13 @@ export default function DataCenterPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => { setUploadOpen(false); if (!uploading) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploading ? '隐藏到数据中心' : '取消'}</Button>
-            <Button variant="primary" disabled={uploading || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
+            <Button variant="primary" disabled={uploading || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
           </>
         }
       >
         <div className="space-y-6">
           {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
+          {isSaaS && <p className="text-xs text-fg-muted">当前已用 {formatBytes(totalBytes)}，总容量 {storageQuotaLabel}。</p>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
             <div className="mb-4">
