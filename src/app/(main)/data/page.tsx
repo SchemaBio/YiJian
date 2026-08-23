@@ -4,13 +4,14 @@ import * as React from 'react';
 import { Button, Checkbox, Input } from '@schema/ui-kit';
 import {
   AlertTriangle, CheckCircle2, Cloud, Database, Download, HardDrive,
-  Loader2, RefreshCw, Search, Trash2, Upload, XCircle,
+  Loader2, Pencil, RefreshCw, Search, Trash2, Upload, XCircle,
 } from 'lucide-react';
 import {
   deleteDataAsset, downloadDataAsset, getDataCenterConfig, listDataAssets,
-  uploadDataFiles, type DataAsset, type DataCenterConfig,
+  updateDataAsset, uploadDataFiles, type DataAsset, type DataCenterConfig,
+  type UploadFileProgress,
 } from '@/lib/data-assets';
-import { AppModal, MetricTile, ModalSectionHeading } from '@/components/shared';
+import { AppModal, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/components/shared';
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -34,14 +35,18 @@ const statusMeta = {
   deleted: { label: '已删除', className: 'bg-canvas-subtle text-fg-muted', icon: Trash2 },
 } as const;
 
-function assetStatus(asset: DataAsset) {
+function assetStatus(asset: DataAsset, progress?: number) {
   const meta = statusMeta[asset.status] ?? statusMeta.failed;
   const Icon = meta.icon;
+  const isActiveUpload = progress !== undefined && progress < 100;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${meta.className}`}>
-      <Icon className={`h-3.5 w-3.5 ${asset.status === 'uploading' ? 'animate-spin' : ''}`} />
-      {meta.label}
-    </span>
+    <div className="min-w-[112px]">
+      <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${isActiveUpload ? statusMeta.uploading.className : meta.className}`}>
+        <Icon className={`h-3.5 w-3.5 ${isActiveUpload || asset.status === 'uploading' ? 'animate-spin' : ''}`} />
+        {isActiveUpload ? `上传中 ${progress}%` : meta.label}
+      </span>
+      {isActiveUpload && <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div>}
+    </div>
   );
 }
 
@@ -54,10 +59,15 @@ export default function DataCenterPage() {
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [read1, setRead1] = React.useState<File | null>(null);
   const [read2, setRead2] = React.useState<File | null>(null);
+  const [internalId, setInternalId] = React.useState('');
   const [uploading, setUploading] = React.useState(false);
   const [uploadPolicyAcknowledged, setUploadPolicyAcknowledged] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
+  const [fileProgress, setFileProgress] = React.useState<Record<string, number>>({});
   const [deleting, setDeleting] = React.useState<DataAsset | null>(null);
+  const [editing, setEditing] = React.useState<DataAsset | null>(null);
+  const [editingInternalId, setEditingInternalId] = React.useState('');
+  const [savingEdit, setSavingEdit] = React.useState(false);
 
   const load = React.useCallback(async (query = '') => {
     setLoading(true);
@@ -74,6 +84,16 @@ export default function DataCenterPage() {
   }, []);
 
   React.useEffect(() => { void load(''); }, [load]);
+
+  React.useEffect(() => {
+    if (!uploading) return;
+    const warnAboutActiveUpload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnAboutActiveUpload);
+    return () => window.removeEventListener('beforeunload', warnAboutActiveUpload);
+  }, [uploading]);
 
   const totalBytes = React.useMemo(() => assets.reduce((sum, asset) => sum + asset.file_size, 0), [assets]);
   const readyCount = React.useMemo(() => assets.filter((asset) => asset.status === 'completed').length, [assets]);
@@ -103,17 +123,27 @@ export default function DataCenterPage() {
     setProgress(0);
     setError('');
     try {
-      await uploadDataFiles(read1, read2, uploadPolicyAcknowledged, setProgress);
+      await uploadDataFiles(read1, read2, uploadPolicyAcknowledged, internalId, setProgress, {
+        onStarted: (files: UploadFileProgress[]) => {
+          setFileProgress(Object.fromEntries(files.map((file) => [file.fileId, 0])));
+          void load(search);
+        },
+        onFileProgress: (file: UploadFileProgress) => {
+          setFileProgress((current) => ({ ...current, [file.fileId]: file.progress }));
+        },
+      });
       setProgress(100);
       setUploadOpen(false);
       setRead1(null);
       setRead2(null);
+      setInternalId('');
       setUploadPolicyAcknowledged(false);
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
     } finally {
       setUploading(false);
+      setFileProgress({});
     }
   };
 
@@ -126,6 +156,21 @@ export default function DataCenterPage() {
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editing) return;
+    setSavingEdit(true);
+    setError('');
+    try {
+      await updateDataAsset(editing.id, editingInternalId);
+      setEditing(null);
+      await load(search);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新内部编号失败');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -161,39 +206,46 @@ export default function DataCenterPage() {
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
           <div className="flex min-w-[280px] flex-1 items-center gap-2">
             <div className="w-full max-w-[420px]">
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文件名或 UUID" leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文件名、内部编号或 UUID" leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
             </div>
             <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default" title="刷新" aria-label="刷新" onClick={() => void load(search)}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>上传数据</Button>
+          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { if (!uploading) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1120px] table-fixed border-collapse text-sm">
+            <colgroup>
+              <col className="w-[22%]" /><col className="w-[12%]" /><col className="w-[14%]" />
+              <col className="w-[7%]" /><col className="w-[9%]" /><col className="w-[12%]" />
+              <col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[4%]" />
+            </colgroup>
             <thead className="border-y border-border-default bg-canvas-subtle text-xs text-fg-muted">
               <tr>
-                <th className="px-5 py-3 font-medium">文件</th><th className="px-4 py-3 font-medium">UUID</th>
-                <th className="px-4 py-3 font-medium">Read</th><th className="px-4 py-3 font-medium">大小</th>
-                <th className="px-4 py-3 font-medium">存储</th><th className="px-4 py-3 font-medium">状态</th>
-                <th className="px-4 py-3 font-medium">上传时间</th><th className="px-4 py-3 font-medium">到期时间</th>
-                <th className="px-5 py-3 text-right font-medium">操作</th>
+                <th className="px-5 py-3 text-left align-middle font-medium">文件</th><th className="px-4 py-3 text-left align-middle font-medium">内部编号</th><th className="px-4 py-3 text-left align-middle font-medium">UUID</th>
+                <th className="px-4 py-3 text-center align-middle font-medium">Read</th><th className="px-4 py-3 text-right align-middle font-medium">大小</th>
+                <th className="px-4 py-3 text-left align-middle font-medium">存储</th><th className="px-4 py-3 text-left align-middle font-medium">状态</th>
+                <th className="px-4 py-3 text-left align-middle font-medium">上传时间</th><th className="px-4 py-3 text-left align-middle font-medium">到期时间</th>
+                <th className="px-5 py-3 text-right align-middle font-medium">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-default">
               {!loading && assets.map((asset) => (
                 <tr key={asset.id} className="hover:bg-canvas-subtle">
-                  <td className="max-w-[260px] px-5 py-3 font-medium text-fg-default"><span className="block truncate" title={asset.file_name}>{asset.file_name}</span></td>
-                  <td className="px-4 py-3 font-mono text-xs text-fg-muted"><span title={asset.id}>{asset.id.slice(0, 8)}...</span></td>
-                  <td className="px-4 py-3 uppercase text-fg-default">{asset.read_type}</td>
-                  <td className="px-4 py-3 tabular-nums text-fg-muted">{formatBytes(asset.file_size)}</td>
-                  <td className="px-4 py-3"><span className="inline-flex items-center gap-1.5 text-fg-muted">{asset.provider === 's3' ? <Cloud className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}{asset.provider === 's3' ? '对象存储' : '本地'}</span></td>
-                  <td className="px-4 py-3">{assetStatus(asset)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-fg-muted">{formatTime(asset.created_at)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</td>
-                  <td className="px-5 py-3"><div className="flex justify-end gap-1">
+                  <td className="max-w-0 px-5 py-3 align-middle font-medium text-fg-default"><HoverText value={asset.file_name} className="font-medium text-fg-default" /></td>
+                  <td className="max-w-0 px-4 py-3 align-middle">{asset.internal_id ? <HoverText value={asset.internal_id} className="font-medium text-fg-default" /> : <span className="text-fg-muted">-</span>}</td>
+                  <td className="px-4 py-3 align-middle"><IdCell id={asset.id} truncateLength={8} /></td>
+                  <td className="px-4 py-3 text-center align-middle uppercase text-fg-default">{asset.read_type}</td>
+                  <td className="px-4 py-3 text-right align-middle tabular-nums text-fg-muted">{formatBytes(asset.file_size)}</td>
+                  <td className="px-4 py-3 align-middle"><span className="inline-flex items-center gap-1.5 text-fg-muted">{asset.provider === 's3' ? <Cloud className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}{asset.provider === 's3' ? '对象存储' : '本地'}</span></td>
+                  <td className="px-4 py-3 align-middle">{assetStatus(asset, fileProgress[asset.id])}</td>
+                  <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{formatTime(asset.created_at)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</td>
+                  <td className="px-5 py-3 align-middle"><div className="flex justify-end gap-1">
                     {config?.download_allowed && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}><Download className="h-4 w-4" /></button>}
+                    <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg" title="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}><Pencil className="h-4 w-4" /></button>
                     <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label="删除" onClick={() => setDeleting(asset)}><Trash2 className="h-4 w-4" /></button>
                   </div></td>
                 </tr>
@@ -209,10 +261,10 @@ export default function DataCenterPage() {
         open={uploadOpen}
         size="large"
         title="上传测序数据"
-        onOpenChange={(open) => { if (!uploading) { setUploadOpen(open); if (!open) setUploadPolicyAcknowledged(false); } }}
+        onOpenChange={(open) => { setUploadOpen(open); if (!open && !uploading) setUploadPolicyAcknowledged(false); }}
         footer={
           <>
-            <Button variant="secondary" disabled={uploading} onClick={() => { setUploadOpen(false); setUploadPolicyAcknowledged(false); }}>取消</Button>
+            <Button variant="secondary" onClick={() => { setUploadOpen(false); if (!uploading) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploading ? '隐藏到数据中心' : '取消'}</Button>
             <Button variant="primary" disabled={uploading || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
           </>
         }
@@ -221,12 +273,32 @@ export default function DataCenterPage() {
           {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号（推荐）</label>
+              <Input value={internalId} disabled={uploading} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder="填写样本中心的内部编号，如 SAMPLE-001" />
+              <p className="mt-1.5 text-xs text-fg-muted">自动匹配将优先使用此编号；未填写时才根据 FASTQ 文件名匹配。</p>
+            </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
               <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
             </div>
           </section>
           {uploading && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title="上传进度" description="请保持页面打开，文件完成后会自动登记到数据中心。" /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>正在上传</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
+        </div>
+      </AppModal>
+
+      <AppModal
+        open={editing !== null}
+        size="small"
+        title="编辑内部编号"
+        onOpenChange={(open) => { if (!open && !savingEdit) setEditing(null); }}
+        footer={<><Button variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>取消</Button><Button variant="primary" disabled={savingEdit} onClick={() => void handleEdit()}>{savingEdit ? '保存中...' : '保存'}</Button></>}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-fg-muted">{editing?.file_name}</p>
+          <label className="block text-xs font-medium text-fg-muted">样本中心内部编号</label>
+          <Input value={editingInternalId} maxLength={100} disabled={savingEdit} onChange={(event) => setEditingInternalId(event.target.value)} placeholder="如 SAMPLE-001" />
+          <p className="text-xs leading-5 text-fg-muted">保存后自动匹配会优先使用该编号；清空后恢复文件名匹配。</p>
         </div>
       </AppModal>
 

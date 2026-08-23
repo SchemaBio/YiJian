@@ -10,6 +10,20 @@ interface IdCellProps {
   truncateLength?: number;
 }
 
+interface HoverTextProps {
+  value: string;
+  className?: string;
+}
+
+/** Truncated text with the same styled hover card used for UUIDs. */
+export function HoverText({ value, className = '' }: HoverTextProps) {
+  return (
+    <Tooltip content={value} placement="top" variant="default">
+      <span className={`block truncate ${className}`}>{value}</span>
+    </Tooltip>
+  );
+}
+
 /**
  * UUID display component with click-to-copy functionality.
  * Shows truncated ID with tooltip showing full value.

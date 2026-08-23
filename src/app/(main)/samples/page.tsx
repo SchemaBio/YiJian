@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { NewSampleModal, EditSampleModal, DataLinkModal } from './components';
 import type { NewSampleFormData, EditSampleFormData } from './components';
-import { ConfirmDialog, IdCell, MetricTile } from '@/components/shared';
+import { ConfirmDialog, HoverText, IdCell, MetricTile } from '@/components/shared';
 import { api } from '@/lib/api';
 import { listSamples, normalizeSample, samplePayload } from '@/lib/samples';
 import type { Sample } from './types';
@@ -291,7 +291,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     {
       id: 'internalId',
       header: '内部编号',
-      accessor: (row) => <span className="block truncate text-sm font-semibold text-[var(--yj-text-strong)]" title={row.internalId}>{row.internalId}</span>,
+      accessor: (row) => <HoverText value={row.internalId} className="text-sm font-semibold text-[var(--yj-text-strong)]" />,
       width: 154,
       minWidth: 140,
       maxWidth: 220,

@@ -454,7 +454,8 @@ export async function requestPresignedUploadUrl(
   fileSize: number,
   readType: 'read1' | 'read2' | 'single' | 'bed' = 'single',
   referenceGenome?: 'GRCh37' | 'GRCh38',
-  uploadPolicyAcknowledged = false
+  uploadPolicyAcknowledged = false,
+  internalId?: string
 ): Promise<PresignedUploadResult> {
   const fileType = readType === 'bed'
     ? 'bed'
@@ -463,6 +464,7 @@ export async function requestPresignedUploadUrl(
       : 'fastq_paired';
   const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
     name: filename,
+	...(internalId?.trim() ? { internal_id: internalId.trim() } : {}),
     file_type: fileType,
     ...(readType === 'bed' && referenceGenome ? { reference_genome: referenceGenome } : {}),
     provider: 'local',
@@ -490,9 +492,10 @@ export interface PairedUploadJobResult {
   files: Array<PresignedUploadResult & { read_type: 'read1' | 'read2' }>;
 }
 
-export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAcknowledged: boolean, sampleId?: string): Promise<PairedUploadJobResult> {
+export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAcknowledged: boolean, sampleId?: string, internalId?: string): Promise<PairedUploadJobResult> {
   const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
     ...(sampleId ? { sample_id: sampleId } : {}),
+	...(internalId?.trim() ? { internal_id: internalId.trim() } : {}),
     name: `${r1.name} + ${r2.name}`,
     file_type: 'fastq_paired',
     provider: 'local',
@@ -625,6 +628,13 @@ export const api = {
       ...options,
       method: 'POST',
       body: data !== undefined ? JSON.stringify(data) : undefined,
+  }),
+
+  put: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     }),
 
   download: (endpoint: string, data?: unknown, options?: RequestOptions & { fallbackFilename?: string }) => {
@@ -639,13 +649,6 @@ export const api = {
       fallbackFilename
     );
   },
-
-  put: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
-    request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: data !== undefined ? JSON.stringify(data) : undefined,
-    }),
 
   patch: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {

@@ -3,7 +3,7 @@ export type { AppModalProps } from './AppModal';
 export { MetricTile } from './MetricTile';
 export { EmptyState } from './EmptyState';
 
-export { IdCell } from './IdCell';
+export { IdCell, HoverText } from './IdCell';
 
 export { StatusTag, StatusDot } from './StatusTag';
 
