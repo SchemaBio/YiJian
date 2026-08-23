@@ -129,6 +129,15 @@ export function updateDataAsset(id: string, internalId: string): Promise<DataAss
   return api.put<DataAsset>(`/v1/data/assets/${encodeURIComponent(id)}`, { internal_id: internalId.trim() });
 }
 
+export async function retryDataAsset(id: string, file: File, onProgress?: (value: number) => void): Promise<DataAsset> {
+  const session = await api.post<{ id: string; presigned_url?: string }>(`/v1/upload/files/${encodeURIComponent(id)}/retry`, {});
+  if (!session.presigned_url) throw new Error('未获取到重试上传地址');
+  await uploadToCOS(session.presigned_url, file, onProgress);
+  await confirmUpload(id);
+  const result = await api.get<DataAsset>(`/v1/data/assets/${encodeURIComponent(id)}`);
+  return result;
+}
+
 export function downloadDataAsset(id: string, filename: string) {
   return api.download(`/v1/data/assets/${encodeURIComponent(id)}/download`, undefined, {
     method: 'GET', fallbackFilename: filename,

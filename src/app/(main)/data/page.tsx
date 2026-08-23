@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
   deleteDataAsset, downloadDataAsset, getDataCenterConfig, listDataAssets,
-  updateDataAsset, uploadDataFiles, type DataAsset, type DataCenterConfig,
+  retryDataAsset, updateDataAsset, uploadDataFiles, type DataAsset, type DataCenterConfig,
   type UploadFileProgress,
 } from '@/lib/data-assets';
 import { AppModal, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/components/shared';
@@ -68,18 +68,25 @@ export default function DataCenterPage() {
   const [editing, setEditing] = React.useState<DataAsset | null>(null);
   const [editingInternalId, setEditingInternalId] = React.useState('');
   const [savingEdit, setSavingEdit] = React.useState(false);
+  const [retryingId, setRetryingId] = React.useState<string | null>(null);
+  const retryInputRef = React.useRef<HTMLInputElement | null>(null);
+  const retryAssetIdRef = React.useRef<string | null>(null);
+  const loadRequestRef = React.useRef(0);
 
   const load = React.useCallback(async (query = '') => {
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     setError('');
     try {
       const [assetResult, configResult] = await Promise.all([listDataAssets(query), getDataCenterConfig()]);
+      if (requestId !== loadRequestRef.current) return;
       setAssets(assetResult.items ?? []);
       setConfig(configResult);
     } catch (err) {
+      if (requestId !== loadRequestRef.current) return;
       setError(err instanceof Error ? err.message : '加载数据资产失败');
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
   }, []);
 
@@ -174,6 +181,29 @@ export default function DataCenterPage() {
     }
   };
 
+  const handleRetryFile = async (file: File | undefined) => {
+    const asset = assets.find((item) => item.id === retryAssetIdRef.current);
+    if (!asset || !file) return;
+    if (file.name !== asset.file_name) {
+      setError(`请选择原文件：${asset.file_name}`);
+      retryAssetIdRef.current = null;
+      if (retryInputRef.current) retryInputRef.current.value = '';
+      return;
+    }
+    setRetryingId(asset.id);
+    setError('');
+    try {
+      await retryDataAsset(asset.id, file, (value) => setFileProgress((current) => ({ ...current, [asset.id]: value })));
+      await load(search);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '重试上传失败');
+    } finally {
+      setRetryingId(null);
+      retryAssetIdRef.current = null;
+      if (retryInputRef.current) retryInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="h-full overflow-auto p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
@@ -216,11 +246,12 @@ export default function DataCenterPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1120px] table-fixed border-collapse text-sm">
+          <table className="w-full min-w-[1470px] table-fixed border-collapse text-sm">
             <colgroup>
-              <col className="w-[22%]" /><col className="w-[12%]" /><col className="w-[14%]" />
-              <col className="w-[7%]" /><col className="w-[9%]" /><col className="w-[12%]" />
-              <col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[4%]" />
+              <col className="w-[260px]" /><col className="w-[160px]" /><col className="w-[150px]" />
+              <col className="w-[80px]" /><col className="w-[100px]" /><col className="w-[120px]" />
+              <col className="w-[140px]" /><col className="w-[170px]" /><col className="w-[170px]" />
+              <col className="w-[120px]" />
             </colgroup>
             <thead className="border-y border-border-default bg-canvas-subtle text-xs text-fg-muted">
               <tr>
@@ -228,7 +259,7 @@ export default function DataCenterPage() {
                 <th className="px-4 py-3 text-center align-middle font-medium">Read</th><th className="px-4 py-3 text-right align-middle font-medium">大小</th>
                 <th className="px-4 py-3 text-left align-middle font-medium">存储</th><th className="px-4 py-3 text-left align-middle font-medium">状态</th>
                 <th className="px-4 py-3 text-left align-middle font-medium">上传时间</th><th className="px-4 py-3 text-left align-middle font-medium">到期时间</th>
-                <th className="px-5 py-3 text-right align-middle font-medium">操作</th>
+                <th className="whitespace-nowrap px-5 py-3 text-center align-middle font-medium">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-default">
@@ -243,8 +274,9 @@ export default function DataCenterPage() {
                   <td className="px-4 py-3 align-middle">{assetStatus(asset, fileProgress[asset.id])}</td>
                   <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{formatTime(asset.created_at)}</td>
                   <td className="whitespace-nowrap px-4 py-3 align-middle text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</td>
-                  <td className="px-5 py-3 align-middle"><div className="flex justify-end gap-1">
+                  <td className="whitespace-nowrap px-5 py-3 text-center align-middle"><div className="inline-flex items-center justify-center gap-1">
                     {config?.download_allowed && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}><Download className="h-4 w-4" /></button>}
+                    {(asset.status === 'pending' || asset.status === 'failed') && <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="重新上传" aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}><Upload className="h-4 w-4" /></button>}
                     <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg" title="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}><Pencil className="h-4 w-4" /></button>
                     <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label="删除" onClick={() => setDeleting(asset)}><Trash2 className="h-4 w-4" /></button>
                   </div></td>
@@ -256,6 +288,7 @@ export default function DataCenterPage() {
           {!loading && assets.length === 0 && <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">暂无数据资产</p></div>}
         </div>
       </div>
+      <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />
 
       <AppModal
         open={uploadOpen}
