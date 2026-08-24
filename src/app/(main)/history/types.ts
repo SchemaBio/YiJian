@@ -21,6 +21,28 @@ export interface DetectionRecord {
   internalId: string;            // 内部编号
   reviewedAt: string;            // 审核时间
   reviewedBy: string;            // 审核人
+	 executionAttemptId?: string;
+	 variantFingerprint?: string;
+	 referenceGenome?: string;
+	 action?: 'REVIEWED' | 'REVOKED';
+	 timestampKnown?: boolean;
+}
+
+export interface ReviewEvent {
+  id: string;
+  taskUuid: string;
+  executionAttemptId: string;
+  importBatchId?: number;
+  variantType: string;
+  variantId: string;
+  variantFingerprint: string;
+  historyGroupKey?: string;
+  action: 'REVIEWED' | 'REVOKED';
+  actorEmail?: string;
+  referenceGenome?: string;
+  occurredAt?: string;
+  timestampKnown: boolean;
+  recordedAt: string;
 }
 
 // ============ SNP/Indel分组位点 ============
@@ -39,6 +61,8 @@ export interface GroupedSNVIndel {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ CNV片段分组位点 ============
@@ -58,6 +82,8 @@ export interface GroupedCNVSegment {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ CNV外显子分组位点 ============
@@ -77,6 +103,8 @@ export interface GroupedCNVExon {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ STR分组位点 ============
@@ -97,6 +125,8 @@ export interface GroupedSTR {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ MEI分组位点 ============
@@ -116,6 +146,8 @@ export interface GroupedMEI {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ 线粒体变异分组位点 ============
@@ -141,6 +173,8 @@ export interface GroupedMTVariant {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ UPD分组位点 ============
@@ -160,6 +194,8 @@ export interface GroupedUPDRegion {
   firstDetectedAt: string;
   lastDetectedAt: string;
   records: DetectionRecord[];
+	 referenceGenome?: string;
+	 hasUnknownReviewTime?: boolean;
 }
 
 // ============ 标签页类型 ============
@@ -195,6 +231,7 @@ export interface HistoryTableFilterState {
   sortDirection?: 'asc' | 'desc';
   page: number;
   pageSize: number;
+	includeRevoked?: boolean;
 }
 
 export const DEFAULT_HISTORY_FILTER_STATE: HistoryTableFilterState = {
@@ -202,6 +239,7 @@ export const DEFAULT_HISTORY_FILTER_STATE: HistoryTableFilterState = {
   filters: {},
   page: 1,
   pageSize: 20,
+	includeRevoked: false,
 };
 
 // ============ 分页结果 ============

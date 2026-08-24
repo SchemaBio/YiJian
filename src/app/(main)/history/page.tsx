@@ -91,6 +91,14 @@ export default function HistoryPage() {
           统计所有任务中已审核通过的位点，按变异类型分类展示
           </p>
         </div>
+		<label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
+			<input
+				type="checkbox"
+				checked={Boolean(filterState.includeRevoked)}
+				onChange={(event) => setFilterState((prev) => ({ ...prev, includeRevoked: event.target.checked, page: 1 }))}
+			/>
+			包含已撤销审核
+		</label>
       </div>
 
       <HistoryTabs activeTab={activeTab} onTabChange={handleTabChange}>

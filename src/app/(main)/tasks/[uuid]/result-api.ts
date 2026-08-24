@@ -531,10 +531,7 @@ export async function getGeneLists(): Promise<GeneListOption[]> {
 }
 
 export function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
-  if (!reviewed) {
-    return Promise.reject(new Error('Octopus review endpoint only supports marking a variant as reviewed.'));
-  }
-  return api.put(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/review`, { reviewed });
+	return api.put(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/review`, { reviewed });
 }
 
 export function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {

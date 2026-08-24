@@ -13,11 +13,27 @@ import type {
   GroupedUPDRegion,
   HistoryTableFilterState,
   PaginatedResult,
+	ReviewEvent,
   ACMGClassification,
   STRStatus,
   MEIType,
   UPDType,
 } from './types';
+
+export async function getReviewEvents(taskId: string): Promise<ReviewEvent[]> {
+  const response = await api.get<BackendPage<BackendRow>>(`/v1/tasks/${encodeURIComponent(taskId)}/results/review-events`, { params: { page: '1', page_size: '200' } });
+  const items = Array.isArray(response) ? response : (response.items ?? (Array.isArray(response.data) ? response.data : response.data?.items) ?? []);
+	return items.map((item) => ({
+		id: s(item.id), taskUuid: s(item.taskUuid ?? item.task_uuid), executionAttemptId: s(item.executionAttemptId ?? item.execution_attempt_id),
+		importBatchId: item.importBatchId !== undefined ? n(item.importBatchId) : (item.import_batch_id !== undefined ? n(item.import_batch_id) : undefined),
+		variantType: s(item.variantType ?? item.variant_type), variantId: s(item.variantId ?? item.variant_id),
+		variantFingerprint: s(item.variantFingerprint ?? item.variant_fingerprint), historyGroupKey: s(item.historyGroupKey ?? item.history_group_key) || undefined, action: s(item.action) === 'REVOKED' ? 'REVOKED' : 'REVIEWED',
+    actorEmail: s(item.actorEmail ?? item.actor_email) || undefined, referenceGenome: s(item.referenceGenome ?? item.reference_genome) || undefined,
+		occurredAt: s(item.occurredAt ?? item.occurred_at) || undefined,
+		timestampKnown: item.timestampKnown !== undefined ? Boolean(item.timestampKnown) : item.timestamp_known !== false,
+		recordedAt: s(item.recordedAt ?? item.recorded_at),
+  }));
+}
 
 export const ACMG_CONFIG: Record<ACMGClassification, { label: string; variant: 'danger' | 'warning' | 'neutral' | 'info' | 'success' }> = {
   Pathogenic: { label: '致病', variant: 'danger' },
@@ -172,6 +188,7 @@ function queryParams(filterState: HistoryTableFilterState): Record<string, strin
   if (filterState.searchQuery) params.searchQuery = filterState.searchQuery;
   if (filterState.sortColumn) params.sortColumn = filterState.sortColumn;
   if (filterState.sortDirection) params.sortDirection = filterState.sortDirection;
+	if (filterState.includeRevoked) params.includeRevoked = 'true';
   return params;
 }
 
@@ -196,6 +213,8 @@ function mapSNV(row: BackendRow): GroupedSNVIndel {
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
     records: Array.isArray(row.records) ? row.records as GroupedSNVIndel['records'] : [],
+		referenceGenome: s(row.referenceGenome),
+		hasUnknownReviewTime: Boolean(row.hasUnknownReviewTime),
   };
 }
 
@@ -214,6 +233,8 @@ function mapCNVSegment(row: BackendRow): GroupedCNVSegment {
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
     records: Array.isArray(row.records) ? row.records as GroupedCNVSegment['records'] : [],
+		referenceGenome: s(row.referenceGenome),
+		hasUnknownReviewTime: Boolean(row.hasUnknownReviewTime),
   };
 }
 
@@ -243,6 +264,8 @@ function mapSTR(row: BackendRow): GroupedSTR {
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
     records: Array.isArray(row.records) ? row.records as GroupedSTR['records'] : [],
+		referenceGenome: s(row.referenceGenome),
+		hasUnknownReviewTime: Boolean(row.hasUnknownReviewTime),
   };
 }
 
@@ -261,6 +284,8 @@ function mapMEI(row: BackendRow): GroupedMEI {
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
     records: Array.isArray(row.records) ? row.records as GroupedMEI['records'] : [],
+		referenceGenome: s(row.referenceGenome),
+	hasUnknownReviewTime: Boolean(row.hasUnknownReviewTime),
   };
 }
 
@@ -280,6 +305,8 @@ function mapMT(row: BackendRow): GroupedMTVariant {
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
     records: Array.isArray(row.records) ? row.records as GroupedMTVariant['records'] : [],
+		referenceGenome: s(row.referenceGenome),
+	hasUnknownReviewTime: Boolean(row.hasUnknownReviewTime),
   };
 }
 
@@ -297,6 +324,8 @@ function mapUPD(row: BackendRow): GroupedUPDRegion {
     firstDetectedAt: s(row.firstDetectedAt),
     lastDetectedAt: s(row.lastDetectedAt),
     records: Array.isArray(row.records) ? row.records as GroupedUPDRegion['records'] : [],
+		referenceGenome: s(row.referenceGenome),
+	hasUnknownReviewTime: Boolean(row.hasUnknownReviewTime),
   };
 }
 
