@@ -24,6 +24,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
   const [loading, setLoading] = React.useState(true);
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [generating, setGenerating] = React.useState(false);
+  const [generationStage, setGenerationStage] = React.useState<'idle' | 'preparing' | 'calling' | 'downloading'>('idle');
   const [exportingKind, setExportingKind] = React.useState<string>('');
   const [lastDownloadedFile, setLastDownloadedFile] = React.useState('');
   const [errorModalOpen, setErrorModalOpen] = React.useState(false);
@@ -63,9 +64,24 @@ export function ReportTab({ taskId }: ReportTabProps) {
     if (!template) return;
 
     setGenerating(true);
+    setGenerationStage('preparing');
     setLastDownloadedFile('');
     try {
+      let packageState = await reportsApi.prepareTaskResultPackage(taskId);
+      const deadline = Date.now() + 5 * 60 * 1000;
+      while (packageState.status !== 'ready') {
+        if (packageState.status === 'failed') {
+          throw new Error(packageState.error || '结果包生成失败，请重试。');
+        }
+        if (Date.now() >= deadline) {
+          throw new Error('结果包准备超时，请稍后重试。');
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        packageState = await reportsApi.getTaskResultPackage(taskId);
+      }
+      setGenerationStage('calling');
       const download = await reportsApi.generateTaskReport(taskId, template);
+      setGenerationStage('downloading');
       saveDownload(download);
       setLastDownloadedFile(download.filename);
       setSelectedTemplate('');
@@ -74,6 +90,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
       setErrorModalOpen(true);
     } finally {
       setGenerating(false);
+      setGenerationStage('idle');
     }
   };
 
@@ -147,6 +164,23 @@ export function ReportTab({ taskId }: ReportTabProps) {
             {generating ? '生成中...' : '生成并下载'}
           </Button>
         </div>
+        {generating && (
+          <div className="mt-4 rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-muted">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {generationStage === 'preparing' && '正在准备完整结果包（首次请求会生成并缓存 ZIP）...'}
+              {generationStage === 'calling' && '结果包已就绪，正在调用报告服务...'}
+              {generationStage === 'downloading' && '报告已生成，正在下载...'}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              <span className={generationStage === 'preparing' ? 'font-medium text-accent-emphasis' : 'text-fg-muted'}>1. 准备结果包</span>
+              <span>→</span>
+              <span className={generationStage === 'calling' ? 'font-medium text-accent-emphasis' : 'text-fg-muted'}>2. 调用报告服务</span>
+              <span>→</span>
+              <span className={generationStage === 'downloading' ? 'font-medium text-accent-emphasis' : 'text-fg-muted'}>3. 下载报告</span>
+            </div>
+          </div>
+        )}
         {templates.length === 0 && (
           <div className="mt-4 text-center py-6 text-sm text-fg-muted border border-border rounded-lg">暂无可用报告模板</div>
         )}

@@ -6,6 +6,20 @@ export interface ReportTemplate {
   description: string;
 }
 
+export type ResultPackageStatus = 'pending' | 'building' | 'ready' | 'failed';
+
+export interface ResultPackageState {
+  task_uuid: string;
+  execution_attempt_id: string;
+  status: ResultPackageStatus;
+  result_package_url?: string;
+  result_package_filename?: string;
+  result_package_size_bytes?: number;
+  result_package_expires_at?: string;
+  source_fingerprint?: string;
+  error?: string;
+}
+
 interface RawReportTemplate {
   id?: unknown;
   name?: unknown;
@@ -62,6 +76,7 @@ export const reportsApi = {
       `/v1/tasks/${encodeURIComponent(taskId)}/reports`,
       {
         name: template.name,
+        templateId: template.id,
         templateName: template.name,
       },
       {
@@ -71,6 +86,14 @@ export const reportsApi = {
         },
       }
     );
+  },
+
+  prepareTaskResultPackage(taskId: string): Promise<ResultPackageState> {
+    return api.post<ResultPackageState>(`/v1/tasks/${encodeURIComponent(taskId)}/result-package/prepare`, {});
+  },
+
+  getTaskResultPackage(taskId: string): Promise<ResultPackageState> {
+    return api.get<ResultPackageState>(`/v1/tasks/${encodeURIComponent(taskId)}/result-package`);
   },
 
   exportTaskFile(taskId: string, kind: 'excel' | 'parquet' | 'vcf' | 'mt-vcf'): Promise<DownloadResult> {

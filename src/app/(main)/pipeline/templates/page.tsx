@@ -15,10 +15,10 @@ import {
   TextArea,
   type Column,
 } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Server } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Server, Braces } from 'lucide-react';
 import { api } from '@/lib/api';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
+import { ReportEndpointExamples } from './ReportEndpointExamples';
 
 type TemplateStatus = 'active' | 'inactive';
 
@@ -60,7 +60,7 @@ function normalizeTemplate(value: unknown): ReportTemplate {
     id: String(raw.id ?? ''),
     name: typeof raw.name === 'string' ? raw.name : '',
     description: typeof raw.description === 'string' ? raw.description : '',
-    // Octopus intentionally does not expose apiEndpoint/apiKey on list responses.
+    // The owner can read the endpoint and key-presence flag, but never the key itself.
     apiEndpoint: typeof raw.apiEndpoint === 'string' ? raw.apiEndpoint : '',
     hasApiKey: raw.hasApiKey === true,
     status: isActive === false ? 'inactive' : 'active',
@@ -140,8 +140,6 @@ const initialFormData: FormData = {
 };
 
 export default function ReportTemplatesPage() {
-  const { isPlatformAdmin } = useAuth();
-  const canManage = isPlatformAdmin();
   const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -161,9 +159,9 @@ export default function ReportTemplatesPage() {
     try {
       setTemplates(await fetchReportTemplates());
     } catch (err) {
-      console.error('加载报告模板失败', err);
+      console.error('加载报告服务失败', err);
       setTemplates([]);
-      setError('加载报告模板失败，请稍后重试');
+      setError('加载报告服务失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -211,10 +209,6 @@ export default function ReportTemplatesPage() {
   };
 
   const handleEdit = (template: ReportTemplate) => {
-    if (!template.apiEndpoint) {
-      setError('当前账号只能读取公开模板摘要，无法编辑后端未返回的 API 端点。请使用平台管理员账号。');
-      return;
-    }
     setEditingId(template.id);
     setFormData({
       name: template.name,
@@ -269,7 +263,6 @@ export default function ReportTemplatesPage() {
     setTestingApi(true);
     setApiTestResult(null);
     setApiTestMessage('');
-    setApiTestMessage('');
 
     try {
       if (!isValidReportEndpoint(endpoint)) {
@@ -277,6 +270,7 @@ export default function ReportTemplatesPage() {
       }
       const result = await api.post<{ reachable: boolean; status_code: number }>('/v1/report-templates/validate-endpoint', {
         apiEndpoint: endpoint,
+        ...(editingId ? { templateId: editingId } : {}),
         ...(formData.apiKey.trim() ? { apiKey: formData.apiKey.trim() } : {}),
       });
       setApiTestResult('success');
@@ -296,6 +290,10 @@ export default function ReportTemplatesPage() {
       setError('请输入不含访问凭据或片段标识的 HTTPS 报告服务地址。');
       return;
     }
+    if (!editingId && !formData.apiKey.trim()) {
+      setError('认证 Key 为必填项，用于报告服务认证。');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -311,8 +309,8 @@ export default function ReportTemplatesPage() {
       setEditingId(null);
       setFormData(initialFormData);
     } catch (err) {
-      console.error('保存报告模板失败', err);
-      setError(err instanceof Error ? err.message : '保存报告模板失败：需要管理员权限，或请稍后重试');
+      console.error('保存报告服务失败', err);
+      setError(err instanceof Error ? err.message : '保存报告服务失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -321,7 +319,7 @@ export default function ReportTemplatesPage() {
   const columns: Column<ReportTemplate>[] = [
     {
       id: 'name',
-      header: '模板名称',
+      header: '服务名称',
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-2">
           <FileText className="w-4 h-4 text-fg-muted" />
@@ -342,10 +340,10 @@ export default function ReportTemplatesPage() {
     },
     {
       id: 'apiEndpoint',
-      header: 'API 端点',
+      header: 'FastAPI 端点',
       accessor: (row) => (
         <span className="text-sm text-fg-muted font-mono truncate block max-w-[250px]" title={row.apiEndpoint}>
-          {row.apiEndpoint || '由后端托管（未向前端暴露）'}
+          {row.apiEndpoint || '-'}
         </span>
       ),
       width: 260,
@@ -379,7 +377,7 @@ export default function ReportTemplatesPage() {
       width: 160,
       align: 'center',
     },
-    ...(canManage ? [{
+    {
       id: 'actions',
       header: '操作',
       accessor: (row: ReportTemplate) => (
@@ -414,34 +412,35 @@ export default function ReportTemplatesPage() {
       ),
       width: 130,
       align: 'center' as const,
-    }] : []),
+    },
   ];
 
-  const isFormValid = formData.name.trim() && formData.apiEndpoint && !nameError;
+  const isFormValid = formData.name.trim()
+    && formData.apiEndpoint.trim()
+    && (editingId !== null || formData.apiKey.trim())
+    && !nameError;
 
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">报告模板</h2>
-          <p className="yj-page-subtitle">报告生成服务与访问凭据。</p>
+          <h2 className="yj-page-title">报告生成服务</h2>
+          <p className="yj-page-subtitle">配置你自己的 FastAPI 报告端点，并使用任务结果 UUID 生成报告。</p>
         </div>
       </div>
 
       <div className="yj-toolbar-panel">
         <div className="w-64">
           <Input
-            placeholder="搜索模板..."
+            placeholder="搜索报告服务..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        {canManage && (
-          <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAdd}>
-            新建模板
-          </Button>
-        )}
+        <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAdd}>
+          添加报告服务
+        </Button>
       </div>
 
       {error && (
@@ -453,7 +452,7 @@ export default function ReportTemplatesPage() {
       {loading ? (
         <div className="flex min-h-64 items-center justify-center text-sm text-fg-muted">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          加载报告模板...
+          加载报告服务...
         </div>
       ) : filteredTemplates.length > 0 ? (
         <DataTable
@@ -467,8 +466,8 @@ export default function ReportTemplatesPage() {
         <EmptyState
           className="yj-panel"
           icon={<FileText />}
-          title="暂无报告模板"
-          description="调整搜索条件，或新建一个报告模板。"
+          title="尚未配置报告服务"
+          description="添加一个带 Bearer Key 认证的 FastAPI 端点，即可在任务报告页调用。"
         />
       )}
 
@@ -476,7 +475,7 @@ export default function ReportTemplatesPage() {
       <AppModal
         open={isModalOpen}
         onOpenChange={(open) => !loading && setIsModalOpen(open)}
-        title={editingId ? '编辑报告模板' : '新建报告模板'}
+        title={editingId ? '编辑报告服务' : '添加报告服务'}
         size="large"
         footer={
           <>
@@ -498,12 +497,12 @@ export default function ReportTemplatesPage() {
             <section>
               <ModalSectionHeading
                 icon={<FileText className="h-4 w-4" />}
-                title="模板信息"
-                description="设置模板唯一标识和用途说明"
+                title="服务信息"
+                description="为你的报告生成端点设置名称和用途说明"
               />
               <div className="space-y-4">
             <FormItem
-              label="模板名称"
+              label="服务名称"
               required
               hint="唯一标识符，建议使用英文和连字符"
               error={nameError || undefined}
@@ -524,7 +523,7 @@ export default function ReportTemplatesPage() {
               <TextArea
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="输入模板描述"
+                placeholder="输入报告服务用途说明"
                 rows={2}
               />
             </FormItem>
@@ -540,14 +539,13 @@ export default function ReportTemplatesPage() {
               />
               <div className="space-y-4">
 
-            <FormItem label="API 端点" required hint="报告生成服务的 RESTful API 地址">
+            <FormItem label="FastAPI 生成端点" required hint="平台将从服务端向此 HTTPS 地址发起 POST 请求">
               <div className="flex gap-2">
                 <Input
                   value={formData.apiEndpoint}
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, apiEndpoint: e.target.value }));
-    setApiTestResult(null);
-    setApiTestMessage('');
+                    setApiTestResult(null);
                     setApiTestMessage('');
                   }}
                   placeholder="https://api.example.com/reports/generate"
@@ -559,10 +557,11 @@ export default function ReportTemplatesPage() {
                   variant="secondary"
                   size="medium"
                   onClick={handleTestApi}
-                  disabled={testingApi || !formData.apiEndpoint}
+                  disabled={testingApi || !formData.apiEndpoint || (!editingId && !formData.apiKey.trim())}
+                  leftIcon={testingApi ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  className="min-w-[116px] shrink-0 whitespace-nowrap"
                 >
-                  {testingApi ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  校验
+                  {testingApi ? '测试中...' : '测试连接'}
                 </Button>
               </div>
               {apiTestResult && (
@@ -582,12 +581,16 @@ export default function ReportTemplatesPage() {
               )}
             </FormItem>
 
-            <FormItem label="API Key" hint="可选；仅提交给后端且不会回显。">
+            <FormItem
+              label="认证 Key"
+              required={!editingId}
+              hint={editingId ? '留空表示继续使用已保存的 Key；填写则轮换。Key 不会回显。' : '必填；以 Authorization: Bearer <key> 发送，保存后不会回显。'}
+            >
               <Input
                 type="password"
                 value={formData.apiKey}
                 onChange={(e) => setFormData((prev) => ({ ...prev, apiKey: e.target.value }))}
-                placeholder="报告服务访问令牌（可选）"
+                placeholder={editingId ? '留空以保留现有 Key' : '输入报告服务认证 Key'}
                 autoComplete="off"
               />
             </FormItem>
@@ -596,13 +599,16 @@ export default function ReportTemplatesPage() {
             </section>
 
             <div className="rounded-md border border-border-default bg-canvas-subtle p-3 text-xs text-fg-muted">
-              <p className="font-medium text-fg-default mb-1">说明</p>
+              <p className="mb-2 flex items-center gap-1.5 font-medium text-fg-default"><Braces className="h-3.5 w-3.5" />FastAPI 请求约定</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>模板名称必须唯一，用于系统内部标识</li>
-                <li>API 端点需要实现报告生成接口规范</li>
-                <li>管理员可通过 Octopus 创建、编辑、启停和删除未启用模板；API Key 只提交给后端且不会回显</li>
+                <li>请求方法：POST；Content-Type：application/json</li>
+                <li>认证方式：Authorization: Bearer &lt;你的 Key&gt;</li>
+                <li>任务结果标识位于请求体字段 task_result_uuid</li>
+                <li>端点应直接返回 PDF、DOCX、XLSX 等报告文件</li>
               </ul>
             </div>
+
+            <ReportEndpointExamples />
           </div>
       </AppModal>
 
@@ -614,7 +620,7 @@ export default function ReportTemplatesPage() {
             <div className="w-12 h-12 rounded-full bg-danger-subtle flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6 text-danger-fg" />
             </div>
-            <p className="text-fg-default mb-2">确定要删除此报告模板吗？</p>
+            <p className="text-fg-default mb-2">确定要删除此报告服务吗？</p>
             {deleteTarget && (
               <p className="text-sm text-fg-muted font-mono bg-canvas-subtle px-2 py-1 rounded">
                 {deleteTarget.name}
