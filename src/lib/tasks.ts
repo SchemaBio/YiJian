@@ -155,6 +155,59 @@ export function normalizeTaskProgress(rawValue: unknown): TaskProgressResponse {
   } as TaskProgressResponse;
 }
 
+export interface TaskEstimateInput {
+  sampleId?: string;
+  pedigreeId?: string;
+  pipelineId: string;
+}
+
+export interface TaskEstimateResponse {
+  estimated_minutes: number;
+}
+
+export interface TaskBatchInputRow {
+  row_number: number;
+  sample_identifier: string;
+  pedigree_id: string;
+  pipeline_id: string;
+  remark: string;
+  enable_cnv: boolean;
+  enable_sv: boolean;
+}
+
+export interface TaskBatchPreviewRow extends TaskBatchInputRow {
+  sample_id?: string;
+  sample_internal_id?: string;
+  pipeline_name?: string;
+  pipeline_version?: string;
+  template?: string;
+  estimated_minutes: number;
+  valid: boolean;
+  errors: string[];
+}
+
+export interface TaskBatchPreviewResponse {
+  rows: TaskBatchPreviewRow[];
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  total_estimated_minutes: number;
+}
+
+export interface TaskBatchCreateResult {
+  row_number: number;
+  status: 'created' | 'failed' | 'skipped';
+  task?: AnalysisTask;
+  error?: string;
+}
+
+export interface TaskBatchCreateResponse {
+  results: TaskBatchCreateResult[];
+  created_count: number;
+  failed_count: number;
+  skipped_count: number;
+}
+
 export const tasksApi = {
   /** List tasks with optional filters */
   list(params?: {
@@ -176,6 +229,21 @@ export const tasksApi = {
   /** Create a new task */
   async create(data: TaskCreateRequest): Promise<AnalysisTask> {
     return normalizeTask(await api.post<unknown>('/v1/tasks', data));
+  },
+
+  /** Preview the server-authoritative runtime estimate without creating a task. */
+  estimate(data: TaskEstimateInput): Promise<TaskEstimateResponse> {
+    return api.post<TaskEstimateResponse>('/v1/tasks/estimate', data);
+  },
+
+  previewBatch(file: File): Promise<TaskBatchPreviewResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    return api.postForm<TaskBatchPreviewResponse>('/v1/tasks/batch/preview', form);
+  },
+
+  createBatch(rows: TaskBatchInputRow[]): Promise<TaskBatchCreateResponse> {
+    return api.post<TaskBatchCreateResponse>('/v1/tasks/batch', { rows });
   },
 
   /** Get a single task by UUID */

@@ -3,8 +3,8 @@
 import * as React from 'react';
 import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, BookOpen, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
-import { AnalysisDetailPanel, NewTaskModal, EditTaskModal } from './components';
+import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, BookOpen, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { AnalysisDetailPanel, NewTaskModal, BatchTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
@@ -322,6 +322,7 @@ export default function AnalysisPage() {
   const [activeTabId, setActiveTabId] = React.useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
+  const [isBatchTaskModalOpen, setIsBatchTaskModalOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<AnalysisTask | null>(null);
   const [actionError, setActionError] = React.useState('');
   const [taskBilling, setTaskBilling] = React.useState<Record<string, TaskBillingSummary>>({});
@@ -773,6 +774,9 @@ export default function AnalysisPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button variant="secondary" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setIsBatchTaskModalOpen(true)}>
+                      批量新建
+                    </Button>
                     <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewTaskModalOpen(true)}>
                       新建任务
                     </Button>
@@ -849,6 +853,14 @@ export default function AnalysisPage() {
         isOpen={isNewTaskModalOpen}
         onClose={() => setIsNewTaskModalOpen(false)}
         onSubmit={handleCreateTask}
+      />
+
+      <BatchTaskModal
+        isOpen={isBatchTaskModalOpen}
+        onClose={() => setIsBatchTaskModalOpen(false)}
+        onCompleted={async () => {
+          await refetch();
+        }}
       />
 
       {/* 编辑任务弹窗 */}

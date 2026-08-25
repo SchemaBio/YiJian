@@ -218,7 +218,7 @@ async function request<T>(
   const url = buildURL(endpoint, params, undefined, coreApi);
 
   const headers = new Headers(init.headers);
-  if (init.body !== undefined && !headers.has('Content-Type')) {
+  if (init.body !== undefined && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -629,6 +629,13 @@ export const api = {
       method: 'POST',
       body: data !== undefined ? JSON.stringify(data) : undefined,
   }),
+
+  postForm: <T>(endpoint: string, data: FormData, options?: RequestOptions) =>
+    request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: data,
+    }),
 
   put: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {

@@ -15,6 +15,7 @@ import {
 } from '@/lib/task-resources';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { tasksApi } from '@/lib/tasks';
 
 export interface NewTaskFormData {
   sampleId: string;
@@ -47,6 +48,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [resourceError, setResourceError] = React.useState('');
   const [billingBalance, setBillingBalance] = React.useState<BillingBalance | null>(null);
   const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
+  const [estimatedMinutes, setEstimatedMinutes] = React.useState(60);
+  const [estimateStatus, setEstimateStatus] = React.useState<'idle' | 'loading' | 'ready' | 'fallback'>('idle');
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -129,7 +132,38 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     return matchedTemplate?.name || templates[0]?.name || pipeline?.id || selectedPipeline;
   };
 
-  const estimatedCredits = calculateEstimatedCredits(60, billingConfig);
+  React.useEffect(() => {
+    const pipeline = pipelines.find(item => item.id === selectedPipeline);
+    if (!selectedSample?.id || !pipeline?.id) {
+      setEstimatedMinutes(60);
+      setEstimateStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+    setEstimateStatus('loading');
+    tasksApi.estimate({ sampleId: selectedSample.id, pipelineId: pipeline.id })
+      .then((estimate) => {
+        if (cancelled) return;
+        const minutes = Math.max(1, Math.ceil(Number(estimate.estimated_minutes)));
+        if (!Number.isFinite(minutes)) throw new Error('Invalid task estimate');
+        setEstimatedMinutes(minutes);
+        setEstimateStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEstimatedMinutes(60);
+        setEstimateStatus('fallback');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pipelines, selectedPipeline, selectedSample?.id]);
+
+  const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
+    ? null
+    : calculateEstimatedCredits(estimatedMinutes, billingConfig);
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
     : null;
@@ -262,7 +296,15 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
         <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">
           <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
-          <p className="mt-1 text-xs leading-5 text-fg-muted">按样本关联的 R1/R2 数据量计算；等待数据时使用基础预估。</p>
+          <p className="mt-1 text-xs leading-5 text-fg-muted">
+            {estimateStatus === 'loading'
+              ? '正在根据所选输入估算…'
+              : estimateStatus === 'ready'
+                ? `预计 ${estimatedMinutes} 分钟；按样本关联的 R1/R2 数据量计算。`
+                : estimateStatus === 'fallback'
+                  ? '估算服务暂不可用，暂按基础预估 60 分钟。'
+                  : '选择样本和分析流程后，将按关联的 R1/R2 数据量计算。'}
+          </p>
         </div>
 
         {isSaaS && (
@@ -271,7 +313,15 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
                 <div className="text-sm font-medium text-fg-default">预计预扣 {estimatedCredits ?? '--'} 积分</div>
-                <div className="text-xs text-fg-muted">按 60 分钟展示；最终按实际运行分钟结算</div>
+                <div className="text-xs text-fg-muted">
+                  {estimateStatus === 'loading'
+                    ? '正在计算预计预扣；最终按实际运行分钟结算'
+                    : estimateStatus === 'ready'
+                      ? `按后端预计 ${estimatedMinutes} 分钟计算；最终按实际运行分钟结算`
+                      : estimateStatus === 'fallback'
+                        ? '暂按基础预估 60 分钟计算；最终按实际运行分钟结算'
+                        : '选择输入和流程后计算预计预扣'}
+                </div>
               </div>
             </div>
             <div className="text-right">
