@@ -1,15 +1,16 @@
 'use client';
 
 import * as React from 'react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, BookOpen, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, BookOpen, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet, MoreHorizontal } from 'lucide-react';
 import { AnalysisDetailPanel, NewTaskModal, BatchTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
 import { useApi, usePolling } from '@/hooks';
-import { EmptyState, IdCell, TaskStatusTag } from '@/components/shared';
+import { ConfirmDialog, EmptyState, IdCell, TaskStatusTag } from '@/components/shared';
 import { TaskCostValue } from '@/components/billing';
 import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -174,22 +175,7 @@ function TaskActionsCell({
   isLoading: boolean;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const deleteConfirmRef = React.useRef<HTMLDivElement>(null);
-
-  // 点击外部关闭删除确认弹窗
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (deleteConfirmRef.current && !deleteConfirmRef.current.contains(event.target as Node)) {
-        setShowDeleteConfirm(false);
-      }
-    };
-    if (showDeleteConfirm) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showDeleteConfirm]);
+  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
 
   // 动态按钮配置：根据状态和进度自动切换
   // 1. 启动 - 排队中(queued)状态
@@ -203,14 +189,14 @@ function TaskActionsCell({
           label: '启动',
           icon: Play,
           onClick: () => onStart(task.id),
-          className: 'text-green-600 hover:bg-green-50 border-green-200 hover:border-green-300',
+          className: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100',
         };
       case 'running':
         return {
           label: '停止',
           icon: Square,
           onClick: () => onStop(task.id),
-          className: 'text-orange-600 hover:bg-orange-50 border-orange-200 hover:border-orange-300',
+          className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
         };
       case 'pending_interpretation':
       case 'completed':
@@ -218,14 +204,14 @@ function TaskActionsCell({
           label: '解读',
           icon: BookOpen,
           onClick: () => onView(task),
-          className: 'text-blue-600 hover:bg-blue-50 border-blue-200 hover:border-blue-300',
+          className: 'border-sky-200 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100',
         };
       case 'failed':
         return {
           label: '重试',
           icon: RotateCcw,
           onClick: () => onRetry(task.id),
-          className: 'text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300',
+          className: 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300 hover:bg-amber-100',
         };
       default:
         return null;
@@ -237,79 +223,95 @@ function TaskActionsCell({
   const canDelete = task.status !== 'running';
 
   return (
-    <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-      {/* 状态转换按钮（主要操作） */}
-      {primaryAction && (
-        <button
-          onClick={primaryAction.onClick}
-          disabled={isLoading}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium border rounded transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''} ${primaryAction.className}`}
-        >
-          {isLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <primaryAction.icon className="w-3.5 h-3.5" />
-          )}
-          {isLoading ? '处理中' : primaryAction.label}
-        </button>
-      )}
-
-      {/* 编辑按钮 */}
-      <button
-        className={`p-1.5 rounded transition-colors ${
-          canEdit ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'
-        }`}
-        onClick={() => {
-          if (canEdit) onEdit(task);
-        }}
-        disabled={!canEdit}
-        aria-label="编辑"
-        title={canEdit ? '编辑' : '运行中不可编辑'}
+    <>
+      <div
+        className="inline-flex h-9 items-center justify-center gap-0.5 rounded-lg border border-border-default bg-canvas-default p-0.5 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+        onClick={(event) => event.stopPropagation()}
       >
-        <Pencil className="w-4 h-4" />
-      </button>
-
-      {/* 删除按钮 */}
-      <div className="relative" ref={deleteConfirmRef}>
-        <button
-          className={`p-1.5 rounded transition-colors ${
-            canDelete ? 'text-gray-400 hover:text-red-600 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'
-          }`}
-          onClick={() => {
-            if (canDelete) setShowDeleteConfirm(true);
-          }}
-          disabled={!canDelete}
-          aria-label="删除"
-          title={canDelete ? '删除' : '运行中不可删除'}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-
-        {/* 删除确认弹窗 */}
-        {showDeleteConfirm && (
-          <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-md shadow-lg z-20 p-2">
-            <div className="text-xs text-gray-600 mb-2 text-center">确认删除此任务？</div>
-            <div className="flex gap-1">
-              <button
-                className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                取消
-              </button>
-              <button
-                className="flex-1 px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                onClick={() => {
-                  onDelete(task.id);
-                  setShowDeleteConfirm(false);
-                }}
-              >
-                删除
-              </button>
-            </div>
-          </div>
+        {primaryAction && (
+          <button
+            type="button"
+            onClick={primaryAction.onClick}
+            disabled={isLoading}
+            aria-label={primaryAction.label}
+            className={`inline-flex h-8 min-w-[68px] items-center justify-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold shadow-[0_1px_1px_rgba(17,24,39,0.04)] transition-all ${isLoading ? 'cursor-wait opacity-60' : 'active:translate-y-px'} ${primaryAction.className}`}
+          >
+            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <primaryAction.icon className="h-3.5 w-3.5" />}
+            {isLoading ? '处理中' : primaryAction.label}
+          </button>
         )}
+
+        <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
+          <PopoverPrimitive.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
+              aria-label="更多任务操作"
+              title="更多操作"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </PopoverPrimitive.Trigger>
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content
+              side="bottom"
+              align="end"
+              sideOffset={6}
+              collisionPadding={12}
+              onClick={(event) => event.stopPropagation()}
+              className="z-50 w-44 overflow-hidden rounded-lg border border-border-default bg-canvas-default p-1.5 shadow-[0_10px_30px_rgba(17,24,39,0.14)] outline-none"
+            >
+              <div role="menu" aria-label="任务操作">
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!canEdit}
+                  title={canEdit ? '编辑任务' : '请先停止运行中的任务'}
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    onEdit(task);
+                  }}
+                  className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-fg-default transition-colors hover:bg-canvas-subtle disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  <Pencil className="h-4 w-4 text-fg-muted" />
+                  编辑任务
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!canDelete}
+                  title={canDelete ? '删除任务' : '请先停止运行中的任务'}
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-rose-700 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  删除任务
+                </button>
+                {!canEdit && (
+                  <p className="mx-2 mt-1 border-t border-border-muted pt-2 pb-1 text-[11px] leading-4 text-fg-muted">
+                    请先停止任务再进行修改
+                  </p>
+                )}
+              </div>
+              <PopoverPrimitive.Arrow className="fill-canvas-default" />
+            </PopoverPrimitive.Content>
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="删除分析任务"
+        message={`确定删除任务 ${task.internalId || task.id}？已产生的运行记录和结果可能无法恢复。`}
+        confirmLabel="确认删除"
+        variant="danger"
+        onConfirm={() => onDelete(task.id)}
+      />
+    </>
   );
 }
 
@@ -613,9 +615,9 @@ export default function AnalysisPage() {
           isLoading={actionLoading === row.id}
         />
       ),
-      width: 130,
-      minWidth: 126,
-      maxWidth: 150,
+      width: 126,
+      minWidth: 122,
+      maxWidth: 140,
       align: 'center',
       pinned: 'right',
     },
