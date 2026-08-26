@@ -13,8 +13,19 @@ class ApiError extends Error {
     public statusText: string,
     public data?: unknown
   ) {
-    super(`API Error: ${status} ${statusText}`);
+    super(ApiError.messageFor(status, statusText, data));
     this.name = 'ApiError';
+  }
+
+  private static messageFor(status: number, statusText: string, data?: unknown): string {
+    if (data && typeof data === 'object') {
+      const payload = data as { error?: unknown; message?: unknown; detail?: unknown };
+      for (const value of [payload.error, payload.message, payload.detail]) {
+        if (typeof value === 'string' && value.trim()) return value.trim();
+      }
+    }
+    if (typeof data === 'string' && data.trim()) return data.trim();
+    return `API Error: ${status} ${statusText}`;
   }
 }
 
