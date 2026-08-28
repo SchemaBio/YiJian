@@ -220,7 +220,7 @@ function TaskActionsCell({
 
   const primaryAction = getPrimaryAction();
   const canEdit = task.status !== 'running';
-  const canDelete = task.status !== 'running';
+  const canDelete = true;
 
   return (
     <>
@@ -280,7 +280,7 @@ function TaskActionsCell({
                   type="button"
                   role="menuitem"
                   disabled={!canDelete}
-                  title={canDelete ? '删除任务' : '请先停止运行中的任务'}
+                  title="删除任务"
                   onClick={() => {
                     setShowMoreMenu(false);
                     setShowDeleteConfirm(true);
