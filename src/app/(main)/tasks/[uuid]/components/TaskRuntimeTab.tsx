@@ -25,6 +25,17 @@ function statusVariant(status?: string): 'success' | 'warning' | 'danger' | 'neu
   return 'neutral';
 }
 
+function vmStatusLabel(status?: string): string {
+  switch ((status || '').toUpperCase()) {
+    case 'WAITING_CAPACITY': return '等待竞价资源';
+    case 'DISPATCHING': return '云端状态确认中';
+    case 'PENDING': return '实例已申请';
+    case 'RUNNING': return '实例运行中';
+    case 'LAUNCH_FAILED': return '实例申请失败';
+    default: return status || '-';
+  }
+}
+
 function areTaskProgressResponsesEqual(
   previous: TaskProgressResponse,
   next: TaskProgressResponse
@@ -65,6 +76,10 @@ function areTaskProgressResponsesEqual(
     && previous.result_import_error === next.result_import_error
     && previous.result_imported_at === next.result_imported_at
     && previous.result_import_attempts === next.result_import_attempts
+    && previous.vm_status === next.vm_status
+    && previous.dispatch_next_retry_at === next.dispatch_next_retry_at
+    && previous.dispatch_retry_deadline_at === next.dispatch_retry_deadline_at
+    && previous.dispatch_retry_count === next.dispatch_retry_count
     && sepiidaEqual
     && tasksEqual;
 }
@@ -126,6 +141,7 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
 
   const value = Math.min(100, Math.max(0, progress?.progress ?? 0));
   const taskSteps = progress?.tasks ?? [];
+  const vmStatus = progress?.vm_status?.toUpperCase();
 
   return (
     <div className="space-y-4">
@@ -151,9 +167,22 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
         </div>
       )}
 
+      {(vmStatus === 'WAITING_CAPACITY' || vmStatus === 'DISPATCHING') && (
+        <div className="flex items-start gap-2 rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-sm text-warning-fg">
+          <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">{vmStatusLabel(vmStatus)}</p>
+            {vmStatus === 'WAITING_CAPACITY' && <p className="mt-1 text-xs">系统会自动重试，不会重复扣除本次任务积分。</p>}
+            {progress?.dispatch_next_retry_at && <p className="mt-1 text-xs">下次重试：{formatTime(progress.dispatch_next_retry_at)}</p>}
+            {progress?.dispatch_retry_deadline_at && <p className="mt-1 text-xs">最晚等待至：{formatTime(progress.dispatch_retry_deadline_at)}</p>}
+          </div>
+        </div>
+      )}
+
       <div className="yj-panel overflow-hidden">
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--yj-border-subtle)] md:grid-cols-4 md:divide-y-0">
+        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--yj-border-subtle)] md:grid-cols-5 md:divide-y-0">
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label="任务状态" value={<Tag variant={statusVariant(progress?.status || initialStatus)}>{progress?.status || initialStatus}</Tag>} />
+          <RuntimeMetric icon={<Server className="h-4 w-4" />} label="竞价实例" value={vmStatusLabel(vmStatus)} />
           <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label="执行进度" value={`${value}%`} />
           <RuntimeMetric icon={<FileText className="h-4 w-4" />} label="结果入库" value={progress?.result_import_status || '-'} />
           <RuntimeMetric icon={<RefreshCw className="h-4 w-4" />} label="入库尝试" value={String(progress?.result_import_attempts ?? 0)} />

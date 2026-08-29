@@ -22,6 +22,14 @@ interface RawTask {
   pipelineVersion?: string;
   pipeline_version?: string;
   status?: string;
+  vm_status?: string;
+  vmStatus?: string;
+  dispatch_next_retry_at?: string;
+  dispatchNextRetryAt?: string;
+  dispatch_retry_deadline_at?: string;
+  dispatchRetryDeadlineAt?: string;
+  dispatch_retry_count?: number;
+  dispatchRetryCount?: number;
   progress?: number;
   createdAt?: string;
   created_at?: string;
@@ -78,6 +86,10 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     pipeline: String(raw.pipeline ?? ''),
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
+    vmStatus: raw.vmStatus ?? raw.vm_status,
+    dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
+    dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
+    dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
     progress: typeof raw.progress === 'number' && Number.isFinite(raw.progress) ? raw.progress : 0,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     createdBy: String(raw.createdBy ?? raw.created_by ?? ''),
@@ -96,6 +108,10 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     pipeline: String(raw.pipeline ?? ''),
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
+    vmStatus: raw.vmStatus ?? raw.vm_status,
+    dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
+    dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
+    dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     createdBy: String(raw.createdBy ?? raw.created_by ?? ''),
     completedAt: raw.completedAt ?? raw.completed_at,

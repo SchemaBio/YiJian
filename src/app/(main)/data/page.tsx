@@ -8,12 +8,13 @@ import {
 } from 'lucide-react';
 import {
   deleteDataAsset, downloadDataAsset, getDataCenterConfig, getUploadStorageStats, listDataAssets,
-  retryDataAsset, updateDataAsset, uploadDataFiles, type DataAsset, type DataCenterConfig,
-  type UploadFileProgress, type UploadStorageStats,
+  retryDataAsset, updateDataAsset, type DataAsset, type DataCenterConfig,
+  type UploadStorageStats,
 } from '@/lib/data-assets';
 import { AppModal, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { useUpload } from '@/components/providers/UploadProvider';
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -55,6 +56,7 @@ function assetStatus(asset: DataAsset, progress?: number) {
 
 export default function DataCenterPage() {
   const { currentOrg } = useAuth();
+  const { activeUpload, startUpload: runUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
   const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
@@ -65,18 +67,24 @@ export default function DataCenterPage() {
   const [read1, setRead1] = React.useState<File | null>(null);
   const [read2, setRead2] = React.useState<File | null>(null);
   const [internalId, setInternalId] = React.useState('');
-  const [uploading, setUploading] = React.useState(false);
   const [uploadPolicyAcknowledged, setUploadPolicyAcknowledged] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
-  const [fileProgress, setFileProgress] = React.useState<Record<string, number>>({});
   const [deleting, setDeleting] = React.useState<DataAsset | null>(null);
   const [editing, setEditing] = React.useState<DataAsset | null>(null);
   const [editingInternalId, setEditingInternalId] = React.useState('');
   const [savingEdit, setSavingEdit] = React.useState(false);
   const [retryingId, setRetryingId] = React.useState<string | null>(null);
+  const [retryProgress, setRetryProgress] = React.useState<Record<string, number>>({});
   const retryInputRef = React.useRef<HTMLInputElement | null>(null);
   const retryAssetIdRef = React.useRef<string | null>(null);
   const loadRequestRef = React.useRef(0);
+  const uploading = activeUpload?.status === 'uploading';
+  const progress = activeUpload?.progress ?? 0;
+  const fileProgress = React.useMemo(
+    () => activeUpload?.status === 'uploading'
+      ? Object.fromEntries((activeUpload.files ?? []).map((file) => [file.fileId, file.progress]))
+      : {},
+    [activeUpload?.files, activeUpload?.status],
+  );
 
   const load = React.useCallback(async (query = '') => {
     const requestId = ++loadRequestRef.current;
@@ -103,6 +111,24 @@ export default function DataCenterPage() {
   }, []);
 
   React.useEffect(() => { void load(''); }, [load]);
+
+  const activeFileKey = (activeUpload?.files ?? []).map((file) => file.fileId).join(',');
+  React.useEffect(() => {
+    if (activeFileKey) void load(search);
+  }, [activeFileKey, load, search]);
+
+  // A browser refresh can leave only the durable upload metadata in
+  // localStorage even though the backend finished the upload just before the
+  // page was closed.  Treat the asset API as authoritative and clear that
+  // stale recovery banner once every remembered file is already available.
+  React.useEffect(() => {
+    if (activeUpload?.status !== 'needs_file' || activeUpload.files.length === 0 || assets.length === 0) return;
+    const allCompleted = activeUpload.files.every((file) => {
+      const asset = assets.find((item) => item.id === file.fileId);
+      return asset?.status === 'completed';
+    });
+    if (allCompleted) clearUpload();
+  }, [activeUpload, assets, clearUpload]);
 
   React.useEffect(() => {
     if (!uploading) return;
@@ -157,20 +183,9 @@ export default function DataCenterPage() {
       setError(`所选文件将超过存储总容量（已用 ${formatBytes(totalBytes)}，总容量 ${formatBytes(storageQuotaBytes)}）`);
       return;
     }
-    setUploading(true);
-    setProgress(0);
     setError('');
     try {
-      await uploadDataFiles(read1, read2, uploadPolicyAcknowledged, internalId, setProgress, {
-        onStarted: (files: UploadFileProgress[]) => {
-          setFileProgress(Object.fromEntries(files.map((file) => [file.fileId, 0])));
-          void load(search);
-        },
-        onFileProgress: (file: UploadFileProgress) => {
-          setFileProgress((current) => ({ ...current, [file.fileId]: file.progress }));
-        },
-      });
-      setProgress(100);
+      await runUpload({ read1, read2, uploadPolicyAcknowledged, internalId });
       setUploadOpen(false);
       setRead1(null);
       setRead2(null);
@@ -179,9 +194,6 @@ export default function DataCenterPage() {
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
-    } finally {
-      setUploading(false);
-      setFileProgress({});
     }
   };
 
@@ -221,15 +233,22 @@ export default function DataCenterPage() {
       if (retryInputRef.current) retryInputRef.current.value = '';
       return;
     }
+    if (asset.file_size > 0 && file.size !== asset.file_size) {
+      setError(`文件大小不匹配：应为 ${formatBytes(asset.file_size)}`);
+      retryAssetIdRef.current = null;
+      if (retryInputRef.current) retryInputRef.current.value = '';
+      return;
+    }
     setRetryingId(asset.id);
     setError('');
     try {
-      await retryDataAsset(asset.id, file, (value) => setFileProgress((current) => ({ ...current, [asset.id]: value })));
+      await retryDataAsset(asset.id, file, (value) => setRetryProgress((current) => ({ ...current, [asset.id]: value })));
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : '重试上传失败');
     } finally {
       setRetryingId(null);
+      setRetryProgress((current) => { const next = { ...current }; delete next[asset.id]; return next; });
       retryAssetIdRef.current = null;
       if (retryInputRef.current) retryInputRef.current.value = '';
     }
@@ -290,7 +309,7 @@ export default function DataCenterPage() {
     {
       id: 'status',
       header: '状态',
-      accessor: (asset) => assetStatus(asset, fileProgress[asset.id]),
+      accessor: (asset) => assetStatus(asset, fileProgress[asset.id] ?? retryProgress[asset.id]),
       width: 140,
       minWidth: 140,
     },
@@ -318,7 +337,7 @@ export default function DataCenterPage() {
               <Download className="h-4 w-4" />
             </button>
           )}
-          {(asset.status === 'pending' || asset.status === 'failed') && (
+          {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && (
             <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="重新上传" aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}>
               <Upload className="h-4 w-4" />
             </button>
@@ -373,6 +392,17 @@ export default function DataCenterPage() {
       )}
 
       {error && <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
+
+      {activeUpload?.status === 'needs_file' && (
+        <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>上次上传在浏览器刷新后仍有未完成记录。请选择相同文件后继续，系统会优先恢复对象存储中已完成的分片。</span>
+            <button type="button" className="shrink-0 rounded-md border border-warning-muted px-2.5 py-1 text-xs font-medium text-warning-fg hover:bg-warning-muted/40" onClick={() => clearUpload()}>
+              放弃恢复记录
+            </button>
+          </div>
+        </div>
+      )}
 
       {storageQuotaReached && (
         <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">

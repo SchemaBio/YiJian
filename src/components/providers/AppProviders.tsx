@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ThemeProvider } from '@schema/ui-kit';
 import { AuthProvider } from './AuthProvider';
 import { AIProvider } from './AIProvider';
+import { UploadProvider } from './UploadProvider';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -19,9 +20,11 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ThemeProvider defaultTheme="light" storageKey="germline-theme">
       <AuthProvider>
-        <AIProvider>
-          {children}
-        </AIProvider>
+        <UploadProvider>
+          <AIProvider>
+            {children}
+          </AIProvider>
+        </UploadProvider>
       </AuthProvider>
     </ThemeProvider>
   );

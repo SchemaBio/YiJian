@@ -401,6 +401,22 @@ export interface PresignedUploadResult {
   storage_type: string;
 }
 
+export const MULTIPART_THRESHOLD_BYTES = 64 * 1024 * 1024;
+export const MULTIPART_PART_SIZE_BYTES = 32 * 1024 * 1024;
+
+export interface MultipartInitResult {
+  session_id: string;
+  file_id: string;
+  part_size: number;
+  total_parts: number;
+  completed_parts: number[];
+}
+
+export interface MultipartPresignResult {
+  session_id: string;
+  parts: Array<{ part_number: number; url: string }>;
+}
+
 interface UploadJobFile {
   id: string;
   file_name?: string;
@@ -578,7 +594,7 @@ function normalizeUploadURL(uploadURL: string): string {
   return url.toString();
 }
 
-function uploadFileOnce(uploadURL: string, file: File, onProgress?: (pct: number) => void) {
+function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number) => void): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const safeUploadURL = normalizeUploadURL(uploadURL);
@@ -624,6 +640,82 @@ export async function uploadToCOS(presignedUrl: string, file: File, onProgress?:
     }
     throw err;
   }
+}
+
+// Exposed for local-storage retries; the URL is still the authenticated
+// backend endpoint and never contains a storage key.
+export function localUploadURL(fileID: string): string {
+  return backendUploadURL(fileID);
+}
+
+export async function uploadPartToCOS(uploadURL: string, part: Blob, onProgress?: (pct: number) => void): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    let safeUploadURL: string;
+    try {
+      safeUploadURL = normalizeUploadURL(uploadURL);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', safeUploadURL);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new UploadError(xhr.status));
+        return;
+      }
+      const etag = xhr.getResponseHeader('ETag') || xhr.getResponseHeader('etag');
+      if (!etag) {
+        reject(new Error('对象存储未返回分片 ETag，请检查 COS CORS 的 expose_headers 配置'));
+        return;
+      }
+      resolve(etag);
+    };
+    xhr.onerror = () => reject(new Error('Upload network error'));
+    xhr.send(part);
+  });
+}
+
+export function startUpload(fileID: string) {
+  return api.post(`/v1/upload/files/${encodeURIComponent(fileID)}/start`, {});
+}
+
+export function initMultipartUpload(fileID: string) {
+  return api.post<MultipartInitResult>(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart`, {});
+}
+
+export function presignMultipartParts(fileID: string, sessionID: string, partNumbers: number[]) {
+  return api.post<MultipartPresignResult>(
+    `/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/parts/presign`,
+    { part_numbers: partNumbers },
+  );
+}
+
+export function recordMultipartPart(fileID: string, sessionID: string, partNumber: number, etag: string, size: number) {
+  return api.put<void>(
+    `/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/parts`,
+    { part_number: partNumber, etag, size },
+  );
+}
+
+export function completeMultipartUpload(fileID: string, sessionID: string) {
+  return api.post(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/complete`, {});
+}
+
+export function abortMultipartUpload(fileID: string, sessionID: string) {
+  return api.delete(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}`);
+}
+
+export function retryS3Upload(fileID: string) {
+  return api.post<{ id: string; presigned_url?: string }>(`/v1/upload/files/${encodeURIComponent(fileID)}/retry`, {});
+}
+
+export function getDataAssetUploadStatus(fileID: string) {
+  return api.get<{ status?: string; provider?: string }>(`/v1/data/assets/${encodeURIComponent(fileID)}`);
 }
 
 export async function confirmUpload(fileId: string) {

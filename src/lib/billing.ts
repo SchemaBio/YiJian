@@ -109,16 +109,20 @@ export function taskBillingMap(
 }
 
 export async function getBillingBalance(): Promise<BillingBalance> {
-  return api.get<BillingBalance>('/v1/billing/balance', { coreApi: false });
+  return api.get<BillingBalance>('/v1/billing/balance', { coreApi: false, cache: 'no-store' });
 }
 
 export async function getBillingConfig(): Promise<BillingConfig> {
-  return api.get<BillingConfig>('/v1/billing/config', { coreApi: false });
+  // Billing policy can be changed by Cuttlefish while this tab is open. Do
+  // not let the browser HTTP cache keep showing the previous organization
+  // multiplier after a refresh or a route transition.
+  return api.get<BillingConfig>('/v1/billing/config', { coreApi: false, cache: 'no-store' });
 }
 
 export async function getBillingTransactions(page = 1, pageSize = 20): Promise<BillingTransactionPage> {
   return api.get<BillingTransactionPage>('/v1/billing/transactions', {
     coreApi: false,
+    cache: 'no-store',
     params: {
       page: String(page),
       page_size: String(pageSize),

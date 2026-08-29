@@ -14,6 +14,10 @@ export interface AnalysisTask {
   pipeline: string;
   pipelineVersion: string;
   status: TaskStatus;
+  vmStatus?: string;
+  dispatchNextRetryAt?: string;
+  dispatchRetryDeadlineAt?: string;
+  dispatchRetryCount?: number;
   progress: number;
   createdAt: string;
   createdBy: string;
@@ -29,6 +33,10 @@ export interface AnalysisTaskDetail {
   pipeline: string;
   pipelineVersion: string;
   status: TaskStatus;
+  vmStatus?: string;
+  dispatchNextRetryAt?: string;
+  dispatchRetryDeadlineAt?: string;
+  dispatchRetryCount?: number;
   createdAt: string;
   createdBy: string;
   completedAt?: string;
@@ -96,6 +104,10 @@ export interface TaskProgressResponse {
   result_import_error?: string;
   result_imported_at?: string;
   result_import_attempts?: number;
+  vm_status?: string;
+  dispatch_next_retry_at?: string;
+  dispatch_retry_deadline_at?: string;
+  dispatch_retry_count?: number;
   sepiida?: SepiidaWorkflow;
   tasks?: SepiidaTask[];
 }

@@ -133,18 +133,18 @@ export interface UpdateOrgBillingPolicyInput {
 }
 
 export async function getAdminStats(): Promise<AdminStats> {
-  return api.get<AdminStats>('/v1/admin/stats', { coreApi: false });
+  return api.get<AdminStats>('/v1/admin/stats', { coreApi: false, cache: 'no-store' });
 }
 
 export async function getBalanceAlerts(): Promise<BalanceAlert[]> {
-  const data = await api.get<BalanceAlert[] | { alerts?: BalanceAlert[] }>('/v1/admin/alerts', { coreApi: false });
+  const data = await api.get<BalanceAlert[] | { alerts?: BalanceAlert[] }>('/v1/admin/alerts', { coreApi: false, cache: 'no-store' });
   return Array.isArray(data) ? data : data.alerts ?? [];
 }
 
 export async function listAdminOrganizations(): Promise<AdminOrganization[]> {
   const data = await api.get<AdminOrganization[] | { organizations?: AdminOrganization[] }>(
     '/v1/admin/orgs',
-    { coreApi: false }
+    { coreApi: false, cache: 'no-store' }
   );
   return Array.isArray(data) ? data : data.organizations ?? [];
 }
@@ -161,7 +161,7 @@ export async function updateAdminOrganization(
 }
 
 export async function getAdminBillingConfig(): Promise<AdminBillingConfig> {
-  return api.get<AdminBillingConfig>('/v1/billing/config', { coreApi: false });
+  return api.get<AdminBillingConfig>('/v1/billing/config', { coreApi: false, cache: 'no-store' });
 }
 
 export async function rechargeOrganization(input: RechargeInput): Promise<RechargeResult> {
@@ -173,7 +173,7 @@ export async function updateAdminBillingConfig(input: UpdateAdminBillingConfigIn
 }
 
 export async function getOrgBillingPolicy(orgId: string): Promise<OrgBillingPolicy> {
-  return api.get<OrgBillingPolicy>(`/v1/admin/billing/orgs/${encodeURIComponent(orgId)}/config`, { coreApi: false });
+  return api.get<OrgBillingPolicy>(`/v1/admin/billing/orgs/${encodeURIComponent(orgId)}/config`, { coreApi: false, cache: 'no-store' });
 }
 
 export async function updateOrgBillingPolicy(orgId: string, input: UpdateOrgBillingPolicyInput): Promise<OrgBillingPolicy> {
