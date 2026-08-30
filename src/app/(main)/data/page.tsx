@@ -7,7 +7,7 @@ import {
   Loader2, Pencil, RefreshCw, Search, Trash2, Upload, XCircle,
 } from 'lucide-react';
 import {
-  deleteDataAsset, downloadDataAsset, getDataCenterConfig, getUploadStorageStats, listDataAssets,
+  deleteDataAsset, downloadDataAsset, getDataCenterConfig, getDataAssetUploadStatus, getUploadStorageStats, listDataAssets,
   retryDataAsset, updateDataAsset, type DataAsset, type DataCenterConfig,
   type UploadStorageStats,
 } from '@/lib/data-assets';
@@ -15,6 +15,7 @@ import { AppModal, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { useUpload } from '@/components/providers/UploadProvider';
+import { ApiError } from '@/lib/api';
 
 function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -39,24 +40,28 @@ const statusMeta = {
   deleted: { label: '已删除', className: 'bg-canvas-subtle text-fg-muted', icon: Trash2 },
 } as const;
 
-function assetStatus(asset: DataAsset, progress?: number) {
+function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploading' | 'canceling' | 'cancelled' | 'completed' | 'failed' | 'deleted') {
   const meta = statusMeta[asset.status] ?? statusMeta.failed;
   const Icon = meta.icon;
-  const isActiveUpload = progress !== undefined && progress < 100;
+  const isCanceling = liveStatus === 'canceling';
+  const isCancelled = liveStatus === 'cancelled';
+  const isActiveUpload = liveStatus === 'uploading' || (progress !== undefined && progress < 100);
+  const isFailed = liveStatus === 'failed';
+  const isSpinning = isCanceling || liveStatus === 'uploading' || (liveStatus === undefined && (isActiveUpload || asset.status === 'uploading' || asset.status === 'deleting'));
   return (
     <div className="min-w-[112px]">
-      <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${isActiveUpload ? statusMeta.uploading.className : meta.className}`}>
-        <Icon className={`h-3.5 w-3.5 ${isActiveUpload || asset.status === 'uploading' || asset.status === 'deleting' ? 'animate-spin' : ''}`} />
-        {isActiveUpload ? `上传中 ${progress}%` : meta.label}
+      <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${isCanceling || isCancelled ? statusMeta.deleting.className : isFailed ? statusMeta.failed.className : isActiveUpload ? statusMeta.uploading.className : meta.className}`}>
+        <Icon className={`h-3.5 w-3.5 ${isSpinning ? 'animate-spin' : ''}`} />
+        {isCanceling ? '取消中' : isCancelled ? '已取消' : isFailed ? '失败' : isActiveUpload ? `上传中 ${progress ?? 0}%` : meta.label}
       </span>
-      {isActiveUpload && <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div>}
+      {isActiveUpload && <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress ?? 0}%` }} /></div>}
     </div>
   );
 }
 
 export default function DataCenterPage() {
   const { currentOrg } = useAuth();
-  const { activeUpload, startUpload: runUpload, clearUpload } = useUpload();
+  const { activeUpload, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
   const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
@@ -64,6 +69,9 @@ export default function DataCenterPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [cancelUploadConfirmOpen, setCancelUploadConfirmOpen] = React.useState(false);
+  const [recoveryChecking, setRecoveryChecking] = React.useState(false);
+  const [recoveryLookupFailed, setRecoveryLookupFailed] = React.useState(false);
   const [read1, setRead1] = React.useState<File | null>(null);
   const [read2, setRead2] = React.useState<File | null>(null);
   const [internalId, setInternalId] = React.useState('');
@@ -78,12 +86,19 @@ export default function DataCenterPage() {
   const retryAssetIdRef = React.useRef<string | null>(null);
   const loadRequestRef = React.useRef(0);
   const uploading = activeUpload?.status === 'uploading';
+  const canceling = activeUpload?.status === 'canceling';
+  const uploadBusy = uploading || canceling;
+  const activeUploadJobId = activeUpload?.files.find((file) => file.jobId)?.jobId;
   const progress = activeUpload?.progress ?? 0;
   const fileProgress = React.useMemo(
     () => activeUpload?.status === 'uploading'
-      ? Object.fromEntries((activeUpload.files ?? []).map((file) => [file.fileId, file.progress]))
+      ? Object.fromEntries((activeUpload.files ?? []).filter((file) => file.status === 'uploading').map((file) => [file.fileId, file.progress]))
       : {},
     [activeUpload?.files, activeUpload?.status],
+  );
+  const fileLiveStatus = React.useMemo(
+    () => Object.fromEntries((activeUpload?.files ?? []).map((file) => [file.fileId, file.status])),
+    [activeUpload?.files],
   );
 
   const load = React.useCallback(async (query = '') => {
@@ -117,28 +132,55 @@ export default function DataCenterPage() {
     if (activeFileKey) void load(search);
   }, [activeFileKey, load, search]);
 
-  // A browser refresh can leave only the durable upload metadata in
-  // localStorage even though the backend finished the upload just before the
-  // page was closed.  Treat the asset API as authoritative and clear that
-  // stale recovery banner once every remembered file is already available.
+  // A browser refresh can leave only durable upload metadata in localStorage.
+  // Ask the backend for every remembered file before showing a resume prompt:
+  // completed/deleted/missing records are not resumable, while transient
+  // lookup failures are retained so a later retry cannot lose the record.
   React.useEffect(() => {
-    if (activeUpload?.status !== 'needs_file' || activeUpload.files.length === 0 || assets.length === 0) return;
-    const allCompleted = activeUpload.files.every((file) => {
-      const asset = assets.find((item) => item.id === file.fileId);
-      return asset?.status === 'completed';
-    });
-    if (allCompleted) clearUpload();
-  }, [activeUpload, assets, clearUpload]);
+    if (activeUpload?.status !== 'needs_file' || activeUpload.files.length === 0) {
+      setRecoveryChecking(false);
+      setRecoveryLookupFailed(false);
+      return;
+    }
+    let cancelled = false;
+    setRecoveryChecking(true);
+    setRecoveryLookupFailed(false);
+    const reconcile = async () => {
+      const terminal: string[] = [];
+      let lookupFailed = false;
+      await Promise.all(activeUpload.files.map(async (file) => {
+        try {
+          const remote = await getDataAssetUploadStatus(file.fileId);
+          if (remote.status === 'completed' || remote.status === 'deleted' || remote.status === 'deleting') {
+            terminal.push(file.fileId);
+          }
+        } catch (error) {
+          const status = error instanceof ApiError
+            ? error.status
+            : (typeof error === 'object' && error !== null && 'status' in error ? (error as { status?: unknown }).status : undefined);
+          if (status === 404) terminal.push(file.fileId);
+          else lookupFailed = true;
+        }
+      }));
+      if (!cancelled) {
+        setRecoveryLookupFailed(lookupFailed);
+        setRecoveryChecking(false);
+        pruneFiles(terminal);
+      }
+    };
+    void reconcile();
+    return () => { cancelled = true; };
+  }, [activeUpload, getDataAssetUploadStatus, pruneFiles]);
 
   React.useEffect(() => {
-    if (!uploading) return;
+    if (!uploadBusy) return;
     const warnAboutActiveUpload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', warnAboutActiveUpload);
     return () => window.removeEventListener('beforeunload', warnAboutActiveUpload);
-  }, [uploading]);
+  }, [uploadBusy]);
 
   const totalBytes = storageStats?.total_bytes ?? 0;
   const readyCount = React.useMemo(() => assets.filter((asset) => asset.status === 'completed').length, [assets]);
@@ -199,13 +241,38 @@ export default function DataCenterPage() {
 
   const handleDelete = async () => {
     if (!deleting) return;
+    const liveFile = activeUpload?.files.find((file) => file.fileId === deleting.id);
+    if (liveFile && liveFile.status !== 'completed' && liveFile.status !== 'cancelled' && liveFile.status !== 'deleted') {
+      // Abort the browser request before asking the backend to delete the
+      // asset. The paired file keeps its own controller and continues.
+      cancelFile(deleting.id);
+    }
     setError('');
     try {
       await deleteDataAsset(deleting.id);
+      forgetFile(deleting.id);
       setDeleting(null);
       await load(search);
     } catch (err) {
+      if (liveFile) markFileFailed(deleting.id, err instanceof Error ? err.message : '删除失败');
       setError(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
+  const handleCancelUpload = async () => {
+    setError('');
+    try {
+      await cancelUpload();
+      setCancelUploadConfirmOpen(false);
+      setUploadOpen(false);
+      setRead1(null);
+      setRead2(null);
+      setInternalId('');
+      setUploadPolicyAcknowledged(false);
+      await load(search);
+    } catch (err) {
+      setCancelUploadConfirmOpen(false);
+      setError(err instanceof Error ? err.message : '取消上传失败');
     }
   };
 
@@ -309,7 +376,7 @@ export default function DataCenterPage() {
     {
       id: 'status',
       header: '状态',
-      accessor: (asset) => assetStatus(asset, fileProgress[asset.id] ?? retryProgress[asset.id]),
+      accessor: (asset) => assetStatus(asset, fileProgress[asset.id] ?? retryProgress[asset.id], fileLiveStatus[asset.id]),
       width: 140,
       minWidth: 140,
     },
@@ -393,10 +460,10 @@ export default function DataCenterPage() {
 
       {error && <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
 
-      {activeUpload?.status === 'needs_file' && (
+      {activeUpload?.status === 'needs_file' && !recoveryChecking && (
         <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>上次上传在浏览器刷新后仍有未完成记录。请选择相同文件后继续，系统会优先恢复对象存储中已完成的分片。</span>
+            <span>{recoveryLookupFailed ? '暂时无法确认部分上传记录的状态，请稍后刷新重试。其余未完成记录仍可选择原文件继续，系统会优先恢复对象存储中已完成的分片。' : '上次上传在浏览器刷新后仍有未完成记录。请选择相同文件后继续，系统会优先恢复对象存储中已完成的分片。'}</span>
             <button type="button" className="shrink-0 rounded-md border border-warning-muted px-2.5 py-1 text-xs font-medium text-warning-fg hover:bg-warning-muted/40" onClick={() => clearUpload()}>
               放弃恢复记录
             </button>
@@ -420,7 +487,7 @@ export default function DataCenterPage() {
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { if (!uploading) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
+          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? '正在取消…' : uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
         </div>
 
         {loading ? (
@@ -443,30 +510,31 @@ export default function DataCenterPage() {
         open={uploadOpen}
         size="large"
         title="上传测序数据"
-        onOpenChange={(open) => { setUploadOpen(open); if (!open && !uploading) setUploadPolicyAcknowledged(false); }}
+        onOpenChange={(open) => { if (canceling && !open) return; setUploadOpen(open); if (!open && !uploadBusy) setUploadPolicyAcknowledged(false); }}
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setUploadOpen(false); if (!uploading) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploading ? '隐藏到数据中心' : '取消'}</Button>
-            <Button variant="primary" disabled={uploading || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{uploading ? '上传中...' : '开始上传'}</Button>
+            {uploading && <Button variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>取消上传</Button>}
+            <Button variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploadBusy ? '隐藏到数据中心' : '取消'}</Button>
+            <Button variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploadBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{canceling ? '取消中...' : uploading ? '上传中...' : '开始上传'}</Button>
           </>
         }
       >
         <div className="space-y-6">
-          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
+          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
           {isSaaS && <p className="text-xs text-fg-muted">当前已用 {formatBytes(totalBytes)}，总容量 {storageQuotaLabel}。</p>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
             <div className="mb-4">
               <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号（推荐）</label>
-              <Input value={internalId} disabled={uploading} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder="填写样本中心的内部编号，如 SAMPLE-001" />
+              <Input value={internalId} disabled={uploadBusy} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder="填写样本中心的内部编号，如 SAMPLE-001" />
               <p className="mt-1.5 text-xs text-fg-muted">自动匹配将优先使用此编号；未填写时才根据 FASTQ 文件名匹配。</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
-              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploading} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
+              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploadBusy} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
+              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploadBusy} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
             </div>
           </section>
-          {uploading && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title="上传进度" description="请保持页面打开，文件完成后会自动登记到数据中心。" /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>正在上传</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
+          {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? '正在取消上传' : '上传进度'} description={canceling ? '正在终止传输并清理对象存储，请稍候。' : '请保持页面打开，文件完成后会自动登记到数据中心。'} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? '取消中' : '正在上传'}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
         </div>
       </AppModal>
 
@@ -483,6 +551,16 @@ export default function DataCenterPage() {
           <Input value={editingInternalId} maxLength={100} disabled={savingEdit} onChange={(event) => setEditingInternalId(event.target.value)} placeholder="如 SAMPLE-001" />
           <p className="text-xs leading-5 text-fg-muted">保存后自动匹配会优先使用该编号；清空后恢复文件名匹配。</p>
         </div>
+      </AppModal>
+
+      <AppModal
+        open={cancelUploadConfirmOpen}
+        size="small"
+        title="取消整个上传任务"
+        onOpenChange={(open) => { if (!canceling) setCancelUploadConfirmOpen(open); }}
+        footer={<><Button variant="secondary" disabled={canceling} onClick={() => setCancelUploadConfirmOpen(false)}>继续上传</Button><Button variant="danger" disabled={canceling} onClick={() => void handleCancelUpload()}>{canceling ? '取消中...' : '确认取消并删除'}</Button></>}
+      >
+        <p className="text-sm leading-6 text-fg-muted">将取消整个上传任务并删除该任务中的所有文件（包括已经完成的 Read1/Read2）。此操作无法撤销。</p>
       </AppModal>
 
       <AppModal

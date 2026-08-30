@@ -7,6 +7,8 @@ interface RequestOptions extends RequestInit {
   coreApi?: boolean;
 }
 
+export type ApiSignalOptions = Pick<RequestOptions, 'signal'>;
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -401,6 +403,19 @@ export interface PresignedUploadResult {
   storage_type: string;
 }
 
+/** Raised when the user intentionally stops an in-flight upload. */
+export class UploadCancelledError extends Error {
+  constructor(message = '上传已取消') {
+    super(message);
+    this.name = 'UploadCancelledError';
+  }
+}
+
+export function isUploadCancelled(error: unknown): error is UploadCancelledError {
+  return error instanceof UploadCancelledError
+    || (typeof error === 'object' && error !== null && 'name' in error && (error as { name?: unknown }).name === 'AbortError');
+}
+
 export const MULTIPART_THRESHOLD_BYTES = 64 * 1024 * 1024;
 export const MULTIPART_PART_SIZE_BYTES = 32 * 1024 * 1024;
 
@@ -482,7 +497,8 @@ export async function requestPresignedUploadUrl(
   readType: 'read1' | 'read2' | 'single' | 'bed' = 'single',
   referenceGenome?: 'GRCh37' | 'GRCh38',
   uploadPolicyAcknowledged = false,
-  internalId?: string
+  internalId?: string,
+  options?: ApiSignalOptions,
 ): Promise<PresignedUploadResult> {
   const fileType = readType === 'bed'
     ? 'bed'
@@ -501,7 +517,7 @@ export async function requestPresignedUploadUrl(
       read_type: readType,
       file_size: fileSize,
     }],
-  });
+  }, options);
   const file = job.files?.[0];
   if (!file?.id) {
     throw new Error('Upload job did not return a file id');
@@ -519,7 +535,7 @@ export interface PairedUploadJobResult {
   files: Array<PresignedUploadResult & { read_type: 'read1' | 'read2' }>;
 }
 
-export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAcknowledged: boolean, sampleId?: string, internalId?: string): Promise<PairedUploadJobResult> {
+export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAcknowledged: boolean, sampleId?: string, internalId?: string, options?: ApiSignalOptions): Promise<PairedUploadJobResult> {
   const job = await api.post<UploadJobResponse>('/v1/upload/jobs', {
     ...(sampleId ? { sample_id: sampleId } : {}),
 	...(internalId?.trim() ? { internal_id: internalId.trim() } : {}),
@@ -539,7 +555,7 @@ export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAck
         file_size: r2.size,
       },
     ],
-  });
+  }, options);
 
   const files = job.files ?? [];
   const byReadType = new Map(files.map((file, index) => [file.read_type || (index === 0 ? 'read1' : 'read2'), file]));
@@ -594,9 +610,27 @@ function normalizeUploadURL(uploadURL: string): string {
   return url.toString();
 }
 
-function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number) => void): Promise<void> {
+function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number) => void, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new UploadCancelledError());
+      return;
+    }
     const xhr = new XMLHttpRequest();
+    let settled = false;
+    const cleanup = () => {
+      signal?.removeEventListener('abort', onAbort);
+    };
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const onAbort = () => {
+      xhr.abort();
+      finish(() => reject(new UploadCancelledError()));
+    };
     const safeUploadURL = normalizeUploadURL(uploadURL);
     const isLocalUpload = isBackendLocalUploadURL(safeUploadURL);
     xhr.open(isLocalUpload ? 'POST' : 'PUT', safeUploadURL);
@@ -615,10 +649,12 @@ function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number
       }
     };
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new UploadError(xhr.status));
+      if (xhr.status >= 200 && xhr.status < 300) finish(resolve);
+      else finish(() => reject(new UploadError(xhr.status)));
     };
-    xhr.onerror = () => reject(new Error('Upload network error'));
+    xhr.onerror = () => finish(() => reject(new Error('Upload network error')));
+    xhr.onabort = () => finish(() => reject(new UploadCancelledError()));
+    signal?.addEventListener('abort', onAbort, { once: true });
     if (isLocalUpload) {
       const form = new FormData();
       form.append('file', file);
@@ -629,13 +665,14 @@ function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number
   });
 }
 
-export async function uploadToCOS(presignedUrl: string, file: File, onProgress?: (pct: number) => void) {
+export async function uploadToCOS(presignedUrl: string, file: File, onProgress?: (pct: number) => void, signal?: AbortSignal) {
   try {
-    await uploadFileOnce(presignedUrl, file, onProgress);
+    await uploadFileOnce(presignedUrl, file, onProgress, signal);
   } catch (err) {
+    if (isUploadCancelled(err) || signal?.aborted) throw new UploadCancelledError();
     const fallbackURL = isBackendLocalUploadURL(presignedUrl) ? squidFallbackLocalUploadURL(presignedUrl) : null;
     if (fallbackURL && err instanceof UploadError && err.status === 404) {
-      await uploadFileOnce(fallbackURL, file, onProgress);
+      await uploadFileOnce(fallbackURL, file, onProgress, signal);
       return;
     }
     throw err;
@@ -648,8 +685,12 @@ export function localUploadURL(fileID: string): string {
   return backendUploadURL(fileID);
 }
 
-export async function uploadPartToCOS(uploadURL: string, part: Blob, onProgress?: (pct: number) => void): Promise<string> {
+export async function uploadPartToCOS(uploadURL: string, part: Blob, onProgress?: (pct: number) => void, signal?: AbortSignal): Promise<string> {
   return new Promise<string>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new UploadCancelledError());
+      return;
+    }
     let safeUploadURL: string;
     try {
       safeUploadURL = normalizeUploadURL(uploadURL);
@@ -658,6 +699,18 @@ export async function uploadPartToCOS(uploadURL: string, part: Blob, onProgress?
       return;
     }
     const xhr = new XMLHttpRequest();
+    let settled = false;
+    const cleanup = () => signal?.removeEventListener('abort', onAbort);
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const onAbort = () => {
+      xhr.abort();
+      finish(() => reject(new UploadCancelledError()));
+    };
     xhr.open('PUT', safeUploadURL);
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     xhr.upload.onprogress = (event) => {
@@ -665,61 +718,69 @@ export async function uploadPartToCOS(uploadURL: string, part: Blob, onProgress?
     };
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new UploadError(xhr.status));
+        finish(() => reject(new UploadError(xhr.status)));
         return;
       }
       const etag = xhr.getResponseHeader('ETag') || xhr.getResponseHeader('etag');
       if (!etag) {
-        reject(new Error('对象存储未返回分片 ETag，请检查 COS CORS 的 expose_headers 配置'));
+        finish(() => reject(new Error('对象存储未返回分片 ETag，请检查 COS CORS 的 expose_headers 配置')));
         return;
       }
-      resolve(etag);
+      finish(() => resolve(etag));
     };
-    xhr.onerror = () => reject(new Error('Upload network error'));
+    xhr.onerror = () => finish(() => reject(new Error('Upload network error')));
+    xhr.onabort = () => finish(() => reject(new UploadCancelledError()));
+    signal?.addEventListener('abort', onAbort, { once: true });
     xhr.send(part);
   });
 }
 
-export function startUpload(fileID: string) {
-  return api.post(`/v1/upload/files/${encodeURIComponent(fileID)}/start`, {});
+export function startUpload(fileID: string, options?: ApiSignalOptions) {
+  return api.post(`/v1/upload/files/${encodeURIComponent(fileID)}/start`, {}, options);
 }
 
-export function initMultipartUpload(fileID: string) {
-  return api.post<MultipartInitResult>(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart`, {});
+export function initMultipartUpload(fileID: string, options?: ApiSignalOptions) {
+  return api.post<MultipartInitResult>(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart`, {}, options);
 }
 
-export function presignMultipartParts(fileID: string, sessionID: string, partNumbers: number[]) {
+export function presignMultipartParts(fileID: string, sessionID: string, partNumbers: number[], options?: ApiSignalOptions) {
   return api.post<MultipartPresignResult>(
     `/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/parts/presign`,
     { part_numbers: partNumbers },
+    options,
   );
 }
 
-export function recordMultipartPart(fileID: string, sessionID: string, partNumber: number, etag: string, size: number) {
+export function recordMultipartPart(fileID: string, sessionID: string, partNumber: number, etag: string, size: number, options?: ApiSignalOptions) {
   return api.put<void>(
     `/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/parts`,
     { part_number: partNumber, etag, size },
+    options,
   );
 }
 
-export function completeMultipartUpload(fileID: string, sessionID: string) {
-  return api.post(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/complete`, {});
+export function completeMultipartUpload(fileID: string, sessionID: string, options?: ApiSignalOptions) {
+  return api.post(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}/complete`, {}, options);
 }
 
 export function abortMultipartUpload(fileID: string, sessionID: string) {
   return api.delete(`/v1/upload/files/${encodeURIComponent(fileID)}/multipart/${encodeURIComponent(sessionID)}`);
 }
 
-export function retryS3Upload(fileID: string) {
-  return api.post<{ id: string; presigned_url?: string }>(`/v1/upload/files/${encodeURIComponent(fileID)}/retry`, {});
+export function retryS3Upload(fileID: string, options?: ApiSignalOptions) {
+  return api.post<{ id: string; presigned_url?: string }>(`/v1/upload/files/${encodeURIComponent(fileID)}/retry`, {}, options);
 }
 
-export function getDataAssetUploadStatus(fileID: string) {
-  return api.get<{ status?: string; provider?: string }>(`/v1/data/assets/${encodeURIComponent(fileID)}`);
+export function deleteUploadJob(jobID: string): Promise<void> {
+  return api.delete<void>(`/v1/upload/jobs/${encodeURIComponent(jobID)}`);
 }
 
-export async function confirmUpload(fileId: string) {
-  return api.post(`/v1/upload/files/${encodeURIComponent(fileId)}/complete`, {});
+export function getDataAssetUploadStatus(fileID: string, options?: ApiSignalOptions) {
+  return api.get<{ status?: string; provider?: string }>(`/v1/data/assets/${encodeURIComponent(fileID)}`, options);
+}
+
+export async function confirmUpload(fileId: string, options?: ApiSignalOptions) {
+  return api.post(`/v1/upload/files/${encodeURIComponent(fileId)}/complete`, {}, options);
 }
 
 export const api = {
