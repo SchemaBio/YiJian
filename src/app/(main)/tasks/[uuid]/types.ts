@@ -21,6 +21,14 @@ export interface AnalysisTaskDetail {
   pipeline: string;              // 分析流程名称
   pipelineVersion: string;       // 流程版本
   status: AnalysisStatus;        // 任务状态
+  vmStatus?: string;
+  executionPhase?: string;
+  executionReasonCode?: string;
+  attemptId?: string;
+  phaseUpdatedAt?: string;
+  dispatchNextRetryAt?: string;
+  dispatchRetryDeadlineAt?: string;
+  dispatchRetryCount?: number;
   createdAt: string;             // 创建时间
   createdBy: string;             // 创建者
   completedAt?: string;          // 完成时间

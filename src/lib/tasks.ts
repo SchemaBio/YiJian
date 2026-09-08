@@ -23,6 +23,10 @@ interface RawTask {
   pipeline_version?: string;
   status?: string;
   vm_status?: string;
+  execution_phase?: string;
+  execution_reason_code?: string;
+  attempt_id?: string;
+  phase_updated_at?: string;
   vmStatus?: string;
   dispatch_next_retry_at?: string;
   dispatchNextRetryAt?: string;
@@ -87,6 +91,10 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
     vmStatus: raw.vmStatus ?? raw.vm_status,
+    executionPhase: raw.execution_phase,
+    executionReasonCode: raw.execution_reason_code,
+    attemptId: raw.attempt_id,
+    phaseUpdatedAt: raw.phase_updated_at,
     dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
     dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
@@ -109,6 +117,10 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
     vmStatus: raw.vmStatus ?? raw.vm_status,
+    executionPhase: raw.execution_phase,
+    executionReasonCode: raw.execution_reason_code,
+    attemptId: raw.attempt_id,
+    phaseUpdatedAt: raw.phase_updated_at,
     dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
     dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
@@ -168,6 +180,10 @@ export function normalizeTaskProgress(rawValue: unknown): TaskProgressResponse {
     status: String(raw.status ?? ''),
     progress: typeof raw.progress === 'number' && Number.isFinite(raw.progress) ? raw.progress : 0,
     created_at: String(raw.created_at ?? raw.createdAt ?? ''),
+    execution_phase: typeof raw.execution_phase === 'string' ? raw.execution_phase : undefined,
+    execution_reason_code: typeof raw.execution_reason_code === 'string' ? raw.execution_reason_code : undefined,
+    attempt_id: typeof raw.attempt_id === 'string' ? raw.attempt_id : undefined,
+    phase_updated_at: typeof raw.phase_updated_at === 'string' ? raw.phase_updated_at : undefined,
   } as TaskProgressResponse;
 }
 

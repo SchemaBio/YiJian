@@ -36,6 +36,29 @@ function vmStatusLabel(status?: string): string {
   }
 }
 
+const executionPhaseLabels: Record<string, string> = {
+  waiting_quota: '等待组织名额',
+  waiting_capacity: '等待竞价节点',
+  dispatching: '申请确认中',
+  bootstrapping: '节点初始化中',
+  running: '计算中',
+  archiving: '结果归档中',
+  terminating: '释放节点中',
+  terminal: '本次执行已结束',
+};
+
+const executionReasonLabels: Record<string, string> = {
+  ORGANIZATION_INACTIVE: '组织已停用',
+  ADMISSION_REJECTED: '余额不足或申请未通过',
+  DISPATCH_FAILED: '执行申请未确认，系统正在对账',
+  BOOTSTRAP_FAILED: '节点初始化失败',
+  AGENT_EXITED: '节点 Agent 意外退出',
+  MAX_RUNTIME: '超过运行时限',
+  LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对',
+  INSTANCE_STOPPED: '云实例已停止',
+  INPUT_REFRESH: '输入文件地址暂时无法刷新',
+};
+
 function areTaskProgressResponsesEqual(
   previous: TaskProgressResponse,
   next: TaskProgressResponse
@@ -77,6 +100,10 @@ function areTaskProgressResponsesEqual(
     && previous.result_imported_at === next.result_imported_at
     && previous.result_import_attempts === next.result_import_attempts
     && previous.vm_status === next.vm_status
+    && previous.execution_phase === next.execution_phase
+    && previous.execution_reason_code === next.execution_reason_code
+    && previous.attempt_id === next.attempt_id
+    && previous.phase_updated_at === next.phase_updated_at
     && previous.dispatch_next_retry_at === next.dispatch_next_retry_at
     && previous.dispatch_retry_deadline_at === next.dispatch_retry_deadline_at
     && previous.dispatch_retry_count === next.dispatch_retry_count
@@ -123,10 +150,20 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
 
   React.useEffect(() => {
     const status = progress?.status || initialStatus;
-    if (!['waiting_for_data', 'queued', 'running'].includes(status)) return;
+    const phase = progress?.execution_phase;
+    const executionStillActive = [
+      'waiting_quota',
+      'waiting_capacity',
+      'dispatching',
+      'bootstrapping',
+      'running',
+      'archiving',
+      'terminating',
+    ].includes(phase ?? '');
+    if (!['waiting_for_data', 'queued', 'running'].includes(status) && !executionStillActive) return;
     const timer = window.setInterval(() => void loadRuntime(true), 5000);
     return () => window.clearInterval(timer);
-  }, [initialStatus, loadRuntime, progress?.status]);
+  }, [initialStatus, loadRuntime, progress?.execution_phase, progress?.status]);
 
   const handleCopy = async () => {
     if (!logs) return;
@@ -142,6 +179,7 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
   const value = Math.min(100, Math.max(0, progress?.progress ?? 0));
   const taskSteps = progress?.tasks ?? [];
   const vmStatus = progress?.vm_status?.toUpperCase();
+  const executionPhase = progress?.execution_phase;
 
   return (
     <div className="space-y-4">
@@ -175,6 +213,25 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
             {vmStatus === 'WAITING_CAPACITY' && <p className="mt-1 text-xs">系统会自动重试，不会重复扣除本次任务积分。</p>}
             {progress?.dispatch_next_retry_at && <p className="mt-1 text-xs">下次重试：{formatTime(progress.dispatch_next_retry_at)}</p>}
             {progress?.dispatch_retry_deadline_at && <p className="mt-1 text-xs">最晚等待至：{formatTime(progress.dispatch_retry_deadline_at)}</p>}
+          </div>
+        </div>
+      )}
+
+      {executionPhase && (
+        <div className="flex items-start gap-2 rounded-md border border-border-default bg-canvas-inset/40 px-3 py-2 text-sm">
+          <Server className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-fg-muted">执行阶段</span>
+              <Tag variant={executionPhase === 'terminating' ? 'warning' : executionPhase === 'terminal' ? 'neutral' : executionPhase === 'running' || executionPhase === 'archiving' ? 'info' : 'warning'}>
+                {executionPhaseLabels[executionPhase] ?? executionPhase}
+              </Tag>
+              {progress?.attempt_id && <span className="font-mono text-xs text-fg-muted" title={progress.attempt_id}>attempt: {progress.attempt_id.slice(0, 8)}…</span>}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
+              {progress?.phase_updated_at && <span>更新时间：{formatTime(progress.phase_updated_at)}</span>}
+              {progress?.execution_reason_code && <span className="text-danger-fg">{executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code}</span>}
+            </div>
           </div>
         </div>
       )}

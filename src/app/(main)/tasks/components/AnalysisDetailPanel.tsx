@@ -20,6 +20,7 @@ import {
   TaskRuntimeTab,
 } from '../[uuid]/components';
 import { Tag } from '@schema/ui-kit';
+import { Clock3, Server } from 'lucide-react';
 
 interface AnalysisDetailPanelProps {
   taskId: string;
@@ -34,6 +35,35 @@ const statusConfig: Record<AnalysisStatus, { label: string; variant: 'neutral' |
   cancelled: { label: '已取消', variant: 'neutral' },
   pending_interpretation: { label: '待解读', variant: 'warning' },
 };
+
+const executionPhaseConfig: Record<string, { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
+  waiting_quota: { label: '等待组织名额', variant: 'warning' },
+  waiting_capacity: { label: '等待竞价节点', variant: 'warning' },
+  dispatching: { label: '申请确认中', variant: 'info' },
+  bootstrapping: { label: '节点初始化中', variant: 'info' },
+  running: { label: '计算中', variant: 'info' },
+  archiving: { label: '结果归档中', variant: 'info' },
+  terminating: { label: '释放节点中', variant: 'warning' },
+  terminal: { label: '本次执行已结束', variant: 'neutral' },
+};
+
+const executionReasonLabels: Record<string, string> = {
+  ORGANIZATION_INACTIVE: '组织已停用',
+  ADMISSION_REJECTED: '余额不足或申请未通过',
+  DISPATCH_FAILED: '执行申请未确认，系统正在对账',
+  BOOTSTRAP_FAILED: '节点初始化失败',
+  AGENT_EXITED: '节点 Agent 意外退出',
+  MAX_RUNTIME: '超过运行时限',
+  LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对',
+  INSTANCE_STOPPED: '云实例已停止',
+  INPUT_REFRESH: '输入文件地址暂时无法刷新',
+};
+
+function formatExecutionTime(value?: string): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
+}
 
 export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   const [task, setTask] = React.useState<AnalysisTaskDetail | null>(null);
@@ -95,6 +125,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   }
 
   const statusInfo = statusConfig[task.status] ?? { label: task.status, variant: 'neutral' as const };
+  const executionInfo = task.executionPhase ? executionPhaseConfig[task.executionPhase] ?? { label: task.executionPhase, variant: 'neutral' as const } : null;
 
   // 渲染当前标签页内容
   const renderTabContent = () => {
@@ -195,6 +226,28 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
           <span>流程: {task.pipeline} {task.pipelineVersion}</span>
           <span>创建: {task.createdAt}</span>
         </div>
+
+        {executionInfo && (
+          <div className="mt-3 rounded-md border border-border-default bg-canvas-inset/40 px-3 py-2 text-xs">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="inline-flex items-center gap-1.5 text-fg-default">
+                <Server className="h-3.5 w-3.5 text-fg-muted" />
+                执行阶段
+                <Tag variant={executionInfo.variant} className="text-xs">{executionInfo.label}</Tag>
+              </span>
+              {task.attemptId && <span className="font-mono text-fg-muted" title={task.attemptId}>attempt: {task.attemptId.slice(0, 8)}…</span>}
+              {task.phaseUpdatedAt && (
+                <span className="inline-flex items-center gap-1 text-fg-muted">
+                  <Clock3 className="h-3.5 w-3.5" />更新时间 {formatExecutionTime(task.phaseUpdatedAt)}
+                </span>
+              )}
+              {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {formatExecutionTime(task.dispatchNextRetryAt)}</span>}
+            </div>
+            {task.executionReasonCode && (
+              <p className="mt-1 text-danger-fg">{executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode}</p>
+            )}
+          </div>
+        )}
 
         {/* 临床信息行 */}
         {sample && (

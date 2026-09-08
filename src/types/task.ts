@@ -15,6 +15,10 @@ export interface AnalysisTask {
   pipelineVersion: string;
   status: TaskStatus;
   vmStatus?: string;
+  executionPhase?: string;
+  executionReasonCode?: string;
+  attemptId?: string;
+  phaseUpdatedAt?: string;
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
@@ -34,6 +38,10 @@ export interface AnalysisTaskDetail {
   pipelineVersion: string;
   status: TaskStatus;
   vmStatus?: string;
+  executionPhase?: string;
+  executionReasonCode?: string;
+  attemptId?: string;
+  phaseUpdatedAt?: string;
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
@@ -105,6 +113,10 @@ export interface TaskProgressResponse {
   result_imported_at?: string;
   result_import_attempts?: number;
   vm_status?: string;
+  execution_phase?: string;
+  execution_reason_code?: string;
+  attempt_id?: string;
+  phase_updated_at?: string;
   dispatch_next_retry_at?: string;
   dispatch_retry_deadline_at?: string;
   dispatch_retry_count?: number;

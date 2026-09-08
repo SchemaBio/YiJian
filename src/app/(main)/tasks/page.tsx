@@ -16,6 +16,9 @@ import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } f
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { formatLocalDateTime } from '@/lib/utils';
 
+const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对' };
+const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', running: '计算中', archiving: '归档中', terminating: '释放中' };
+
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },
   queued: { label: '排队中', variant: 'neutral' },
@@ -54,6 +57,14 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.pipeline === candidate.pipeline
       && task.pipelineVersion === candidate.pipelineVersion
       && task.status === candidate.status
+      && task.vmStatus === candidate.vmStatus
+      && task.executionPhase === candidate.executionPhase
+      && task.executionReasonCode === candidate.executionReasonCode
+      && task.attemptId === candidate.attemptId
+      && task.phaseUpdatedAt === candidate.phaseUpdatedAt
+      && task.dispatchNextRetryAt === candidate.dispatchNextRetryAt
+      && task.dispatchRetryDeadlineAt === candidate.dispatchRetryDeadlineAt
+      && task.dispatchRetryCount === candidate.dispatchRetryCount
       && task.progress === candidate.progress
       && task.createdAt === candidate.createdAt
       && task.createdBy === candidate.createdBy
@@ -183,6 +194,15 @@ function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
+    if (task.executionPhase === 'terminating') return null;
+    if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
+      return {
+        label: task.status === 'completed' ? '释放节点' : '取消执行',
+        icon: Square,
+        onClick: () => onStop(task.id),
+        className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
+      };
+    }
     switch (task.status) {
       case 'queued':
         return {
@@ -206,6 +226,7 @@ function TaskActionsCell({
           onClick: () => onView(task),
           className: 'border-sky-200 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100',
         };
+      case 'cancelled':
       case 'failed':
         return {
           label: '重试',
@@ -219,7 +240,12 @@ function TaskActionsCell({
   };
 
   const primaryAction = getPrimaryAction();
-  const canEdit = task.status !== 'running';
+  const executionInFlight = Boolean(
+    task.executionPhase
+      && task.executionPhase !== 'idle'
+      && task.executionPhase !== 'terminal'
+  );
+  const canEdit = task.status !== 'running' && !executionInFlight;
   const canDelete = true;
 
   return (
@@ -542,7 +568,8 @@ export default function AnalysisPage() {
       header: '状态',
       accessor: (row) => {
         const config = statusConfig[row.status];
-        return <Tag variant={config.variant} className="w-14 justify-center">{config.label}</Tag>;
+        const label = row.executionPhase && executionLabels[row.executionPhase] || config.label;
+        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><Tag variant={config.variant} className="min-w-14 justify-center">{label}</Tag>{row.executionReasonCode && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
       },
       width: 90,
       align: 'center',
