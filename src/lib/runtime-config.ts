@@ -4,6 +4,8 @@ declare global {
       API_URL?: string;
       BACKEND?: 'octopus' | 'squid';
       SUPPORT_EMAIL?: string;
+      UPLOAD_ORIGINS?: string;
+      PASSWORD_RESET_ENABLED?: string;
     };
   }
 }
@@ -96,6 +98,34 @@ export function getRuntimeBackendFlavor(): 'octopus' | 'squid' {
     ? window.__YIJIAN_CONFIG__?.BACKEND
     : process.env.YIJIAN_BACKEND_FLAVOR || process.env.YIJIAN_BACKEND || process.env.NEXT_PUBLIC_BACKEND;
   return value === 'squid' ? 'squid' : 'octopus';
+}
+
+export function getRuntimeUploadOrigins(): string[] {
+  const raw = typeof window !== 'undefined'
+    ? window.__YIJIAN_CONFIG__?.UPLOAD_ORIGINS
+    : process.env.YIJIAN_UPLOAD_ORIGINS;
+  return (raw || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .flatMap((value) => {
+      try {
+        const parsed = new URL(value);
+        if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.username || parsed.password) {
+          return [];
+        }
+        return [parsed.origin];
+      } catch {
+        return [];
+      }
+    });
+}
+
+export function getRuntimePasswordResetEnabled(): boolean {
+  const value = typeof window !== 'undefined'
+    ? window.__YIJIAN_CONFIG__?.PASSWORD_RESET_ENABLED
+    : process.env.YIJIAN_PASSWORD_RESET_ENABLED || process.env.NEXT_PUBLIC_PASSWORD_RESET_ENABLED;
+  return String(value || '').trim().toLowerCase() === 'true';
 }
 
 export function getRuntimeSupportEmail(): string {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isUploadCancelled, uploadPartToCOS, uploadToCOS } from './api';
 
 class MockXMLHttpRequest {
@@ -35,9 +35,18 @@ class MockXMLHttpRequest {
 }
 
 describe('abortable COS uploads', () => {
+  beforeEach(() => {
+    window.__YIJIAN_CONFIG__ = {
+      API_URL: '/api',
+      BACKEND: 'squid',
+      UPLOAD_ORIGINS: 'https://objects.example.test',
+    };
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     MockXMLHttpRequest.instances = [];
+    window.__YIJIAN_CONFIG__ = undefined;
   });
 
   it('aborts an ordinary XHR immediately and reports a user cancellation', async () => {
@@ -74,5 +83,13 @@ describe('abortable COS uploads', () => {
     const error = await promise.catch((reason: unknown) => reason);
     expect(isUploadCancelled(error)).toBe(true);
     expect(MockXMLHttpRequest.instances[0].abortCalls).toBe(1);
+  });
+
+  it('rejects presigned URLs that are not on the upload origin allowlist', async () => {
+    vi.stubGlobal('XMLHttpRequest', MockXMLHttpRequest);
+    await expect(uploadToCOS('https://evil.example/steal', new File(['x'], 'r1.fastq.gz'))).rejects.toThrow(
+      /not allowed/,
+    );
+    expect(MockXMLHttpRequest.instances).toHaveLength(0);
   });
 });

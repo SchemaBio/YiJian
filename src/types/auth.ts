@@ -5,6 +5,7 @@ export type UserRole = SystemRole;
 export interface LoginRequest {
   email: string;
   password: string;
+  remember?: boolean;
 }
 
 export interface LoginResponse {

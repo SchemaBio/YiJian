@@ -11,15 +11,19 @@ interface AuthGateProps {
 export function AuthGate({ children }: AuthGateProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, isPlatformAdmin } = useAuth();
 
   React.useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
       const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
       router.replace(`/login?next=${encodeURIComponent(`${pathname}${currentSearch}`)}`);
+      return;
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+    if (isPlatformAdmin() && !pathname.startsWith('/settings') && pathname !== '/about' && pathname !== '/privacy') {
+      router.replace('/settings?platform=1');
+    }
+  }, [isAuthenticated, isLoading, isPlatformAdmin, pathname, router]);
 
   if (isLoading || !isAuthenticated) {
     return (

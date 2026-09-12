@@ -11,6 +11,7 @@ import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MobileNav } from './MobileNav';
 import { AssistantButton } from '@/components/assistant';
+import { useAI } from '@/components/providers/AIProvider';
 import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
 import { SupportDialog } from '@/components/support/SupportDialog';
@@ -116,8 +117,15 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
  * Includes Sidebar with navigation and Main Content area.
  * Handles responsive behavior for different viewport sizes.
  */
+function shouldMountAIAssistant(pathname: string, isEnabled: boolean): boolean {
+  if (!isEnabled) return false;
+  return !pathname.startsWith('/admin') && !pathname.startsWith('/settings') && !pathname.startsWith('/billing');
+}
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const { isEnabled: aiAssistantEnabled } = useAI();
+  const showAssistant = shouldMountAIAssistant(pathname, aiAssistantEnabled);
   const { collapsed, setCollapsed } = useSidebarState();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1279px)');
@@ -173,8 +181,7 @@ export function AppShell({ children }: AppShellProps) {
           />
         )}
         <main className="flex-1 overflow-auto">{children}</main>
-        {/* AI Assistant */}
-        <AssistantButton />
+        {showAssistant ? <AssistantButton /> : null}
       </div>
     );
   }
@@ -230,8 +237,7 @@ export function AppShell({ children }: AppShellProps) {
         </main>
       </div>
 
-      {/* AI Assistant */}
-      <AssistantButton />
+      {showAssistant ? <AssistantButton /> : null}
     </div>
   );
 }

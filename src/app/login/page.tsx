@@ -151,9 +151,6 @@ export default function LoginPage() {
                 />
                 <span className="text-[var(--yj-text-muted)]">记住我</span>
               </label>
-              <Link href="/forgot-password" className="text-success-fg hover:underline">
-                忘记密码？
-              </Link>
             </div>
 
             {privacyConsentRequired && (

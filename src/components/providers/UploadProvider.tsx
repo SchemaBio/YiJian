@@ -7,6 +7,7 @@ import {
   deleteUploadJob,
   isUploadCancelled,
 } from '@/lib/api';
+import { STORAGE_KEYS } from '@/lib/storage';
 import {
   resumeDataFiles,
   uploadDataFiles,
@@ -61,7 +62,7 @@ interface UploadRun {
 }
 
 const UploadContext = React.createContext<UploadContextValue | null>(null);
-const PERSISTED_UPLOAD_KEY = 'schema:active-upload:v1';
+const PERSISTED_UPLOAD_KEY = STORAGE_KEYS.ACTIVE_UPLOAD;
 
 function isTerminalFile(file: UploadFileProgress) {
   return file.status === 'completed' || file.status === 'cancelled' || file.status === 'deleted';

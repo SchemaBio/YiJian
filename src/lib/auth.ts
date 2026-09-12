@@ -102,6 +102,14 @@ export const authApi = {
     }
   },
 
+  changePassword: async (data: { old_password: string; new_password: string }): Promise<{ expires_at?: string }> => {
+    return api.post<{ expires_at?: string }>(
+      '/v1/auth/password',
+      data,
+      { coreApi: false }
+    );
+  },
+
   forgotPassword: async (email: string): Promise<{ message?: string }> => {
     return api.post<{ message?: string }>(
       '/v1/auth/forgot-password',

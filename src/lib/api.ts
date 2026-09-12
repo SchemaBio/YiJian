@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './storage';
-import { getRuntimeApiBaseUrl, getRuntimeBackendFlavor, getRuntimeCoreApiPrefix } from './runtime-config';
+import { getRuntimeApiBaseUrl, getRuntimeBackendFlavor, getRuntimeCoreApiPrefix, getRuntimeUploadOrigins } from './runtime-config';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
@@ -478,6 +478,10 @@ function isAllowedBackendOrigin(url: URL): boolean {
   return allowedBackendOrigins().has(url.origin);
 }
 
+function isAllowedPresignedUploadOrigin(url: URL): boolean {
+  return getRuntimeUploadOrigins().includes(url.origin);
+}
+
 function squidFallbackLocalUploadURL(uploadURL: string): string | null {
   if (getRuntimeBackendFlavor() === 'octopus' || getRuntimeCoreApiPrefix()) return null;
   try {
@@ -606,6 +610,9 @@ function normalizeUploadURL(uploadURL: string): string {
   if (!isLocalUpload && isAllowedBackendOrigin(url)) {
     throw new Error('Refusing to upload to a non-upload backend endpoint');
   }
+  if (!isLocalUpload && !isAllowedPresignedUploadOrigin(url)) {
+    throw new Error('Presigned upload URL host is not allowed');
+  }
   url.hash = '';
   return url.toString();
 }
@@ -616,6 +623,14 @@ function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number
       reject(new UploadCancelledError());
       return;
     }
+    let safeUploadURL: string;
+    try {
+      safeUploadURL = normalizeUploadURL(uploadURL);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    const isLocalUpload = isBackendLocalUploadURL(safeUploadURL);
     const xhr = new XMLHttpRequest();
     let settled = false;
     const cleanup = () => {
@@ -631,8 +646,6 @@ function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number
       xhr.abort();
       finish(() => reject(new UploadCancelledError()));
     };
-    const safeUploadURL = normalizeUploadURL(uploadURL);
-    const isLocalUpload = isBackendLocalUploadURL(safeUploadURL);
     xhr.open(isLocalUpload ? 'POST' : 'PUT', safeUploadURL);
     if (!isLocalUpload) {
       xhr.setRequestHeader('Content-Type', 'application/octet-stream');

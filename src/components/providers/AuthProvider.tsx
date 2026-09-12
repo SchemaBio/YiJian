@@ -36,9 +36,10 @@ interface AuthContextType {
   currentOrg: UserOrganizationInfo | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, remember?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: { name: string }) => Promise<User>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: (email: string) => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
   hasOrgRole: (role: OrgRole) => boolean;
@@ -54,6 +55,7 @@ function clearStoredAuth() {
   localStorage.removeItem(STORAGE_KEYS.LEGACY_AUTH_TOKENS);
   localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+  localStorage.removeItem(STORAGE_KEYS.ACTIVE_UPLOAD);
 }
 
 function persistDevAuthState(nextUser: User, nextOrgs: UserOrganizationInfo[], nextOrg: UserOrganizationInfo | null) {
@@ -165,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [applySession, resetSession]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, remember = false) => {
     setIsLoading(true);
     try {
       if (DEV_MOCK_AUTH) {
@@ -173,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const hashedPassword = await hashPassword(password, email);
-      const response: LoginResponse = await authApi.login({ email, password: hashedPassword });
+      const response: LoginResponse = await authApi.login({ email, password: hashedPassword, remember });
 
       localStorage.removeItem(STORAGE_KEYS.LEGACY_AUTH_TOKENS);
       applySession(response.user, response.currentOrg ?? response.organizations[0] ?? null);
@@ -219,6 +221,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await authApi.deleteAccount(email);
     resetSession();
   }, [resetSession, user]);
+
+  const changePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
+    if (DEV_MOCK_AUTH) {
+      return;
+    }
+    const [preparedOld, preparedNew] = await Promise.all([
+      hashPassword(oldPassword, user.email),
+      hashPassword(newPassword, user.email),
+    ]);
+    await authApi.changePassword({ old_password: preparedOld, new_password: preparedNew });
+  }, [user]);
 
   const switchOrganization = useCallback(async (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
@@ -268,6 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     updateProfile,
+    changePassword,
     deleteAccount,
     switchOrganization,
     hasOrgRole,

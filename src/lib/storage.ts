@@ -22,4 +22,6 @@ export const STORAGE_KEYS = {
   SIDEBAR_STATE: `${PREFIX}_sidebar_state`,
   /** UI theme */
   THEME: `${PREFIX}_ui_theme`,
+  /** In-progress multipart upload resume state (filenames / file IDs). */
+  ACTIVE_UPLOAD: `${PREFIX}:active-upload:v1`,
 } as const;
