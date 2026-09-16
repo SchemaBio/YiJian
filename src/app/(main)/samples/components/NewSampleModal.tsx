@@ -52,6 +52,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
   });
 
   const [submitting, setSubmitting] = React.useState(false);
+  const submittingRef = React.useRef(false);
   const [submitError, setSubmitError] = React.useState('');
 
   const [hpoSearchQuery, setHpoSearchQuery] = React.useState('');
@@ -67,7 +68,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
 
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
     setSubmitError('');
 
     if (!formData.internalId.trim()) {
@@ -75,6 +76,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onSubmit({
@@ -97,6 +99,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '创建样本失败，请稍后重试');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -122,7 +125,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
   return (
     <AppModal
       open={isOpen}
-      onOpenChange={(open) => !open && !submitting && onClose()}
+      onOpenChange={(open) => !open && !submittingRef.current && onClose()}
       title="新建样本"
       size="large"
       className="!fixed !left-1/2 !right-auto !top-1/2 !bottom-auto !m-0 !max-h-[calc(100vh-2rem)] !w-[min(920px,calc(100vw-2rem))] !max-w-[920px] !-translate-x-1/2 !-translate-y-1/2"

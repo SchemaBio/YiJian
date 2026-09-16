@@ -128,9 +128,10 @@ export default function DataCenterPage() {
   React.useEffect(() => { void load(''); }, [load]);
 
   const activeFileKey = (activeUpload?.files ?? []).map((file) => file.fileId).join(',');
+  const activeUploadStatus = activeUpload?.status;
   React.useEffect(() => {
     if (activeFileKey) void load(search);
-  }, [activeFileKey, load, search]);
+  }, [activeFileKey, activeUploadStatus, load, search]);
 
   // A browser refresh can leave only durable upload metadata in localStorage.
   // Ask the backend for every remembered file before showing a resume prompt:

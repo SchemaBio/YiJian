@@ -64,6 +64,19 @@ function areSamplesEqual(previous: Sample[], next: Sample[]): boolean {
   });
 }
 
+function uniqueSamplesById(samples: Sample[]): Sample[] {
+  const seen = new Set<string>();
+  const unique: Sample[] = [];
+
+  for (const sample of samples) {
+    if (!sample.id || seen.has(sample.id)) continue;
+    seen.add(sample.id);
+    unique.push(sample);
+  }
+
+  return unique;
+}
+
 function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
   if (!hpoTerms || hpoTerms.length === 0) {
     return <span className="text-xs text-fg-muted">未录入</span>;
@@ -183,7 +196,7 @@ export default function SamplesPage() {
 
   const loadSamples = React.useCallback(async () => {
     try {
-      const loadedSamples = await listSamples({ page: '1', page_size: '100' });
+      const loadedSamples = uniqueSamplesById(await listSamples({ page: '1', page_size: '100' }));
       const loadedIds = new Set(loadedSamples.map((sample) => sample.id));
       setSamples((previous) => areSamplesEqual(previous, loadedSamples) ? previous : loadedSamples);
       setSelectedRows((previous) => {
@@ -231,7 +244,11 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
   const handleCreateSample = async (data: NewSampleFormData) => {
     try {
       const created = await api.post<unknown>('/v1/samples', samplePayload(data));
-      setSamples(prev => [normalizeSample(created), ...prev].filter(sample => sample.id));
+      const createdSample = normalizeSample(created);
+      if (!createdSample.id) {
+        throw new Error('样本已创建，但服务器未返回样本 ID');
+      }
+      setSamples((prev) => uniqueSamplesById([createdSample, ...prev]));
       setSamplesError('');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create sample';

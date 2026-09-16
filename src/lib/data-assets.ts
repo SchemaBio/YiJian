@@ -81,6 +81,7 @@ export interface UploadBatchResult {
 
 export async function listDataAssets(search = '', filters?: { readType?: DataReadType; status?: DataAssetStatus; referenceGenome?: 'GRCh37' | 'GRCh38' }): Promise<AssetListResponse> {
   return api.get<AssetListResponse>('/v1/data/assets', {
+    cache: 'no-store',
     params: {
       page: '1', page_size: '100',
       ...(search.trim() ? { search: search.trim() } : {}),
@@ -92,11 +93,11 @@ export async function listDataAssets(search = '', filters?: { readType?: DataRea
 }
 
 export function getDataCenterConfig(): Promise<DataCenterConfig> {
-  return api.get<DataCenterConfig>('/v1/data/config');
+  return api.get<DataCenterConfig>('/v1/data/config', { cache: 'no-store' });
 }
 
 export function getUploadStorageStats(): Promise<UploadStorageStats> {
-  return api.get<UploadStorageStats>('/v1/upload/files/stats');
+  return api.get<UploadStorageStats>('/v1/upload/files/stats', { cache: 'no-store' });
 }
 
 type UploadWaiter = {
