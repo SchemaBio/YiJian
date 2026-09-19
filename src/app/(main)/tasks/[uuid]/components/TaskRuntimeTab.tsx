@@ -41,6 +41,7 @@ const executionPhaseLabels: Record<string, string> = {
   waiting_capacity: '等待竞价节点',
   dispatching: '申请确认中',
   bootstrapping: '节点初始化中',
+	  diagnostic_hold: '诊断日志保留中',
   running: '计算中',
   archiving: '结果归档中',
 	terminating: '释放节点中',
@@ -60,7 +61,31 @@ const executionReasonLabels: Record<string, string> = {
 	RELEASE_RETRY: '节点释放正在重试',
 	RELEASE_FAILED: '节点释放失败，需要管理员处理',
 	SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度',
-  INPUT_REFRESH: '输入文件地址暂时无法刷新',
+	INPUT_REFRESH: '输入文件地址暂时无法刷新',
+	NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报',
+	NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟',
+	NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟',
+	NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败',
+	NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流',
+	NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常',
+	NODE_DNS_FAILED: '节点无法解析状态服务域名',
+	NODE_TLS_FAILED: '节点与状态服务的 TLS 连接失败',
+	BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖',
+	REFERENCE_DATABASE_FAILED: '参考数据库准备失败',
+	INPUT_DOWNLOAD_FAILED: '输入文件下载失败',
+	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
+};
+
+const bootstrapPhaseLabels: Record<string, string> = {
+	starting: '节点首报握手',
+	mounting: '挂载数据盘',
+	references: '准备参考数据库（下载及解压）',
+	downloading: '下载输入',
+	agent: '启动 Agent',
+	running: '启动工作流',
+	archiving: '结果归档',
+	preflight: '检查启动依赖',
+	supervisor: '节点状态监控',
 };
 
 function areTaskProgressResponsesEqual(
@@ -108,6 +133,10 @@ function areTaskProgressResponsesEqual(
     && previous.execution_reason_code === next.execution_reason_code
     && previous.attempt_id === next.attempt_id
     && previous.phase_updated_at === next.phase_updated_at
+	    && previous.bootstrap_phase === next.bootstrap_phase
+	    && previous.bootstrap_last_heartbeat_at === next.bootstrap_last_heartbeat_at
+	    && previous.diagnostic_hold_until === next.diagnostic_hold_until
+	    && previous.diagnostic_summary === next.diagnostic_summary
     && previous.dispatch_next_retry_at === next.dispatch_next_retry_at
     && previous.dispatch_retry_deadline_at === next.dispatch_retry_deadline_at
     && previous.dispatch_retry_count === next.dispatch_retry_count
@@ -160,6 +189,7 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
       'waiting_capacity',
       'dispatching',
       'bootstrapping',
+	      'diagnostic_hold',
       'running',
       'archiving',
       'terminating',
@@ -184,6 +214,7 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
   const taskSteps = progress?.tasks ?? [];
   const vmStatus = progress?.vm_status?.toUpperCase();
   const executionPhase = progress?.execution_phase;
+	  const initializingWithoutProgress = ['bootstrapping', 'diagnostic_hold'].includes(executionPhase ?? '') && (progress?.progress ?? 0) === 0;
 
   return (
     <div className="space-y-4">
@@ -227,15 +258,19 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-fg-muted">执行阶段</span>
-              <Tag variant={executionPhase === 'terminating' ? 'warning' : executionPhase === 'terminal' ? 'neutral' : executionPhase === 'running' || executionPhase === 'archiving' ? 'info' : 'warning'}>
+              <Tag variant={executionPhase === 'terminating' || executionPhase === 'diagnostic_hold' ? 'warning' : executionPhase === 'terminal' ? 'neutral' : executionPhase === 'running' || executionPhase === 'archiving' ? 'info' : 'warning'}>
                 {executionPhaseLabels[executionPhase] ?? executionPhase}
               </Tag>
               {progress?.attempt_id && <span className="font-mono text-xs text-fg-muted" title={progress.attempt_id}>attempt: {progress.attempt_id.slice(0, 8)}…</span>}
             </div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
               {progress?.phase_updated_at && <span>更新时间：{formatTime(progress.phase_updated_at)}</span>}
+              {progress?.bootstrap_phase && <span>节点阶段：{bootstrapPhaseLabels[progress.bootstrap_phase] ?? progress.bootstrap_phase}</span>}
+	            {progress?.bootstrap_last_heartbeat_at && <span>最近心跳：{formatTime(progress.bootstrap_last_heartbeat_at)}</span>}
+	            {progress?.diagnostic_hold_until && <span className="text-warning-fg">日志保留至：{formatTime(progress.diagnostic_hold_until)}</span>}
               {progress?.execution_reason_code && <span className="text-danger-fg">{executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code}</span>}
             </div>
+	          {progress?.diagnostic_summary && <p className="mt-2 rounded-md bg-danger-subtle px-3 py-2 text-xs text-danger-fg">{progress.diagnostic_summary}</p>}
           </div>
         </div>
       )}
@@ -244,14 +279,14 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
         <div className="grid grid-cols-2 divide-x divide-y divide-[var(--yj-border-subtle)] md:grid-cols-5 md:divide-y-0">
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label="任务状态" value={<Tag variant={statusVariant(progress?.status || initialStatus)}>{progress?.status || initialStatus}</Tag>} />
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label="竞价实例" value={vmStatusLabel(vmStatus)} />
-          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label="执行进度" value={`${value}%`} />
+          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label="执行进度" value={initializingWithoutProgress ? '—' : `${value}%`} />
           <RuntimeMetric icon={<FileText className="h-4 w-4" />} label="结果入库" value={progress?.result_import_status || '-'} />
           <RuntimeMetric icon={<RefreshCw className="h-4 w-4" />} label="入库尝试" value={String(progress?.result_import_attempts ?? 0)} />
         </div>
         <div className="border-t border-[var(--yj-border-subtle)] p-4">
-          <div className="h-2 overflow-hidden rounded-full bg-canvas-inset">
+          {!initializingWithoutProgress && <div className="h-2 overflow-hidden rounded-full bg-canvas-inset">
             <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${value}%` }} />
-          </div>
+          </div>}
           <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-fg-muted">
             <span>工作流：{progress?.template || progress?.name || '-'}</span>
             <span>创建时间：{formatTime(progress?.created_at)}</span>

@@ -27,6 +27,10 @@ interface RawTask {
   execution_reason_code?: string;
   attempt_id?: string;
   phase_updated_at?: string;
+  bootstrap_phase?: string;
+  bootstrap_last_heartbeat_at?: string;
+  diagnostic_hold_until?: string;
+  diagnostic_summary?: string;
   vmStatus?: string;
   dispatch_next_retry_at?: string;
   dispatchNextRetryAt?: string;
@@ -95,6 +99,10 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     executionReasonCode: raw.execution_reason_code,
     attemptId: raw.attempt_id,
     phaseUpdatedAt: raw.phase_updated_at,
+    bootstrapPhase: raw.bootstrap_phase,
+    bootstrapLastHeartbeatAt: raw.bootstrap_last_heartbeat_at,
+    diagnosticHoldUntil: raw.diagnostic_hold_until,
+    diagnosticSummary: raw.diagnostic_summary,
     dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
     dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
@@ -121,6 +129,10 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     executionReasonCode: raw.execution_reason_code,
     attemptId: raw.attempt_id,
     phaseUpdatedAt: raw.phase_updated_at,
+    bootstrapPhase: raw.bootstrap_phase,
+    bootstrapLastHeartbeatAt: raw.bootstrap_last_heartbeat_at,
+    diagnosticHoldUntil: raw.diagnostic_hold_until,
+    diagnosticSummary: raw.diagnostic_summary,
     dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
     dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
@@ -184,6 +196,10 @@ export function normalizeTaskProgress(rawValue: unknown): TaskProgressResponse {
     execution_reason_code: typeof raw.execution_reason_code === 'string' ? raw.execution_reason_code : undefined,
     attempt_id: typeof raw.attempt_id === 'string' ? raw.attempt_id : undefined,
     phase_updated_at: typeof raw.phase_updated_at === 'string' ? raw.phase_updated_at : undefined,
+    bootstrap_phase: typeof raw.bootstrap_phase === 'string' ? raw.bootstrap_phase : undefined,
+    bootstrap_last_heartbeat_at: typeof raw.bootstrap_last_heartbeat_at === 'string' ? raw.bootstrap_last_heartbeat_at : undefined,
+    diagnostic_hold_until: typeof raw.diagnostic_hold_until === 'string' ? raw.diagnostic_hold_until : undefined,
+    diagnostic_summary: typeof raw.diagnostic_summary === 'string' ? raw.diagnostic_summary : undefined,
   } as TaskProgressResponse;
 }
 

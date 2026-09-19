@@ -41,6 +41,7 @@ const executionPhaseConfig: Record<string, { label: string; variant: 'neutral' |
   waiting_capacity: { label: '等待竞价节点', variant: 'warning' },
   dispatching: { label: '申请确认中', variant: 'info' },
   bootstrapping: { label: '节点初始化中', variant: 'info' },
+	diagnostic_hold: { label: '诊断日志保留中', variant: 'warning' },
   running: { label: '计算中', variant: 'info' },
   archiving: { label: '结果归档中', variant: 'info' },
 	terminating: { label: '释放节点中', variant: 'warning' },
@@ -60,7 +61,25 @@ const executionReasonLabels: Record<string, string> = {
 	RELEASE_RETRY: '节点释放正在重试',
 	RELEASE_FAILED: '节点释放失败，需要管理员处理',
 	SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度',
-  INPUT_REFRESH: '输入文件地址暂时无法刷新',
+	INPUT_REFRESH: '输入文件地址暂时无法刷新',
+	NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报',
+	NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟',
+	NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟',
+	NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败',
+	NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流',
+	NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常',
+	NODE_DNS_FAILED: '节点无法解析状态服务域名',
+	NODE_TLS_FAILED: '节点与状态服务的 TLS 连接失败',
+	BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖',
+	REFERENCE_DATABASE_FAILED: '参考数据库准备失败',
+	INPUT_DOWNLOAD_FAILED: '输入文件下载失败',
+	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
+};
+
+const bootstrapPhaseLabels: Record<string, string> = {
+	starting: '节点首报握手', mounting: '挂载数据盘', references: '准备参考数据库（下载及解压）',
+	downloading: '下载输入', agent: '启动 Agent', running: '启动工作流', archiving: '结果归档',
+	preflight: '检查启动依赖', supervisor: '节点状态监控',
 };
 
 function formatExecutionTime(value?: string): string {
@@ -246,10 +265,14 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
                 </span>
               )}
               {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {formatExecutionTime(task.dispatchNextRetryAt)}</span>}
+              {task.bootstrapPhase && <span className="text-fg-muted">节点阶段：{bootstrapPhaseLabels[task.bootstrapPhase] ?? task.bootstrapPhase}</span>}
+              {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">最近心跳：{formatExecutionTime(task.bootstrapLastHeartbeatAt)}</span>}
+              {task.diagnosticHoldUntil && <span className="text-warning-fg">日志保留至：{formatExecutionTime(task.diagnosticHoldUntil)}</span>}
             </div>
             {task.executionReasonCode && (
               <p className="mt-1 text-danger-fg">{executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode}</p>
             )}
+	          {task.diagnosticSummary && <p className="mt-1 text-xs text-danger-fg">{task.diagnosticSummary}</p>}
           </div>
         )}
 

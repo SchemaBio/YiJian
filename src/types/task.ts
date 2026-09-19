@@ -19,6 +19,10 @@ export interface AnalysisTask {
   executionReasonCode?: string;
   attemptId?: string;
   phaseUpdatedAt?: string;
+  bootstrapPhase?: string;
+  bootstrapLastHeartbeatAt?: string;
+  diagnosticHoldUntil?: string;
+  diagnosticSummary?: string;
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
@@ -42,6 +46,10 @@ export interface AnalysisTaskDetail {
   executionReasonCode?: string;
   attemptId?: string;
   phaseUpdatedAt?: string;
+  bootstrapPhase?: string;
+  bootstrapLastHeartbeatAt?: string;
+  diagnosticHoldUntil?: string;
+  diagnosticSummary?: string;
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
@@ -115,6 +123,10 @@ export interface TaskProgressResponse {
   vm_status?: string;
   execution_phase?: string;
   execution_reason_code?: string;
+  bootstrap_phase?: string;
+  bootstrap_last_heartbeat_at?: string;
+  diagnostic_hold_until?: string;
+  diagnostic_summary?: string;
   attempt_id?: string;
   phase_updated_at?: string;
   dispatch_next_retry_at?: string;

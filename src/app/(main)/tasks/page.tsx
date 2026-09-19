@@ -16,8 +16,9 @@ import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } f
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { formatLocalDateTime } from '@/lib/utils';
 
-const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度' };
-const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', running: '计算中', archiving: '归档中', terminating: '释放中', release_failed: '释放失败' };
+const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度', NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报', NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟', NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟', NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败', NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流', NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常', NODE_DNS_FAILED: '节点无法解析状态服务域名', NODE_TLS_FAILED: '节点 TLS 连接失败', BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖', REFERENCE_DATABASE_FAILED: '参考数据库准备失败', INPUT_DOWNLOAD_FAILED: '输入文件下载失败', AGENT_START_FAILED: 'Sepiida Agent 启动失败' };
+const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', diagnostic_hold: '诊断日志保留中', running: '计算中', archiving: '归档中', terminating: '释放中', release_failed: '释放失败' };
+const bootstrapStageLabels: Record<string, string> = { starting: '节点首报握手', mounting: '挂载数据盘', references: '准备参考数据库（下载及解压）', downloading: '下载输入', agent: '启动 Agent', running: '启动工作流', archiving: '结果归档', preflight: '检查启动依赖', supervisor: '节点状态监控' };
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },
@@ -62,6 +63,10 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.executionReasonCode === candidate.executionReasonCode
       && task.attemptId === candidate.attemptId
       && task.phaseUpdatedAt === candidate.phaseUpdatedAt
+      && task.bootstrapPhase === candidate.bootstrapPhase
+      && task.bootstrapLastHeartbeatAt === candidate.bootstrapLastHeartbeatAt
+      && task.diagnosticHoldUntil === candidate.diagnosticHoldUntil
+      && task.diagnosticSummary === candidate.diagnosticSummary
       && task.dispatchNextRetryAt === candidate.dispatchNextRetryAt
       && task.dispatchRetryDeadlineAt === candidate.dispatchRetryDeadlineAt
       && task.dispatchRetryCount === candidate.dispatchRetryCount
@@ -569,7 +574,7 @@ export default function AnalysisPage() {
       accessor: (row) => {
         const config = statusConfig[row.status];
         const label = row.executionPhase && executionLabels[row.executionPhase] || config.label;
-        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><Tag variant={config.variant} className="min-w-14 justify-center">{label}</Tag>{row.executionReasonCode && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
+        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><Tag variant={config.variant} className="min-w-14 justify-center">{label}</Tag>{row.bootstrapPhase && <div className="text-xs text-fg-muted">{bootstrapStageLabels[row.bootstrapPhase] ?? row.bootstrapPhase}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
       },
       width: 90,
       align: 'center',
@@ -577,7 +582,10 @@ export default function AnalysisPage() {
     {
       id: 'progress',
       header: '进度',
-      accessor: (row) => (
+      accessor: (row) => {
+        const preparing = ['bootstrapping', 'diagnostic_hold'].includes(row.executionPhase ?? '') && row.progress === 0;
+        if (preparing) return <span className="text-xs text-fg-muted">准备中</span>;
+        return (
         <div className="flex items-center justify-center gap-2">
           <div className="flex-1 h-2 bg-canvas-inset rounded-full overflow-hidden max-w-[60px]">
             <div
@@ -589,7 +597,8 @@ export default function AnalysisPage() {
           </div>
           <span className="text-xs text-fg-muted w-8">{row.progress}%</span>
         </div>
-      ),
+        );
+      },
       width: 120,
       align: 'center',
     },

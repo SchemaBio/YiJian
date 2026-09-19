@@ -26,6 +26,7 @@ const executionPhaseLabels: Record<string, string> = {
   waiting_capacity: '等待竞价节点',
   dispatching: '申请确认中',
   bootstrapping: '节点初始化中',
+	  diagnostic_hold: '诊断日志保留中',
   running: '计算中',
   archiving: '结果归档中',
 	terminating: '释放节点中',
@@ -45,7 +46,25 @@ const executionReasonLabels: Record<string, string> = {
 	RELEASE_RETRY: '节点释放正在重试',
 	RELEASE_FAILED: '节点释放失败，需要管理员处理',
 	SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度',
-  INPUT_REFRESH: '输入文件地址暂时无法刷新',
+	INPUT_REFRESH: '输入文件地址暂时无法刷新',
+	NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报',
+	NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟',
+	NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟',
+	NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败',
+	NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流',
+	NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常',
+	NODE_DNS_FAILED: '节点无法解析状态服务域名',
+	NODE_TLS_FAILED: '节点与状态服务的 TLS 连接失败',
+	BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖',
+	REFERENCE_DATABASE_FAILED: '参考数据库准备失败',
+	INPUT_DOWNLOAD_FAILED: '输入文件下载失败',
+	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
+};
+
+const bootstrapPhaseLabels: Record<string, string> = {
+	starting: '节点首报握手', mounting: '挂载数据盘', references: '准备参考数据库（下载及解压）',
+	downloading: '下载输入', agent: '启动 Agent', running: '启动工作流', archiving: '结果归档',
+	preflight: '检查启动依赖', supervisor: '节点状态监控',
 };
 
 export function TaskHeader({ task, onBack }: TaskHeaderProps) {
@@ -110,8 +129,12 @@ export function TaskHeader({ task, onBack }: TaskHeaderProps) {
               </span>
               {task.attemptId && <span className="font-mono text-fg-muted" title={task.attemptId}>attempt: {task.attemptId.slice(0, 8)}…</span>}
               {task.phaseUpdatedAt && <span className="inline-flex items-center gap-1 text-fg-muted"><Clock3 className="h-3.5 w-3.5" />{new Date(task.phaseUpdatedAt).toLocaleString('zh-CN', { hour12: false })}</span>}
+              {task.bootstrapPhase && <span className="text-fg-muted">节点阶段：{bootstrapPhaseLabels[task.bootstrapPhase] ?? task.bootstrapPhase}</span>}
+              {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">最近心跳：{new Date(task.bootstrapLastHeartbeatAt).toLocaleString('zh-CN', { hour12: false })}</span>}
               {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {new Date(task.dispatchNextRetryAt).toLocaleString('zh-CN', { hour12: false })}</span>}
+              {task.diagnosticHoldUntil && <span className="text-warning-fg">日志保留至 {new Date(task.diagnosticHoldUntil).toLocaleString('zh-CN', { hour12: false })}</span>}
               {task.executionReasonCode && <span className="text-danger-fg">{executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode}</span>}
+              {task.diagnosticSummary && <p className="mt-2 max-w-2xl text-xs text-danger-fg">{task.diagnosticSummary}</p>}
             </div>
           )}
         </div>

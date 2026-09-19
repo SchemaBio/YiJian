@@ -26,6 +26,10 @@ export interface AnalysisTaskDetail {
   executionReasonCode?: string;
   attemptId?: string;
   phaseUpdatedAt?: string;
+  bootstrapPhase?: string;
+  bootstrapLastHeartbeatAt?: string;
+  diagnosticHoldUntil?: string;
+  diagnosticSummary?: string;
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
