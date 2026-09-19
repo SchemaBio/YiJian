@@ -16,8 +16,8 @@ import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } f
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { formatLocalDateTime } from '@/lib/utils';
 
-const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对' };
-const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', running: '计算中', archiving: '归档中', terminating: '释放中' };
+const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度' };
+const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', running: '计算中', archiving: '归档中', terminating: '释放中', release_failed: '释放失败' };
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },

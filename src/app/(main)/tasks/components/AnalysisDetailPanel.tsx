@@ -43,7 +43,8 @@ const executionPhaseConfig: Record<string, { label: string; variant: 'neutral' |
   bootstrapping: { label: '节点初始化中', variant: 'info' },
   running: { label: '计算中', variant: 'info' },
   archiving: { label: '结果归档中', variant: 'info' },
-  terminating: { label: '释放节点中', variant: 'warning' },
+	terminating: { label: '释放节点中', variant: 'warning' },
+	release_failed: { label: '节点释放失败', variant: 'danger' },
   terminal: { label: '本次执行已结束', variant: 'neutral' },
 };
 
@@ -56,6 +57,9 @@ const executionReasonLabels: Record<string, string> = {
   MAX_RUNTIME: '超过运行时限',
   LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对',
   INSTANCE_STOPPED: '云实例已停止',
+	RELEASE_RETRY: '节点释放正在重试',
+	RELEASE_FAILED: '节点释放失败，需要管理员处理',
+	SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度',
   INPUT_REFRESH: '输入文件地址暂时无法刷新',
 };
 
