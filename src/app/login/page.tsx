@@ -54,7 +54,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       router.push(nextPath);
     } catch (err) {
       if (err instanceof ApiError) {

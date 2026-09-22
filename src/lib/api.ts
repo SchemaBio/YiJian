@@ -223,6 +223,21 @@ async function tryRefreshToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+// These endpoints either establish, rotate, or deliberately invalidate a
+// session. Retrying them through the refresh flow would create loops or cause
+// an unauthenticated request to be replayed with a different intent. Protected
+// auth endpoints such as /v1/auth/me remain eligible for refresh.
+function shouldAttemptAuthRefresh(endpoint: string): boolean {
+  return ![
+    '/v1/auth/login',
+    '/v1/auth/register',
+    '/v1/auth/refresh',
+    '/v1/auth/logout',
+    '/v1/auth/forgot-password',
+    '/v1/auth/reset-password',
+  ].includes(endpoint);
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestOptions = {}
@@ -256,10 +271,11 @@ async function request<T>(
     });
   }
 
-  // Auto-refresh on 401 (skip for auth endpoints to avoid loops). This runs
-  // after Squid /v1/octopus fallback too, because expired sessions usually
-  // surface from the proxied core endpoint rather than the first /v1/* probe.
-  if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
+  // Auto-refresh on 401. The current-user endpoint is itself under /v1/auth/
+  // and must be eligible: it is the first request made after a page reload and
+  // otherwise an expired access token looks like a logged-out session even when
+  // the refresh token is still valid.
+  if (response.status === 401 && shouldAttemptAuthRefresh(endpoint)) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
       response = await fetch(url, {
@@ -365,7 +381,7 @@ async function requestDownload(
   if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
     response = await doFetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK));
   }
-  if (response.status === 401 && !endpoint.startsWith('/v1/auth/')) {
+  if (response.status === 401 && shouldAttemptAuthRefresh(endpoint)) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
       response = await doFetch();
