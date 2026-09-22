@@ -250,8 +250,9 @@ export default function BillingSettingsPage() {
                 )}
               </p>
               <p>任务启动或重试时先按预估运行时间预扣，最终按实际计费分钟结算。</p>
-              <p>任务完成或运行中取消：按 started_at 到 finished_at 的时长计费，不足 1 分钟按 1 分钟；排队中取消不产生运行费并退回预扣。</p>
-              <p>任务失败或启动失败：退回该任务的净扣费；下载结果或报告按 {formatCredits(config?.download_credits)} 积分 / 次计费。</p>
+              <p>按时长计费的云计算任务，从节点申请成功开始，到节点确认释放为止计费，包含数据盘挂载、数据库下载及解压、输入下载、Agent 启动和分析运行；计费分钟数向上取整，不足 1 分钟按 1 分钟。</p>
+              <p>节点申请成功后，任务完成、取消、初始化失败或运行失败均按实际占用时长结算；诊断保留期间也计费。尚未申请到节点时取消或失败，退回预扣积分。</p>
+              <p>下载结果或报告按 {formatCredits(config?.download_credits)} 积分 / 次计费。</p>
               <p>CNV 基线任务按输入数据量计费，当前单价为 {formatCredits(config?.cnv_baseline_credits_per_gib)} 积分 / GiB。</p>
               <p className="text-xs text-fg-muted">预扣不是最终扣费，差额会在任务终态结算；账单明细会显示预扣、扣费、退款和下载流水。</p>
             </div>
