@@ -40,7 +40,7 @@ const executionPhaseConfig: Record<string, { label: string; variant: 'neutral' |
   waiting_quota: { label: '等待组织名额', variant: 'warning' },
   waiting_capacity: { label: '等待竞价节点', variant: 'warning' },
   dispatching: { label: '申请确认中', variant: 'info' },
-  bootstrapping: { label: '节点初始化中', variant: 'info' },
+  bootstrapping: { label: '初始化中', variant: 'info' },
 	diagnostic_hold: { label: '诊断日志保留中', variant: 'warning' },
   running: { label: '计算中', variant: 'info' },
   archiving: { label: '结果归档中', variant: 'info' },
@@ -74,12 +74,6 @@ const executionReasonLabels: Record<string, string> = {
 	REFERENCE_DATABASE_FAILED: '参考数据库准备失败',
 	INPUT_DOWNLOAD_FAILED: '输入文件下载失败',
 	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
-};
-
-const bootstrapPhaseLabels: Record<string, string> = {
-	starting: '节点首报握手', mounting: '挂载数据盘', references: '准备参考数据库（下载及解压）',
-	downloading: '下载输入', agent: '启动 Agent', running: '启动工作流', archiving: '结果归档',
-	preflight: '检查启动依赖', supervisor: '节点状态监控',
 };
 
 function formatExecutionTime(value?: string): string {
@@ -265,7 +259,6 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
                 </span>
               )}
               {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {formatExecutionTime(task.dispatchNextRetryAt)}</span>}
-              {task.bootstrapPhase && <span className="text-fg-muted">节点阶段：{bootstrapPhaseLabels[task.bootstrapPhase] ?? task.bootstrapPhase}</span>}
               {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">最近心跳：{formatExecutionTime(task.bootstrapLastHeartbeatAt)}</span>}
               {task.diagnosticHoldUntil && <span className="text-warning-fg">日志保留至：{formatExecutionTime(task.diagnosticHoldUntil)}</span>}
             </div>

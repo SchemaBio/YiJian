@@ -40,7 +40,7 @@ const executionPhaseLabels: Record<string, string> = {
   waiting_quota: '等待组织名额',
   waiting_capacity: '等待竞价节点',
   dispatching: '申请确认中',
-  bootstrapping: '节点初始化中',
+  bootstrapping: '初始化中',
 	  diagnostic_hold: '诊断日志保留中',
   running: '计算中',
   archiving: '结果归档中',
@@ -76,17 +76,6 @@ const executionReasonLabels: Record<string, string> = {
 	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
 };
 
-const bootstrapPhaseLabels: Record<string, string> = {
-	starting: '节点首报握手',
-	mounting: '挂载数据盘',
-	references: '准备参考数据库（下载及解压）',
-	downloading: '下载输入',
-	agent: '启动 Agent',
-	running: '启动工作流',
-	archiving: '结果归档',
-	preflight: '检查启动依赖',
-	supervisor: '节点状态监控',
-};
 
 function areTaskProgressResponsesEqual(
   previous: TaskProgressResponse,
@@ -265,7 +254,6 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
             </div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
               {progress?.phase_updated_at && <span>更新时间：{formatTime(progress.phase_updated_at)}</span>}
-              {progress?.bootstrap_phase && <span>节点阶段：{bootstrapPhaseLabels[progress.bootstrap_phase] ?? progress.bootstrap_phase}</span>}
 	            {progress?.bootstrap_last_heartbeat_at && <span>最近心跳：{formatTime(progress.bootstrap_last_heartbeat_at)}</span>}
 	            {progress?.diagnostic_hold_until && <span className="text-warning-fg">日志保留至：{formatTime(progress.diagnostic_hold_until)}</span>}
               {progress?.execution_reason_code && <span className="text-danger-fg">{executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code}</span>}

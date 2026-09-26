@@ -25,7 +25,7 @@ const executionPhaseLabels: Record<string, string> = {
   waiting_quota: '等待组织名额',
   waiting_capacity: '等待竞价节点',
   dispatching: '申请确认中',
-  bootstrapping: '节点初始化中',
+  bootstrapping: '初始化中',
 	  diagnostic_hold: '诊断日志保留中',
   running: '计算中',
   archiving: '结果归档中',
@@ -61,11 +61,6 @@ const executionReasonLabels: Record<string, string> = {
 	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
 };
 
-const bootstrapPhaseLabels: Record<string, string> = {
-	starting: '节点首报握手', mounting: '挂载数据盘', references: '准备参考数据库（下载及解压）',
-	downloading: '下载输入', agent: '启动 Agent', running: '启动工作流', archiving: '结果归档',
-	preflight: '检查启动依赖', supervisor: '节点状态监控',
-};
 
 export function TaskHeader({ task, onBack }: TaskHeaderProps) {
   const statusInfo = statusConfig[task.status];
@@ -129,7 +124,6 @@ export function TaskHeader({ task, onBack }: TaskHeaderProps) {
               </span>
               {task.attemptId && <span className="font-mono text-fg-muted" title={task.attemptId}>attempt: {task.attemptId.slice(0, 8)}…</span>}
               {task.phaseUpdatedAt && <span className="inline-flex items-center gap-1 text-fg-muted"><Clock3 className="h-3.5 w-3.5" />{new Date(task.phaseUpdatedAt).toLocaleString('zh-CN', { hour12: false })}</span>}
-              {task.bootstrapPhase && <span className="text-fg-muted">节点阶段：{bootstrapPhaseLabels[task.bootstrapPhase] ?? task.bootstrapPhase}</span>}
               {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">最近心跳：{new Date(task.bootstrapLastHeartbeatAt).toLocaleString('zh-CN', { hour12: false })}</span>}
               {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {new Date(task.dispatchNextRetryAt).toLocaleString('zh-CN', { hour12: false })}</span>}
               {task.diagnosticHoldUntil && <span className="text-warning-fg">日志保留至 {new Date(task.diagnosticHoldUntil).toLocaleString('zh-CN', { hour12: false })}</span>}
