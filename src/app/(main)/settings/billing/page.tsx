@@ -8,6 +8,7 @@ import { Button, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Clock3, Coins, CreditCard, Gauge, LifeBuoy, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import {
+  billingReferenceTaskId,
   getBillingBalance,
   getBillingConfig,
   getBillingTransactions,
@@ -138,8 +139,8 @@ export default function BillingSettingsPage() {
       id: 'reference_id',
       header: '关联任务',
       accessor: (row) => row.reference_id ? (
-        <Link href={`/tasks/${encodeURIComponent(row.reference_id)}`} className="font-mono text-xs text-accent-fg hover:underline">
-          {row.reference_id.slice(0, 8)}...
+        <Link href={`/tasks/${encodeURIComponent(billingReferenceTaskId(row.reference_id))}`} className="font-mono text-xs text-accent-fg hover:underline">
+          {billingReferenceTaskId(row.reference_id).slice(0, 8)}...
         </Link>
       ) : '-',
       width: 150,

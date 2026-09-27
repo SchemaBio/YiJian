@@ -24,7 +24,7 @@ export function TaskCostValue({ summary, loading = false }: TaskCostValueProps) 
     <div className="text-center">
       <div className="font-medium text-fg-default">{summary.netCost} 积分</div>
       <div className="text-xs text-fg-muted">
-        {fullyRefunded ? '已退款' : summary.refunded > 0 ? `已退 ${summary.refunded}` : '净扣费'}
+        {summary.preDeducted > 0 ? `已预扣 ${summary.preDeducted}` : fullyRefunded ? '已退款' : summary.refunded > 0 ? `已退 ${summary.refunded}` : '净扣费'}
       </div>
     </div>
   );
@@ -66,7 +66,11 @@ export function TaskCostDetail({ taskId }: { taskId: string }) {
         ) : summary && summary.transactionCount > 0 ? (
           <div className="text-sm font-medium text-fg-default">
             {summary.netCost} 积分
-            {summary.refunded > 0 && <span className="ml-1 text-xs font-normal text-fg-muted">已退 {summary.refunded}</span>}
+            {summary.preDeducted > 0 ? (
+              <span className="ml-1 text-xs font-normal text-fg-muted">已预扣 {summary.preDeducted}</span>
+            ) : summary.refunded > 0 ? (
+              <span className="ml-1 text-xs font-normal text-fg-muted">已退 {summary.refunded}</span>
+            ) : null}
           </div>
         ) : (
           <div className="text-sm text-fg-muted">未扣费</div>

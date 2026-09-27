@@ -74,7 +74,11 @@ export function summarizeTaskBilling(
   taskId: string,
   transactions: BillingTransaction[]
 ): TaskBillingSummary {
-  const taskTransactions = transactions.filter((transaction) => transaction.reference_id === taskId);
+  const attemptPrefix = `${taskId}:`;
+  const taskTransactions = transactions.filter((transaction) => (
+    transaction.reference_id === taskId
+    || transaction.reference_id?.startsWith(attemptPrefix)
+  ));
   let deducted = 0;
   let preDeducted = 0;
   let refunded = 0;
@@ -97,8 +101,14 @@ export function summarizeTaskBilling(
     refunded,
     netCost: Math.max(0, deducted - refunded),
     transactionCount: taskTransactions.length,
-    lastTransactionAt: taskTransactions[0]?.created_at,
+    lastTransactionAt: taskTransactions.reduce<string | undefined>((latest, transaction) => (
+      !latest || transaction.created_at > latest ? transaction.created_at : latest
+    ), undefined),
   };
+}
+
+export function billingReferenceTaskId(referenceId: string): string {
+  return referenceId.split(':', 1)[0];
 }
 
 export function taskBillingMap(
