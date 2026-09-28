@@ -36,6 +36,24 @@ function vmStatusLabel(status?: string): string {
   }
 }
 
+function livenessLabel(state?: string): string {
+  switch (state) {
+    case 'online': return '在线';
+    case 'delayed': return '延迟';
+    case 'offline': return '离线';
+    case 'legacy/unknown': return '旧版 Agent / 未知';
+    case 'unknown': return '未知';
+    default: return state || '未知';
+  }
+}
+
+function livenessVariant(state?: string): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (state === 'online') return 'success';
+  if (state === 'delayed') return 'warning';
+  if (state === 'offline') return 'danger';
+  return 'neutral';
+}
+
 const executionPhaseLabels: Record<string, string> = {
   waiting_quota: '等待组织名额',
   waiting_capacity: '等待竞价节点',
@@ -61,6 +79,7 @@ const executionReasonLabels: Record<string, string> = {
 	RELEASE_RETRY: '节点释放正在重试',
 	RELEASE_FAILED: '节点释放失败，需要管理员处理',
 	SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度',
+	SEPIIDA_QUERY_UNAVAILABLE: '暂时无法读取 Sepiida 状态，已按平台故障处理',
 	INPUT_REFRESH: '输入文件地址暂时无法刷新',
 	NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报',
 	NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟',
@@ -105,6 +124,9 @@ function areTaskProgressResponsesEqual(
       && previous.sepiida.status === next.sepiida.status
       && previous.sepiida.start_time === next.sepiida.start_time
       && previous.sepiida.end_time === next.sepiida.end_time);
+  const analysisEqual = JSON.stringify(previous.analysis_progress ?? null) === JSON.stringify(next.analysis_progress ?? null);
+  const nodeLivenessEqual = JSON.stringify(previous.node_liveness ?? null) === JSON.stringify(next.node_liveness ?? null);
+  const agentLivenessEqual = JSON.stringify(previous.agent_liveness ?? null) === JSON.stringify(next.agent_liveness ?? null);
 
   return previous.id === next.id
     && previous.uuid === next.uuid
@@ -129,6 +151,9 @@ function areTaskProgressResponsesEqual(
     && previous.dispatch_next_retry_at === next.dispatch_next_retry_at
     && previous.dispatch_retry_deadline_at === next.dispatch_retry_deadline_at
     && previous.dispatch_retry_count === next.dispatch_retry_count
+    && analysisEqual
+    && nodeLivenessEqual
+    && agentLivenessEqual
     && sepiidaEqual
     && tasksEqual;
 }
@@ -203,7 +228,8 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
   const taskSteps = progress?.tasks ?? [];
   const vmStatus = progress?.vm_status?.toUpperCase();
   const executionPhase = progress?.execution_phase;
-	  const initializingWithoutProgress = ['bootstrapping', 'diagnostic_hold'].includes(executionPhase ?? '') && (progress?.progress ?? 0) === 0;
+  const initializingWithoutProgress = ['bootstrapping', 'diagnostic_hold'].includes(executionPhase ?? '') && (progress?.progress ?? 0) === 0;
+  const analysisProgress = progress?.analysis_progress;
 
   return (
     <div className="space-y-4">
@@ -267,13 +293,13 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
         <div className="grid grid-cols-2 divide-x divide-y divide-[var(--yj-border-subtle)] md:grid-cols-5 md:divide-y-0">
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label="任务状态" value={<Tag variant={statusVariant(progress?.status || initialStatus)}>{progress?.status || initialStatus}</Tag>} />
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label="竞价实例" value={vmStatusLabel(vmStatus)} />
-          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label="执行进度" value={initializingWithoutProgress ? '—' : `${value}%`} />
+          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label="分析进度" value={initializingWithoutProgress || !analysisProgress ? '—' : `${analysisProgress.percent}%`} />
           <RuntimeMetric icon={<FileText className="h-4 w-4" />} label="结果入库" value={progress?.result_import_status || '-'} />
           <RuntimeMetric icon={<RefreshCw className="h-4 w-4" />} label="入库尝试" value={String(progress?.result_import_attempts ?? 0)} />
         </div>
         <div className="border-t border-[var(--yj-border-subtle)] p-4">
-          {!initializingWithoutProgress && <div className="h-2 overflow-hidden rounded-full bg-canvas-inset">
-            <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${value}%` }} />
+          {!initializingWithoutProgress && analysisProgress && <div className="h-2 overflow-hidden rounded-full bg-canvas-inset">
+            <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${analysisProgress.percent}%` }} />
           </div>}
           <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-fg-muted">
             <span>工作流：{progress?.template || progress?.name || '-'}</span>
@@ -284,6 +310,65 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
           )}
         </div>
       </div>
+
+      {(progress?.node_liveness || progress?.agent_liveness || analysisProgress) && (
+        <section className="grid gap-3 lg:grid-cols-3">
+          <div className="yj-panel p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-fg-default">分析进度</h3>
+              <span className="text-sm font-semibold tabular-nums text-fg-default">{analysisProgress?.percent ?? value}%</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-canvas-inset">
+              <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${analysisProgress?.percent ?? value}%` }} />
+            </div>
+            {analysisProgress?.active_stages.length ? (
+              <p className="mt-3 text-xs text-fg-muted">正在进行：{analysisProgress.active_stages.map((code) => analysisProgress.stages.find((stage) => stage.code === code)?.label ?? code).join('、')}</p>
+            ) : (
+              <p className="mt-3 text-xs text-fg-muted">{initializingWithoutProgress ? '等待工作流开始' : '当前没有正在运行的分析阶段'}</p>
+            )}
+          </div>
+
+          <div className="yj-panel p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-fg-default">计算节点</h3>
+              <Tag variant={livenessVariant(progress?.node_liveness?.state)}>{livenessLabel(progress?.node_liveness?.state)}</Tag>
+            </div>
+            <p className="mt-3 text-xs text-fg-muted">最近节点心跳：{formatTime(progress?.node_liveness?.last_seen_at || progress?.bootstrap_last_heartbeat_at)}</p>
+          </div>
+
+          <div className="yj-panel p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-fg-default">Sepiida Agent</h3>
+              <Tag variant={livenessVariant(progress?.agent_liveness?.state)}>{livenessLabel(progress?.agent_liveness?.state)}</Tag>
+            </div>
+            <p className="mt-3 text-xs text-fg-muted">最近采集：{formatTime(progress?.agent_liveness?.last_collected_at)}</p>
+            <p className="mt-1 text-xs text-fg-muted">最近进度上报：{formatTime(progress?.agent_liveness?.last_progress_push_at)}</p>
+            {progress?.agent_liveness?.collection_status === 'error' && (
+              <p className="mt-2 text-xs text-warning-fg">最近一次采集异常{progress.agent_liveness.error_code ? `（${progress.agent_liveness.error_code}）` : ''}</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {analysisProgress?.stages.length ? (
+        <section className="yj-panel overflow-hidden">
+          <div className="yj-panel-header"><h3 className="yj-section-title">分析阶段</h3></div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {analysisProgress.stages.map((stage) => (
+              <div key={stage.code} className="rounded-md border border-border-default p-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-fg-default">{stage.label}</span>
+                  <span className="tabular-nums text-fg-muted">{stage.percent}%</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas-inset">
+                  <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${stage.percent}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-fg-muted">权重 {stage.weight}% · {stage.status === 'success' ? '完成' : stage.status === 'running' ? '进行中' : '等待中'}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {taskSteps.length > 0 && (
         <section className="yj-panel overflow-hidden">

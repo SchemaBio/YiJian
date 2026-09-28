@@ -134,6 +134,37 @@ export interface TaskProgressResponse {
   dispatch_retry_count?: number;
   sepiida?: SepiidaWorkflow;
   tasks?: SepiidaTask[];
+  analysis_progress?: AnalysisProgress;
+  node_liveness?: Liveness;
+  agent_liveness?: AgentLiveness;
+}
+
+export interface AnalysisStageProgress {
+  code: string;
+  label: string;
+  weight: number;
+  percent: number;
+  status: 'pending' | 'running' | 'success' | string;
+}
+
+export interface AnalysisProgress {
+  percent: number;
+  profile_version: string;
+  active_stages: string[];
+  stages: AnalysisStageProgress[];
+}
+
+export interface Liveness {
+  state: 'online' | 'delayed' | 'offline' | 'unknown' | 'legacy/unknown' | string;
+  last_seen_at?: string;
+}
+
+export interface AgentLiveness {
+  state: 'online' | 'delayed' | 'offline' | 'legacy/unknown' | string;
+  last_collected_at?: string;
+  last_progress_push_at?: string;
+  collection_status?: 'ok' | 'error' | 'unknown' | string;
+  error_code?: string;
 }
 
 export interface TaskStatsResponse {
