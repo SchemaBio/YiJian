@@ -10,6 +10,7 @@ import { getMitochondrialVariants, reportVariant, reviewVariant } from '../resul
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { MTDetailPanel } from './MTDetailPanel';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface MTTabProps {
   taskId: string;
@@ -24,6 +25,7 @@ const PATHOGENICITY_CONFIG: Record<MitochondrialPathogenicity, { label: string; 
   VUS: { label: '意义未明', variant: 'neutral' },
   Likely_Benign: { label: '可能良性', variant: 'info' },
   Benign: { label: '良性', variant: 'success' },
+  Unknown: { label: '未提供', variant: 'neutral' },
 };
 
 export function MTTab({ 
@@ -34,6 +36,9 @@ export function MTTab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<MitochondrialVariant> | null>(null);
   const [loading, setLoading] = React.useState(true);
+	const [error, setError] = React.useState<string | null>(null);
+	const [operationError, setOperationError] = React.useState<string | null>(null);
+	const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
 
   // IGV 查看器状态
@@ -72,25 +77,43 @@ export function MTTab({
   }, []);
 
   // 处理审核状态变更
-  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reviewed: checked }
     }));
-    reviewVariant(taskId, 'mt', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+		try {
+			await reviewVariant(taskId, 'mt', id, checked);
+		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+			setOperationError(cause instanceof Error ? cause.message : '更新复核状态失败');
+		} finally {
+			setPendingVariantIDs((previous) => {
+				const next = new Set(previous); next.delete(id); return next;
+			});
+		}
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reported: checked }
     }));
-    reportVariant(taskId, 'mt', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+		try {
+			await reportVariant(taskId, 'mt', id, checked);
+		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+			setOperationError(cause instanceof Error ? cause.message : '标记回报失败');
+		} finally {
+			setPendingVariantIDs((previous) => {
+				const next = new Set(previous); next.delete(id); return next;
+			});
+		}
   }, [taskId]);
 
   // 获取变异的审核状态
@@ -98,31 +121,30 @@ export function MTTab({
     return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
   }, [reviewStatus]);
 
-  // 按审核/回报状态排序的数据
-  const sortedData = React.useMemo(() => {
-    if (!result?.data) return [];
-    return [...result.data].sort((a, b) => {
-      const stateA = getReviewState(a);
-      const stateB = getReviewState(b);
-      if (stateA.reported !== stateB.reported) return stateA.reported ? -1 : 1;
-      if (stateA.reviewed !== stateB.reviewed) return stateA.reviewed ? -1 : 1;
-      return 0;
-    });
-  }, [result?.data, getReviewState]);
+	const sortedData = result?.data ?? [];
 
   React.useEffect(() => {
+		const controller = new AbortController();
     async function loadData() {
       setLoading(true);
-      const data = await getMitochondrialVariants(taskId, filterState);
-      setResult(data);
-      setLoading(false);
+		setError(null);
+		try {
+			const data = await getMitochondrialVariants(taskId, filterState, controller.signal);
+			if (!controller.signal.aborted) setResult(data);
+		} catch (cause) {
+			if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : '无法加载线粒体结果');
+		} finally {
+			if (!controller.signal.aborted) setLoading(false);
+		}
     }
-    loadData();
+		void loadData();
+		return () => controller.abort();
   }, [taskId, filterState]);
 
   const handleSearch = React.useCallback((query: string) => {
     setFilterState({ ...filterState, searchQuery: query, page: 1 });
   }, [filterState, setFilterState]);
+  const [searchInput, setSearchInput] = useDebouncedSearch(filterState.searchQuery, handleSearch);
 
   const handleSortChange = React.useCallback((column: string, direction: 'asc' | 'desc' | null) => {
     setFilterState({
@@ -152,6 +174,7 @@ export function MTTab({
           <ReviewCheckbox
             checked={state.reviewed}
             onChange={(checked) => handleReviewChange(row.id, checked, state)}
+			disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -166,6 +189,7 @@ export function MTTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+			disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -238,8 +262,8 @@ export function MTTab({
           <div className="w-64">
             <Input
               placeholder="搜索基因、疾病..."
-              value={filterState.searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
@@ -261,7 +285,9 @@ export function MTTab({
         </div>
       </div>
 
-      {loading ? (
+		{error && !loading ? (
+			<div className="rounded-lg border border-danger-emphasis bg-danger-subtle p-4 text-sm text-danger-fg">{error}</div>
+		) : loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
@@ -308,9 +334,13 @@ export function MTTab({
           暂无线粒体变异数据
         </div>
       )}
+		{operationError && (
+			<div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>
+		)}
 
       {/* IGV 查看器 */}
       <IGVViewer
+		taskId={taskId}
         chromosome={igvState.chromosome}
         position={igvState.position}
         isOpen={igvState.isOpen}

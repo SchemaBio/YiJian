@@ -8,6 +8,7 @@ import type { UPDRegion, UPDType, TableFilterState, PaginatedResult } from '../t
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getUPDRegions, reportVariant, reviewVariant } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface UPDTabProps {
   taskId: string;
@@ -16,9 +17,10 @@ interface UPDTabProps {
 }
 
 // UPD类型配置
-const UPD_TYPE_CONFIG: Record<UPDType, { label: string; variant: 'info' | 'warning' }> = {
+const UPD_TYPE_CONFIG: Record<UPDType, { label: string; variant: 'info' | 'warning' | 'neutral' }> = {
   Isodisomy: { label: '等位UPD', variant: 'warning' },
   Heterodisomy: { label: '异位UPD', variant: 'info' },
+  Unknown: { label: '未提供', variant: 'neutral' },
 };
 
 export function UPDTab({ 
@@ -29,6 +31,9 @@ export function UPDTab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<UPDRegion> | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [requestError, setRequestError] = React.useState<string | null>(null);
+  const [operationError, setOperationError] = React.useState<string | null>(null);
+  const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
 
   const filterState = externalFilterState ?? internalFilterState;
@@ -36,18 +41,29 @@ export function UPDTab({
 
   // 加载基因列表
   React.useEffect(() => {
+    const controller = new AbortController();
     async function loadData() {
       setLoading(true);
-      const data = await getUPDRegions(taskId, filterState);
-      setResult(data);
-      setLoading(false);
+      setRequestError(null);
+      try {
+        const data = await getUPDRegions(taskId, filterState, controller.signal);
+        if (!controller.signal.aborted) setResult(data);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setRequestError(error instanceof Error ? error.message : '无法加载 UPD 区域');
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
     }
-    loadData();
+    void loadData();
+    return () => controller.abort();
   }, [taskId, filterState]);
 
   const handleSearch = React.useCallback((query: string) => {
     setFilterState({ ...filterState, searchQuery: query, page: 1 });
   }, [filterState, setFilterState]);
+  const [searchInput, setSearchInput] = useDebouncedSearch(filterState.searchQuery, handleSearch);
 
   const handleSortChange = React.useCallback((column: string, direction: 'asc' | 'desc' | null) => {
     setFilterState({
@@ -58,25 +74,47 @@ export function UPDTab({
   }, [filterState, setFilterState]);
 
   // 处理审核状态变更
-  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+    setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reviewed: checked }
     }));
-    reviewVariant(taskId, 'upd', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+    try {
+      await reviewVariant(taskId, 'upd', id, checked);
+    } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+      setOperationError(error instanceof Error ? error.message : '更新复核状态失败');
+    } finally {
+      setPendingVariantIDs((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+    setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reported: checked }
     }));
-    reportVariant(taskId, 'upd', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+    try {
+      await reportVariant(taskId, 'upd', id, checked);
+    } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+      setOperationError(error instanceof Error ? error.message : '标记回报失败');
+    } finally {
+      setPendingVariantIDs((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [taskId]);
 
   // 获取变异的审核状态
@@ -84,17 +122,7 @@ export function UPDTab({
     return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
   }, [reviewStatus]);
 
-  // 按审核/回报状态排序的数据
-  const sortedData = React.useMemo(() => {
-    if (!result?.data) return [];
-    return [...result.data].sort((a, b) => {
-      const stateA = getReviewState(a);
-      const stateB = getReviewState(b);
-      if (stateA.reported !== stateB.reported) return stateA.reported ? -1 : 1;
-      if (stateA.reviewed !== stateB.reviewed) return stateA.reviewed ? -1 : 1;
-      return 0;
-    });
-  }, [result?.data, getReviewState]);
+  const sortedData = result?.data ?? [];
 
   const columns: Column<UPDRegion>[] = [
     {
@@ -106,6 +134,7 @@ export function UPDTab({
           <ReviewCheckbox
             checked={state.reviewed}
             onChange={(checked) => handleReviewChange(row.id, checked, state)}
+            disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -120,6 +149,7 @@ export function UPDTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+            disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -192,8 +222,8 @@ export function UPDTab({
           <div className="w-64">
             <Input
               placeholder="搜索染色体..."
-              value={filterState.searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
@@ -207,7 +237,12 @@ export function UPDTab({
         </div>
       </div>
 
-      {loading ? (
+      {requestError ? (
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
+          {requestError}
+          <button onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</button>
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
@@ -252,6 +287,9 @@ export function UPDTab({
         <div className="text-center py-12 text-fg-muted">
           暂无UPD区域数据
         </div>
+      )}
+      {operationError && (
+        <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>
       )}
     </div>
   );

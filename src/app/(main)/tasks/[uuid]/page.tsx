@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { tasksApi } from '@/lib/tasks';
 import { useTabState } from './hooks/useTabState';
-import type { AnalysisTaskDetail } from './types';
+import { getResultContext } from './result-api';
+import type { AnalysisTaskDetail, ResultContext, TabType } from './types';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import {
   TaskHeader,
@@ -22,6 +23,8 @@ import {
   ROHTab,
   ReportTab,
   TaskRuntimeTab,
+	ResultOverview,
+	VariantTypeNav,
 } from './components';
 
 export default function AnalysisDetailPage() {
@@ -33,22 +36,32 @@ export default function AnalysisDetailPage() {
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
+	const [resultContext, setResultContext] = React.useState<ResultContext | null>(null);
+	const [resultContextError, setResultContextError] = React.useState<string | null>(null);
 
   // 使用标签页状态管理hook，默认从质控结果开始
-  const { activeTab, setActiveTab, getFilterState, setFilterState } = useTabState(uuid);
+	const { activeTab, hasExplicitTab, setActiveTab, getFilterState, setFilterState } = useTabState(uuid);
+	const defaultedTabRef = React.useRef(false);
 
   // 加载任务数据和样本数据
   React.useEffect(() => {
+		const controller = new AbortController();
     async function loadData() {
       setLoading(true);
       setNotFound(false);
       try {
-        const [taskData, sampleData] = await Promise.all([
+        const [taskData, sampleData, contextData] = await Promise.all([
           tasksApi.get(uuid),
           tasksApi.getSample(uuid).catch(() => null),
+			getResultContext(uuid, controller.signal).catch(cause => {
+				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
+				return null;
+			}),
         ]);
+		if (controller.signal.aborted) return;
         setTask(taskData);
         setSample(sampleData);
+		setResultContext(contextData);
       } catch {
         setNotFound(true);
         setTask(null);
@@ -57,8 +70,15 @@ export default function AnalysisDetailPage() {
         setLoading(false);
       }
     }
-    loadData();
+		void loadData();
+		return () => controller.abort();
   }, [uuid]);
+
+	React.useEffect(() => {
+		if (loading || hasExplicitTab || defaultedTabRef.current) return;
+		defaultedTabRef.current = true;
+		if (resultContext && resultContext.state !== 'ready') setActiveTab('runtime');
+	}, [hasExplicitTab, loading, resultContext, setActiveTab]);
 
   // 返回任务列表
   const handleBack = React.useCallback(() => {
@@ -101,10 +121,12 @@ export default function AnalysisDetailPage() {
   // 渲染当前标签页内容
   const renderTabContent = () => {
     switch (activeTab) {
+		case 'overview':
+			return resultContext ? <ResultOverview context={resultContext} onNavigate={setActiveTab} /> : <ResultContextUnavailable message={resultContextError} />;
       case 'runtime':
         return <TaskRuntimeTab taskId={uuid} initialStatus={task.status} />;
-      case 'qc':
-        return <QCResultTab taskId={uuid} />;
+		case 'qc':
+			return <QCResultTab taskId={uuid} context={resultContext} />;
       case 'snv-indel':
         return (
           <SNVIndelTab
@@ -117,6 +139,7 @@ export default function AnalysisDetailPage() {
         return (
           <CNVSegmentTab
             taskId={uuid}
+            referenceId={resultContext?.reference.declaredId}
             filterState={getFilterState('cnv-segment')}
             onFilterChange={(state) => setFilterState('cnv-segment', state)}
           />
@@ -125,6 +148,7 @@ export default function AnalysisDetailPage() {
         return (
           <CNVExonTab
             taskId={uuid}
+            referenceId={resultContext?.reference.declaredId}
             filterState={getFilterState('cnv-exon')}
             onFilterChange={(state) => setFilterState('cnv-exon', state)}
           />
@@ -176,6 +200,8 @@ export default function AnalysisDetailPage() {
     }
   };
 
+	const isVariantTab = ['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'].includes(activeTab);
+
   return (
     <PageContent>
       {/* 任务信息头部 */}
@@ -185,9 +211,23 @@ export default function AnalysisDetailPage() {
       {sample && <SampleSummaryCard sample={sample} />}
 
       {/* 标签面板和内容 */}
-      <ResultTabs activeTab={activeTab} onTabChange={setActiveTab}>
-        {renderTabContent()}
-      </ResultTabs>
+		<ResultTabs activeTab={activeTab} onTabChange={setActiveTab}>
+			{isVariantTab ? (
+				<div className="grid gap-5 xl:grid-cols-[168px_minmax(0,1fr)]">
+					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={setActiveTab} />
+					<div className="min-w-0 rounded-xl border border-border-default bg-canvas-default p-4 shadow-sm">{renderTabContent()}</div>
+				</div>
+			) : renderTabContent()}
+		</ResultTabs>
     </PageContent>
+  );
+}
+
+function ResultContextUnavailable({ message }: { message: string | null }) {
+  return (
+    <div className="rounded-xl border border-border-default bg-canvas-default p-8 text-center">
+      <h2 className="font-semibold text-fg-default">结果上下文尚不可用</h2>
+      <p className="mt-2 text-sm text-fg-muted">{message || '任务结果尚未完成结构化导入。'}</p>
+    </div>
   );
 }

@@ -314,7 +314,7 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
 
   const currentClassification = localClassification ?? variant.acmgClassification;
   const currentCriteria = localCriteria ?? variant.acmgCriteria ?? [];
-  const acmgConfig = ACMG_CONFIG[currentClassification];
+  const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
   
   // 格式化频率显示
   const formatFrequency = (freq?: number) => {
@@ -356,7 +356,7 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">变异详情</h3>
-            <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag>
+            {acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : <Tag variant="neutral">未提供</Tag>}
           </div>
           <button
             onClick={onClose}
@@ -388,7 +388,8 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
             <InfoItem label="变异类型" value={variant.variantType} />
             <InfoItem label="杂合性" value={
               variant.zygosity === 'Heterozygous' ? '杂合' :
-              variant.zygosity === 'Homozygous' ? '纯合' : '半合'
+              variant.zygosity === 'Homozygous' ? '纯合' :
+              variant.zygosity === 'Hemizygous' ? '半合' : '未提供'
             } />
             <InfoItem label="转录本" value={variant.transcript} />
             <InfoItem label="cDNA变化" value={variant.hgvsc} />
@@ -450,14 +451,14 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
           <div className="bg-canvas-subtle rounded-lg p-3">
             {isEditingACMG ? (
               <ACMGClassificationEditor
-                currentClassification={currentClassification}
+                currentClassification={currentClassification ?? 'VUS'}
                 currentCriteria={currentCriteria}
                 onSave={handleSaveACMG}
                 onCancel={() => setIsEditingACMG(false)}
               />
             ) : (
               <>
-                <InfoItem label="分类" value={<Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag>} />
+                <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未提供'} />
                 <InfoItem 
                   label="证据项" 
                   value={currentCriteria.length ? (

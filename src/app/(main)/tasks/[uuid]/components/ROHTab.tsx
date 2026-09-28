@@ -8,6 +8,7 @@ import type { PaginatedResult, ROHRegion, TableFilterState } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getROHRegions, reportVariant, reviewVariant } from '../result-api';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface ROHTabProps {
   taskId: string;
@@ -19,33 +20,40 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<ROHRegion> | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [requestError, setRequestError] = React.useState<string | null>(null);
+  const [operationError, setOperationError] = React.useState<string | null>(null);
+  const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
 
   const filterState = externalFilterState ?? internalFilterState;
   const setFilterState = onFilterChange ?? setInternalFilterState;
 
   React.useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function loadData() {
       setLoading(true);
+      setRequestError(null);
       try {
-        const data = await getROHRegions(taskId, filterState);
-        if (!cancelled) setResult(data);
+        const data = await getROHRegions(taskId, filterState, controller.signal);
+        if (!controller.signal.aborted) setResult(data);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setRequestError(error instanceof Error ? error.message : '无法加载 ROH 区域');
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
-    loadData();
-    return () => {
-      cancelled = true;
-    };
+    void loadData();
+    return () => controller.abort();
   }, [taskId, filterState]);
 
   const handleSearch = React.useCallback((query: string) => {
     setFilterState({ ...filterState, searchQuery: query, page: 1 });
   }, [filterState, setFilterState]);
+  const [searchInput, setSearchInput] = useDebouncedSearch(filterState.searchQuery, handleSearch);
 
   const handleSortChange = React.useCallback((column: string, direction: 'asc' | 'desc' | null) => {
     setFilterState({
@@ -55,40 +63,53 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     });
   }, [filterState, setFilterState]);
 
-  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+    setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reviewed: checked },
     }));
-    reviewVariant(taskId, 'roh', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+    try {
+      await reviewVariant(taskId, 'roh', id, checked);
+    } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+      setOperationError(error instanceof Error ? error.message : '更新复核状态失败');
+    } finally {
+      setPendingVariantIDs((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [taskId]);
 
-  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+    setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reported: checked },
     }));
-    reportVariant(taskId, 'roh', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+    try {
+      await reportVariant(taskId, 'roh', id, checked);
+    } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+      setOperationError(error instanceof Error ? error.message : '标记回报失败');
+    } finally {
+      setPendingVariantIDs((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [taskId]);
 
   const getReviewState = React.useCallback((region: ROHRegion) => {
     return reviewStatus[region.id] ?? { reviewed: region.reviewed, reported: region.reported };
   }, [reviewStatus]);
 
-  const sortedData = React.useMemo(() => {
-    if (!result?.data) return [];
-    return [...result.data].sort((a, b) => {
-      const stateA = getReviewState(a);
-      const stateB = getReviewState(b);
-      if (stateA.reported !== stateB.reported) return stateA.reported ? -1 : 1;
-      if (stateA.reviewed !== stateB.reviewed) return stateA.reviewed ? -1 : 1;
-      return 0;
-    });
-  }, [result?.data, getReviewState]);
+  const sortedData = result?.data ?? [];
 
   const columns: Column<ROHRegion>[] = [
     {
@@ -96,7 +117,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       header: <ReviewColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
-        return <ReviewCheckbox checked={state.reviewed} onChange={(checked) => handleReviewChange(row.id, checked, state)} />;
+        return <ReviewCheckbox checked={state.reviewed} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handleReviewChange(row.id, checked, state)} />;
       },
       width: 60,
     },
@@ -105,7 +126,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       header: <ReportColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
-        return <ReportCheckbox checked={state.reported} onChange={(checked) => handleReportChange(row.id, checked, state)} />;
+        return <ReportCheckbox checked={state.reported} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handleReportChange(row.id, checked, state)} />;
       },
       width: 60,
     },
@@ -143,15 +164,20 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
         <div className="w-64">
           <Input
             placeholder="搜索染色体、基因..."
-            value={filterState.searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
         <div className="text-sm text-fg-muted">共 {result?.total ?? 0} 条ROH区域</div>
       </div>
 
-      {loading ? (
+      {requestError ? (
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
+          {requestError}
+          <button onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</button>
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
@@ -194,6 +220,9 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">暂无ROH区域数据</div>
+      )}
+      {operationError && (
+        <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>
       )}
     </div>
   );

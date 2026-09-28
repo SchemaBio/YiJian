@@ -25,6 +25,9 @@ export function SNVIndelTab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<SNVIndel> | null>(null);
   const [loading, setLoading] = React.useState(true);
+	const [requestError, setRequestError] = React.useState<string | null>(null);
+	const [operationError, setOperationError] = React.useState<string | null>(null);
+	const [pendingVariants, setPendingVariants] = React.useState<Set<string>>(() => new Set());
   const [geneLists, setGeneLists] = React.useState<GeneListOption[]>([]);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
   
@@ -69,9 +72,14 @@ export function SNVIndelTab({
       ...prev,
       [id]: { ...currentState, reviewed: checked }
     }));
-    reviewVariant(taskId, 'snv-indel', id, checked).catch(() => {
-      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+		setPendingVariants(previous => new Set(previous).add(id));
+		setOperationError(null);
+		void reviewVariant(taskId, 'snv-indel', id, checked).catch(cause => {
+			setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+			setOperationError(cause instanceof Error ? cause.message : '审核状态保存失败');
+		}).finally(() => setPendingVariants(previous => {
+			const next = new Set(previous); next.delete(id); return next;
+		}));
   }, [taskId]);
 
   // 处理回报状态变更
@@ -80,9 +88,14 @@ export function SNVIndelTab({
       ...prev,
       [id]: { ...currentState, reported: checked }
     }));
-    reportVariant(taskId, 'snv-indel', id, checked).catch(() => {
-      setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+		setPendingVariants(previous => new Set(previous).add(id));
+		setOperationError(null);
+		void reportVariant(taskId, 'snv-indel', id, checked).catch(cause => {
+			setReviewStatus(prev => ({ ...prev, [id]: currentState }));
+			setOperationError(cause instanceof Error ? cause.message : '回报标记保存失败');
+		}).finally(() => setPendingVariants(previous => {
+			const next = new Set(previous); next.delete(id); return next;
+		}));
   }, [taskId]);
 
   // 获取变异的审核状态
@@ -90,23 +103,15 @@ export function SNVIndelTab({
     return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
   }, [reviewStatus]);
 
-  // 按审核/回报状态排序的数据
-  const sortedData = React.useMemo(() => {
-    if (!result?.data) return [];
-    return [...result.data].sort((a, b) => {
-      const stateA = getReviewState(a);
-      const stateB = getReviewState(b);
-      // 回报的排最前
-      if (stateA.reported !== stateB.reported) {
-        return stateA.reported ? -1 : 1;
-      }
-      // 审核的排其次
-      if (stateA.reviewed !== stateB.reviewed) {
-        return stateA.reviewed ? -1 : 1;
-      }
-      return 0;
-    });
-  }, [result?.data, getReviewState]);
+	const sortedData = result?.data ?? [];
+	const [searchInput, setSearchInput] = React.useState(filterState.searchQuery);
+	React.useEffect(() => setSearchInput(filterState.searchQuery), [filterState.searchQuery]);
+	React.useEffect(() => {
+		const timer = window.setTimeout(() => {
+			if (searchInput !== filterState.searchQuery) setFilterState({ ...filterState, searchQuery: searchInput, page: 1 });
+		}, 300);
+		return () => window.clearTimeout(timer);
+	}, [filterState, searchInput, setFilterState]);
 
   // 加载基因列表
   React.useEffect(() => {
@@ -119,20 +124,24 @@ export function SNVIndelTab({
 
   // 加载数据
   React.useEffect(() => {
+		const controller = new AbortController();
     async function loadData() {
       setLoading(true);
-      const data = await getSNVIndels(taskId, filterState);
-      setResult(data);
-      setLoading(false);
+		setRequestError(null);
+		try {
+			const data = await getSNVIndels(taskId, filterState, controller.signal);
+			if (!controller.signal.aborted) setResult(data);
+		} catch (cause) {
+			if (!controller.signal.aborted) setRequestError(cause instanceof Error ? cause.message : '无法加载 SNV / InDel 结果');
+		} finally {
+			if (!controller.signal.aborted) setLoading(false);
+		}
     }
-    loadData();
+		void loadData();
+		return () => controller.abort();
   }, [taskId, filterState]);
 
   // 处理搜索
-  const handleSearch = React.useCallback((query: string) => {
-    setFilterState({ ...filterState, searchQuery: query, page: 1 });
-  }, [filterState, setFilterState]);
-
   // 处理排序
   const handleSortChange = React.useCallback((column: string, direction: 'asc' | 'desc' | null) => {
     setFilterState({
@@ -179,6 +188,7 @@ export function SNVIndelTab({
           <ReviewCheckbox
             checked={state.reviewed}
             onChange={(checked) => handleReviewChange(row.id, checked, state)}
+					disabled={pendingVariants.has(row.id)}
           />
         );
       },
@@ -194,6 +204,7 @@ export function SNVIndelTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+					disabled={pendingVariants.has(row.id)}
           />
         );
       },
@@ -243,7 +254,7 @@ export function SNVIndelTab({
       id: 'zygosity',
       header: '杂合性',
       accessor: (row) => {
-        const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合' };
+        const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合', Unknown: '未提供' };
         return labels[row.zygosity];
       },
       width: 80,
@@ -269,8 +280,10 @@ export function SNVIndelTab({
       id: 'acmgClassification',
       header: 'ACMG分类',
       accessor: (row) => {
-        const config = ACMG_CONFIG[row.acmgClassification];
-        return <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>;
+        const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
+        return config
+          ? <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>
+          : <Tag variant="neutral" className="w-20 justify-center">未提供</Tag>;
       },
       width: 100,
       align: 'center',
@@ -311,8 +324,8 @@ export function SNVIndelTab({
           <div className="w-64">
             <Input
               placeholder="搜索基因、位置..."
-              value={filterState.searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+						value={searchInput}
+						onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
@@ -359,7 +372,10 @@ export function SNVIndelTab({
       </div>
 
       {/* 数据表格 */}
-      {loading ? (
+		{operationError && <div role="alert" className="mb-3 rounded-lg border border-danger-emphasis bg-danger-subtle p-3 text-sm text-danger-fg">{operationError}</div>}
+		{requestError && !loading ? (
+			<div className="rounded-lg border border-danger-emphasis bg-danger-subtle p-4 text-sm text-danger-fg">{requestError}</div>
+		) : loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
@@ -410,6 +426,7 @@ export function SNVIndelTab({
 
       {/* IGV 查看器 */}
       <IGVViewer
+		taskId={taskId}
         chromosome={igvState.chromosome}
         position={igvState.position}
         isOpen={igvState.isOpen}

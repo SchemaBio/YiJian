@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { TabType } from '../types';
-import { TAB_CONFIGS } from '../types';
+import { TAB_CONFIGS, VARIANT_TAB_CONFIGS } from '../types';
 
 interface ResultTabsProps {
   activeTab: TabType;
@@ -12,6 +12,8 @@ interface ResultTabsProps {
 
 export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps) {
   const tabRefs = React.useRef<Map<TabType, HTMLButtonElement>>(new Map());
+	const isVariantTab = VARIANT_TAB_CONFIGS.some(tab => tab.id === activeTab);
+	const primaryActiveTab: TabType = isVariantTab ? 'snv-indel' : activeTab;
 
   // 键盘导航处理
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent, currentIndex: number) => {
@@ -55,7 +57,7 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
           aria-label="分析结果标签页"
         >
           {TAB_CONFIGS.map((tab, index) => {
-            const isActive = activeTab === tab.id;
+						const isActive = primaryActiveTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -88,8 +90,8 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
       {/* 标签页内容 */}
       <div
         role="tabpanel"
-        id={`tabpanel-${activeTab}`}
-        aria-labelledby={`tab-${activeTab}`}
+			id={`tabpanel-${primaryActiveTab}`}
+			aria-labelledby={`tab-${primaryActiveTab}`}
         tabIndex={0}
       >
         {children}

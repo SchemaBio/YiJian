@@ -11,15 +11,23 @@ interface CNVDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   allSegments?: CNVSegment[];  // 所有CNV片段数据，用于绘制全基因组图
+  referenceId?: string;
 }
 
 function geneCardsURL(gene: string): string {
   return `https://www.genecards.org/cgi-bin/carddisp.pl?gene=${encodeURIComponent(String(gene).trim())}`;
 }
 
-function ucscRegionURL(chromosome: string, startPosition: number, endPosition: number): string {
+function ucscDatabase(referenceId?: string): 'hg19' | 'hg38' | null {
+  const normalized = referenceId?.trim().toLowerCase();
+  if (normalized === 'hg19' || normalized === 'grch37') return 'hg19';
+  if (normalized === 'hg38' || normalized === 'grch38') return 'hg38';
+  return null;
+}
+
+function ucscRegionURL(database: 'hg19' | 'hg38', chromosome: string, startPosition: number, endPosition: number): string {
   const position = `${chromosome}:${startPosition}-${endPosition}`;
-  return `https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=${encodeURIComponent(position)}`;
+  return `https://genome.ucsc.edu/cgi-bin/hgTracks?db=${database}&position=${encodeURIComponent(position)}`;
 }
 
 function ensemblRegionURL(chromosome: string, startPosition: number, endPosition: number): string {
@@ -30,7 +38,8 @@ function ensemblRegionURL(chromosome: string, startPosition: number, endPosition
 function cnvTypeLabel(type: CNVSegment['type']): string {
   if (type === 'Amplification') return '扩增';
   if (type === 'Deletion') return '缺失';
-  return '正常';
+  if (type === 'Normal') return '正常';
+  return '未提供';
 }
 
 function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
@@ -128,16 +137,6 @@ function useDraggable(initialPosition: { x: number; y: number } = { x: 0, y: 0 }
   return { position, isDragging, handleMouseDown, resetPosition };
 }
 
-// 染色体大小（hg38）
-const CHROMOSOME_SIZES: Record<string, number> = {
-  'chr1': 248956422, 'chr2': 242193529, 'chr3': 198295559, 'chr4': 190214555,
-  'chr5': 181538259, 'chr6': 170805979, 'chr7': 159345973, 'chr8': 145138636,
-  'chr9': 138394717, 'chr10': 133797422, 'chr11': 135086622, 'chr12': 133275309,
-  'chr13': 114364328, 'chr14': 107043718, 'chr15': 101991189, 'chr16': 90338345,
-  'chr17': 83257441, 'chr18': 80373285, 'chr19': 58617616, 'chr20': 64444167,
-  'chr21': 46709983, 'chr22': 50818468, 'chrX': 156040895, 'chrY': 57227415,
-};
-
 // 判断是否为 CNVExon 类型
 function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
   return 'gene' in variant && 'exon' in variant;
@@ -163,53 +162,24 @@ function CNVPlotModal({
     if (!isOpen) resetPosition();
   }, [isOpen, resetPosition]);
 
-  // Octopus 当前结果接口只返回 CNV segment，不返回原始 coverage/bin 级数据。
-  // 因此这里绘制的是基于 segment 坐标与 copyNumber 的确定性示意线，
-  // 不生成随机 coverage 点，避免把前端伪造信号误认为真实测序证据。
-  const windowData = React.useMemo(() => {
-    const data: { pos: number; logRatio: number; inCNV: boolean; cnvType?: string }[] = [];
-    const windowSize = 100000; // 100kb滑窗，单染色体可以更精细
-    const chr = variant.chromosome;
-    const chrSize = CHROMOSOME_SIZES[chr] || 100000000;
-    const numWindows = Math.ceil(chrSize / windowSize);
+  // 当前接口提供的是当前页的 segment 调用结果，而不是 CNR/bin 级原始信号。
+  // 因此只画已加载片段与调用出的 copy number，不以零值填充未检出区域。
+  const segmentData = React.useMemo(() => {
+    const segments = allSegments
+      .filter((segment) => segment.chromosome === variant.chromosome)
+      .sort((left, right) => left.startPosition - right.startPosition || left.endPosition - right.endPosition);
+    const starts = segments.map((segment) => segment.startPosition).concat(variant.startPosition);
+    const ends = segments.map((segment) => segment.endPosition).concat(variant.endPosition);
+    const first = Math.min(...starts);
+    const last = Math.max(...ends);
+    const padding = Math.max(Math.round((last - first) * 0.08), 1_000);
 
-    // 获取当前染色体上的所有CNV区域
-    const cnvRegions = allSegments
-      .filter(seg => seg.chromosome === chr)
-      .map(seg => ({
-        start: seg.startPosition,
-        end: seg.endPosition,
-        type: seg.type,
-        copyNumber: seg.copyNumber,
-        id: seg.id,
-      }));
-
-    for (let i = 0; i < numWindows; i++) {
-      const windowStart = i * windowSize;
-      const windowMid = windowStart + windowSize / 2;
-
-      // 检查该窗口是否与CNV区域重叠
-      const overlappingCNV = cnvRegions.find(
-        cnv => windowStart < cnv.end && (windowStart + windowSize) > cnv.start
-      );
-
-      let logRatio: number;
-      let inCNV = false;
-      let cnvType: string | undefined;
-
-      if (overlappingCNV) {
-        logRatio = Math.log2(overlappingCNV.copyNumber / 2);
-        inCNV = true;
-        cnvType = overlappingCNV.type;
-      } else {
-        logRatio = 0;
-      }
-
-      data.push({ pos: windowMid, logRatio, inCNV, cnvType });
-    }
-
-    return data;
-  }, [variant.chromosome, allSegments]);
+    return {
+      segments,
+      rangeStart: Math.max(0, first - padding),
+      rangeEnd: last + padding,
+    };
+  }, [allSegments, variant.chromosome, variant.endPosition, variant.startPosition]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -229,7 +199,7 @@ function CNVPlotModal({
 
     const width = containerWidth;
     const height = 280;
-    const padding = { top: 30, right: 20, bottom: 40, left: 50 };
+    const padding = { top: 38, right: 20, bottom: 48, left: 74 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
 
@@ -241,93 +211,79 @@ function CNVPlotModal({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(padding.left, padding.top, plotWidth, plotHeight);
 
-    const chr = variant.chromosome;
-    const chrSize = CHROMOSOME_SIZES[chr] || 100000000;
+    const { segments, rangeStart, rangeEnd } = segmentData;
+    const coordinateRange = Math.max(rangeEnd - rangeStart, 1);
+    const laneLabels: Record<CNVSegment['type'], string> = {
+      Amplification: '扩增',
+      Deletion: '缺失',
+      Normal: '其他',
+      Unknown: '未提供',
+    };
+    const laneIndex: Record<CNVSegment['type'], number> = {
+      Amplification: 0,
+      Deletion: 1,
+      Normal: 2,
+      Unknown: 3,
+    };
+    const laneHeight = 34;
+    const laneGap = 17;
+    const laneTop = padding.top + 12;
 
-    // 高亮当前选中的CNV区域
-    const highlightStart = padding.left + (variant.startPosition / chrSize) * plotWidth;
-    const highlightEnd = padding.left + (variant.endPosition / chrSize) * plotWidth;
-    ctx.fillStyle = variant.type === 'Amplification'
-      ? 'rgba(207,34,46,0.15)'
-      : variant.type === 'Deletion'
-        ? 'rgba(9,105,218,0.15)'
-        : 'rgba(139,148,158,0.15)';
-    ctx.fillRect(highlightStart, padding.top, Math.max(highlightEnd - highlightStart, 3), plotHeight);
-
-    // Y轴范围和网格线
-    const yMin = -2, yMax = 2;
-    ctx.strokeStyle = '#e1e4e8';
-    ctx.lineWidth = 1;
-    for (let y = yMin; y <= yMax; y += 1) {
-      const yPos = padding.top + plotHeight * (1 - (y - yMin) / (yMax - yMin));
-      ctx.beginPath();
-      ctx.moveTo(padding.left, yPos);
-      ctx.lineTo(padding.left + plotWidth, yPos);
-      ctx.stroke();
+    Object.entries(laneLabels).forEach(([type, label]) => {
+      const lane = laneIndex[type as CNVSegment['type']];
+      const y = laneTop + lane * (laneHeight + laneGap);
+      ctx.fillStyle = '#f6f8fa';
+      ctx.fillRect(padding.left, y, plotWidth, laneHeight);
       ctx.fillStyle = '#586069';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(y.toString(), padding.left - 8, yPos + 3);
-    }
+      ctx.fillText(label, padding.left - 8, y + 21);
+    });
 
-    // 0线加粗
-    const zeroY = padding.top + plotHeight * 0.5;
-    ctx.strokeStyle = '#24292f';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(padding.left, zeroY);
-    ctx.lineTo(padding.left + plotWidth, zeroY);
-    ctx.stroke();
-
-    // 绘制滑窗数据点
-    windowData.forEach(point => {
-      const x = padding.left + (point.pos / chrSize) * plotWidth;
-      const y = padding.top + plotHeight * (1 - (point.logRatio - yMin) / (yMax - yMin));
-
-      // 判断是否在选中的CNV区域内
-      const isInSelectedCNV = point.pos >= variant.startPosition && point.pos <= variant.endPosition;
-
-      // 根据是否在CNV区域设置颜色
-      if (point.inCNV) {
-        ctx.fillStyle = point.cnvType === 'Amplification'
-          ? '#cf222e'
-          : point.cnvType === 'Deletion'
-            ? '#0969da'
-            : '#8b949e';
-      } else {
-        ctx.fillStyle = '#8b949e';
+    segments.forEach((segment) => {
+      const x = padding.left + ((segment.startPosition - rangeStart) / coordinateRange) * plotWidth;
+      const end = padding.left + ((segment.endPosition - rangeStart) / coordinateRange) * plotWidth;
+      const y = laneTop + laneIndex[segment.type] * (laneHeight + laneGap);
+      const selected = segment.id === variant.id;
+      ctx.fillStyle = segment.type === 'Amplification'
+        ? '#cf222e'
+        : segment.type === 'Deletion'
+          ? '#0969da'
+          : '#8b949e';
+      ctx.globalAlpha = selected ? 1 : 0.62;
+      ctx.fillRect(x, y + 5, Math.max(end - x, 3), laneHeight - 10);
+      if (selected) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#24292f';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, y + 5, Math.max(end - x, 3), laneHeight - 10);
       }
-
-      ctx.globalAlpha = isInSelectedCNV ? 1 : 0.5;
-      ctx.beginPath();
-      ctx.arc(x, Math.max(padding.top + 2, Math.min(padding.top + plotHeight - 2, y)), isInSelectedCNV ? 2.5 : 1.5, 0, Math.PI * 2);
-      ctx.fill();
+      if (end - x > 54 && segment.copyNumber !== null) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`CN ${segment.copyNumber}`, x + (end - x) / 2, y + 21);
+      }
     });
     ctx.globalAlpha = 1;
 
-    // Y轴标题
-    ctx.fillStyle = '#24292f';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('Log2 Ratio', padding.left, padding.top - 12);
-
-    // X轴标签 - 显示位置刻度
+    // X轴标签只描述当前已导入片段的坐标范围，不推断整条染色体的长度。
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#586069';
     const tickCount = 5;
     for (let i = 0; i <= tickCount; i++) {
-      const pos = (chrSize / tickCount) * i;
-      const x = padding.left + (pos / chrSize) * plotWidth;
+      const pos = rangeStart + (coordinateRange / tickCount) * i;
+      const x = padding.left + ((pos - rangeStart) / coordinateRange) * plotWidth;
       const label = pos >= 1000000 ? `${(pos / 1000000).toFixed(0)}Mb` : `${(pos / 1000).toFixed(0)}kb`;
       ctx.fillText(label, x, padding.top + plotHeight + 15);
     }
 
     ctx.font = 'bold 11px sans-serif';
     ctx.fillStyle = '#24292f';
-    ctx.fillText(`${chr} Position`, padding.left + plotWidth / 2, padding.top + plotHeight + 32);
+    ctx.fillText(`${variant.chromosome} 坐标`, padding.left + plotWidth / 2, padding.top + plotHeight + 32);
 
-  }, [isOpen, variant, windowData]);
+  }, [isOpen, segmentData, variant]);
 
   if (!isOpen) return null;
 
@@ -346,7 +302,7 @@ function CNVPlotModal({
         <div className="flex items-center gap-3">
           <GripHorizontal className="w-4 h-4 text-fg-muted" />
           <BarChart3 className="w-4 h-4 text-fg-muted" />
-          <span className="font-medium text-sm text-fg-default">{variant.chromosome} CNV图</span>
+          <span className="font-medium text-sm text-fg-default">{variant.chromosome} 当前页 CNV 片段概览</span>
           <Tag variant={cnvTypeVariant(variant.type)}>
             {variant.startPosition.toLocaleString()}-{variant.endPosition.toLocaleString()}
           </Tag>
@@ -360,7 +316,7 @@ function CNVPlotModal({
       </div>
       <div ref={containerRef} className="p-4">
         <p className="mb-2 text-xs text-amber-700">
-          区间示意图根据 CNV 坐标与拷贝数绘制，用于快速定位变异范围。
+          仅显示当前页已加载的 CNV 片段和调用出的拷贝数。该任务未提供原始 CNR/bin log2 ratio，因此本图不能用于判断覆盖度波动。
         </p>
         <canvas ref={canvasRef} className="rounded" style={{ display: 'block', maxWidth: '100%' }} />
       </div>
@@ -373,13 +329,15 @@ function CNVPlotModal({
   );
 }
 
-export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegments = [] }: CNVDetailPanelProps) {
+export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegments = [], referenceId }: CNVDetailPanelProps) {
   if (!isOpen || !variant) return null;
 
   const isExon = isCNVExon(variant);
+  const exonRatio = isExon ? variant.ratio : null;
   const showPlot = variantType === 'segment' && allSegments.length > 0;
   const typeVariant = cnvTypeVariant(variant.type);
   const typeLabel = cnvTypeLabel(variant.type);
+  const externalReference = ucscDatabase(referenceId);
 
   return (
     <>
@@ -442,10 +400,12 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
               } 
             />
             <InfoItem label="拷贝数" value={variant.copyNumber} />
+            <InfoItem label="Copy ratio" value={variant.copyRatio === null ? undefined : variant.copyRatio.toFixed(3)} />
+            <InfoItem label="片段 Log2 ratio" value={variant.log2Ratio === null ? undefined : variant.log2Ratio.toFixed(3)} />
             {isExon && (
-              <InfoItem label="比值" value={(variant as CNVExon).ratio.toFixed(2)} />
+              <InfoItem label="外显子比值" value={exonRatio === null ? undefined : exonRatio.toFixed(2)} />
             )}
-            <InfoItem label="置信度" value={`${(variant.confidence * 100).toFixed(0)}%`} />
+            <InfoItem label="置信度" value={variant.confidence === null ? undefined : `${(variant.confidence * 100).toFixed(0)}%`} />
           </div>
 
           {/* 涉及基因 (仅 Segment) */}
@@ -474,16 +434,22 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
           {/* 基因组位置链接 */}
           <SectionTitle icon={MapPin} title="外部资源" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
-              label="UCSC Genome Browser" 
-              value="查看"
-              link={ucscRegionURL(variant.chromosome, variant.startPosition, variant.endPosition)}
-            />
-            <InfoItem 
-              label="Ensembl" 
-              value="查看"
-              link={ensemblRegionURL(variant.chromosome, variant.startPosition, variant.endPosition)}
-            />
+            {externalReference ? (
+              <>
+                <InfoItem
+                  label="UCSC Genome Browser"
+                  value={`查看（${externalReference}）`}
+                  link={ucscRegionURL(externalReference, variant.chromosome, variant.startPosition, variant.endPosition)}
+                />
+                <InfoItem
+                  label="Ensembl"
+                  value="查看"
+                  link={ensemblRegionURL(variant.chromosome, variant.startPosition, variant.endPosition)}
+                />
+              </>
+            ) : (
+              <InfoItem label="外部资源" value="未提供任务参考版本" />
+            )}
             {isExon && (
               <InfoItem 
                 label="GeneCards" 

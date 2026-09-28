@@ -1,207 +1,295 @@
 'use client';
 
 import * as React from 'react';
-import { X, ExternalLink } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
 import { AppModal } from '@/components/shared';
+import type { IGVSession, IGVTrackDescriptor, IGVTrackURL } from '../types';
+import { getIGVSession, getIGVTrackURLs } from '../result-api';
 
 export interface IGVViewerProps {
+  taskId: string;
   chromosome: string;
   position: number;
+  endPosition?: number;
   isOpen: boolean;
   onClose: () => void;
-  /** 内置参考基因组名称，默认 hg38。设为 null 则必须提供 reference 配置 */
-  genome?: 'hg38' | 'hg19' | null;
-  /** 自定义参考基因组配置（用于自建/离线参考） */
-  reference?: IGVReferenceConfig;
-  /** 显示的轨迹 */
-  tracks?: IGVTrackConfig[];
-  /** 可视窗口半径 bp，默认 100 */
+  session?: IGVSession | null;
   flanking?: number;
 }
 
 export interface IGVReferenceConfig {
   id: string;
-  /** FASTA 文件 URL（需支持 HTTP Range） */
   fastaURL: string;
-  /** FASTA 索引 URL */
   indexURL: string;
-  /** 染色体条带注释 URL (可选) */
   cytobandURL?: string;
-  /** 染色体别名文件 URL，用于映射 chr1 ↔ 1 */
   aliasURL?: string;
 }
 
 export interface IGVTrackConfig {
   type: 'alignment' | 'variant' | 'annotation' | 'wig';
   name: string;
-  url?: string;
-  indexURL?: string;
+  url?: string | (() => Promise<string>);
+  indexURL?: string | (() => Promise<string>);
   format?: 'bam' | 'vcf' | 'cram' | 'gff3' | 'bed' | 'bigwig';
   height?: number;
-  /** 颜色配置 */
   color?: string;
 }
 
-function igvWebURL(locus: string, genome: string): string {
-  return `https://igv.org/app/?locus=${encodeURIComponent(locus)}&genome=${encodeURIComponent(genome)}`;
-}
+const signedURLRefreshLeadMs = 60_000;
 
-/**
- * 格式化染色体名称（添加 chr 前缀）
- */
-export function formatChromosome(chr: string): string {
-  if (chr.startsWith('chr')) return chr;
-  if (chr === 'MT' || chr === 'M') return 'chrM';
-  return `chr${chr}`;
-}
+class SignedTrackResolver {
+  private readonly cache = new Map<string, { value: IGVTrackURL; expiresAt: number }>();
+  private pending = new Set<string>();
+  private pendingRequest: Promise<void> | null = null;
 
-/**
- * IGV.js 基因组浏览器查看器
- * 定位到指定变异位点，显示侧翼序列和可选的 BAM/VCF 轨迹
- */
-export function IGVViewer({
-  chromosome,
-  position,
-  isOpen,
-  onClose,
-  genome = 'hg38',
-  reference,
-  tracks,
-  flanking = 100,
-}: IGVViewerProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const igvBrowserRef = React.useRef<any>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  constructor(private readonly taskId: string, private readonly version: string) {}
 
-  // 计算显示区间
-  const chr = formatChromosome(chromosome);
-  const start = Math.max(1, position - flanking);
-  const end = position + flanking;
-  const locus = `${chr}:${start}-${end}`;
+  url(trackId: string): () => Promise<string> {
+    return async () => (await this.ensure(trackId)).url;
+  }
 
-  React.useEffect(() => {
-    if (!isOpen || !containerRef.current) return;
+  indexURL(trackId: string): () => Promise<string> {
+    return async () => {
+      const value = (await this.ensure(trackId)).indexURL;
+      if (!value) throw new Error('该轨迹缺少索引');
+      return value;
+    };
+  }
 
-    let mounted = true;
-
-    async function initIGV() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const igv = await import('igv');
-
-        if (!mounted || !containerRef.current) return;
-
-        if (igvBrowserRef.current) {
-          igv.removeBrowser(igvBrowserRef.current);
-          igvBrowserRef.current = null;
-        }
-
-        const options: Record<string, unknown> = {
-          locus,
-          tracks: [],
-        };
-
-        // 参考基因组配置
-        if (reference) {
-          options.reference = {
-            id: reference.id,
-            fastaURL: reference.fastaURL,
-            indexURL: reference.indexURL,
-            cytobandURL: reference.cytobandURL,
-            aliasURL: reference.aliasURL,
-          };
-        } else if (genome) {
-          options.genome = genome;
-        }
-
-        // 添加轨迹
-        if (tracks && tracks.length > 0) {
-          (options.tracks as unknown[]).push(...tracks);
-        }
-
-        const browser = await igv.createBrowser(containerRef.current, options);
-
-        if (mounted) {
-          igvBrowserRef.current = browser;
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Failed to initialize IGV:', err);
-        if (mounted) {
-          setError('无法加载 IGV 浏览器');
-          setLoading(false);
-        }
-      }
-    }
-
-    initIGV();
-
-    return () => {
-      mounted = false;
-      if (igvBrowserRef.current) {
-        import('igv').then((igv) => {
-          igv.removeBrowser(igvBrowserRef.current);
-          igvBrowserRef.current = null;
+  private async ensure(trackId: string): Promise<IGVTrackURL> {
+    // A track can be requested after a coalesced request has already copied
+    // its pending ID list. Loop once more in that case so it starts the next
+    // batch instead of receiving an artificial "not returned" error.
+    for (;;) {
+      const cached = this.cache.get(trackId);
+      if (cached && cached.expiresAt - Date.now() > signedURLRefreshLeadMs) return cached.value;
+      this.pending.add(trackId);
+      if (!this.pendingRequest) {
+        this.pendingRequest = Promise.resolve().then(async () => {
+          const ids = [...this.pending];
+          this.pending.clear();
+          try {
+            const response = await getIGVTrackURLs(this.taskId, this.version, ids);
+            const expiresAt = Date.parse(response.expiresAt);
+            for (const track of response.tracks) {
+              this.cache.set(track.id, {
+                value: track,
+                expiresAt: Number.isFinite(expiresAt) ? expiresAt : Date.now() + 9 * 60_000,
+              });
+            }
+          } finally {
+            this.pendingRequest = null;
+          }
         });
       }
+      await this.pendingRequest;
+      const refreshed = this.cache.get(trackId);
+      if (refreshed) return refreshed.value;
+      if (!this.pending.has(trackId)) throw new Error('轨迹授权未返回');
+    }
+  }
+}
+
+export function formatChromosome(chromosome: string): string {
+  const normalized = chromosome.trim();
+  if (/^chr/i.test(normalized)) return normalized;
+  if (/^(MT|M)$/i.test(normalized)) return 'chrM';
+  return `chr${normalized}`;
+}
+
+function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackResolver): IGVTrackConfig {
+  return {
+    type: track.type as IGVTrackConfig['type'],
+    format: track.format as IGVTrackConfig['format'],
+    name: track.name,
+    url: resolver.url(track.id),
+    ...(track.hasIndex ? { indexURL: resolver.indexURL(track.id) } : {}),
+    ...(track.type === 'alignment' ? { height: 260 } : {}),
+  };
+}
+
+function referenceConfiguration(session: IGVSession) {
+  const reference = session.reference;
+  if (!reference.id || !reference.fastaURL || !reference.indexURL) return null;
+  return {
+    id: reference.id,
+    fastaURL: reference.fastaURL,
+    indexURL: reference.indexURL,
+    aliasURL: reference.aliasURL,
+    cytobandURL: reference.cytobandURL,
+  };
+}
+
+function staticGeneTrack(session: IGVSession): IGVTrackConfig | null {
+  const reference = session.reference;
+  if (!reference.geneTrackURL) return null;
+  return {
+    type: 'annotation',
+    format: 'gff3',
+    name: '基因注释',
+    url: reference.geneTrackURL,
+    ...(reference.geneTrackIndexURL ? { indexURL: reference.geneTrackIndexURL } : {}),
+  };
+}
+
+export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, onClose, session: suppliedSession, flanking = 100 }: IGVViewerProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const browserRef = React.useRef<import('igv').IGVBrowser | null>(null);
+  const resolverRef = React.useRef<SignedTrackResolver | null>(null);
+  const [loadedSession, setLoadedSession] = React.useState<IGVSession | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [trackErrors, setTrackErrors] = React.useState<string[]>([]);
+  const [reloadToken, setReloadToken] = React.useState(0);
+  const session = suppliedSession ?? loadedSession;
+
+  const locus = React.useMemo(() => {
+    const start = Math.max(1, Math.min(position, endPosition ?? position) - flanking);
+    const end = Math.max(position, endPosition ?? position) + flanking;
+    return `${formatChromosome(chromosome)}:${start}-${end}`;
+  }, [chromosome, endPosition, flanking, position]);
+  const locusRef = React.useRef(locus);
+  locusRef.current = locus;
+
+  React.useEffect(() => {
+    setLoadedSession(null);
+    setError(null);
+  }, [taskId]);
+
+  React.useEffect(() => {
+    if (!isOpen || suppliedSession) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    void getIGVSession(taskId, controller.signal)
+      .then(value => {
+        if (!controller.signal.aborted) setLoadedSession(value);
+      })
+      .catch(cause => {
+        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : '无法读取测序证据');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [isOpen, suppliedSession, taskId, reloadToken]);
+
+  React.useEffect(() => {
+    if (!isOpen || !session || !containerRef.current) return;
+    const reference = referenceConfiguration(session);
+    if (!session.available || !reference) {
+      setError(session.reason || '该执行没有可判读的参考序列或测序证据');
+      return;
+    }
+
+    let active = true;
+    let createdBrowser: import('igv').IGVBrowser | null = null;
+    setLoading(true);
+    setError(null);
+    setTrackErrors([]);
+    resolverRef.current = new SignedTrackResolver(taskId, session.version);
+
+    const dispose = async () => {
+      const current = createdBrowser ?? browserRef.current;
+      if (!current) return;
+      try {
+        current.dispose();
+      } catch {
+        // dispose is best effort during modal close and Strict Mode replays.
+      }
+      if (browserRef.current === current) browserRef.current = null;
     };
-  }, [isOpen, locus, genome, reference, tracks]);
+
+    void (async () => {
+      try {
+        const module = await import('igv');
+        const igv = module.default;
+        if (!active || !containerRef.current) return;
+		const browser = await igv.createBrowser(containerRef.current, { reference, locus: locusRef.current, tracks: [] });
+        createdBrowser = browser;
+        if (!active) {
+          await dispose();
+          return;
+        }
+        browserRef.current = browser;
+        const failures: string[] = [];
+        const tracks = session.tracks.filter(track => track.available);
+        const geneTrack = staticGeneTrack(session);
+        const configurations: IGVTrackConfig[] = [
+          ...(geneTrack ? [geneTrack] : []),
+          ...tracks.map(track => trackConfiguration(track, resolverRef.current as SignedTrackResolver)),
+        ];
+        for (const configuration of configurations) {
+          try {
+            await browser.loadTrack(configuration);
+          } catch {
+            failures.push(configuration.name || '未命名轨迹');
+          }
+        }
+        if (!active) return;
+        setTrackErrors(failures);
+        setLoading(false);
+      } catch (cause) {
+        if (!active) return;
+        setError(cause instanceof Error ? cause.message : '无法初始化 IGV 测序证据');
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+      void dispose();
+    };
+  }, [isOpen, reloadToken, session, taskId]);
+
+  React.useEffect(() => {
+    if (!isOpen || !browserRef.current) return;
+    void browserRef.current.search(locus).catch(() => setError('无法定位到该参考序列区间'));
+  }, [isOpen, locus]);
 
   if (!isOpen) return null;
 
-  const genomeLabel = reference ? reference.id : (genome ?? 'unknown');
-
+  const unavailableTracks = session?.tracks.filter(track => !track.available) ?? [];
   return (
-    <AppModal
-      open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
-      title="IGV 基因组浏览器"
-      size="fullscreen"
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <span className="px-2 py-0.5 text-sm bg-canvas-subtle rounded text-fg-muted">{locus}</span>
-        <span className="text-xs text-fg-muted">({genomeLabel})</span>
-        <a
-          href={igvWebURL(locus, genome || genomeLabel)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors ml-auto"
+    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="fullscreen">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+        <span className="rounded bg-canvas-subtle px-2 py-1 text-fg-default">{locus}</span>
+        <span className="text-fg-muted">{session?.reference.id || '参考未知'}</span>
+        <button
+          type="button"
+          onClick={() => setReloadToken(value => value + 1)}
+          className="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"
         >
-          <ExternalLink className="w-4 h-4" />
-          IGV Web 版
-        </a>
+          <RefreshCw className="h-4 w-4" /> 刷新证据
+        </button>
       </div>
 
-      <div className="flex-1 overflow-auto min-h-[500px]">
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-danger-emphasis bg-danger-subtle p-3 text-sm text-danger-fg">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {(trackErrors.length > 0 || unavailableTracks.length > 0) && (
+        <div className="mb-3 rounded-lg border border-warning-emphasis bg-warning-subtle p-3 text-sm text-warning-fg">
+          {trackErrors.length > 0 && <p>未加载的轨迹：{trackErrors.join('、')}。</p>}
+          {unavailableTracks.map(track => <p key={track.id}>{track.name}：{track.reason || '不可用'}。</p>)}
+        </div>
+      )}
+
+      <div className="relative min-h-[560px] overflow-auto rounded-lg border border-border-default bg-canvas-default">
+        <div ref={containerRef} className="min-h-[560px] min-w-[960px]" />
         {loading && (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
-              <span className="text-sm text-fg-muted">正在加载参考基因组...</span>
-            </div>
+          <div className="absolute inset-0 flex items-center justify-center bg-canvas-default/80">
+            <div className="flex items-center gap-3 text-sm text-fg-muted"><div className="h-5 w-5 animate-spin rounded-full border-b-2 border-accent-emphasis" />正在加载参考和轨迹…</div>
           </div>
         )}
-
-        {error && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <p className="text-danger-fg mb-2">{error}</p>
-              <p className="text-sm text-fg-muted">请确认网络连接正常（参考基因组文件托管在远程 CDN）</p>
-            </div>
-          </div>
-        )}
-
-        <div ref={containerRef} className={loading || error ? 'hidden' : ''} />
       </div>
     </AppModal>
   );
 }
 
-/** 位置链接组件 */
 interface PositionLinkProps {
   chromosome: string;
   position: number;
@@ -211,11 +299,8 @@ interface PositionLinkProps {
 
 export function PositionLink({ chromosome, position, label, onClick }: PositionLinkProps) {
   return (
-    <Tooltip content="点击在 IGV 中查看" placement="top" variant="nav">
-      <button
-        onClick={() => onClick(chromosome, position)}
-        className="text-accent-fg hover:underline cursor-pointer text-left"
-      >
+    <Tooltip content="在当前任务的 IGV 证据中查看" placement="top" variant="nav">
+      <button onClick={() => onClick(chromosome, position)} className="text-left text-accent-fg hover:underline">
         {label ?? `${chromosome}:${position}`}
       </button>
     </Tooltip>

@@ -1,5 +1,7 @@
 export { TaskHeader } from './TaskHeader';
 export { ResultTabs } from './ResultTabs';
+export { ResultOverview } from './ResultOverview';
+export { VariantTypeNav } from './VariantTypeNav';
 export { QCResultTab } from './QCResultTab';
 export { SampleSummaryCard } from './SampleSummaryCard';
 export { SNVIndelTab } from './SNVIndelTab';

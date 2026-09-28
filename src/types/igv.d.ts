@@ -10,8 +10,8 @@ declare module 'igv' {
   export interface TrackConfig {
     type: string;
     format?: string;
-    url?: string;
-    indexURL?: string;
+    url?: string | (() => Promise<string>);
+    indexURL?: string | (() => Promise<string>);
     name?: string;
     height?: number;
     [key: string]: any;
@@ -30,12 +30,11 @@ declare module 'igv' {
     [key: string]: any;
   }
 
-  export function createBrowser(
-    container: HTMLElement,
-    options: IGVOptions
-  ): Promise<IGVBrowser>;
+  const igv: {
+    createBrowser(container: HTMLElement, options: IGVOptions): Promise<IGVBrowser>;
+    removeBrowser(browser: IGVBrowser): void;
+    removeAllBrowsers(): void;
+  };
 
-  export function removeBrowser(browser: IGVBrowser): void;
-
-  export function removeAllBrowsers(): void;
+  export default igv;
 }

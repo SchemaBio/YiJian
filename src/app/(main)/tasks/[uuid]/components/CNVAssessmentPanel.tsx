@@ -181,7 +181,7 @@ export function CNVAssessmentPanel({
   onCriteriaChange,
 }: CNVAssessmentPanelProps) {
   if (!isOpen || !cnv || !assessment) return null;
-  if (cnv.type === 'Normal') return null;
+  if (cnv.type === 'Normal' || cnv.type === 'Unknown') return null;
 
   const isLoss = cnv.type === 'Deletion';
   const frameworkType = isLoss ? 'Loss' : 'Gain';

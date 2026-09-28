@@ -9,7 +9,10 @@ import type {
   MitochondrialPathogenicity,
   MitochondrialVariant,
   PaginatedResult,
+  IGVSession,
+  IGVTrackURL,
   QCResult,
+	ResultContext,
   ROHRegion,
   SNVIndel,
   STR,
@@ -82,6 +85,15 @@ function n(value: unknown, fallback = 0): number {
     }
   }
   return fallback;
+}
+
+function nullableNumber(value: unknown): number | null {
+	if (typeof value === 'number' && Number.isFinite(value)) return value;
+	if (typeof value === 'string' && value.trim() !== '') {
+		const parsed = Number(value);
+		if (Number.isFinite(parsed)) return parsed;
+	}
+	return null;
 }
 
 function s(value: unknown, fallback = ''): string {
@@ -158,6 +170,8 @@ function params(type: ResultQueryType, filterState: TableFilterState): Record<st
     page_size: String(filterState.pageSize),
   };
   if (filterState.searchQuery) result.search = filterState.searchQuery;
+	if (filterState.sortColumn) result.sort = filterState.sortColumn;
+	if (filterState.sortDirection) result.direction = filterState.sortDirection;
 
   const filters = filterState.filters;
   switch (type) {
@@ -174,8 +188,10 @@ function params(type: ResultQueryType, filterState: TableFilterState): Record<st
     case 'mei':
       if (typeof filters.type === 'string') result.teType = toBackendMEIType(filters.type);
       break;
-    case 'cnv-exon':
     case 'mt':
+		if (typeof filters.pathogenicity === 'string') result.pathogenicity = filters.pathogenicity;
+		break;
+    case 'cnv-exon':
     case 'upd':
     case 'roh':
       break;
@@ -199,14 +215,8 @@ function cnvType(type: unknown): CNVSegment['type'] {
   const value = s(type).toUpperCase();
   if (value === 'DUP' || value === 'AMPLIFICATION' || value === 'GAIN') return 'Amplification';
   if (value === 'DEL' || value === 'DELETION' || value === 'LOSS') return 'Deletion';
-  return 'Normal';
-}
-
-function copyNumber(type: unknown, copyRatio: unknown): number {
-  const normalizedType = cnvType(type);
-  const fallbackRatio = normalizedType === 'Amplification' ? 2 : normalizedType === 'Deletion' ? 1 : 1;
-  const inferred = Math.round(n(copyRatio, fallbackRatio) * 2);
-  return Math.max(0, inferred);
+  if (value === 'NORMAL' || value === 'NEUTRAL') return 'Normal';
+  return 'Unknown';
 }
 
 function variantType(type: unknown): SNVIndel['variantType'] {
@@ -221,23 +231,25 @@ function zygosity(value: unknown): SNVIndel['zygosity'] {
   const normalized = s(value).toLowerCase();
   if (normalized.includes('hom') || normalized === '1/1') return 'Homozygous';
   if (normalized.includes('hemi')) return 'Hemizygous';
-  return 'Heterozygous';
+  if (normalized.includes('het') || normalized === '0/1' || normalized === '1/0') return 'Heterozygous';
+  return 'Unknown';
 }
 
-function acmg(value: unknown): ACMGClassification {
-  const normalized = s(value, 'VUS')
+function acmg(value: unknown): ACMGClassification | undefined {
+  const normalized = s(value)
     .trim()
     .replace(/[-\s]+/g, '_')
     .replace(/__+/g, '_')
     .toLowerCase();
-  return ACMG_ALIASES[normalized] ?? 'VUS';
+  return ACMG_ALIASES[normalized];
 }
 
 function strStatus(value: unknown): STRStatus {
-  const normalized = s(value, 'Normal').replace(/[-\s]+/g, '').toLowerCase();
+  const normalized = s(value).replace(/[-\s]+/g, '').toLowerCase();
+  if (normalized === 'normal') return 'Normal';
   if (normalized === 'premutation') return 'Premutation';
   if (normalized === 'fullmutation') return 'FullMutation';
-  return 'Normal';
+  return 'Unknown';
 }
 
 function meiType(value: unknown): MEIType {
@@ -248,6 +260,21 @@ function meiType(value: unknown): MEIType {
   return 'Unknown';
 }
 
+function meiInsertionType(value: unknown): MEIVariant['insertionType'] {
+  const normalized = s(value).trim().toLowerCase();
+  if (normalized === 'insertion' || normalized === 'insert') return 'insertion';
+  if (normalized === 'deletion' || normalized === 'delete') return 'deletion';
+  if (normalized === 'complex') return 'complex';
+  return 'Unknown';
+}
+
+function meiStrand(value: unknown): MEIVariant['strand'] {
+  const normalized = s(value).trim().toLowerCase();
+  if (normalized === '+' || normalized === 'plus' || normalized.startsWith('5')) return '+';
+  if (normalized === '-' || normalized === 'minus' || normalized.startsWith('3')) return '-';
+  return 'Unknown';
+}
+
 function pathogenicity(row: BackendRow): MitochondrialPathogenicity {
   const source = row.pathogenicity ?? row.clinvarSig ?? row.clinvarSignificance;
   const value = s(source).toLowerCase();
@@ -255,7 +282,7 @@ function pathogenicity(row: BackendRow): MitochondrialPathogenicity {
   if (value.includes('pathogenic')) return 'Pathogenic';
   if (value.includes('benign') && value.includes('likely')) return 'Likely_Benign';
   if (value.includes('benign')) return 'Benign';
-  return 'VUS';
+  return 'Unknown';
 }
 
 function repeatCount(row: BackendRow): number {
@@ -277,9 +304,10 @@ function predictedGender(value: unknown): QCResult['predictedGender'] {
 }
 
 function updType(value: unknown): UPDRegion['type'] {
-  return s(value).replace(/[-\s]+/g, '').toLowerCase() === 'heterodisomy'
-    ? 'Heterodisomy'
-    : 'Isodisomy';
+  const normalized = s(value).replace(/[-\s]+/g, '').toLowerCase();
+  if (normalized === 'heterodisomy') return 'Heterodisomy';
+  if (normalized === 'isodisomy') return 'Isodisomy';
+  return 'Unknown';
 }
 
 function parentOfOrigin(value: unknown): UPDRegion['parentOfOrigin'] {
@@ -326,9 +354,11 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     endPosition: end,
     length: Math.max(0, end - start + 1),
     type: cnvType(row.type),
-    copyNumber: copyNumber(row.type, row.copyRatio),
+    copyNumber: nullableNumber(row.copyNumber),
+    copyRatio: nullableNumber(row.copyRatio),
+    log2Ratio: nullableNumber(row.log2Ratio),
     genes: arr(row.dosageGenes ?? row.genccADGenes),
-    confidence: n(row.weight ?? row.quality, 1),
+    confidence: nullableNumber(row.weight ?? row.quality),
     ...normalizeReview(row),
   };
 }
@@ -339,7 +369,7 @@ function mapCNVExon(row: BackendRow): CNVExon {
     gene: s(row.gene, '-'),
     transcript: s(row.transcript, '-'),
     exon: s(row.exon ?? row.exonCount, '-'),
-    ratio: n(row.copyRatio ?? row.depthRatio ?? row.ratio2, 1),
+    ratio: nullableNumber(row.copyRatio ?? row.depthRatio ?? row.ratio2),
   };
 }
 
@@ -365,13 +395,13 @@ function mapMEI(row: BackendRow): MEIVariant {
     chromosome: s(row.chromosome),
     position: n(row.position),
     meiType: meiType(row.teType ?? row.teFamily),
-    insertionType: 'insertion',
-    strand: s(row.direction).startsWith('3') ? '-' : '+',
+    insertionType: meiInsertionType(row.insertionType ?? row.eventType),
+    strand: meiStrand(row.direction ?? row.strand),
     length: n(row.avgSoftClipLength),
     gene: s(row.gene, '-'),
     transcript: s(row.transcript),
     impact: s(row.impact ?? row.location ?? row.consequence),
-    zygosity: 'Heterozygous',
+    zygosity: zygosity(row.zygosity ?? row.genotype),
     supportingReads: n(row.supportingReads),
     totalReads: n(row.depth ?? row.supportingReads),
     frequency: n(row.gnomadAF, undefined as unknown as number),
@@ -435,38 +465,48 @@ function mapROH(row: BackendRow): ROHRegion {
 export async function getQCResult(taskId: string): Promise<QCResult | null> {
   const row = await api.get<BackendRow>(`/v1/tasks/${encodeURIComponent(taskId)}/results/qc`);
   return {
-    totalReads: n(row.totalReads),
-    mappedReads: n(row.mappedReads),
-    mappingRate: n(row.mappedReadsFraction),
-    averageDepth: n(row.averageDepth ?? row.meanTargetCoverage),
-    dedupDepth: n(row.dedupDepth),
-    targetCoverage: n(row.coverageGte30x ?? row.pctTargetBases30x),
-    duplicateRate: n(row.duplicateRate),
-    q30Rate: n(row.q30Rate),
-    insertSize: n(row.insertSizeMedian ?? row.insertSizeAverage),
-    gcRatio: n(row.gcRatio ?? row.gcContent),
-    uniformity: n(row.uniformity ?? row.pctTargetBases30x),
-    captureEfficiency: n(row.captureEfficiency ?? row.targetDataFraction),
+    totalReads: nullableNumber(row.totalReads),
+    mappedReads: nullableNumber(row.mappedReads),
+    mappingRate: nullableNumber(row.mappedReadsFraction),
+    averageDepth: nullableNumber(row.averageDepth),
+    dedupDepth: nullableNumber(row.dedupDepth),
+    targetCoverage: nullableNumber(row.coverageGte30x),
+    duplicateRate: nullableNumber(row.duplicateRate),
+    q30Rate: nullableNumber(row.q30Rate),
+    insertSize: nullableNumber(row.insertSizeMedian ?? row.insertSizeAverage),
+    gcRatio: nullableNumber(row.gcContent),
+    captureEfficiency: nullableNumber(row.targetDataFraction),
     predictedGender: predictedGender(row.predictedGender),
-    contaminationRate: n(row.contaminationRate ?? row.pfMismatchRate),
-    mtCoverage: n(row.mtCoverageGt0x),
-    mtDepth: n(row.mtAverageDepth),
+		mtCoverage: nullableNumber(row.mtCoverageGt0x),
+		mtDepth: nullableNumber(row.mtAverageDepth),
   };
 }
 
-async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T): Promise<PaginatedResult<T>> {
-  const response = await api.get<BackendPage<BackendRow>>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}`, { params: params(type, filterState) });
+export function getResultContext(taskId: string, signal?: AbortSignal): Promise<ResultContext> {
+	return api.get<ResultContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/context`, { signal });
+}
+
+export function getIGVSession(taskId: string, signal?: AbortSignal): Promise<IGVSession> {
+	return api.get<IGVSession>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv`, { signal });
+}
+
+export async function getIGVTrackURLs(taskId: string, version: string, trackIds: string[]): Promise<{ tracks: IGVTrackURL[]; expiresAt: string }> {
+	return api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/urls`, { version, trackIds });
+}
+
+async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T, signal?: AbortSignal): Promise<PaginatedResult<T>> {
+  const response = await api.get<BackendPage<BackendRow>>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}`, { params: params(type, filterState), signal });
   return normalizePage(response, filterState, mapper);
 }
 
-export const getSNVIndels = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'snv-indel', filterState, mapSNV);
-export const getCNVSegments = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'cnv-segment', filterState, mapCNVSegment);
-export const getCNVExons = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'cnv-exon', filterState, mapCNVExon);
-export const getSTRs = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'str', filterState, mapSTR);
-export const getMEIs = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'mei', filterState, mapMEI);
-export const getMitochondrialVariants = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'mt', filterState, mapMT);
-export const getUPDRegions = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'upd', filterState, mapUPD);
-export const getROHRegions = (taskId: string, filterState: TableFilterState) => getPage(taskId, 'roh', filterState, mapROH);
+export const getSNVIndels = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'snv-indel', filterState, mapSNV, signal);
+export const getCNVSegments = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'cnv-segment', filterState, mapCNVSegment, signal);
+export const getCNVExons = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'cnv-exon', filterState, mapCNVExon, signal);
+export const getSTRs = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'str', filterState, mapSTR, signal);
+export const getMEIs = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'mei', filterState, mapMEI, signal);
+export const getMitochondrialVariants = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'mt', filterState, mapMT, signal);
+export const getUPDRegions = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'upd', filterState, mapUPD, signal);
+export const getROHRegions = (taskId: string, filterState: TableFilterState, signal?: AbortSignal) => getPage(taskId, 'roh', filterState, mapROH, signal);
 
 type CNVAssessmentType = 'cnv-segment' | 'cnv-exon';
 

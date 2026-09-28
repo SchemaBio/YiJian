@@ -12,6 +12,7 @@ const PATHOGENICITY_CONFIG: Record<MitochondrialPathogenicity, { label: string; 
   VUS: { label: '意义未明', variant: 'neutral' },
   Likely_Benign: { label: '可能良性', variant: 'info' },
   Benign: { label: '良性', variant: 'success' },
+  Unknown: { label: '未提供', variant: 'neutral' },
 };
 
 interface MTDetailPanelProps {

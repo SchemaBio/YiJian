@@ -40,22 +40,20 @@ export interface AnalysisTaskDetail {
 
 // ============ 质控结果 ============
 export interface QCResult {
-  totalReads: number;            // 总读数
-  mappedReads: number;           // 比对读数
-  mappingRate: number;           // 比对率 (0-1)
-  averageDepth: number;          // 平均覆盖深度
-  dedupDepth: number;            // 去重深度
-  targetCoverage: number;        // 目标区域覆盖率 (0-1)
-  duplicateRate: number;         // 重复率 (0-1)
-  q30Rate: number;               // Q30比例 (0-1)
-  insertSize: number;            // 插入片段大小
-  gcRatio: number;               // GC比例 (0-1)
-  uniformity: number;            // 均一性 (0-1)
-  captureEfficiency: number;     // 捕获效率 (0-1)
+  totalReads: number | null;     // 总读数
+  mappedReads: number | null;    // 比对读数
+  mappingRate: number | null;    // 比对率 (0-1)
+  averageDepth: number | null;   // 平均覆盖深度
+  dedupDepth: number | null;     // 去重深度
+  targetCoverage: number | null; // 目标区域覆盖率 (0-1)
+  duplicateRate: number | null;  // 重复率 (0-1)
+  q30Rate: number | null;        // Q30比例 (0-1)
+  insertSize: number | null;     // 插入片段大小
+  gcRatio: number | null;        // GC比例 (0-1)
+  captureEfficiency: number | null;
   predictedGender: 'Male' | 'Female' | 'Unknown';  // 性别预测
-  contaminationRate: number;     // 污染比例 (0-1)
-  mtCoverage: number;            // 线粒体覆盖度 (0-1)
-  mtDepth: number;               // 线粒体深度
+  mtCoverage: number | null;     // 线粒体覆盖度 (0-1)
+  mtDepth: number | null;        // 线粒体深度
 }
 
 export type QCMetricKey = keyof QCResult;
@@ -69,6 +67,92 @@ export interface QCThreshold {
 }
 
 export type QCStatus = 'success' | 'warning' | 'danger';
+
+// ============ 结果工作台上下文 ============
+export interface QCMetric {
+  key: string;
+  value: number | null;
+  unit?: string;
+  source?: string;
+  threshold?: string;
+}
+
+export interface QCMemberSummary {
+  memberId: string;
+  memberRole: string;
+  sampleId?: string;
+  metrics: QCMetric[];
+}
+
+export interface ResultMember {
+  id: string;
+  role: string;
+  sampleId?: string;
+}
+
+export interface ResultCount {
+  total: number;
+  reviewed: number;
+  reported: number;
+}
+
+export interface ResultContext {
+  taskUuid: string;
+  executionAttemptId: string;
+  importBatchId?: number;
+  importStatus: 'pending' | 'running' | 'success' | 'failed' | string;
+  state: 'ready' | 'importing' | 'import_failed' | 'workflow_running' | 'not_imported' | string;
+  version: string;
+  reference: {
+    declaredId?: string;
+    available: boolean;
+    reason?: string;
+  };
+  members: ResultMember[];
+  types: Record<string, ResultCount>;
+  qc: QCMemberSummary[];
+  permissions: { canReview: boolean; canReport: boolean };
+}
+
+export interface IGVReference {
+  id?: string;
+  available: boolean;
+  reason?: string;
+  fastaURL?: string;
+  indexURL?: string;
+  aliasURL?: string;
+  cytobandURL?: string;
+  geneTrackURL?: string;
+  geneTrackIndexURL?: string;
+}
+
+export interface IGVTrackDescriptor {
+  id: string;
+  name: string;
+  type: 'alignment' | 'variant' | 'annotation' | 'wig' | string;
+  format: 'bam' | 'vcf' | 'bed' | 'cram' | 'gff3' | 'bigwig' | string;
+  memberId?: string;
+  memberRole?: string;
+  hasIndex: boolean;
+  available: boolean;
+  reason?: string;
+}
+
+export interface IGVSession {
+  taskUuid: string;
+  executionAttemptId: string;
+  version: string;
+  available: boolean;
+  reason?: string;
+  reference: IGVReference;
+  tracks: IGVTrackDescriptor[];
+}
+
+export interface IGVTrackURL {
+  id: string;
+  url: string;
+  indexURL?: string;
+}
 
 // ============ ACMG分类 ============
 export type ACMGClassification = 
@@ -97,10 +181,10 @@ export interface SNVIndel extends VariantReviewStatus {
   ref: string;                   // 参考碱基
   alt: string;                   // 变异碱基
   variantType: 'SNV' | 'Insertion' | 'Deletion' | 'Complex';
-  zygosity: 'Heterozygous' | 'Homozygous' | 'Hemizygous';
+  zygosity: 'Heterozygous' | 'Homozygous' | 'Hemizygous' | 'Unknown';
   alleleFrequency: number;       // 等位基因频率
   depth: number;                 // 覆盖深度
-  acmgClassification: ACMGClassification;
+  acmgClassification?: ACMGClassification;
   transcript: string;            // 转录本
   hgvsc: string;                 // cDNA变化
   hgvsp: string;                 // 蛋白质变化
@@ -127,7 +211,7 @@ export interface SNVIndel extends VariantReviewStatus {
 }
 
 // ============ CNV变异(片段级别) ============
-export type CNVType = 'Amplification' | 'Deletion' | 'Normal';
+export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 
 export interface CNVSegment extends VariantReviewStatus {
   id: string;
@@ -136,9 +220,11 @@ export interface CNVSegment extends VariantReviewStatus {
   endPosition: number;
   length: number;
   type: CNVType;
-  copyNumber: number;
+  copyNumber: number | null;
+  copyRatio: number | null;
+  log2Ratio: number | null;
   genes: string[];
-  confidence: number;
+  confidence: number | null;
 }
 
 // ============ CNV变异(外显子级别) ============
@@ -151,13 +237,15 @@ export interface CNVExon extends VariantReviewStatus {
   startPosition: number;
   endPosition: number;
   type: CNVType;
-  copyNumber: number;
-  ratio: number;
-  confidence: number;
+  copyNumber: number | null;
+  copyRatio: number | null;
+  log2Ratio: number | null;
+  ratio: number | null;
+  confidence: number | null;
 }
 
 // ============ 动态突变（STR） ============
-export type STRStatus = 'Normal' | 'Premutation' | 'FullMutation';
+export type STRStatus = 'Normal' | 'Premutation' | 'FullMutation' | 'Unknown';
 
 export interface STR extends VariantReviewStatus {
   id: string;
@@ -173,7 +261,7 @@ export interface STR extends VariantReviewStatus {
 
 // ============ MEI (移动元件插入) ============
 export type MEIType = 'LINE1' | 'Alu' | 'SVA' | 'Unknown';
-export type MEIInsertionType = 'insertion' | 'deletion' | 'complex';
+export type MEIInsertionType = 'insertion' | 'deletion' | 'complex' | 'Unknown';
 
 export interface MEIVariant extends VariantReviewStatus {
   id: string;
@@ -181,12 +269,12 @@ export interface MEIVariant extends VariantReviewStatus {
   position: number;              // 插入位置
   meiType: MEIType;              // MEI类型
   insertionType: MEIInsertionType; // 插入类型
-  strand: '+' | '-';             // 链方向
+  strand: '+' | '-' | 'Unknown'; // 链方向
   length: number;                // 插入长度
   gene: string;                  // 所在基因
   transcript?: string;           // 转录本
   impact?: string;               // 影响 (如 exonic, intronic, UTR5, UTR3, intergenic)
-  zygosity: 'Heterozygous' | 'Homozygous' | 'Hemizygous';
+  zygosity: 'Heterozygous' | 'Homozygous' | 'Hemizygous' | 'Unknown';
   supportingReads: number;       // 支持读数
   totalReads: number;            // 总读数
   frequency?: number;            // 人群频率
@@ -202,7 +290,8 @@ export type MitochondrialPathogenicity =
   | 'Likely_Pathogenic' 
   | 'VUS' 
   | 'Likely_Benign' 
-  | 'Benign';
+  | 'Benign'
+  | 'Unknown';
 
 export interface MitochondrialVariant extends VariantReviewStatus {
   id: string;
@@ -217,7 +306,7 @@ export interface MitochondrialVariant extends VariantReviewStatus {
 }
 
 // ============ UPD区域 ============
-export type UPDType = 'Isodisomy' | 'Heterodisomy';
+export type UPDType = 'Isodisomy' | 'Heterodisomy' | 'Unknown';
 export type ParentOfOrigin = 'Maternal' | 'Paternal' | 'Unknown';
 
 export interface UPDRegion extends VariantReviewStatus {
@@ -245,7 +334,7 @@ export interface ROHRegion extends VariantReviewStatus {
 }
 
 // ============ 标签页类型 ============
-export type TabType = 'runtime' | 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
+export type TabType = 'overview' | 'runtime' | 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
 
 export interface TabConfig {
   id: TabType;
@@ -253,9 +342,15 @@ export interface TabConfig {
 }
 
 export const TAB_CONFIGS: TabConfig[] = [
+  { id: 'overview', label: '总览' },
+  { id: 'snv-indel', label: '变异判读' },
+  { id: 'qc', label: '质控与家系' },
+  { id: 'report', label: '报告与文件' },
   { id: 'runtime', label: '运行状态' },
-  { id: 'qc', label: '质控结果' },
-  { id: 'snv-indel', label: 'SNP/InDel' },
+];
+
+export const VARIANT_TAB_CONFIGS: TabConfig[] = [
+  { id: 'snv-indel', label: 'SNV / InDel' },
   { id: 'cnv-segment', label: 'CNV(Region)' },
   { id: 'cnv-exon', label: 'CNV(Exon)' },
   { id: 'str', label: '动态突变' },
@@ -263,7 +358,6 @@ export const TAB_CONFIGS: TabConfig[] = [
   { id: 'mt', label: '线粒体' },
   { id: 'upd', label: 'UPD' },
   { id: 'roh', label: 'ROH' },
-  { id: 'report', label: '报告生成' },
 ];
 
 // ============ 表格筛选状态 ============

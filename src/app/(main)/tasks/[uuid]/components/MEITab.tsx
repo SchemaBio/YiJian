@@ -7,8 +7,9 @@ import { Search } from 'lucide-react';
 import type { MEIVariant, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getMEIs, ACMG_CONFIG, reportVariant, reviewVariant } from '../result-api';
-import { PositionLink } from './IGVViewer';
+import { IGVViewer, PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface MEITabProps {
   taskId: string;
@@ -32,6 +33,13 @@ const MEI_TYPE_COLORS = {
   Unknown: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
+const MEI_INSERTION_LABELS: Record<MEIVariant['insertionType'], string> = {
+  insertion: '插入',
+  deletion: '缺失',
+  complex: '复杂',
+  Unknown: '未提供',
+};
+
 // 影响类型标签
 const IMPACT_LABELS = {
   exonic: '外显子区',
@@ -49,31 +57,53 @@ export function MEITab({
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<MEIVariant> | null>(null);
   const [loading, setLoading] = React.useState(true);
+	const [error, setError] = React.useState<string | null>(null);
+	const [operationError, setOperationError] = React.useState<string | null>(null);
+	const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+	const [igvState, setIgvState] = React.useState({ isOpen: false, chromosome: '', position: 0 });
 
   const filterState = externalFilterState ?? internalFilterState;
   const setFilterState = onFilterChange ?? setInternalFilterState;
 
   // 处理审核状态变更
-  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reviewed: checked }
     }));
-    reviewVariant(taskId, 'mei', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+		try {
+			await reviewVariant(taskId, 'mei', id, checked);
+		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+			setOperationError(cause instanceof Error ? cause.message : '更新复核状态失败');
+		} finally {
+			setPendingVariantIDs((previous) => {
+				const next = new Set(previous); next.delete(id); return next;
+			});
+		}
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reported: checked }
     }));
-    reportVariant(taskId, 'mei', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+		try {
+			await reportVariant(taskId, 'mei', id, checked);
+		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+			setOperationError(cause instanceof Error ? cause.message : '标记回报失败');
+		} finally {
+			setPendingVariantIDs((previous) => {
+				const next = new Set(previous); next.delete(id); return next;
+			});
+		}
   }, [taskId]);
 
   // 获取变异的审核状态
@@ -81,38 +111,33 @@ export function MEITab({
     return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
   }, [reviewStatus]);
 
-  // 按审核/回报状态排序的数据
-  const sortedData = React.useMemo(() => {
-    if (!result?.data) return [];
-    return [...result.data].sort((a, b) => {
-      const stateA = getReviewState(a);
-      const stateB = getReviewState(b);
-      if (stateA.reported !== stateB.reported) {
-        return stateA.reported ? -1 : 1;
-      }
-      if (stateA.reviewed !== stateB.reviewed) {
-        return stateA.reviewed ? -1 : 1;
-      }
-      return 0;
-    });
-  }, [result?.data, getReviewState]);
+	// 排序和分页均由服务端在一个执行尝试范围内完成，不能在当前页再按
+	// 审核状态重排，否则用户看到的页码与统计会不一致。
+	const sortedData = result?.data ?? [];
 
-  // 加载基因列表
-  // 加载数据
   React.useEffect(() => {
+		const controller = new AbortController();
     async function loadData() {
       setLoading(true);
-      const data = await getMEIs(taskId, filterState);
-      setResult(data);
-      setLoading(false);
+		setError(null);
+		try {
+			const data = await getMEIs(taskId, filterState, controller.signal);
+			if (!controller.signal.aborted) setResult(data);
+		} catch (cause) {
+			if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : '无法加载 MEI 结果');
+		} finally {
+			if (!controller.signal.aborted) setLoading(false);
+		}
     }
-    loadData();
+		void loadData();
+		return () => controller.abort();
   }, [taskId, filterState]);
 
   // 处理搜索
   const handleSearch = React.useCallback((query: string) => {
     setFilterState({ ...filterState, searchQuery: query, page: 1 });
   }, [filterState, setFilterState]);
+  const [searchInput, setSearchInput] = useDebouncedSearch(filterState.searchQuery, handleSearch);
 
   // 处理基因列表筛选
   // 获取当前选中的基因列表信息
@@ -127,6 +152,7 @@ export function MEITab({
           <ReviewCheckbox
             checked={state.reviewed}
             onChange={(checked) => handleReviewChange(row.id, checked, state)}
+			disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -142,6 +168,7 @@ export function MEITab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+			disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -163,7 +190,7 @@ export function MEITab({
         <PositionLink
           chromosome={row.chromosome}
           position={row.position}
-          onClick={() => {}}
+							onClick={(chromosome, position) => setIgvState({ isOpen: true, chromosome, position })}
         />
       ),
       width: 150,
@@ -185,8 +212,7 @@ export function MEITab({
       id: 'insertionType',
       header: '插入类型',
       accessor: (row) => {
-        const labels = { insertion: '插入', deletion: '缺失', complex: '复杂' };
-        return labels[row.insertionType];
+        return MEI_INSERTION_LABELS[row.insertionType];
       },
       width: 80,
       align: 'center',
@@ -194,7 +220,7 @@ export function MEITab({
     {
       id: 'strand',
       header: '链',
-      accessor: 'strand',
+      accessor: (row) => row.strand === 'Unknown' ? '未提供' : row.strand,
       width: 50,
       align: 'center',
     },
@@ -217,7 +243,7 @@ export function MEITab({
       id: 'zygosity',
       header: '杂合性',
       accessor: (row) => {
-        const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合' };
+        const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合', Unknown: '未提供' };
         return labels[row.zygosity];
       },
       width: 80,
@@ -249,7 +275,6 @@ export function MEITab({
       },
       width: 100,
       align: 'center',
-      sortable: true,
     },
   ];
 
@@ -265,8 +290,8 @@ export function MEITab({
           <div className="w-64">
             <Input
               placeholder="搜索基因、位置..."
-              value={filterState.searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
@@ -281,7 +306,9 @@ export function MEITab({
       </div>
 
       {/* 数据表格 */}
-      {loading ? (
+		{error && !loading ? (
+			<div className="rounded-lg border border-danger-emphasis bg-danger-subtle p-4 text-sm text-danger-fg">{error}</div>
+		) : loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
@@ -334,6 +361,17 @@ export function MEITab({
           暂无 MEI 变异数据
         </div>
       )}
+		{operationError && (
+			<div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>
+		)}
+
+		<IGVViewer
+			taskId={taskId}
+			chromosome={igvState.chromosome}
+			position={igvState.position}
+			isOpen={igvState.isOpen}
+			onClose={() => setIgvState(previous => ({ ...previous, isOpen: false }))}
+		/>
     </div>
   );
 }

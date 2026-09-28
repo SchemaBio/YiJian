@@ -12,9 +12,11 @@ import { CNVDetailPanel } from './CNVDetailPanel';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
 import { CNVAssessmentPanel } from './CNVAssessmentPanel';
 import { useCNVAssessment } from '../hooks/useCNVAssessment';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface CNVSegmentTabProps {
   taskId: string;
+  referenceId?: string;
   filterState?: TableFilterState;
   onFilterChange?: (state: TableFilterState) => void;
 }
@@ -22,7 +24,8 @@ interface CNVSegmentTabProps {
 function cnvTypeLabel(type: CNVSegment['type']): string {
   if (type === 'Amplification') return '扩增';
   if (type === 'Deletion') return '缺失';
-  return '正常';
+  if (type === 'Normal') return '正常';
+  return '未提供';
 }
 
 function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
@@ -33,12 +36,16 @@ function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral'
 
 export function CNVSegmentTab({ 
   taskId, 
+  referenceId,
   filterState: externalFilterState,
   onFilterChange 
 }: CNVSegmentTabProps) {
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<CNVSegment> | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [requestError, setRequestError] = React.useState<string | null>(null);
+  const [operationError, setOperationError] = React.useState<string | null>(null);
+  const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [assessmentError, setAssessmentError] = React.useState<string | null>(null);
   const [assessmentSaving, setAssessmentSaving] = React.useState(false);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
@@ -80,7 +87,7 @@ export function CNVSegmentTab({
 
   // 打开评估面板
   const handleOpenAssessmentPanel = React.useCallback((variant: CNVSegment) => {
-    if (variant.type === 'Normal') return;
+    if (variant.type === 'Normal' || variant.type === 'Unknown') return;
     setAssessmentVariant(variant);
     const cached = assessmentCache[variant.id];
     if (cached) {
@@ -125,26 +132,36 @@ export function CNVSegmentTab({
 
   // 加载基因列表
   React.useEffect(() => {
+    const controller = new AbortController();
     async function loadData() {
       setLoading(true);
+      setRequestError(null);
       try {
-        const data = await getCNVSegments(taskId, filterState);
+        const data = await getCNVSegments(taskId, filterState, controller.signal);
+        if (controller.signal.aborted) return;
         setResult(data);
         const ids = data.data.filter(item => item.type !== 'Normal').map(item => item.id);
         if (ids.length > 0) {
           const saved = await listCNVAssessments(taskId, 'cnv-segment', ids);
+          if (controller.signal.aborted) return;
           setAssessmentCache(prev => ({ ...prev, ...saved }));
         }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setRequestError(error instanceof Error ? error.message : '无法加载片段 CNV 结果');
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     void loadData();
+    return () => controller.abort();
   }, [taskId, filterState]);
 
   const handleSearch = React.useCallback((query: string) => {
     setFilterState({ ...filterState, searchQuery: query, page: 1 });
   }, [filterState, setFilterState]);
+  const [searchInput, setSearchInput] = useDebouncedSearch(filterState.searchQuery, handleSearch);
 
   const handleSortChange = React.useCallback((column: string, direction: 'asc' | 'desc' | null) => {
     setFilterState({
@@ -165,43 +182,53 @@ export function CNVSegmentTab({
   }, [filterState, setFilterState]);
 
   // 处理审核状态变更
-  const handleReviewChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+    setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reviewed: checked }
     }));
-    reviewVariant(taskId, 'cnv-segment', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+    try {
+      await reviewVariant(taskId, 'cnv-segment', id, checked);
+    } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+      setOperationError(error instanceof Error ? error.message : '更新复核状态失败');
+    } finally {
+      setPendingVariantIDs((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+    setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, reported: checked }
     }));
-    reportVariant(taskId, 'cnv-segment', id, checked).catch(() => {
+    setPendingVariantIDs((previous) => new Set(previous).add(id));
+    try {
+      await reportVariant(taskId, 'cnv-segment', id, checked);
+    } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-    });
+      setOperationError(error instanceof Error ? error.message : '标记回报失败');
+    } finally {
+      setPendingVariantIDs((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [taskId]);
 
   // 获取变异的审核状态
   const getReviewState = React.useCallback((variant: CNVSegment) => {
     return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
   }, [reviewStatus]);
-
-  // 按审核/回报状态排序的数据
-  const sortedData = React.useMemo(() => {
-    if (!result?.data) return [];
-    return [...result.data].sort((a, b) => {
-      const stateA = getReviewState(a);
-      const stateB = getReviewState(b);
-      if (stateA.reported !== stateB.reported) return stateA.reported ? -1 : 1;
-      if (stateA.reviewed !== stateB.reviewed) return stateA.reviewed ? -1 : 1;
-      return 0;
-    });
-  }, [result?.data, getReviewState]);
 
   const columns: Column<CNVSegment>[] = [
     {
@@ -213,6 +240,7 @@ export function CNVSegmentTab({
           <ReviewCheckbox
             checked={state.reviewed}
             onChange={(checked) => handleReviewChange(row.id, checked, state)}
+            disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -227,6 +255,7 @@ export function CNVSegmentTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+            disabled={pendingVariantIDs.has(row.id)}
           />
         );
       },
@@ -280,7 +309,7 @@ export function CNVSegmentTab({
       id: 'pathogenicity',
       header: '致病性',
       accessor: (row) => {
-        if (row.type === 'Normal') {
+        if (row.type === 'Normal' || row.type === 'Unknown') {
           return <Tag variant="neutral">不适用</Tag>;
         }
         const cachedAssessment = getAssessmentForCNV(row.id);
@@ -304,9 +333,8 @@ export function CNVSegmentTab({
     {
       id: 'copyNumber',
       header: '拷贝数',
-      accessor: (row) => row.copyNumber,
+      accessor: (row) => row.copyNumber ?? '未提供',
       width: 80,
-      sortable: true,
     },
     {
       id: 'genes',
@@ -317,7 +345,7 @@ export function CNVSegmentTab({
     {
       id: 'confidence',
       header: '置信度',
-      accessor: (row) => `${(row.confidence * 100).toFixed(0)}%`,
+      accessor: (row) => row.confidence === null ? '未提供' : `${(row.confidence * 100).toFixed(0)}%`,
       width: 80,
       sortable: true,
     },
@@ -332,8 +360,8 @@ export function CNVSegmentTab({
           <div className="w-64">
             <Input
               placeholder="搜索染色体..."
-              value={filterState.searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
@@ -357,14 +385,19 @@ export function CNVSegmentTab({
         </div>
       </div>
 
-      {loading ? (
+      {requestError ? (
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
+          {requestError}
+          <button onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</button>
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
       ) : result && result.data.length > 0 ? (
         <>
           <DataTable
-            data={sortedData}
+            data={result.data}
             columns={columns}
             rowKey="id"
             striped
@@ -412,12 +445,18 @@ export function CNVSegmentTab({
         isOpen={detailPanelOpen}
         onClose={handleCloseDetailPanel}
         allSegments={result?.data || []}
+        referenceId={referenceId}
       />
 
       {/* CNV 评估面板 */}
       {assessmentError && (
         <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
           {assessmentError}
+        </div>
+      )}
+      {operationError && (
+        <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+          {operationError}
         </div>
       )}
       {assessmentSaving && (

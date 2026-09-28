@@ -45,7 +45,9 @@ export function ReviewCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
  * 回报标记。
  */
 export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
-  const tooltip = checked ? '已回报；当前后端不支持在此取消回报' : '点击标记为已回报';
+  const tooltip = checked
+    ? '已标记回报；此标记不代表正式报告已签发'
+    : '标记已回报（该操作不可在此撤销）';
 
   return (
     <Tooltip content={tooltip} placement="top" variant="nav">
@@ -65,7 +67,7 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : checked ? 'cursor-default' : 'cursor-pointer'}
         `}
-        aria-label={checked ? '已回报' : '标记为已回报'}
+        aria-label={checked ? '已标记回报' : '标记为已回报'}
         aria-pressed={checked}
       >
         <FileCheck2 className={`w-5 h-5 ${checked ? 'fill-accent-subtle' : ''}`} />
@@ -78,9 +80,9 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
  * 审核和回报状态的列头。
  */
 export function ReviewColumnHeader() {
-  return '审核';
+  return '复核';
 }
 
 export function ReportColumnHeader() {
-  return '回报';
+  return '已回报';
 }
