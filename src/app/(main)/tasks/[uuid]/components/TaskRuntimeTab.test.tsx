@@ -8,11 +8,13 @@ vi.mock('@/lib/tasks', () => ({
   tasksApi: {
     getProgress: vi.fn(),
     getLogs: vi.fn(),
+    retryResultImport: vi.fn(),
   },
 }));
 
 const getProgress = vi.mocked(tasksApi.getProgress);
 const getLogs = vi.mocked(tasksApi.getLogs);
+const retryResultImport = vi.mocked(tasksApi.retryResultImport);
 
 function progressResponse(overrides: Partial<TaskProgressResponse> = {}): TaskProgressResponse {
   return {
@@ -103,5 +105,27 @@ describe('TaskRuntimeTab', () => {
     expect(screen.queryByRole('heading', { name: '计算节点' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sepiida Agent' })).not.toBeInTheDocument();
     expect(screen.getByText('分析进度')).toBeInTheDocument();
+  });
+
+  it('recovers a failed structured import from the archived attempt', async () => {
+    getProgress
+      .mockResolvedValueOnce(progressResponse({ status: 'completed', result_import_status: 'failed', result_import_attempts: 1 }))
+      .mockResolvedValueOnce(progressResponse({ status: 'completed', result_import_status: 'success', result_import_attempts: 2 }));
+    retryResultImport.mockResolvedValue(progressResponse({ status: 'completed', result_import_status: 'success', result_import_attempts: 2 }));
+    const onResultImportChange = vi.fn().mockResolvedValue(undefined);
+
+    render(<TaskRuntimeTab taskId="task-1" initialStatus="completed" onResultImportChange={onResultImportChange} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '重新导入结果' }));
+    await waitFor(() => expect(retryResultImport).toHaveBeenCalledWith('task-1'));
+    await waitFor(() => expect(onResultImportChange).toHaveBeenCalledTimes(1));
+  });
+
+  it('offers recovery when an old completed task is still marked importing', async () => {
+    getProgress.mockResolvedValue(progressResponse({ status: 'completed', result_import_status: 'running', result_import_attempts: 1 }));
+
+    render(<TaskRuntimeTab taskId="task-1" initialStatus="completed" />);
+
+    expect(await screen.findByRole('button', { name: '恢复导入' })).toBeInTheDocument();
   });
 });

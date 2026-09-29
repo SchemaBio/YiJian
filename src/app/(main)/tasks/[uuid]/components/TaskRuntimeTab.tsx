@@ -9,6 +9,7 @@ import type { TaskProgressResponse, TaskStatus } from '@/types/task';
 interface TaskRuntimeTabProps {
   taskId: string;
   initialStatus: TaskStatus;
+  onResultImportChange?: () => Promise<void>;
 }
 
 function formatTime(value?: string): string {
@@ -31,6 +32,9 @@ function vmStatusLabel(status?: string): string {
     case 'DISPATCHING': return '云端状态确认中';
     case 'PENDING': return '实例已申请';
     case 'RUNNING': return '实例运行中';
+    case 'TERMINATING': return '节点释放中';
+    case 'TERMINATED':
+    case 'RECLAIMED': return '节点已释放';
     case 'LAUNCH_FAILED': return '实例申请失败';
     default: return status || '-';
   }
@@ -158,12 +162,14 @@ function areTaskProgressResponsesEqual(
     && tasksEqual;
 }
 
-export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
+export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: TaskRuntimeTabProps) {
   const [progress, setProgress] = React.useState<TaskProgressResponse | null>(null);
   const [logs, setLogs] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [copied, setCopied] = React.useState(false);
+  const [retryingImport, setRetryingImport] = React.useState(false);
+  const [importRetryError, setImportRetryError] = React.useState('');
 
   const loadRuntime = React.useCallback(async (background = false) => {
     if (!background) setLoading(true);
@@ -208,10 +214,11 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
       'archiving',
       'terminating',
     ].includes(phase ?? '');
-    if (!['waiting_for_data', 'queued', 'running'].includes(status) && !executionStillActive) return;
+    const importStillActive = status === 'completed' && progress?.result_import_status === 'running';
+    if (!['waiting_for_data', 'queued', 'running'].includes(status) && !executionStillActive && !importStillActive) return;
     const timer = window.setInterval(() => void loadRuntime(true), 5000);
     return () => window.clearInterval(timer);
-  }, [initialStatus, loadRuntime, progress?.execution_phase, progress?.status]);
+  }, [initialStatus, loadRuntime, progress?.execution_phase, progress?.result_import_status, progress?.status]);
 
   const handleCopy = async () => {
     if (!logs) return;
@@ -224,12 +231,38 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
     }
   };
 
+  const handleRetryImport = async () => {
+    setRetryingImport(true);
+    setImportRetryError('');
+    try {
+      const next = await tasksApi.retryResultImport(taskId);
+      setProgress(next);
+      await loadRuntime(true);
+      await onResultImportChange?.();
+    } catch (cause) {
+      setImportRetryError(cause instanceof Error ? cause.message : '重新导入结果失败');
+      await loadRuntime(true);
+      await onResultImportChange?.();
+    } finally {
+      setRetryingImport(false);
+    }
+  };
+
   const value = Math.min(100, Math.max(0, progress?.progress ?? 0));
   const taskSteps = progress?.tasks ?? [];
   const vmStatus = progress?.vm_status?.toUpperCase();
   const executionPhase = progress?.execution_phase;
+  const executionPhaseLabel = executionPhase === 'terminal'
+    ? vmStatus === 'LAUNCH_FAILED'
+      ? '未创建计算节点'
+      : ['TERMINATED', 'RECLAIMED'].includes(vmStatus ?? '')
+        ? '节点已释放'
+        : executionPhaseLabels[executionPhase]
+    : executionPhaseLabels[executionPhase ?? ''];
   const initializingWithoutProgress = ['bootstrapping', 'diagnostic_hold'].includes(executionPhase ?? '') && (progress?.progress ?? 0) === 0;
   const analysisProgress = progress?.analysis_progress;
+  const canRetryImport = progress?.status === 'completed'
+    && (progress.result_import_status === 'failed' || progress.result_import_status === 'running');
 
   return (
     <div className="space-y-4">
@@ -267,6 +300,24 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
         </div>
       )}
 
+      {canRetryImport && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning-muted bg-warning-subtle px-3 py-3 text-sm text-warning-fg">
+          <div>
+            <p className="font-medium">{progress?.result_import_status === 'running' ? '结果导入未结束' : '结构化结果导入失败'}</p>
+            <p className="mt-1 text-xs">将从本次已归档文件恢复导入，不会重新申请计算节点。</p>
+          </div>
+          <Button variant="secondary" size="small" onClick={() => void handleRetryImport()} disabled={retryingImport}>
+            {retryingImport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {retryingImport ? '正在导入' : progress?.result_import_status === 'running' ? '恢复导入' : '重新导入结果'}
+          </Button>
+        </div>
+      )}
+      {importRetryError && (
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg" role="alert">
+          {importRetryError}
+        </div>
+      )}
+
       {executionPhase && (
         <div className="flex items-start gap-2 rounded-md border border-border-default bg-canvas-inset/40 px-3 py-2 text-sm">
           <Server className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
@@ -274,7 +325,7 @@ export function TaskRuntimeTab({ taskId, initialStatus }: TaskRuntimeTabProps) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-fg-muted">执行阶段</span>
               <Tag variant={executionPhase === 'terminating' || executionPhase === 'diagnostic_hold' ? 'warning' : executionPhase === 'terminal' ? 'neutral' : executionPhase === 'running' || executionPhase === 'archiving' ? 'info' : 'warning'}>
-                {executionPhaseLabels[executionPhase] ?? executionPhase}
+                {executionPhaseLabel ?? executionPhase}
               </Tag>
               {progress?.attempt_id && <span className="font-mono text-xs text-fg-muted" title={progress.attempt_id}>attempt: {progress.attempt_id.slice(0, 8)}…</span>}
             </div>

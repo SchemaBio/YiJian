@@ -41,7 +41,13 @@ export default function AnalysisDetailPage() {
 
   // 使用标签页状态管理hook，默认从质控结果开始
 	const { activeTab, hasExplicitTab, setActiveTab, getFilterState, setFilterState } = useTabState(uuid);
-	const defaultedTabRef = React.useRef(false);
+	const manuallySelectedTabRef = React.useRef(false);
+	const automaticallySelectedTabRef = React.useRef<TabType | null>(null);
+	const handleTabChange = React.useCallback((tab: TabType) => {
+		manuallySelectedTabRef.current = true;
+		automaticallySelectedTabRef.current = null;
+		setActiveTab(tab);
+	}, [setActiveTab]);
 
   // 加载任务数据和样本数据
   React.useEffect(() => {
@@ -75,10 +81,41 @@ export default function AnalysisDetailPage() {
   }, [uuid]);
 
 	React.useEffect(() => {
-		if (loading || hasExplicitTab || defaultedTabRef.current) return;
-		defaultedTabRef.current = true;
-		if (resultContext && resultContext.state !== 'ready') setActiveTab('runtime');
-	}, [hasExplicitTab, loading, resultContext, setActiveTab]);
+		if (loading || resultContext?.state === 'ready' || resultContext?.state === 'import_failed') return;
+		let disposed = false;
+		let requestInFlight = false;
+		const refreshContext = async () => {
+			if (requestInFlight) return;
+			requestInFlight = true;
+			try {
+				const next = await getResultContext(uuid);
+				if (disposed) return;
+				setResultContext(next);
+				setResultContextError(null);
+			} catch (cause) {
+				if (!disposed) setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
+			} finally {
+				requestInFlight = false;
+			}
+		};
+		const timer = window.setInterval(() => void refreshContext(), 5000);
+		return () => {
+			disposed = true;
+			window.clearInterval(timer);
+		};
+	}, [loading, resultContext?.state, uuid]);
+
+	React.useEffect(() => {
+		if (loading || manuallySelectedTabRef.current) return;
+		if (hasExplicitTab && automaticallySelectedTabRef.current === null) return;
+		const nextTab: TabType = resultContext?.state === 'ready' ? 'overview' : 'runtime';
+		if (activeTab === nextTab) {
+			automaticallySelectedTabRef.current = nextTab;
+			return;
+		}
+		automaticallySelectedTabRef.current = nextTab;
+		setActiveTab(nextTab);
+	}, [activeTab, hasExplicitTab, loading, resultContext?.state, setActiveTab]);
 
   // 返回任务列表
   const handleBack = React.useCallback(() => {
@@ -122,9 +159,20 @@ export default function AnalysisDetailPage() {
   const renderTabContent = () => {
     switch (activeTab) {
 		case 'overview':
-			return resultContext ? <ResultOverview context={resultContext} onNavigate={setActiveTab} /> : <ResultContextUnavailable message={resultContextError} />;
+			return resultContext ? <ResultOverview context={resultContext} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
       case 'runtime':
-        return <TaskRuntimeTab taskId={uuid} initialStatus={task.status} />;
+        return <TaskRuntimeTab
+          taskId={uuid}
+          initialStatus={task.status}
+          onResultImportChange={async () => {
+            try {
+              setResultContext(await getResultContext(uuid));
+              setResultContextError(null);
+            } catch (cause) {
+              setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
+            }
+          }}
+        />;
 		case 'qc':
 			return <QCResultTab taskId={uuid} context={resultContext} />;
       case 'snv-indel':
@@ -211,10 +259,10 @@ export default function AnalysisDetailPage() {
       {sample && <SampleSummaryCard sample={sample} />}
 
       {/* 标签面板和内容 */}
-		<ResultTabs activeTab={activeTab} onTabChange={setActiveTab}>
+		<ResultTabs activeTab={activeTab} onTabChange={handleTabChange}>
 			{isVariantTab ? (
 				<div className="grid gap-5 xl:grid-cols-[168px_minmax(0,1fr)]">
-					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={setActiveTab} />
+					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />
 					<div className="min-w-0 rounded-xl border border-border-default bg-canvas-default p-4 shadow-sm">{renderTabContent()}</div>
 				</div>
 			) : renderTabContent()}

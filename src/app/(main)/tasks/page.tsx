@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, X, ChevronRight, ChevronLeft, List, Play, Square, Pencil, Trash2, BookOpen, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet, MoreHorizontal } from 'lucide-react';
-import { AnalysisDetailPanel, NewTaskModal, BatchTaskModal, EditTaskModal } from './components';
+import { Search, Plus, RotateCcw, Play, Square, Pencil, Trash2, BookOpen, Eye, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet, List, MoreHorizontal } from 'lucide-react';
+import { NewTaskModal, BatchTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
@@ -17,7 +18,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { formatLocalDateTime } from '@/lib/utils';
 
 const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度', NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报', NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟', NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟', NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败', NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流', NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常', NODE_DNS_FAILED: '节点无法解析状态服务域名', NODE_TLS_FAILED: '节点 TLS 连接失败', BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖', REFERENCE_DATABASE_FAILED: '参考数据库准备失败', INPUT_DOWNLOAD_FAILED: '输入文件下载失败', AGENT_START_FAILED: 'Sepiida Agent 启动失败' };
-const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', diagnostic_hold: '诊断日志保留中', running: '计算中', archiving: '归档中', terminating: '节点释放中', release_failed: '节点释放重试中' };
+const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', diagnostic_hold: '诊断日志保留中', running: '计算中', archiving: '归档中', terminating: '节点释放中', release_failed: '节点释放重试中', terminal: '本次执行已结束' };
 
 const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   waiting_for_data: { label: '等待数据', variant: 'warning' },
@@ -27,16 +28,6 @@ const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'ne
   failed: { label: '失败', variant: 'danger' },
   cancelled: { label: '已取消', variant: 'neutral' },
   pending_interpretation: { label: '待解读', variant: 'warning' },
-};
-
-const statusDotColors: Record<AnalysisTask['status'], string> = {
-  waiting_for_data: 'bg-attention-emphasis',
-  queued: 'bg-neutral-emphasis',
-  running: 'bg-accent-emphasis',
-  completed: 'bg-success-emphasis',
-  failed: 'bg-danger-emphasis',
-  cancelled: 'bg-neutral-emphasis',
-  pending_interpretation: 'bg-attention-emphasis',
 };
 
 const statusFilterOptions = [
@@ -162,13 +153,6 @@ function StatusFilterDropdown({
   );
 }
 
-interface OpenTab {
-  id: string;
-  taskId: string;
-  sampleId: string;
-  name: string;
-}
-
 // 操作单元格组件
 function TaskActionsCell({
   task,
@@ -178,6 +162,7 @@ function TaskActionsCell({
   onEdit,
   onDelete,
   onView,
+  onDetails,
   isLoading,
 }: {
   task: AnalysisTask;
@@ -187,6 +172,7 @@ function TaskActionsCell({
   onEdit: (task: AnalysisTask) => void;
   onDelete: (id: string) => void;
   onView: (task: AnalysisTask) => void;
+  onDetails: (task: AnalysisTask) => void;
   isLoading: boolean;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
@@ -271,6 +257,17 @@ function TaskActionsCell({
           </button>
         )}
 
+        <button
+          type="button"
+          onClick={() => onDetails(task)}
+          aria-label={`查看任务 ${task.internalId || task.id} 详情`}
+          title="查看详情"
+          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border-default bg-canvas-default px-2 text-xs font-medium text-fg-default transition-colors hover:bg-canvas-subtle"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          查看详情
+        </button>
+
         <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
           <PopoverPrimitive.Trigger asChild>
             <button
@@ -346,13 +343,11 @@ function TaskActionsCell({
 }
 
 export default function AnalysisPage() {
+  const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
-  const [openTabs, setOpenTabs] = React.useState<OpenTab[]>([]);
-  const [activeTabId, setActiveTabId] = React.useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
   const [isBatchTaskModalOpen, setIsBatchTaskModalOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<AnalysisTask | null>(null);
@@ -486,35 +481,13 @@ export default function AnalysisPage() {
     }
   };
 
-  const handleOpenTab = React.useCallback((task: AnalysisTask) => {
-    const existingTab = openTabs.find(t => t.taskId === task.id);
-    if (existingTab) {
-      setActiveTabId(existingTab.id);
-      return;
-    }
+  const handleOpenDetails = React.useCallback((task: AnalysisTask) => {
+    router.push(`/tasks/${encodeURIComponent(task.id)}`);
+  }, [router]);
 
-    const newTab: OpenTab = {
-      id: `tab-${Date.now()}`,
-      taskId: task.id,
-      sampleId: task.sampleId,
-      name: task.sampleId,
-    };
-    setOpenTabs(prev => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-  }, [openTabs]);
-
-  const handleCloseTab = React.useCallback((tabId: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setOpenTabs(prev => {
-      const newTabs = prev.filter(t => t.id !== tabId);
-      if (activeTabId === tabId && newTabs.length > 0) {
-        setActiveTabId(newTabs[newTabs.length - 1].id);
-      } else if (newTabs.length === 0) {
-        setActiveTabId(null);
-      }
-      return newTabs;
-    });
-  }, [activeTabId]);
+  const handleOpenInterpretation = React.useCallback((task: AnalysisTask) => {
+    router.push(`/tasks/${encodeURIComponent(task.id)}?tab=overview`);
+  }, [router]);
 
   const filteredTasks = React.useMemo(() => {
     let result = tasks ?? [];
@@ -575,9 +548,18 @@ export default function AnalysisPage() {
         const terminalStatus = ['completed', 'failed', 'cancelled'].includes(row.status);
         const phaseLabel = row.executionPhase ? executionLabels[row.executionPhase] : undefined;
         const cleanupPhase = terminalStatus && ['terminating', 'release_failed'].includes(row.executionPhase ?? '');
-        const label = terminalStatus || !phaseLabel ? config.label : phaseLabel;
+        const vmStatus = row.vmStatus?.toUpperCase();
+        const releaseConfirmed = row.executionPhase === 'terminal' && ['TERMINATED', 'RECLAIMED'].includes(vmStatus ?? '');
+        const label = row.status === 'completed' ? '分析已完成' : terminalStatus || !phaseLabel ? config.label : phaseLabel;
+        const releaseLabel = cleanupPhase
+          ? phaseLabel
+          : releaseConfirmed
+            ? '节点已释放'
+            : row.executionPhase === 'terminal' && vmStatus === 'LAUNCH_FAILED'
+              ? '未创建计算节点'
+              : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><Tag variant={config.variant} className="min-w-14 justify-center">{label}</Tag>{cleanupPhase && phaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : 'text-warning-fg'}`}>{phaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
+        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><Tag variant={config.variant} className="min-w-14 justify-center">{label}</Tag>{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
       },
       width: 90,
       align: 'center',
@@ -651,108 +633,21 @@ export default function AnalysisPage() {
           onRetry={handleRetryTask}
           onEdit={setEditingTask}
           onDelete={handleDeleteTask}
-          onView={handleOpenTab}
+          onView={handleOpenInterpretation}
+          onDetails={handleOpenDetails}
           isLoading={actionLoading === row.id}
         />
       ),
-      width: 126,
-      minWidth: 122,
-      maxWidth: 140,
+      width: 230,
+      minWidth: 220,
+      maxWidth: 250,
       align: 'center',
       pinned: 'right',
     },
   ];
 
-  const activeTab = openTabs.find(t => t.id === activeTabId);
-  const hasOpenTabs = openTabs.length > 0;
-
   return (
     <div className="flex h-full min-w-0 w-full">
-      {/* 左侧任务列表 */}
-      {hasOpenTabs ? (
-        // 收起/展开状态
-        sidebarCollapsed ? (
-          // 完全收起：只显示展开按钮
-          <div className="w-10 flex-shrink-0 border-r border-border-default bg-canvas-subtle flex flex-col items-center py-2">
-            <button
-              onClick={() => setSidebarCollapsed(false)}
-              className="p-2 rounded hover:bg-canvas-inset text-fg-muted hover:text-fg-default transition-colors"
-              title="展开任务列表"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <div className="mt-2 text-xs text-fg-muted writing-mode-vertical">
-              任务
-            </div>
-            {/* 显示打开的任务数量 */}
-            <div className="mt-auto mb-2 w-5 h-5 rounded-full bg-accent-emphasis text-white text-xs flex items-center justify-center">
-              {openTabs.length}
-            </div>
-          </div>
-        ) : (
-          // 展开状态：窄边栏显示样本列表
-          <div className="w-56 flex-shrink-0 border-r border-border-default bg-canvas-subtle flex flex-col">
-            {/* 标题栏 */}
-            <div className="px-3 py-2 border-b border-border-default flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <List className="w-4 h-4 text-fg-muted" />
-                <span className="text-sm font-medium text-fg-default">任务列表</span>
-              </div>
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                className="p-1 rounded hover:bg-canvas-inset text-fg-muted hover:text-fg-default transition-colors"
-                title="收起"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* 搜索框 */}
-            <div className="p-2 border-b border-border-default">
-              <Input
-                placeholder="搜索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                leftElement={<Search className="w-3.5 h-3.5" />}
-                className="text-xs"
-              />
-            </div>
-
-            {/* 任务列表 */}
-            <div className="flex-1 overflow-auto">
-              {filteredTasks.map((task) => {
-                const isOpen = openTabs.some(t => t.taskId === task.id);
-                const isActive = activeTab?.taskId === task.id;
-                return (
-                  <div
-                    key={task.id}
-                    onClick={() => handleOpenTab(task)}
-                    className={`
-                      px-3 py-2 cursor-pointer border-b border-border-muted
-                      transition-colors
-                      ${isActive
-                        ? 'bg-accent-subtle border-l-2 border-l-accent-emphasis'
-                        : isOpen
-                          ? 'bg-canvas-inset'
-                          : 'hover:bg-canvas-inset'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${statusDotColors[task.status]}`} />
-                      <span className={`text-sm ${isActive ? 'text-accent-fg font-medium' : 'text-fg-default'}`}>
-                        {task.internalId}
-                      </span>
-                    </div>
-                    <div className="text-xs text-fg-muted ml-4 font-mono">{task.sampleId}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )
-      ) : (
-        // 展开状态：完整表格
         <div className="min-w-0 flex-1">
           <div className="yj-page-shell h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
             <div className="yj-page-header">
@@ -846,50 +741,6 @@ export default function AnalysisPage() {
             )}
           </div>
         </div>
-      )}
-
-      {/* 右侧详情面板 */}
-      {hasOpenTabs && (
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* 标签栏 */}
-          <div className="flex items-center border-b border-border-default bg-canvas-subtle overflow-x-auto flex-shrink-0">
-            {openTabs.map((tab) => (
-              <div
-                key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
-                className={`
-                  flex items-center gap-2 px-4 py-2 cursor-pointer border-r border-border-muted
-                  text-sm whitespace-nowrap transition-colors
-                  ${activeTabId === tab.id
-                    ? 'bg-canvas-default text-fg-default border-b-2 border-b-accent-emphasis -mb-px'
-                    : 'text-fg-muted hover:bg-canvas-inset hover:text-fg-default'
-                  }
-                `}
-              >
-                <span>{tab.name}</span>
-                <button
-                  onClick={(e) => handleCloseTab(tab.id, e)}
-                  className="p-0.5 rounded hover:bg-canvas-inset"
-                  aria-label="关闭标签"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* 详情内容 */}
-          <div className="flex-1 overflow-auto">
-            {activeTab && (
-              <AnalysisDetailPanel
-                key={activeTab.taskId}
-                taskId={activeTab.taskId}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
       {/* 新建任务弹窗 */}
       <NewTaskModal
         isOpen={isNewTaskModalOpen}

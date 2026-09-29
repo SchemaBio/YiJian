@@ -335,6 +335,11 @@ export const tasksApi = {
     return normalizeTaskProgress(await api.get<unknown>(`/v1/tasks/${encodeURIComponent(id)}/progress`));
   },
 
+  /** Retry or recover a completed task's structured result import from its archive. */
+  async retryResultImport(id: string): Promise<TaskProgressResponse> {
+    return normalizeTaskProgress(await api.post<unknown>(`/v1/tasks/${encodeURIComponent(id)}/results/import/retry`));
+  },
+
   /** Get scoped operational task statistics. */
   getStats(): Promise<TaskStatsResponse> {
     return api.get<TaskStatsResponse>('/v1/tasks/stats');

@@ -32,23 +32,29 @@ export function HoverText({ value, className = '' }: HoverTextProps) {
  * <IdCell id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
  */
 export function IdCell({ id, truncateLength = 8 }: IdCellProps) {
-  const [copied, setCopied] = React.useState(false);
+  const [copyStatus, setCopyStatus] = React.useState<'idle' | 'copied' | 'failed'>('idle');
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('failed');
+    }
+    window.setTimeout(() => setCopyStatus('idle'), 1800);
   };
 
   return (
-    <Tooltip content={id} placement="top" variant="default">
-      <span
-        className={`font-mono text-xs cursor-pointer ${copied ? 'text-green-500' : 'text-accent-fg hover:underline'}`}
+    <Tooltip content={copyStatus === 'copied' ? '已复制任务编号' : copyStatus === 'failed' ? '复制失败，请检查剪贴板权限' : id} placement="top" variant="default">
+      <button
+        type="button"
+        aria-label={copyStatus === 'copied' ? '已复制编号' : copyStatus === 'failed' ? '复制失败' : '复制编号'}
+        className={`font-mono text-xs cursor-pointer ${copyStatus === 'copied' ? 'text-green-600' : copyStatus === 'failed' ? 'text-danger-fg' : 'text-accent-fg hover:underline'}`}
         onClick={handleClick}
       >
         {id.substring(0, truncateLength)}
-      </span>
+      </button>
     </Tooltip>
   );
 }

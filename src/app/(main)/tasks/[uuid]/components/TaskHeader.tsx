@@ -64,6 +64,14 @@ const executionReasonLabels: Record<string, string> = {
 
 export function TaskHeader({ task, onBack }: TaskHeaderProps) {
   const statusInfo = statusConfig[task.status];
+  const taskVMStatus = task.vmStatus?.toUpperCase();
+  const executionPhaseLabel = task.executionPhase === 'terminal'
+    ? taskVMStatus === 'LAUNCH_FAILED'
+      ? '未创建计算节点'
+      : ['TERMINATED', 'RECLAIMED'].includes(taskVMStatus ?? '')
+        ? '节点已释放'
+        : executionPhaseLabels[task.executionPhase]
+    : executionPhaseLabels[task.executionPhase ?? ''];
 
   return (
     <div className="mb-6">
@@ -120,7 +128,7 @@ export function TaskHeader({ task, onBack }: TaskHeaderProps) {
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border-default bg-canvas-inset/40 px-3 py-2 text-xs">
               <span className="inline-flex items-center gap-1.5 font-medium text-fg-default">
                 <Server className="h-3.5 w-3.5 text-fg-muted" />
-                执行阶段：{executionPhaseLabels[task.executionPhase] ?? task.executionPhase}
+                执行阶段：{executionPhaseLabel ?? task.executionPhase}
               </span>
               {task.attemptId && <span className="font-mono text-fg-muted" title={task.attemptId}>attempt: {task.attemptId.slice(0, 8)}…</span>}
               {task.phaseUpdatedAt && <span className="inline-flex items-center gap-1 text-fg-muted"><Clock3 className="h-3.5 w-3.5" />{new Date(task.phaseUpdatedAt).toLocaleString('zh-CN', { hour12: false })}</span>}
