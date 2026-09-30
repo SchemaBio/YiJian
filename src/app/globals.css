@@ -608,6 +608,73 @@
     table-layout: fixed;
   }
 
+  .task-center-table th:last-child,
+  .task-center-table td:last-child {
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+  }
+
+  .task-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+  }
+
+  .task-actions button {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .task-primary-action {
+    padding: 0 6px;
+  }
+
+  .task-detail-action {
+    min-width: 0;
+    padding: 0 6px;
+  }
+
+  .task-more-action {
+    width: 28px;
+    height: 32px;
+  }
+
+  @media (max-width: 1023px) {
+    .task-center-table th:last-child,
+    .task-center-table td:last-child {
+      width: 144px;
+      min-width: 144px;
+      max-width: 144px;
+    }
+
+    .task-actions {
+      gap: 4px;
+    }
+
+    .task-primary-action {
+      padding: 0 4px;
+    }
+
+    .task-detail-action {
+      width: 28px;
+      min-width: 28px;
+      padding: 0;
+    }
+
+    .task-detail-label {
+      display: none;
+    }
+
+    .task-more-action {
+      width: 28px;
+    }
+  }
+
   .right-pinned-actions-table thead th:last-child {
     z-index: 31;
     background: var(--yj-panel-subtle);

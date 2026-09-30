@@ -81,7 +81,7 @@ export default function AnalysisDetailPage() {
   }, [uuid]);
 
 	React.useEffect(() => {
-		if (loading || resultContext?.state === 'ready' || resultContext?.state === 'import_failed') return;
+		if (loading || resultContext?.state === 'ready') return;
 		let disposed = false;
 		let requestInFlight = false;
 		const refreshContext = async () => {
@@ -248,6 +248,12 @@ export default function AnalysisDetailPage() {
     }
   };
 
+	const resultContextKey = [
+		uuid,
+		resultContext?.executionAttemptId ?? 'no-attempt',
+		resultContext?.importBatchId ?? 'no-batch',
+		resultContext?.version ?? 'no-version',
+	].join(':');
 	const isVariantTab = ['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'].includes(activeTab);
 
   return (
@@ -259,7 +265,7 @@ export default function AnalysisDetailPage() {
       {sample && <SampleSummaryCard sample={sample} />}
 
       {/* 标签面板和内容 */}
-		<ResultTabs activeTab={activeTab} onTabChange={handleTabChange}>
+		<ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
 			{isVariantTab ? (
 				<div className="grid gap-5 xl:grid-cols-[168px_minmax(0,1fr)]">
 					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />

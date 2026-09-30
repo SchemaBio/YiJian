@@ -51,8 +51,8 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
     <div>
       {/* 标签页导航 */}
       <div className="border-b border-border-default mb-4">
-        <nav 
-          className="flex gap-1" 
+        <nav
+			className="flex gap-1 overflow-x-auto whitespace-nowrap"
           role="tablist"
           aria-label="分析结果标签页"
         >
@@ -71,8 +71,8 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => onTabChange(tab.id)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className={`
-                  px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+				className={`
+				  shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis focus-visible:ring-offset-2
                   ${isActive
                     ? 'border-accent-emphasis text-accent-fg'

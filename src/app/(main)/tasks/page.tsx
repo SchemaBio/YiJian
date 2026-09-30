@@ -241,7 +241,7 @@ function TaskActionsCell({
   return (
     <>
       <div
-        className="inline-flex h-9 items-center justify-center gap-0.5 rounded-lg border border-border-default bg-canvas-default p-0.5 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+        className="task-actions"
         onClick={(event) => event.stopPropagation()}
       >
         {primaryAction && (
@@ -250,9 +250,9 @@ function TaskActionsCell({
             onClick={primaryAction.onClick}
             disabled={isLoading}
             aria-label={primaryAction.label}
-            className={`inline-flex h-8 min-w-[68px] items-center justify-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold shadow-[0_1px_1px_rgba(17,24,39,0.04)] transition-all ${isLoading ? 'cursor-wait opacity-60' : 'active:translate-y-px'} ${primaryAction.className}`}
+            className={`task-primary-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors ${isLoading ? 'cursor-wait opacity-60' : 'active:translate-y-px'} ${primaryAction.className}`}
           >
-            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <primaryAction.icon className="h-3.5 w-3.5" />}
+            {isLoading ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <primaryAction.icon className="h-3.5 w-3.5 shrink-0" />}
             {isLoading ? '处理中' : primaryAction.label}
           </button>
         )}
@@ -262,17 +262,17 @@ function TaskActionsCell({
           onClick={() => onDetails(task)}
           aria-label={`查看任务 ${task.internalId || task.id} 详情`}
           title="查看详情"
-          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border-default bg-canvas-default px-2 text-xs font-medium text-fg-default transition-colors hover:bg-canvas-subtle"
+          className="task-detail-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-border-default bg-canvas-default px-2 text-xs font-medium text-fg-default transition-colors hover:bg-canvas-subtle whitespace-nowrap"
         >
-          <Eye className="h-3.5 w-3.5" />
-          查看详情
+          <Eye className="h-3.5 w-3.5 shrink-0" />
+          <span className="task-detail-label">查看详情</span>
         </button>
 
         <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
           <PopoverPrimitive.Trigger asChild>
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
+              className="task-more-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
               aria-label="更多任务操作"
               title="更多操作"
             >
@@ -554,7 +554,7 @@ export default function AnalysisPage() {
         const releaseLabel = cleanupPhase
           ? phaseLabel
           : releaseConfirmed
-            ? '节点已释放'
+            ? row.status === 'completed' ? undefined : '节点已释放'
             : row.executionPhase === 'terminal' && vmStatus === 'LAUNCH_FAILED'
               ? '未创建计算节点'
               : undefined;
@@ -638,9 +638,9 @@ export default function AnalysisPage() {
           isLoading={actionLoading === row.id}
         />
       ),
-      width: 230,
-      minWidth: 220,
-      maxWidth: 250,
+      width: 200,
+      minWidth: 200,
+      maxWidth: 200,
       align: 'center',
       pinned: 'right',
     },
