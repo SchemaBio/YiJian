@@ -24,12 +24,12 @@ export function VariantTypeNav({ activeTab, context, onTabChange }: VariantTypeN
               key={item.id}
               type="button"
               onClick={() => onTabChange(item.id)}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${active ? 'bg-accent-subtle text-accent-fg' : 'text-fg-muted hover:bg-canvas-subtle hover:text-fg-default'}`}
+              className={`flex w-full items-center gap-1 rounded-md px-2 py-2 text-left text-sm transition-colors ${active ? 'bg-accent-subtle text-accent-fg' : 'text-fg-muted hover:bg-canvas-subtle hover:text-fg-default'}`}
               aria-current={active ? 'page' : undefined}
             >
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              <span className="flex-1 whitespace-nowrap">{item.label}</span>
               <span className="text-xs tabular-nums opacity-80">{count?.toLocaleString() ?? '—'}</span>
-              {active && <ChevronRight className="h-4 w-4" />}
+              {active && <ChevronRight className="h-3 w-3 shrink-0" />}
             </button>
           );
         })}

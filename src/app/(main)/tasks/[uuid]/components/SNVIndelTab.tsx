@@ -376,10 +376,10 @@ export function SNVIndelTab({
     <div>
       <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* 搜索框 */}
-          <div className="w-64">
+          <div className="w-52">
             <Input
               placeholder="搜索基因、位置..."
 						value={searchInput}
@@ -419,7 +419,7 @@ export function SNVIndelTab({
         </div>
 
         {/* 统计信息 */}
-        <div className="flex items-center gap-4 text-sm text-fg-muted">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted">
           {selectedGeneList && (
             <span className="text-accent-fg">
               已筛选: {selectedGeneList.name}

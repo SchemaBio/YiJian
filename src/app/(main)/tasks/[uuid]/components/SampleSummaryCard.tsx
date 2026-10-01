@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import * as Popover from '@radix-ui/react-popover';
 import { Tag } from '@schema/ui-kit';
 import { User, Calendar, FlaskConical, HeartPulse, Users } from 'lucide-react';
 import type { SampleDetail } from '@/app/(main)/samples/types';
@@ -39,7 +40,7 @@ function InfoItem({ label, value, className = '' }: { label: string; value: Reac
   );
 }
 
-export function SampleSummaryCard({ sample }: SampleSummaryCardProps) {
+function SampleDetails({ sample }: SampleSummaryCardProps) {
   const genderInfo = GENDER_CONFIG[sample.gender];
   const isMatched = sample.matchedPair !== null;
 
@@ -179,4 +180,17 @@ export function SampleSummaryCard({ sample }: SampleSummaryCardProps) {
       </div>
     </div>
   );
+}
+export function SampleSummaryCard({sample}: SampleSummaryCardProps) {
+ const gender = GENDER_CONFIG[sample.gender];
+ return <div className="mb-2 flex min-w-0 items-center gap-3 rounded-md bg-canvas-subtle px-3 py-2 text-xs">
+  <User className="h-3.5 w-3.5 shrink-0 text-fg-muted"/>
+  <span className="shrink-0 font-semibold text-fg-default">{sample.internalId}</span>
+  <span className={`shrink-0 ${gender.color}`}>{gender.label}{sample.age !== undefined ? ` · ${sample.age}岁` : ''}</span>
+  <span className="hidden shrink-0 text-fg-muted sm:inline">{sample.sampleType}</span>
+  <span className="min-w-0 flex-1 truncate text-fg-muted" title={sample.clinicalDiagnosis?.mainDiagnosis}>诊断：{sample.clinicalDiagnosis?.mainDiagnosis || '未提供'}</span>
+  <Popover.Root><Popover.Trigger asChild><button type="button" className="shrink-0 whitespace-nowrap text-accent-fg hover:underline">样本详情</button></Popover.Trigger>
+   <Popover.Portal><Popover.Content side="bottom" align="end" sideOffset={8} className="z-[70] max-h-[70dvh] w-[min(720px,calc(100vw-24px))] overflow-auto rounded-lg border border-border-default bg-canvas-default p-3 shadow-xl" aria-label="样本详细信息"><SampleDetails sample={sample}/><Popover.Close className="rounded border border-border-default px-3 py-1 text-xs">关闭</Popover.Close></Popover.Content></Popover.Portal>
+  </Popover.Root>
+ </div>;
 }

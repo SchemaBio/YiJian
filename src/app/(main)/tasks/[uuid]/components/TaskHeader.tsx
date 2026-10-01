@@ -9,6 +9,7 @@ import { TaskCostDetail } from '@/components/billing';
 interface TaskHeaderProps {
   task: AnalysisTaskDetail;
   onBack: () => void;
+  compact?: boolean;
 }
 
 const statusConfig: Record<AnalysisStatus, { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
@@ -62,7 +63,7 @@ const executionReasonLabels: Record<string, string> = {
 };
 
 
-export function TaskHeader({ task, onBack }: TaskHeaderProps) {
+export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
   const statusInfo = statusConfig[task.status];
   const taskVMStatus = task.vmStatus?.toUpperCase();
   const executionPhaseLabel = task.executionPhase === 'terminal'
@@ -72,6 +73,15 @@ export function TaskHeader({ task, onBack }: TaskHeaderProps) {
         ? '节点已释放'
         : executionPhaseLabels[task.executionPhase]
     : executionPhaseLabels[task.executionPhase ?? ''];
+
+  if (compact) return <div className="mb-2 flex min-w-0 items-center gap-3">
+    <button onClick={onBack} aria-label="返回任务列表" title="返回任务列表" className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button>
+    <h1 title={task.name} className="min-w-0 truncate text-base font-semibold text-fg-default">{task.name}</h1>
+    <Tag variant={statusInfo.variant}>{statusInfo.label}</Tag>
+    <span className="hidden text-xs text-fg-muted md:inline">{task.pipeline} · {task.pipelineVersion}</span>
+    <span className="ml-auto shrink-0 text-xs text-fg-muted" title={task.id}>任务 {task.id.substring(0,8)}</span>
+    <TaskCostDetail taskId={task.id}/>
+  </div>;
 
   return (
     <div className="mb-6">

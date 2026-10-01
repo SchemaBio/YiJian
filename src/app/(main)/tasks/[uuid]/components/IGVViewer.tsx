@@ -109,7 +109,7 @@ function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackReso
     name: track.name,
     url: resolver.url(track.id),
     ...(track.hasIndex ? { indexURL: resolver.indexURL(track.id) } : {}),
-    ...(track.type === 'alignment' ? { height: 260 } : {}),
+    ...(track.type === 'alignment' ? { height: 180 } : {}),
   };
 }
 
@@ -274,7 +274,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
   const unavailableTracks = session?.tracks.filter(track => !track.available) ?? [];
   return (
-    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="fullscreen">
+    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="large" className="!w-[min(1100px,94vw)] !max-w-none">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded bg-canvas-subtle px-2 py-1 text-fg-default">{locus}</span>
         <span className="text-fg-muted">{session?.reference.id || '参考未知'}</span>
@@ -300,8 +300,8 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         </div>
       )}
 
-      <div className="relative min-h-[560px] overflow-auto rounded-lg border border-border-default bg-canvas-default">
-        <div ref={containerRef} className="min-h-[560px] min-w-[960px]" />
+      <div className="relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default">
+        <div ref={containerRef} className="min-h-[260px] w-full min-w-[640px]" />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-canvas-default/80">
             <div className="flex items-center gap-3 text-sm text-fg-muted"><div className="h-5 w-5 animate-spin rounded-full border-b-2 border-accent-emphasis" />正在加载参考和轨迹…</div>

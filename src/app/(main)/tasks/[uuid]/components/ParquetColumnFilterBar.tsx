@@ -114,7 +114,7 @@ export function ParquetColumnFilterBar({
   const availableOps = OPS.filter(([key]) => !NUMERIC_OPS.has(key) || fieldType === 'number');
 
   return (
-    <div className="mb-3 rounded-lg border border-border-subtle bg-canvas-subtle/60 p-3">
+    <div className="mb-2 flex flex-wrap items-center gap-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         {taskId && table && <button type="button" disabled={exporting} onClick={() => void exportTable()} className="ml-auto inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border-default px-3 text-sm"><Download className="h-3.5 w-3.5" />{exporting ? '导出中' : '导出筛选结果 CSV'}</button>}
         <details><summary className="cursor-pointer text-xs text-fg-muted">更多注释列筛选</summary><div className="mt-2 flex flex-wrap items-center gap-2">
@@ -129,7 +129,7 @@ export function ParquetColumnFilterBar({
         {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
         </div></details>
       </div>
-      {viewsURL&&<div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      {viewsURL&&<div className="flex flex-wrap items-center gap-2 text-xs">
 
         <details><summary className="cursor-pointer text-fg-muted">保存与加载筛选</summary><div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
@@ -154,7 +154,7 @@ export function ParquetColumnFilterBar({
           })}
         </div>
       )}
-      <p className="mt-2 text-xs text-fg-muted">不同列条件同时生效；“任一匹配”输入逗号分隔的值，数值范围输入最小值和最大值，多值注释按任一值匹配。</p>
+
     </div>
   );
 }
