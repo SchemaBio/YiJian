@@ -181,7 +181,7 @@ export function AppShell({ children }: AppShellProps) {
             onClose={() => setMobileMenuOpen(false)}
           />
         )}
-        <main className="min-h-0 flex-1 overflow-auto">{children}</main>
+        <main className={`min-h-0 flex-1 ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>{children}</main>
         {showAssistant ? <AssistantButton /> : null}
       </div>
     );
@@ -196,7 +196,7 @@ export function AppShell({ children }: AppShellProps) {
       />
 
       {/* Main Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
         {/* Top Bar */}
         <header className="h-14 flex items-center justify-between px-5 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] shrink-0">
           {/* Left: Breadcrumbs */}
@@ -233,7 +233,7 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-[var(--yj-workspace-bg)]">
+        <main className={`min-h-0 flex-1 bg-[var(--yj-workspace-bg)] ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>
           {children}
         </main>
       </div>

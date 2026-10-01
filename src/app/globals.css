@@ -923,3 +923,16 @@
     z-index: 20;
   }
 }
+
+@layer utilities {
+  /* A clipped table becomes the sticky header's ancestor without scrolling.
+     Keep clipping/scrolling on the grid viewport, not on the table itself. */
+  .yj-modern main .variant-results-table > table {
+    overflow: visible;
+  }
+  .yj-modern main .variant-results-table > table > thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+}
