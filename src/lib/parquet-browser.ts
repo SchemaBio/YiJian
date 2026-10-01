@@ -1,5 +1,6 @@
 'use client';
 import { api, ApiError } from './api';
+import { awaitWorkerStartup, configureBrowserRuntime } from './parquet-runtime';
 import { buildLocalSelection, effectiveField, fieldType, ident, literal, OVERLAY_FIELDS, type LocalQuery } from './parquet-browser-sql';
 import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 interface DatasetInfo {
@@ -153,14 +154,14 @@ class BrowserTable {
                 timed('assessment_download_ms', () => this.info.automaticUrl ? this.binary('automaticUrl') : Promise.resolve(undefined)),
                 timed('worker_startup_ms', async () => {
                     const d = await import('@duckdb/duckdb-wasm');
-                    const bundle = await d.selectBundle({ mvp: { mainModule: '/duckdb/duckdb-mvp.wasm', mainWorker: '/duckdb/duckdb-browser-mvp.worker.js' }, eh: { mainModule: '/duckdb/duckdb-eh.wasm', mainWorker: '/duckdb/duckdb-browser-eh.worker.js' } });
+                    const bundle = await d.selectBundle({ mvp: { mainModule: '/duckdb/1.32.0-csp2/duckdb-mvp.wasm', mainWorker: '/duckdb/1.32.0-csp2/duckdb-browser-mvp.worker.js' }, eh: { mainModule: '/duckdb/1.32.0-csp2/duckdb-eh.wasm', mainWorker: '/duckdb/1.32.0-csp2/duckdb-browser-eh.worker.js' } });
                     check(this.lifecycle.signal);
                     this.worker = new Worker(bundle.mainWorker!);
                     this.db = new d.AsyncDuckDB(new d.VoidLogger(), this.worker);
-                    await this.db.instantiate(bundle.mainModule);
+                    await awaitWorkerStartup(this.worker, progress => this.db.instantiate(bundle.mainModule, null, progress), this.lifecycle.signal);
                     check(this.lifecycle.signal);
                     this.conn = await this.db.connect();
-                    await this.conn.query("SET memory_limit='512MB'; SET threads=1; SET TimeZone='UTC'");
+                    await configureBrowserRuntime(this.conn, window.location.origin);
                 }),
             ]);
             check(this.lifecycle.signal);
