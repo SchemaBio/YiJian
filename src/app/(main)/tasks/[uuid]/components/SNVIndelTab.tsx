@@ -277,8 +277,10 @@ export function SNVIndelTab({
     {
       id: 'change',
       header: '参考/变异',
-      accessor: (row) => `${row.ref}>${row.alt}`,
-      width: 100,
+      accessor: (row) => <span className="block w-[116px] max-w-full whitespace-normal break-all text-center leading-5">{row.ref}&gt;{row.alt}</span>,
+      width: 140,
+      minWidth: 140,
+      maxWidth: 140,
       align: 'center',
     },
     {
@@ -287,7 +289,9 @@ export function SNVIndelTab({
       accessor: (row) => {
         const typeLabels = { SNV: 'SNP', Insertion: '插入', Deletion: '缺失', Complex: '复杂' };
         const variants: Record<SNVIndel['variantType'], 'neutral' | 'info' | 'warning'> = { SNV: 'neutral', Insertion: 'info', Deletion: 'warning', Complex: 'neutral' };
-        return <Tag variant={variants[row.variantType]}>{typeLabels[row.variantType]}</Tag>;
+        return row.variantType === 'SNV'
+          ? <span className="inline-flex rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200">SNP</span>
+          : <Tag variant={variants[row.variantType]}>{typeLabels[row.variantType]}</Tag>;
       },
       width: 80,
       align: 'center',
@@ -297,7 +301,13 @@ export function SNVIndelTab({
       header: '杂合性',
       accessor: (row) => {
         const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合', Unknown: '未提供' };
-        return row.zygosity === 'Unknown' ? <span className="text-fg-muted">未提供</span> : <span className="inline-flex rounded-full bg-canvas-inset px-2 py-0.5 text-xs font-medium text-fg-default">{labels[row.zygosity]}</span>;
+        const colors = {
+          Heterozygous: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
+          Homozygous: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200',
+          Hemizygous: 'border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200',
+          Unknown: 'border-border-default bg-canvas-inset text-fg-muted',
+        };
+        return <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${colors[row.zygosity]}`}>{labels[row.zygosity]}</span>;
       },
       width: 80,
       align: 'center',

@@ -677,10 +677,9 @@ export async function reviewVariant(taskId: string, type: string, variantId: str
 }
 
 export async function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
-  if (!reported) throw new Error('已回报标记不能取消');
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
   if (!snapshot) throw new Error('请刷新结果后再保存');
-  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reported }, '标记已回报');
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reported }, reported ? '标记已回报' : '撤回已回报标记');
   return { reported };
 }
 
