@@ -383,7 +383,7 @@ export function SNVIndelTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div>
+    <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -451,7 +451,7 @@ export function SNVIndelTab({
         ) : result ? (
         <>
           <DataTable
-            className="variant-results-table"
+            className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'snv-indel')}
@@ -466,7 +466,7 @@ export function SNVIndelTab({
 
           {/* 分页 */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex shrink-0 items-center justify-between mt-2">
               <div className="text-sm text-fg-muted">
                 第 {filterState.page} / {totalPages} 页
               </div>

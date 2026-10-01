@@ -294,7 +294,7 @@ export default function AnalysisDetailPage() {
 			{isVariantTab ? (
 				<div className="grid h-full min-h-0 gap-3 grid-cols-[164px_minmax(0,1fr)]">
 					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />
-					<div className="min-h-0 min-w-0 overflow-auto rounded-xl border border-border-default bg-canvas-default p-3">{renderTabContent()}</div>
+					<div className="min-h-0 min-w-0 overflow-hidden rounded-xl border border-border-default bg-canvas-default p-3">{renderTabContent()}</div>
 				</div>
 			) : <div className="h-full overflow-auto">{renderTabContent()}</div>}
 		</ResultTabs>

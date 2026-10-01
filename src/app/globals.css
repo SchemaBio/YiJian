@@ -911,3 +911,15 @@
     background-color: var(--color-accent-subtle) !important;
   }
 }
+
+/* The data grid owns scrolling; toolbar and pagination stay outside it. */
+@layer utilities {
+  .variant-tab-panel > :not(.variant-results-table) {
+    flex-shrink: 0;
+  }
+  .variant-results-table > table > thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+}

@@ -362,7 +362,7 @@ export function CNVExonTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div>
+    <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <ParquetColumnFilterBar taskId={taskId} table="cnv-exon" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
@@ -396,7 +396,7 @@ export function CNVExonTab({
       ) : result ? (
         <>
           <DataTable
-            className="variant-results-table"
+            className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={result.data}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'cnv-exon')}
@@ -410,7 +410,7 @@ export function CNVExonTab({
           />
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex shrink-0 items-center justify-between mt-2">
               <div className="text-sm text-fg-muted">
                 第 {filterState.page} / {totalPages} 页
               </div>
