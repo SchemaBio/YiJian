@@ -890,3 +890,24 @@
     box-shadow: none;
   }
 }
+
+/* Review/report state is independent of clinical classification and selection. */
+@layer utilities {
+  .variant-results-table {
+    --yj-marked-row-bg: #f8f6e8;
+    --yj-marked-row-hover: #efecd6;
+  }
+  .dark .variant-results-table {
+    --yj-marked-row-bg: #29291f;
+    --yj-marked-row-hover: #353429;
+  }
+  .variant-results-table tbody tr:not([aria-selected="true"]):has([data-result-mark][aria-pressed="true"]) > td {
+    background-color: var(--yj-marked-row-bg) !important;
+  }
+  .variant-results-table tbody tr:not([aria-selected="true"]):has([data-result-mark][aria-pressed="true"]):hover > td {
+    background-color: var(--yj-marked-row-hover) !important;
+  }
+  .variant-results-table tbody tr[aria-selected="true"] > td {
+    background-color: var(--color-accent-subtle) !important;
+  }
+}

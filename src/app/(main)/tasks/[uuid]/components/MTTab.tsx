@@ -302,6 +302,7 @@ export function MTTab({
       ) : result ? (
         <>
           <DataTable
+            className="variant-results-table"
             stickyHeader
             data={sortedData}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'mt')}

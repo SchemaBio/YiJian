@@ -387,10 +387,11 @@ export function SNVIndelTab({
       <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-4">
           {/* 搜索框 */}
-          <div className="w-52">
+          <div className="w-52 shrink-0">
             <Input
+              className="[&_input]:min-w-0 [&_input]:w-0"
               placeholder="搜索基因、位置..."
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
@@ -450,6 +451,7 @@ export function SNVIndelTab({
         ) : result ? (
         <>
           <DataTable
+            className="variant-results-table"
             stickyHeader
             data={sortedData}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'snv-indel')}

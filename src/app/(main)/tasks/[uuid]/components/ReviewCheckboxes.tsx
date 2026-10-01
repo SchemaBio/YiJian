@@ -32,6 +32,7 @@ export function ReviewCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
+        data-result-mark="review"
         aria-label={checked ? '撤销审核' : '标记为已审核'}
         aria-pressed={checked}
       >
@@ -65,6 +66,7 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
+        data-result-mark="report"
         aria-label={checked ? '撤回已回报标记' : '标记为已回报'}
         aria-pressed={checked}
       >

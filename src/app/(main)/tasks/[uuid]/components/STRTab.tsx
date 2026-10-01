@@ -271,6 +271,7 @@ export function STRTab({
       ) : result ? (
         <>
           <DataTable
+            className="variant-results-table"
             stickyHeader
             data={sortedData}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'str')}

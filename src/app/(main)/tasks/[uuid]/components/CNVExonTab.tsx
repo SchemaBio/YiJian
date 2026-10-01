@@ -396,6 +396,7 @@ export function CNVExonTab({
       ) : result ? (
         <>
           <DataTable
+            className="variant-results-table"
             stickyHeader
             data={result.data}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'cnv-exon')}

@@ -192,6 +192,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       ) : result ? (
         <>
           <DataTable
+            className="variant-results-table"
             stickyHeader
             data={sortedData}
             columns={filterableColumns(columns, result, filterState, setFilterState, 'roh')}
