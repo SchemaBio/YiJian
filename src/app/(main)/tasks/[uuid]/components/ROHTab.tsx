@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { PaginatedResult, ROHRegion, TableFilterState } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getROHRegions, reportVariant, reviewVariant } from '../result-api';
+import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
@@ -160,6 +161,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
 
   return (
     <div>
+      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="w-64">
           <Input

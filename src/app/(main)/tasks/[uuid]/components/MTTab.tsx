@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { MitochondrialVariant, MitochondrialPathogenicity, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getMitochondrialVariants, reportVariant, reviewVariant } from '../result-api';
+import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { MTDetailPanel } from './MTDetailPanel';
@@ -257,6 +258,7 @@ export function MTTab({
 
   return (
     <div>
+      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-64">

@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { UPDRegion, UPDType, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getUPDRegions, reportVariant, reviewVariant } from '../result-api';
+import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
@@ -217,6 +218,7 @@ export function UPDTab({
 
   return (
     <div>
+      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-64">

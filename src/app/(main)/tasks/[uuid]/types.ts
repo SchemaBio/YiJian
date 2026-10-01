@@ -112,6 +112,15 @@ export interface ResultContext {
   types: Record<string, ResultCount>;
   qc: QCMemberSummary[];
   permissions: { canReview: boolean; canReport: boolean };
+  parquet?: {
+    available: boolean;
+    tables: string[];
+    preparedTables: string[];
+    manifestVersion?: string;
+    fieldProfileVersion?: string;
+    automaticAssessmentProfile?: string;
+    reason?: string;
+  };
 }
 
 export interface IGVReference {
@@ -162,7 +171,7 @@ export type ACMGClassification =
   | 'Likely_Benign' 
   | 'Benign';
 
-// ============ SNV/Indel变异 ============
+// ============ SNP/InDel变异 ============
 // ============ 变异审核状态 ============
 export interface VariantReviewStatus {
   reviewed: boolean;             // 是否已审核
@@ -171,6 +180,24 @@ export interface VariantReviewStatus {
   reviewedAt?: string;           // 审核时间
   reportedBy?: string;           // 回报人
   reportedAt?: string;           // 回报时间
+  adjustmentVersion?: number;
+}
+
+export interface ACMGEvidenceEntry {
+  code: string;
+  strength: 'supporting' | 'moderate' | 'strong' | 'very_strong' | 'standalone';
+  source?: string;
+  note?: string;
+  value?: number;
+}
+
+export interface AutomaticACMGAssessment {
+  profile: string;
+  state: string;
+  score: number;
+  classification?: ACMGClassification;
+  criteria: ACMGEvidenceEntry[];
+  pending: string[];
 }
 
 export interface SNVIndel extends VariantReviewStatus {
@@ -185,6 +212,13 @@ export interface SNVIndel extends VariantReviewStatus {
   alleleFrequency: number;       // 等位基因频率
   depth: number;                 // 覆盖深度
   acmgClassification?: ACMGClassification;
+  automaticAcmg?: AutomaticACMGAssessment;
+  acmgEvidence?: ACMGEvidenceEntry[];
+  acmgOverride?: ACMGClassification;
+  acmgOverrideReason?: string;
+  acmgState?: string;
+  acmgAssessmentSource?: 'automatic' | 'manual_evidence' | 'manual_override';
+  interpretation?: string;
   transcript: string;            // 转录本
   hgvsc: string;                 // cDNA变化
   hgvsp: string;                 // 蛋白质变化
@@ -356,7 +390,7 @@ export const TAB_CONFIGS: TabConfig[] = [
 ];
 
 export const VARIANT_TAB_CONFIGS: TabConfig[] = [
-  { id: 'snv-indel', label: 'SNV / InDel' },
+  { id: 'snv-indel', label: 'SNP / InDel' },
   { id: 'cnv-segment', label: 'CNV(Region)' },
   { id: 'cnv-exon', label: 'CNV(Exon)' },
   { id: 'str', label: '动态突变' },
@@ -370,6 +404,7 @@ export const VARIANT_TAB_CONFIGS: TabConfig[] = [
 export interface TableFilterState {
   searchQuery: string;
   filters: Record<string, string | string[]>;
+  columnFilters?: Array<{ column: string; operator: 'contains' | 'equals' | 'in' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'is_missing' | 'is_not_missing'; value?: string | string[] }>;
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
   page: number;
@@ -391,6 +426,10 @@ export interface PaginatedResult<T> {
   total: number;
   page: number;
   pageSize: number;
+  columns?: string[];
+  columnTypes?: Record<string, 'text' | 'number' | 'enum' | 'boolean'>;
+  fieldProfileVersion?: string;
+  version?: string;
 }
 
 
@@ -702,6 +741,7 @@ export interface CNVAssessment {
   updatedAt: string;
   createdBy?: string;
   updatedBy?: string;
+  adjustmentVersion?: number;
 }
 
 /**

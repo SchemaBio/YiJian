@@ -38,3 +38,15 @@ declare module 'igv' {
 
   export default igv;
 }
+
+declare module 'igv/dist/igv.esm.js' {
+  export type IGVBrowser = import('igv').IGVBrowser;
+  export type IGVTrackConfig = import('igv').TrackConfig;
+  export type IGVOptions = import('igv').IGVOptions;
+  const igv: {
+    createBrowser(container: HTMLElement, options: IGVOptions): Promise<IGVBrowser>;
+    removeBrowser(browser: IGVBrowser): void;
+    removeAllBrowsers(): void;
+  };
+  export default igv;
+}

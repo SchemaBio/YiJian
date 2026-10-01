@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { STR, STRStatus, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getSTRs, reportVariant, reviewVariant } from '../result-api';
+import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
@@ -221,6 +222,7 @@ export function STRTab({
 
   return (
     <div>
+      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-64">

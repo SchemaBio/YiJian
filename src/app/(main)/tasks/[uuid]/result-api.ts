@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
 import type {
   ACMGClassification,
+  ACMGEvidenceEntry,
   CNVAssessment,
   CNVExon,
   CNVSegment,
@@ -72,6 +73,11 @@ interface BackendPage<T> {
   page?: number;
   page_size?: number;
   pageSize?: number;
+  columns?: string[];
+  columnTypes?: PaginatedResult<unknown>['columnTypes'];
+  fieldProfileVersion?: string;
+  version?: string;
+  rowCount?: number;
 }
 
 function n(value: unknown, fallback = 0): number {
@@ -137,6 +143,7 @@ function normalizeReview(row: BackendRow): VariantReviewStatus {
     reviewedAt: s(review.reviewedAt ?? review.reviewed_at ?? row.reviewedAt ?? row.reviewed_at, undefined as unknown as string),
     reportedBy: s(review.reportedBy ?? review.reported_by ?? row.reportedBy ?? row.reported_by, undefined as unknown as string),
     reportedAt: s(review.reportedAt ?? review.reported_at ?? row.reportedAt ?? row.reported_at, undefined as unknown as string),
+    adjustmentVersion: n(row.adjustmentVersion ?? row.adjustment_version),
   };
 }
 
@@ -160,6 +167,10 @@ function normalizePage<T, U>(
     total: n(response.total, items.length),
     page: n(response.page, filterState.page),
     pageSize: n(response.pageSize ?? response.page_size, filterState.pageSize),
+    columns: response.columns,
+    columnTypes: response.columnTypes,
+    fieldProfileVersion: response.fieldProfileVersion,
+    version: response.version,
   };
 }
 
@@ -319,6 +330,10 @@ function parentOfOrigin(value: unknown): UPDRegion['parentOfOrigin'] {
 }
 
 function mapSNV(row: BackendRow): SNVIndel {
+  const automaticAcmg = row.automaticAcmg && typeof row.automaticAcmg === 'object'
+    ? row.automaticAcmg as SNVIndel['automaticAcmg']
+    : undefined;
+  const adjustments = row.adjustments && typeof row.adjustments === 'object' ? row.adjustments as BackendRow : {};
   return {
     id: s(row.id),
     gene: s(row.gene, '-'),
@@ -330,7 +345,15 @@ function mapSNV(row: BackendRow): SNVIndel {
     zygosity: zygosity(row.zygosity ?? row.genotype),
     alleleFrequency: n(row.alleleFrequency ?? row.vaf),
     depth: n(row.depth),
-    acmgClassification: acmg(row.acmgClassification),
+    acmgClassification: acmg(row.acmgClassification ?? row.acmgClassificationComputed),
+    automaticAcmg,
+    acmgEvidence: Array.isArray(adjustments.acmgEvidence) ? adjustments.acmgEvidence as ACMGEvidenceEntry[] : automaticAcmg?.criteria,
+    acmgOverride: acmg(adjustments.acmgOverride),
+    acmgOverrideReason: s(adjustments.acmgOverrideReason),
+    acmgState: s(adjustments.acmgState ?? automaticAcmg?.state),
+    acmgAssessmentSource: row.acmgAssessmentSource === 'manual_override' || row.acmgAssessmentSource === 'manual_evidence' ? row.acmgAssessmentSource : 'automatic',
+    interpretation: s(adjustments.interpretation),
+    acmgCriteria: Array.isArray(adjustments.acmgEvidence) ? adjustments.acmgEvidence.map(item => typeof item === 'object' && item !== null ? String((item as Record<string, unknown>).code ?? '') : String(item)) : automaticAcmg?.criteria.map(item => item.code),
     transcript: s(row.transcript, '-'),
     hgvsc: s(row.hgvsc, '-'),
     hgvsp: s(row.hgvsp, '-'),
@@ -509,8 +532,58 @@ export async function getIGVTrackURLs(taskId: string, version: string, trackIds:
 	return api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/urls`, { version, trackIds });
 }
 
+function parquetColumn(type: ResultQueryType, column: string): string {
+  const aliases: Record<string, string> = {
+    chromosome: 'Chromosome', chr: 'Chr', position: 'Position', startPosition: 'Start', begin: 'Begin',
+    endPosition: 'End', variantType: 'Type', type: type === 'cnv-segment' || type === 'cnv-exon' ? 'Col4' : 'Type',
+    zygosity: 'Zygosity', genotype: 'Genotype', alleleFrequency: 'VAF', depth: 'Depth',
+    gnomadAF: 'GnomAD_AF', gnomadEasAF: 'GnomAD_AF_EAS', clinvarSignificance: 'ClinVar_Sig',
+    pathogenicity: 'ClinVar_Sig', status: 'Status', teType: 'TE_Family', acmgClassification: 'acmgClassification',
+    gene: 'Gene', reviewed: 'reviewed', reported: 'reported',
+    repeatUnit: 'Repeat_Unit', normalRangeMax: 'Normal_Max',
+  };
+  if (type === 'str' && column === 'status') return 'STR_Status';
+  if (type === 'cnv-segment' && column === 'log2Ratio') return 'Col5';
+  if (type === 'cnv-exon' && column === 'log2Ratio') return 'Col9';
+  if (type === 'mei' && column === 'teType') return 'TE_Type';
+  return aliases[column] ?? column;
+}
+
 async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T, signal?: AbortSignal): Promise<PaginatedResult<T>> {
-  const response = await api.get<BackendPage<BackendRow>>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}`, { params: params(type, filterState), signal });
+  const queryFilters: Array<{ column: string; operator: string; value?: string | string[] }> = [];
+  for (const [column, value] of Object.entries(filterState.filters)) {
+    if (value === '' || (Array.isArray(value) && value.length === 0)) continue;
+    queryFilters.push({
+      column: parquetColumn(type, column),
+      operator: Array.isArray(value) ? 'in' : (column === 'acmgClassification' || column === 'status' || column === 'type' || column === 'pathogenicity' ? 'equals' : 'contains'),
+      value,
+    });
+  }
+  for (const filter of filterState.columnFilters ?? []) {
+    if (filter.operator === 'is_missing' || filter.operator === 'is_not_missing') {
+      queryFilters.push({ column: filter.column, operator: filter.operator });
+    } else if (filter.value !== undefined && filter.value !== '') {
+      queryFilters.push({ column: filter.column, operator: filter.operator, value: filter.value });
+    }
+  }
+  if (filterState.geneListId) {
+    const lists = await getGeneLists();
+    const genes = lists.find(list => list.id === filterState.geneListId)?.genes ?? [];
+    if (genes.length) queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
+  }
+  const sort = filterState.sortColumn ? parquetColumn(type, filterState.sortColumn) : '';
+  const response = await api.post<BackendPage<BackendRow>>(
+    `/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${encodeURIComponent(type)}/query`,
+    {
+      offset: (filterState.page - 1) * filterState.pageSize,
+      limit: filterState.pageSize,
+      search: filterState.searchQuery,
+      sort,
+      direction: filterState.sortDirection,
+      filters: queryFilters,
+    },
+    { signal },
+  );
   return normalizePage(response, filterState, mapper);
 }
 
@@ -529,6 +602,8 @@ interface BackendCNVAssessment {
   variant_id?: string;
   variantId?: string;
   assessment?: CNVAssessment;
+  version?: number;
+  adjustments?: Record<string, unknown>;
 }
 
 export async function listCNVAssessments(
@@ -536,20 +611,14 @@ export async function listCNVAssessments(
   type: CNVAssessmentType,
   variantIds: string[] = []
 ): Promise<Record<string, CNVAssessment>> {
-  const response = await api.get<BackendCNVAssessment[] | BackendPage<BackendCNVAssessment>>(
-    `/v1/tasks/${encodeURIComponent(taskId)}/results/cnv-assessments`,
-    {
-      params: {
-        type,
-        ...(variantIds.length > 0 ? { variant_ids: variantIds.join(',') } : {}),
-      },
-    }
-  );
-  const items = Array.isArray(response) ? response : response.items ?? response.data ?? [];
+  const items = await Promise.all(variantIds.map(async id => {
+    const response = await api.get<BackendCNVAssessment>(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(id)}`);
+    const raw = response.adjustments?.cnvAssessment;
+    if (!raw || typeof raw !== 'object') return null;
+    return { id, assessment: { ...(raw as CNVAssessment), adjustmentVersion: response.version } };
+  }));
   return items.reduce<Record<string, CNVAssessment>>((acc, item) => {
-    const assessment = item.assessment;
-    const id = assessment?.cnvId ?? s(item.variant_id ?? item.variantId);
-    if (id && assessment) acc[id] = assessment;
+    if (item?.id && item.assessment) acc[item.id] = item.assessment;
     return acc;
   }, {});
 }
@@ -558,16 +627,13 @@ export async function saveCNVAssessment(
   taskId: string,
   type: CNVAssessmentType,
   variantId: string,
-  assessment: CNVAssessment
+  assessment: CNVAssessment,
+  expectedVersion = 0,
 ): Promise<CNVAssessment> {
-  const response = await api.put<BackendCNVAssessment>(
-    `/v1/tasks/${encodeURIComponent(taskId)}/results/cnv-assessments/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}`,
-    { assessment }
-  );
-  if (!response.assessment) {
-    throw new Error('Octopus did not return saved CNV assessment');
-  }
-  return response.assessment;
+  const response = await saveResultRowAdjustment(taskId, type, variantId, expectedVersion, {
+    cnvAssessment: { ...assessment, cnvId: variantId },
+  }, 'CNV evidence assessment updated');
+  return { ...assessment, cnvId: variantId, isUserModified: true, updatedAt: new Date().toISOString(), adjustmentVersion: response.adjustment.version };
 }
 
 export async function getGeneLists(): Promise<GeneListOption[]> {
@@ -586,12 +652,48 @@ export async function getGeneLists(): Promise<GeneListOption[]> {
 }
 
 export function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
-	return api.put(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/review`, { reviewed });
+	return api.put<{ reviewed: boolean }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/review`, { reviewed }).then(response => {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
+    return response;
+  });
 }
 
 export function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
   if (!reported) {
     return Promise.reject(new Error('Octopus report endpoint only supports marking a variant as reported.'));
   }
-  return api.put(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/report`, { reported });
+  return api.put<{ reported: boolean }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/report`, { reported }).then(response => {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
+    return response;
+  });
+}
+
+export async function saveResultRowAdjustment(
+  taskId: string,
+  type: string,
+  rowId: string,
+  expectedVersion: number,
+  adjustments: Record<string, unknown>,
+  reason = '',
+): Promise<{ adjustment: { version: number; adjustments: Record<string, unknown> } }> {
+  const response = await api.put<{ adjustment: { version: number; adjustments: Record<string, unknown> } }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}`, {
+    expectedVersion,
+    adjustments,
+    reason,
+  });
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
+  return response;
+}
+
+export interface ResultRowAdjustmentEvent {
+  id: string;
+  before: string;
+  after: string;
+  reason: string;
+  actor: string;
+  createdAt: string;
+}
+
+export function getResultRowAdjustmentHistory(taskId: string, type: string, rowId: string, signal?: AbortSignal): Promise<ResultRowAdjustmentEvent[]> {
+  return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}/history`, { signal });
 }

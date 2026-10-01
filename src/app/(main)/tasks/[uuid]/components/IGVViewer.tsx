@@ -34,6 +34,7 @@ export interface IGVTrackConfig {
   format?: 'bam' | 'vcf' | 'cram' | 'gff3' | 'bed' | 'bigwig';
   height?: number;
   color?: string;
+  [key: string]: unknown;
 }
 
 const signedURLRefreshLeadMs = 60_000;
@@ -203,9 +204,12 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
     void (async () => {
       try {
-        const module = await import('igv');
-        const igv = module.default;
+        const igvModule = await import('igv/dist/igv.esm.js');
+        const igv = igvModule.default;
         if (!active || !containerRef.current) return;
+		if (typeof igv?.createBrowser !== 'function') {
+		  throw new Error('IGV ESM 模块未提供浏览器初始化接口');
+		}
 		const browser = await igv.createBrowser(containerRef.current, { reference, locus: locusRef.current, tracks: [] });
         createdBrowser = browser;
         if (!active) {
@@ -221,10 +225,18 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
           ...tracks.map(track => trackConfiguration(track, resolverRef.current as SignedTrackResolver)),
         ];
         for (const configuration of configurations) {
+          if (!active) {
+            await dispose();
+            return;
+          }
           try {
             await browser.loadTrack(configuration);
           } catch {
             failures.push(configuration.name || '未命名轨迹');
+          }
+          if (!active) {
+            await dispose();
+            return;
           }
         }
         if (!active) return;

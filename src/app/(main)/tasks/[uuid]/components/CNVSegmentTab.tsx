@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { CNVSegment, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getCNVSegments, listCNVAssessments, reportVariant, reviewVariant, saveCNVAssessment } from '../result-api';
+import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
@@ -112,11 +113,12 @@ export function CNVSegmentTab({
     setAssessmentSaving(true);
     setAssessmentError(null);
     try {
-      const persisted = await saveCNVAssessment(taskId, 'cnv-segment', assessmentVariant.id, finalized);
+      const persisted = await saveCNVAssessment(taskId, 'cnv-segment', assessmentVariant.id, finalized, assessmentVariant.adjustmentVersion ?? 0);
       setAssessmentCache(prev => ({
         ...prev,
         [persisted.cnvId]: persisted,
       }));
+      setResult(prev => prev ? { ...prev, data: prev.data.map(item => item.id === persisted.cnvId ? { ...item, adjustmentVersion: persisted.adjustmentVersion } : item) } : prev);
       setAssessmentPanelOpen(false);
     } catch (err) {
       setAssessmentError(err instanceof Error ? err.message : '保存 CNV 评估失败');
@@ -355,6 +357,7 @@ export function CNVSegmentTab({
 
   return (
     <div>
+      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-64">

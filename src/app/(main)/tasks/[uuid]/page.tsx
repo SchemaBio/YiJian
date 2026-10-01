@@ -106,6 +106,23 @@ export default function AnalysisDetailPage() {
 	}, [loading, resultContext?.state, uuid]);
 
 	React.useEffect(() => {
+		const controller = new AbortController();
+		const refreshAfterAdjustment = () => {
+			void getResultContext(uuid, controller.signal).then(next => {
+				setResultContext(next);
+				setResultContextError(null);
+			}).catch(cause => {
+				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? cause.message : '无法刷新结果统计');
+			});
+		};
+		window.addEventListener('yijian:result-adjustment-saved', refreshAfterAdjustment);
+		return () => {
+			controller.abort();
+			window.removeEventListener('yijian:result-adjustment-saved', refreshAfterAdjustment);
+		};
+	}, [uuid]);
+
+	React.useEffect(() => {
 		if (loading || manuallySelectedTabRef.current) return;
 		if (hasExplicitTab && automaticallySelectedTabRef.current === null) return;
 		const nextTab: TabType = resultContext?.state === 'ready' ? 'overview' : 'runtime';

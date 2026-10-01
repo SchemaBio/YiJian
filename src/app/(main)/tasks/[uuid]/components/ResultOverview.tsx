@@ -10,7 +10,7 @@ interface ResultOverviewProps {
 }
 
 const TYPE_LABELS: Array<{ key: string; label: string; tab: TabType }> = [
-  { key: 'snv-indel', label: 'SNV / InDel', tab: 'snv-indel' },
+  { key: 'snv-indel', label: 'SNP / InDel', tab: 'snv-indel' },
   { key: 'cnv-segment', label: 'CNV 区段', tab: 'cnv-segment' },
   { key: 'cnv-exon', label: 'CNV 外显子', tab: 'cnv-exon' },
   { key: 'str', label: 'STR', tab: 'str' },
@@ -36,9 +36,16 @@ function MemberLabel({ role }: { role: string }) {
 }
 
 export function ResultOverview({ context, onNavigate }: ResultOverviewProps) {
-  const state = stateDescription(context);
+  const state = context.parquet?.available && context.importStatus === 'failed'
+    ? { title: 'Parquet 检出表可查询', detail: '当前执行的原始 Parquet 归档可直接查询；旧的结构化数据库导入失败不会阻断检出表。', icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' }
+    : stateDescription(context);
   const StateIcon = state.icon;
-  const allCounts = TYPE_LABELS.map(item => ({ ...item, count: context.types[item.key]?.total ?? 0 }));
+  const allCounts = TYPE_LABELS.map(item => ({
+    ...item,
+    count: context.types[item.key]?.total ?? 0,
+    unqueried: Boolean(context.parquet?.available && context.parquet.tables.includes(item.key) && !context.parquet.preparedTables.includes(item.key)),
+  }));
+  const countsPending = allCounts.some(item => item.unqueried);
   const total = allCounts.reduce((sum, item) => sum + item.count, 0);
   const reviewed = TYPE_LABELS.reduce((sum, item) => sum + (context.types[item.key]?.reviewed ?? 0), 0);
   const reported = TYPE_LABELS.reduce((sum, item) => sum + (context.types[item.key]?.reported ?? 0), 0);
@@ -65,8 +72,8 @@ export function ResultOverview({ context, onNavigate }: ResultOverviewProps) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="已导入候选" value={total.toLocaleString()} detail="完整结果集，不受当前筛选影响" icon={<Layers3 className="h-5 w-5" />} />
-        <SummaryCard label="已复核" value={`${reviewed.toLocaleString()} / ${total.toLocaleString()}`} detail={`复核进度 ${progress}%`} icon={<CheckCircle2 className="h-5 w-5" />} />
+        <SummaryCard label={context.parquet?.available ? 'Parquet 候选' : '已导入候选'} value={countsPending && total === 0 ? '按需查询' : total.toLocaleString()} detail={countsPending && total === 0 ? '打开结果类型后读取 Parquet 完整计数' : '完整结果集，不受当前筛选影响'} icon={<Layers3 className="h-5 w-5" />} />
+        <SummaryCard label="已复核" value={countsPending && total === 0 ? '按需查询' : `${reviewed.toLocaleString()} / ${total.toLocaleString()}`} detail={countsPending && total === 0 ? '复核调整与结果查询同步读取' : `复核进度 ${progress}%`} icon={<CheckCircle2 className="h-5 w-5" />} />
         <SummaryCard label="已标记回报" value={reported.toLocaleString()} detail="此标记不等同于正式报告签发" icon={<FileWarning className="h-5 w-5" />} />
         <SummaryCard label="质控成员" value={context.qc.length.toLocaleString()} detail={context.members.map(member => member.role).join(' · ') || '未导入'} icon={<Clock3 className="h-5 w-5" />} />
       </div>
@@ -84,10 +91,10 @@ export function ResultOverview({ context, onNavigate }: ResultOverviewProps) {
             {allCounts.map(item => (
               <button key={item.key} onClick={() => onNavigate(item.tab)} className="group grid w-full grid-cols-[112px_minmax(0,1fr)_56px] items-center gap-3 text-left">
                 <span className="text-sm text-fg-default group-hover:text-accent-fg">{item.label}</span>
-                <span className="h-3 overflow-hidden rounded-full bg-canvas-subtle" aria-label={`${item.label} ${item.count} 条`}>
-                  <span className="block h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${(item.count / maxCount) * 100}%` }} />
+                <span className="h-3 overflow-hidden rounded-full bg-canvas-subtle" aria-label={item.unqueried ? `${item.label} Parquet待查询` : `${item.label} ${item.count} 条`}>
+                  <span className={`block h-full rounded-full transition-[width] ${item.unqueried ? 'bg-accent-subtle' : 'bg-accent-emphasis'}`} style={{ width: `${item.unqueried ? 12 : (item.count / maxCount) * 100}%` }} />
                 </span>
-                <span className="text-right text-sm tabular-nums text-fg-muted">{item.count.toLocaleString()}</span>
+                <span className="text-right text-xs tabular-nums text-fg-muted">{item.unqueried ? '待查询' : item.count.toLocaleString()}</span>
               </button>
             ))}
           </div>

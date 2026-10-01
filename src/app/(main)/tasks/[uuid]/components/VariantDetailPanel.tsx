@@ -3,24 +3,10 @@
 import * as React from 'react';
 import { X, ExternalLink, FileText, Database, Dna, Edit2, Check, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
-import type { SNVIndel, ACMGClassification } from '../types';
+import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
 import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
-
-// ACMG 证据项定义
-const ACMG_CRITERIA_OPTIONS = {
-  pathogenic: {
-    veryStrong: ['PVS1'],
-    strong: ['PS1', 'PS2', 'PS3', 'PS4'],
-    moderate: ['PM1', 'PM2', 'PM3', 'PM4', 'PM5', 'PM6'],
-    supporting: ['PP1', 'PP2', 'PP3', 'PP4', 'PP5'],
-  },
-  benign: {
-    standalone: ['BA1'],
-    strong: ['BS1', 'BS2', 'BS3', 'BS4'],
-    supporting: ['BP1', 'BP2', 'BP3', 'BP4', 'BP5', 'BP6', 'BP7'],
-  },
-};
+import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 
 function pubMedURL(pmid: string): string {
   return `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(pmid).trim())}`;
@@ -40,11 +26,13 @@ function omimURL(omimId: string): string {
 }
 
 interface VariantDetailPanelProps {
+  taskId: string;
   variant: SNVIndel | null;
   isOpen: boolean;
   onClose: () => void;
   onOpenIGV?: (chromosome: string, position: number) => void;
-  onUpdateClassification?: (variantId: string, classification: ACMGClassification, criteria: string[]) => void;
+  onUpdateClassification?: (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => Promise<void>;
+  onSaveInterpretation?: (variant: SNVIndel, interpretation: string, reason: string) => Promise<void>;
 }
 
 // 信息项组件
@@ -91,216 +79,126 @@ function SectionTitle({ icon: Icon, title, action }: { icon: React.ElementType; 
   );
 }
 
-// ACMG 分类编辑器组件
-function ACMGClassificationEditor({
-  currentClassification,
-  currentCriteria,
+const POINTS: Record<string, number> = { supporting: 1, moderate: 2, strong: 4, very_strong: 8, standalone: 0 };
+const POINT_CRITERIA = [
+  { title: '致病性证据', items: ['PVS1', 'PS1', 'PS2', 'PS3', 'PS4', 'PM1', 'PM2', 'PM3', 'PM4', 'PM5', 'PM6', 'PP1', 'PP2', 'PP3', 'PP4', 'PP5'] },
+  { title: '良性证据', items: ['BA1', 'BS1', 'BS2', 'BS3', 'BS4', 'BP1', 'BP2', 'BP3', 'BP4', 'BP5', 'BP6', 'BP7'] },
+];
+
+function classifyPoints(score: number, count: number): ACMGClassification | undefined {
+  if (score >= 10) return 'Pathogenic';
+  if (score >= 6) return 'Likely_Pathogenic';
+  if (score <= -7) return 'Benign';
+  if (score <= -1) return 'Likely_Benign';
+  return count ? 'VUS' : undefined;
+}
+
+function adjustmentDiff(beforeJSON: string, afterJSON: string): Array<{ key: string; before: string; after: string }> {
+  try {
+    const before = JSON.parse(beforeJSON || '{}') as Record<string, unknown>;
+    const after = JSON.parse(afterJSON || '{}') as Record<string, unknown>;
+    return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+      .filter(key => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+      .map(key => ({
+        key,
+        before: before[key] === undefined ? '未设置' : JSON.stringify(before[key]),
+        after: after[key] === undefined ? '未设置' : JSON.stringify(after[key]),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function ACMGPointsEditor({
+  variant,
   onSave,
   onCancel,
 }: {
-  currentClassification: ACMGClassification;
-  currentCriteria: string[];
-  onSave: (classification: ACMGClassification, criteria: string[]) => void;
+  variant: SNVIndel;
+  onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [classification, setClassification] = React.useState<ACMGClassification>(currentClassification);
-  const [selectedCriteria, setSelectedCriteria] = React.useState<Set<string>>(new Set(currentCriteria));
+  const initialEvidence = variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
+  const [evidence, setEvidence] = React.useState<Record<string, ACMGEvidenceEntry>>(() => Object.fromEntries(initialEvidence.map(item => [item.code, item])));
+  const [override, setOverride] = React.useState<ACMGClassification | ''>(variant.acmgOverride ?? '');
+  const [overrideReason, setOverrideReason] = React.useState(variant.acmgOverrideReason ?? '');
+  const [reason, setReason] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const score = Object.values(evidence).reduce((sum, item) => {
+    if (item.code === 'BA1') return sum;
+    const points = POINTS[item.strength] ?? 0;
+    return sum + (item.code.startsWith('B') ? -points : points);
+  }, 0);
+  const calculated = Object.values(evidence).some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, Object.keys(evidence).length);
+  const effective = override || calculated;
+  const auto = variant.automaticAcmg;
+  const changed = JSON.stringify(Object.values(evidence).sort((a, b) => a.code.localeCompare(b.code))) !== JSON.stringify([...initialEvidence].sort((a, b) => a.code.localeCompare(b.code))) || override !== (variant.acmgOverride ?? '') || overrideReason !== (variant.acmgOverrideReason ?? '');
 
-  const toggleCriteria = (criterion: string) => {
-    const newSet = new Set(selectedCriteria);
-    if (newSet.has(criterion)) {
-      newSet.delete(criterion);
-    } else {
-      newSet.add(criterion);
+  const toggle = (code: string, checked: boolean) => setEvidence(previous => {
+    const next = { ...previous };
+    if (!checked) delete next[code];
+    else {
+      if (code === 'PP3') delete next.BP4;
+      if (code === 'BP4') delete next.PP3;
+      const strength = code === 'BA1' ? 'standalone' : (code === 'PVS1' ? 'very_strong' : code.startsWith('P') && code.slice(0, 2) === 'PS' || code.startsWith('B') && code.slice(0, 2) === 'BS' ? 'strong' : 'supporting');
+      next[code] = { code, strength, source: code === 'PP3' || code === 'BP4' ? 'AlphaMissense' : '人工证据' };
     }
-    setSelectedCriteria(newSet);
+    return next;
+  });
+
+  const save = async () => {
+    if (override && !overrideReason.trim()) { setError('人工覆写分类必须填写理由'); return; }
+    if (changed && !reason.trim()) { setError('请填写本次调整理由'); return; }
+    setSaving(true); setError('');
+    try {
+      await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '保存 ACMG 证据失败');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSave = () => {
-    onSave(classification, Array.from(selectedCriteria));
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* 分类选择 */}
-      <div>
-        <label className="block text-sm text-fg-muted mb-2">ACMG 分类</label>
-        <select
-          value={classification}
-          onChange={(e) => setClassification(e.target.value as ACMGClassification)}
-          className="w-full px-3 py-2 text-sm border border-border rounded-md bg-canvas-default text-fg-default"
-        >
-          {Object.entries(ACMG_CONFIG).map(([key, config]) => (
-            <option key={key} value={key}>{config.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* 致病性证据 */}
-      <div>
-        <label className="block text-sm text-fg-muted mb-2">致病性证据</label>
-        <div className="space-y-2">
-          <div>
-            <span className="text-xs text-fg-subtle">非常强 (PVS)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.pathogenic.veryStrong.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-danger-emphasis text-fg-on-emphasis'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="text-xs text-fg-subtle">强 (PS)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.pathogenic.strong.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-danger-subtle text-danger-fg'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="text-xs text-fg-subtle">中等 (PM)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.pathogenic.moderate.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-warning-subtle text-warning-fg'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="text-xs text-fg-subtle">支持 (PP)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.pathogenic.supporting.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-warning-subtle text-warning-fg'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 良性证据 */}
-      <div>
-        <label className="block text-sm text-fg-muted mb-2">良性证据</label>
-        <div className="space-y-2">
-          <div>
-            <span className="text-xs text-fg-subtle">独立 (BA)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.benign.standalone.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-success-emphasis text-fg-on-emphasis'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="text-xs text-fg-subtle">强 (BS)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.benign.strong.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-success-subtle text-success-fg'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="text-xs text-fg-subtle">支持 (BP)</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {ACMG_CRITERIA_OPTIONS.benign.supporting.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleCriteria(c)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    selectedCriteria.has(c)
-                      ? 'bg-success-subtle text-success-fg'
-                      : 'bg-canvas-inset text-fg-muted hover:bg-canvas-subtle'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 操作按钮 */}
-      <div className="flex gap-2 pt-2">
-        <button
-          onClick={handleSave}
-          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-accent-emphasis text-fg-on-emphasis rounded-md hover:bg-accent-emphasis/90 transition-colors"
-        >
-          <Check className="w-4 h-4" />
-          保存
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-3 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
-        >
-          取消
-        </button>
-      </div>
+  return <div className="space-y-4">
+    <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">自动初评 · {auto?.profile ?? 'acmg-snv-points-v1'}</span><span>自动分类：{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : '证据不足'} · {auto?.score ?? 0} 分</span></div>
+      {auto?.pending?.length ? <p className="mt-1 text-xs text-fg-muted">待确认：{auto.pending.join('；')}</p> : <p className="mt-1 text-xs text-fg-muted">未纳入缺乏当前证据前提的人群、疾病机制、家系或实验室证据。</p>}
     </div>
-  );
+    {POINT_CRITERIA.map(group => <section key={group.title} className="space-y-2">
+      <h5 className="text-sm font-semibold text-fg-default">{group.title}</h5>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {group.items.map(code => {
+          const item = evidence[code];
+          return <div key={code} className={`flex min-w-0 items-center gap-2 rounded-md border p-2 ${item ? (code.startsWith('B') ? 'border-success-emphasis/40 bg-success-subtle/30' : 'border-danger-emphasis/40 bg-danger-subtle/30') : 'border-border-subtle bg-canvas-default'}`}>
+            <input type="checkbox" checked={Boolean(item)} onChange={event => toggle(code, event.target.checked)} aria-label={`选择 ACMG 证据 ${code}`} />
+            <span className="w-12 shrink-0 text-xs font-semibold">{code}</span>
+            {item && code !== 'BA1' && <select value={item.strength} onChange={event => setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } }))} aria-label={`${code} 强度`} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
+              {(code === 'PVS1' ? [['very_strong', '非常强']]:[['supporting','支持'],['moderate','中等'],['strong','强'],...(code.startsWith('P') ? [['very_strong','非常强']] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} 分）</option>)}
+            </select>}
+            {item && code === 'BA1' && <span className="text-xs text-success-fg">独立良性证据</span>}
+          </div>;
+        })}
+      </div>
+    </section>)}
+    <div className="rounded-lg border border-border-subtle bg-canvas-default p-3 text-sm"><div className="flex justify-between"><span>证据积分</span><strong>{score}</strong></div><div className="mt-1 flex justify-between"><span>积分分类</span><strong>{calculated ? ACMG_CONFIG[calculated].label : '证据不足'}</strong></div></div>
+    <div><label className="mb-1 block text-sm font-medium">人工覆写最终分类</label><select value={override} onChange={event => setOverride(event.target.value as ACMGClassification | '')} className="w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm"><option value="">按证据积分显示</option>{Object.entries(ACMG_CONFIG).map(([key, config]) => <option key={key} value={key}>{config.label}</option>)}</select></div>
+    {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder="人工覆写理由（必填）" className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
+    <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={changed ? '本次证据调整理由（必填）' : '调整理由（如有）'} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
+    {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
+    <div className="flex gap-2"><button type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50"><Check className="h-4 w-4" />{saving ? '保存中…' : '保存证据与分类'}</button><button type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">取消</button></div>
+  </div>;
 }
 
-export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpdateClassification }: VariantDetailPanelProps) {
+export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
   const [interpretation, setInterpretation] = React.useState('');
+  const [interpretationReason, setInterpretationReason] = React.useState('');
+  const [interpretationSaving, setInterpretationSaving] = React.useState(false);
+  const [interpretationError, setInterpretationError] = React.useState('');
+  const [adjustmentHistory, setAdjustmentHistory] = React.useState<ResultRowAdjustmentEvent[]>([]);
   const canEditACMG = Boolean(onUpdateClassification);
 
   // 当 variant 变化时重置编辑状态
@@ -308,8 +206,19 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
-    setInterpretation('');
+    setInterpretation(variant?.interpretation ?? '');
+    setInterpretationReason('');
+    setInterpretationError('');
   }, [variant?.id]);
+
+  React.useEffect(() => {
+    if (!variant) { setAdjustmentHistory([]); return; }
+    const controller = new AbortController();
+    void getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id, controller.signal)
+      .then(setAdjustmentHistory)
+      .catch(() => { if (!controller.signal.aborted) setAdjustmentHistory([]); });
+    return () => controller.abort();
+  }, [taskId, variant?.id]);
 
   if (!isOpen || !variant) return null;
 
@@ -320,15 +229,39 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
 
   // 保存 ACMG 分类
-  const handleSaveACMG = (classification: ACMGClassification, criteria: string[]) => {
-    if (!onUpdateClassification) {
-      setIsEditingACMG(false);
+  const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => {
+    if (!onUpdateClassification) return;
+    await onUpdateClassification(variant, evidence, override, overrideReason, reason);
+    try {
+      setAdjustmentHistory(await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id));
+    } catch {
+      // The saved assessment remains successful even if history refresh is unavailable.
+    }
+    const score = evidence.reduce((total, item) => total + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
+    setLocalClassification(override || classifyPoints(score, evidence.length) || null);
+    setLocalCriteria(evidence.map(item => item.code));
+    setIsEditingACMG(false);
+  };
+
+  const handleSaveInterpretation = async () => {
+    if (!variant || !onSaveInterpretation || interpretationSaving) return;
+    if (interpretation === (variant.interpretation ?? '')) return;
+    if (!interpretationReason.trim()) {
+      setInterpretationError('请填写本次判读调整理由');
       return;
     }
-    setLocalClassification(classification);
-    setLocalCriteria(criteria);
-    setIsEditingACMG(false);
-    onUpdateClassification(variant.id, classification, criteria);
+    setInterpretationSaving(true);
+    setInterpretationError('');
+    try {
+      await onSaveInterpretation(variant, interpretation, interpretationReason.trim());
+      setInterpretationReason('');
+      const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
+      setAdjustmentHistory(history);
+    } catch (cause) {
+      setInterpretationError(cause instanceof Error ? cause.message : '保存人工解读失败');
+    } finally {
+      setInterpretationSaving(false);
+    }
   };
 
   return (
@@ -443,16 +376,17 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
           />
           <div className="bg-canvas-subtle rounded-lg p-3">
             {isEditingACMG ? (
-              <ACMGClassificationEditor
-                currentClassification={currentClassification ?? 'VUS'}
-                currentCriteria={currentCriteria}
+              <ACMGPointsEditor
+                variant={variant}
                 onSave={handleSaveACMG}
                 onCancel={() => setIsEditingACMG(false)}
               />
             ) : (
               <>
                 <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
-                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前 SNP/Indel 流程未输出 ACMG 分级。ClinVar 临床意义和功能预测单独展示。</p>}
+                <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : '自动初评'} />
+                <InfoItem label="自动初评分数" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
+                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
                 <InfoItem 
                   label="证据项" 
                   value={currentCriteria.length ? (
@@ -469,6 +403,15 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
             )}
           </div>
 
+          <SectionTitle icon={FileText} title="判读变更记录" />
+          <div className="space-y-2 rounded-lg bg-canvas-subtle p-3">
+            {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">暂无调整记录</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
+              <div className="flex flex-wrap justify-between gap-1 text-xs text-fg-muted"><span>{event.actor || '用户'}</span><time>{event.createdAt ? new Date(event.createdAt).toLocaleString() : ''}</time></div>
+              <p className="mt-1 text-sm text-fg-default">{event.reason || '未填写理由'}</p>
+              {adjustmentDiff(event.before, event.after).map(change => <p key={change.key} className="mt-1 break-words text-xs text-fg-muted"><span className="font-medium">{change.key}：</span>{change.before} → {change.after}</p>)}
+            </article>)}
+          </div>
+
           {/* 人工解读 */}
           <SectionTitle icon={MessageSquare} title="人工解读" />
           <div className="bg-canvas-subtle rounded-lg p-3">
@@ -478,8 +421,13 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
               placeholder="请输入您对该变异的解读分析..."
               className="w-full min-h-[120px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
             />
-            <div className="flex justify-end mt-2">
-              <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
+            <div className="mt-2 space-y-2">
+              <input value={interpretationReason} onChange={event => setInterpretationReason(event.target.value)} placeholder="本次调整理由（保存时必填）" className="h-9 w-full rounded-md border border-border-default bg-canvas-default px-2 text-sm" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
+                <button type="button" disabled={interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
+              </div>
+              {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
             </div>
           </div>
 

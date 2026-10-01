@@ -4,13 +4,14 @@ import * as React from 'react';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
-import type { SNVIndel, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
+import type { SNVIndel, TableFilterState, PaginatedResult, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSNVIndels, ACMG_CONFIG, getGeneLists, reportVariant, reviewVariant, type GeneListOption } from '../result-api';
+import { getSNVIndels, ACMG_CONFIG, getGeneLists, reportVariant, reviewVariant, saveResultRowAdjustment, type GeneListOption } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { VariantDetailPanel } from './VariantDetailPanel';
 import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 
 interface SNVIndelTabProps {
   taskId: string;
@@ -133,7 +134,7 @@ export function SNVIndelTab({
 			const data = await getSNVIndels(taskId, filterState, controller.signal);
 			if (!controller.signal.aborted) setResult(data);
 		} catch (cause) {
-			if (!controller.signal.aborted) setRequestError(cause instanceof Error ? cause.message : '无法加载 SNV / InDel 结果');
+			if (!controller.signal.aborted) setRequestError(cause instanceof Error ? cause.message : '无法加载 SNP / InDel 结果');
 		} finally {
 			if (!controller.signal.aborted) setLoading(false);
 		}
@@ -171,6 +172,35 @@ export function SNVIndelTab({
       page: 1 
     });
   }, [filterState, setFilterState]);
+
+  const handleUpdateClassification = React.useCallback(async (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => {
+    const saved = await saveResultRowAdjustment(taskId, 'snv-indel', variant.id, variant.adjustmentVersion ?? 0, {
+      acmgEvidence: evidence,
+      acmgOverride: override,
+      acmgOverrideReason: overrideReason,
+    }, reason);
+    const refreshed = await getSNVIndels(taskId, filterState);
+    setResult(refreshed);
+    const updated = refreshed.data.find(item => item.id === variant.id);
+    setSelectedVariant(updated ?? {
+      ...variant,
+      acmgEvidence: evidence,
+      acmgOverride: override || undefined,
+      acmgOverrideReason: overrideReason,
+      acmgClassification: saved.adjustment.adjustments.acmgClassification as ACMGClassification | undefined,
+      acmgState: String(saved.adjustment.adjustments.acmgState ?? ''),
+      acmgAssessmentSource: override ? 'manual_override' : 'manual_evidence',
+      acmgCriteria: evidence.map(item => item.code),
+      adjustmentVersion: saved.adjustment.version,
+    });
+  }, [filterState, taskId]);
+
+  const handleSaveInterpretation = React.useCallback(async (variant: SNVIndel, interpretation: string, reason: string) => {
+    const saved = await saveResultRowAdjustment(taskId, 'snv-indel', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, reason);
+    const refreshed = await getSNVIndels(taskId, filterState);
+    setResult(refreshed);
+    setSelectedVariant(refreshed.data.find(item => item.id === variant.id) ?? { ...variant, interpretation, adjustmentVersion: saved.adjustment.version });
+  }, [filterState, taskId]);
 
   // 获取当前选中的基因列表信息
   const selectedGeneList = React.useMemo(() => {
@@ -215,7 +245,7 @@ export function SNVIndelTab({
     {
       id: 'gene',
       header: '基因',
-      accessor: 'gene',
+      accessor: (row) => <span className="font-semibold text-accent-fg">{row.gene}</span>,
       width: 100,
       align: 'center',
       sortable: true,
@@ -246,7 +276,8 @@ export function SNVIndelTab({
       header: '变异类型',
       accessor: (row) => {
         const typeLabels = { SNV: 'SNP', Insertion: '插入', Deletion: '缺失', Complex: '复杂' };
-        return typeLabels[row.variantType];
+        const variants: Record<SNVIndel['variantType'], 'neutral' | 'info' | 'warning'> = { SNV: 'neutral', Insertion: 'info', Deletion: 'warning', Complex: 'neutral' };
+        return <Tag variant={variants[row.variantType]}>{typeLabels[row.variantType]}</Tag>;
       },
       width: 80,
       align: 'center',
@@ -256,7 +287,7 @@ export function SNVIndelTab({
       header: '杂合性',
       accessor: (row) => {
         const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合', Unknown: '未提供' };
-        return labels[row.zygosity];
+        return row.zygosity === 'Unknown' ? <span className="text-fg-muted">未提供</span> : <span className="inline-flex rounded-full bg-canvas-inset px-2 py-0.5 text-xs font-medium text-fg-default">{labels[row.zygosity]}</span>;
       },
       width: 80,
       align: 'center',
@@ -264,7 +295,7 @@ export function SNVIndelTab({
     {
       id: 'alleleFrequency',
       header: 'VAF（样本）',
-      accessor: (row) => `${(row.alleleFrequency * 100).toFixed(1)}%`,
+      accessor: (row) => <span className="font-mono tabular-nums text-accent-fg">{(row.alleleFrequency * 100).toFixed(1)}%</span>,
       width: 80,
       align: 'center',
       sortable: true,
@@ -297,9 +328,9 @@ export function SNVIndelTab({
       header: 'ACMG 评定',
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
-        return config
-          ? <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>
-          : <span title="当前 SNP/Indel 流程未输出 ACMG 分级；预测标签和 ClinVar 不等同于 ACMG 评定"><Tag variant="neutral" className="w-20 justify-center">未评定</Tag></span>;
+          return config
+          ? <span title={row.acmgAssessmentSource === 'manual_override' ? '人工覆写分类' : row.acmgAssessmentSource === 'manual_evidence' ? '根据已保存的 ACMG 证据计算' : `自动初评${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag></span>
+          : <span title={row.automaticAcmg?.pending?.join('；') || '当前数据没有足够的自动评估证据'}><Tag variant="neutral" className="w-20 justify-center">证据不足</Tag></span>;
       },
       width: 100,
       align: 'center',
@@ -333,6 +364,7 @@ export function SNVIndelTab({
 
   return (
     <div>
+      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
@@ -383,7 +415,7 @@ export function SNVIndelTab({
               已筛选: {selectedGeneList.name}
             </span>
           )}
-          <span>共 {result?.total ?? 0} 条变异</span>
+      <span>共 {result?.total ?? 0} 条 SNP/InDel</span>
         </div>
       </div>
 
@@ -395,7 +427,7 @@ export function SNVIndelTab({
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
-      ) : result && result.data.length > 0 ? (
+        ) : result && result.data.length > 0 ? (
         <>
           <DataTable
             data={sortedData}
@@ -436,7 +468,7 @@ export function SNVIndelTab({
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无SNV/Indel变异数据
+          暂无SNP/InDel变异数据
         </div>
       )}
 
@@ -451,10 +483,13 @@ export function SNVIndelTab({
 
       {/* 变异详情面板 */}
       <VariantDetailPanel
+        taskId={taskId}
         variant={selectedVariant}
         isOpen={detailPanelOpen}
         onClose={handleCloseDetailPanel}
         onOpenIGV={handleOpenIGV}
+        onUpdateClassification={handleUpdateClassification}
+        onSaveInterpretation={handleSaveInterpretation}
       />
     </div>
   );
