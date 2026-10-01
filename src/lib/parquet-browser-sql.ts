@@ -92,5 +92,9 @@ export function buildLocalSelection(q: LocalQuery, raw: string[]) {
             x = `(SELECT min(TRY_CAST(NULLIF(v,'.') AS DOUBLE)) FROM UNNEST(string_split(CAST(${x} AS VARCHAR),'&')) AS u(v))`;
         order = `CASE WHEN ${x} IS NULL OR CAST(${x} AS VARCHAR) IN ('','.') THEN 1 ELSE 0 END ASC, ${x} ${q.direction === 'desc' ? 'DESC' : 'ASC'}, t.file_row_number ASC`;
     }
+    // Apply the current adjustment snapshot before pagination: marking a row
+    // must promote it across the whole dataset, not just within the visible page.
+    const marked = ['reported', 'reviewed'].map(field => `COALESCE(TRY_CAST(${effectiveField(field, raw)} AS BOOLEAN), FALSE)`).join(' OR ');
+    order = `CASE WHEN ${marked} THEN 0 ELSE 1 END ASC, ${order}`;
     return { where: where.length ? ' WHERE ' + where.join(' AND ') : '', order };
 }
