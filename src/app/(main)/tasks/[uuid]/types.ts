@@ -254,6 +254,7 @@ export interface SNVIndel extends VariantReviewStatus {
 export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 
 export interface CNVSegment extends VariantReviewStatus {
+  assessment?: CNVAssessment;
   id: string;
   chromosome: string;
   startPosition: number;
@@ -269,6 +270,7 @@ export interface CNVSegment extends VariantReviewStatus {
 
 // ============ CNV变异(外显子级别) ============
 export interface CNVExon extends VariantReviewStatus {
+  assessment?: CNVAssessment;
   id: string;
   gene: string;
   transcript: string;            // 转录本

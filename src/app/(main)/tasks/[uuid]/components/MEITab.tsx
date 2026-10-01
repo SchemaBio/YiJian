@@ -63,6 +63,11 @@ export function MEITab({
 	const [operationError, setOperationError] = React.useState<string | null>(null);
 	const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  React.useEffect(()=>{
+    const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='mei')setReviewStatus({});};
+    window.addEventListener('yijian:result-overlays-synced',sync);
+    return()=>window.removeEventListener('yijian:result-overlays-synced',sync);
+  },[taskId]);
 	const [igvState, setIgvState] = React.useState({ isOpen: false, chromosome: '', position: 0 });
 
   const filterState = externalFilterState ?? internalFilterState;

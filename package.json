@@ -7,12 +7,14 @@
   "scripts": {
     "dev": "next dev",
     "test": "vitest run",
-    "build": "next build",
+    "build": "node scripts/copy-duckdb-assets.mjs && next build",
+    "predev": "node scripts/copy-duckdb-assets.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "1.32.0",
     "@radix-ui/react-popover": "^1.0.7",
     "@schema/ui-kit": "github:SchemaBio/ui-kit",
     "clsx": "^2.1.0",

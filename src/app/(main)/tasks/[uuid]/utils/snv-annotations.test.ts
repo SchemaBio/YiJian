@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from './snv-annotations';
 import { getSNVIndels } from '../result-api';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { api } from '@/lib/api';
+import { queryBrowserParquet } from '@/lib/parquet-browser';
 
-vi.mock('@/lib/api', () => ({ api: { post: vi.fn() } }));
+vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserParquet:vi.fn(),updateBrowserOverlay:vi.fn()}));
 
 describe('workflow SNV annotations', () => {
   it('shows population AF as a fraction and preserves missing values and zero', () => {
@@ -18,7 +18,7 @@ describe('workflow SNV annotations', () => {
   });
 
   it('maps actual prediction fields and never infers ACMG from ClinVar', async () => {
-    vi.mocked(api.post).mockResolvedValue({ total: 1, items: [{
+    vi.mocked(queryBrowserParquet).mockResolvedValue({ total: 1,rowCount:1,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',version:'hash',attemptId:'attempt',offset:0,limit:20, items: [{
       id: 'stable-id', vaf: 0.5, clinvarSignificance: 'Pathogenic', acmgClassification: '',
       gnomadAF: null, gnomadEasAF: 0, pangolinGain: 0.7, pangolinAN: 'High likelihood',
       evoScore: -12, evoScoreAN: 'Pathogenic', alphaMissenseAM: null,

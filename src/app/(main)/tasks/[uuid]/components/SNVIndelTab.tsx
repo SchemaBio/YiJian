@@ -34,6 +34,11 @@ export function SNVIndelTab({
 	const [pendingVariants, setPendingVariants] = React.useState<Set<string>>(() => new Set());
   const [geneLists, setGeneLists] = React.useState<GeneListOption[]>([]);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  React.useEffect(()=>{
+    const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='snv-indel')setReviewStatus({});};
+    window.addEventListener('yijian:result-overlays-synced',sync);
+    return()=>window.removeEventListener('yijian:result-overlays-synced',sync);
+  },[taskId]);
   
   // IGV 查看器状态
   const [igvState, setIgvState] = React.useState<{

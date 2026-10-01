@@ -6,7 +6,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { CNVExon, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getCNVExons, listCNVAssessments, reportVariant, reviewVariant, saveCNVAssessment } from '../result-api';
+import { getCNVExons, reportVariant, reviewVariant, saveCNVAssessment } from '../result-api';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
@@ -50,6 +50,11 @@ export function CNVExonTab({
   const [assessmentError, setAssessmentError] = React.useState<string | null>(null);
   const [assessmentSaving, setAssessmentSaving] = React.useState(false);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  React.useEffect(()=>{
+    const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='cnv-exon')setReviewStatus({});};
+    window.addEventListener('yijian:result-overlays-synced',sync);
+    return()=>window.removeEventListener('yijian:result-overlays-synced',sync);
+  },[taskId]);
 
   // 详情面板状态
   const [selectedVariant, setSelectedVariant] = React.useState<CNVExon | null>(null);
@@ -142,12 +147,14 @@ export function CNVExonTab({
         const data = await getCNVExons(taskId, filterState, controller.signal);
         if (controller.signal.aborted) return;
         setResult(data);
-        const ids = data.data.filter(item => item.type !== 'Normal').map(item => item.id);
-        if (ids.length > 0) {
-          const saved = await listCNVAssessments(taskId, 'cnv-exon', ids);
-          if (controller.signal.aborted) return;
-          setAssessmentCache(prev => ({ ...prev, ...saved }));
-        }
+        setAssessmentCache(prev => {
+          const next = { ...prev };
+          for (const item of data.data) {
+            delete next[item.id];
+            if (item.assessment) next[item.id] = item.assessment;
+          }
+          return next;
+        });
       } catch (error) {
         if (!controller.signal.aborted) {
           setRequestError(error instanceof Error ? error.message : '无法加载外显子 CNV 结果');

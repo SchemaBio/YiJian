@@ -1,4 +1,5 @@
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import { queryBrowserParquet, exportBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
 import type {
   ACMGClassification,
@@ -398,6 +399,9 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     log2Ratio: nullableNumber(row.log2Ratio),
     genes: arr(row.dosageGenes ?? row.genccADGenes),
     confidence: nullableNumber(row.weight ?? row.quality),
+    assessment: row.cnvAssessment && typeof row.cnvAssessment === "object"
+      ? { ...(row.cnvAssessment as CNVAssessment), adjustmentVersion: n(row.adjustmentVersion) }
+      : undefined,
     ...normalizeReview(row),
   };
 }
@@ -521,8 +525,10 @@ export async function getQCResult(taskId: string): Promise<QCResult | null> {
   };
 }
 
-export function getResultContext(taskId: string, signal?: AbortSignal): Promise<ResultContext> {
-	return api.get<ResultContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/context`, { signal });
+export async function getResultContext(taskId: string, signal?: AbortSignal): Promise<ResultContext> {
+	const context=await api.get<ResultContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/context`, { signal });
+  if(!signal?.aborted)await updateBrowserContext(taskId,context.executionAttemptId,context.version);
+  return context;
 }
 
 export function getIGVSession(taskId: string, signal?: AbortSignal): Promise<IGVSession> {
@@ -550,8 +556,11 @@ function parquetColumn(type: ResultQueryType, column: string): string {
   return aliases[column] ?? column;
 }
 
-const rowSnapshots = new Map<string, { attemptId: string; datasetVersion: string; version: number }>();
+const rowSnapshots = new Map<string, { attemptId: string; datasetVersion: string; version: number; rowOrdinal?:number }>();
 const tableSnapshots = new Map<string, { datasetVersion: string; attemptId: string }>();
+const queryModes=new Map<string,'browser'|'server'>();
+export function setResultQueryMode(task:string,table:string,mode:'browser'|'server'){queryModes.set(`${task}/${table}`,mode);}
+export function getResultQueryMode(task:string,table:string){return queryModes.get(`${task}/${table}`)??'browser';}
 function snapshotKey(taskId: string, type: string, rowId: string) { return `${taskId}/${type}/${rowId}`; }
 
 async function buildTableQuery(type: ResultQueryType, filterState: TableFilterState) {
@@ -573,8 +582,9 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
   }
   if (filterState.geneListId) {
     const lists = await getGeneLists();
-    const genes = lists.find(list => list.id === filterState.geneListId)?.genes ?? [];
-    if (genes.length) queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
+    const genes = lists.find(list => list.id === filterState.geneListId)?.genes;
+    if (!genes?.length) throw new Error('所选基因列表不可用，请刷新列表或清除该筛选');
+    queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
   }
   const sort = filterState.sortColumn ? parquetColumn(type, filterState.sortColumn) : '';
   return { offset: (filterState.page - 1) * filterState.pageSize, limit: filterState.pageSize,
@@ -583,16 +593,15 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
 
 async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T, signal?: AbortSignal): Promise<PaginatedResult<T>> {
   const query = await buildTableQuery(type, filterState);
-  const response = await api.post<BackendPage<BackendRow>>(
-    `/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${encodeURIComponent(type)}/query`,
-    query,
-    { signal },
-  );
+  const response: BackendPage<BackendRow> = queryModes.get(`${taskId}/${type}`)==='server'
+    ? await api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${type}/query`,query,{signal})
+    : await queryBrowserParquet(taskId,type,query,signal);
   if (!signal?.aborted) {
     tableSnapshots.set(`${taskId}/${type}`, { datasetVersion: response.version ?? '', attemptId: String(response.attemptId ?? response.items?.[0]?.attemptId ?? '') });
     for (const row of response.items ?? []) {
       rowSnapshots.set(snapshotKey(taskId, type, String(row.id)), {
         attemptId: String(row.attemptId ?? ''), datasetVersion: String(row.datasetVersion ?? ''), version: Number(row.adjustmentVersion ?? 0),
+        rowOrdinal:typeof row.rowOrdinal==='number'&&Number.isSafeInteger(row.rowOrdinal)?row.rowOrdinal:undefined,
       });
     }
   }
@@ -688,15 +697,25 @@ export async function saveResultRowAdjustment(
 ): Promise<{ adjustment: { version: number; adjustments: Record<string, unknown> } }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, rowId));
   if (!snapshot?.attemptId || !snapshot.datasetVersion) throw new Error('结果版本未知，请刷新后再保存');
-  const response = await api.put<{ adjustment: { version: number; adjustments: Record<string, unknown> } }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}`, {
+  const payload = {
+    clientMutationId: crypto.randomUUID(),
     expectedVersion,
     attemptId: snapshot.attemptId,
     datasetVersion: snapshot.datasetVersion,
+    rowOrdinal:snapshot.rowOrdinal,
     adjustments,
     reason,
-  });
-  rowSnapshots.set(snapshotKey(taskId, type, rowId), { ...snapshot, version: response.adjustment.version });
+  };
+  const endpoint=`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}`;
+  const write=()=>api.put<{ adjustment: { version: number; adjustments: Record<string, unknown> } }>(endpoint,payload);
+  let response;
+  try {response=await write();} catch(cause) {
+    if(cause instanceof TypeError || (cause instanceof ApiError && cause.status>=500))response=await write();else throw cause;
+  }
+  rowSnapshots.set(snapshotKey(taskId, type, rowId), { ...snapshot, version: Math.max(rowSnapshots.get(snapshotKey(taskId,type,rowId))?.version??0,response.adjustment.version) });
+  await updateBrowserOverlay(taskId,type,{rowId,version:response.adjustment.version,adjustments:response.adjustment.adjustments}).catch(()=>undefined);
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('yijian:result-overlays-synced',{detail:{taskId,table:type}}));
   return response;
 }
 
@@ -716,6 +735,6 @@ export function getResultRowAdjustmentHistory(taskId: string, type: string, rowI
 export async function exportEffectiveTable(taskId: string, type: ResultQueryType, state: TableFilterState) {
  const snapshot = tableSnapshots.get(`${taskId}/${type}`);
  if (!snapshot?.datasetVersion || !snapshot.attemptId) throw new Error('请先加载结果，再导出');
- return api.download(`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${type}/export`,
-   { ...await buildTableQuery(type, state), ...snapshot }, { method: 'POST', fallbackFilename: `results-${type}.csv` });
+ if(queryModes.get(`${taskId}/${type}`)==='server')return api.download(`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${type}/export`,{...await buildTableQuery(type,state),...snapshot},{method:'POST',fallbackFilename:`results-${type}.csv`});
+ return exportBrowserParquet(taskId,type,await buildTableQuery(type,state));
 }

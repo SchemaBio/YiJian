@@ -3,7 +3,9 @@
 import * as React from 'react';
 import { Download, X } from 'lucide-react';
 import type { TableFilterState } from '../types';
-import { exportEffectiveTable } from '../result-api';
+import { exportEffectiveTable, setResultQueryMode, getResultQueryMode } from '../result-api';
+import { api } from '@/lib/api';
+import { retainBrowserTable, refreshBrowserTable } from '@/lib/parquet-browser';
 
 const OPS = [
   ['contains', '包含'], ['equals', '精确匹配'], ['in', '任一匹配'],
@@ -37,6 +39,45 @@ export function ParquetColumnFilterBar({
   state: TableFilterState;
   onChange: (state: TableFilterState) => void;
 }) {
+  const [views,setViews]=React.useState<Array<{name:string;stateJson:string;version:number}>>([]);
+  const [viewName,setViewName]=React.useState('');
+  const [selectedView,setSelectedView]=React.useState('');
+  const [viewMessage,setViewMessage]=React.useState('');
+  const [viewSaving,setViewSaving]=React.useState(false);
+  const [queryMode,setQueryMode]=React.useState<'browser'|'server'>(()=>taskId&&table?getResultQueryMode(taskId,table):'browser');
+  const stateRef=React.useRef(state);stateRef.current=state;
+  const changeRef=React.useRef(onChange);changeRef.current=onChange;
+  const viewsURL=taskId&&table?`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${table}/views`:'';
+  const scopeRef=React.useRef(viewsURL);scopeRef.current=viewsURL;
+  React.useEffect(()=>{if(taskId&&table)return retainBrowserTable(taskId,table);},[taskId,table]);
+  React.useEffect(()=>{
+    if(!viewsURL)return;
+    const controller=new AbortController();
+    setViews([]);setViewName('');setSelectedView('');setViewMessage('');setViewSaving(false);
+    void api.get<typeof views>(viewsURL,{signal:controller.signal}).then(setViews).catch(cause=>{if(!controller.signal.aborted)setViewMessage(cause instanceof Error?cause.message:'方案读取失败');});
+    return()=>controller.abort();
+  },[viewsURL]);
+  React.useEffect(()=>{
+    const changed=(event:Event)=>{
+      const detail=(event as CustomEvent).detail;
+      if(detail?.taskId===taskId&&detail?.table===table){setViewMessage('判读修改已同步');changeRef.current({...stateRef.current});}
+    };
+    const failed=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table===table)setViewMessage('修改同步暂时失败，页面保留上次已同步的数据');};
+    window.addEventListener('yijian:result-overlays-synced',changed);
+    window.addEventListener('yijian:result-sync-error',failed);
+    return()=>{window.removeEventListener('yijian:result-overlays-synced',changed);window.removeEventListener('yijian:result-sync-error',failed);};
+  },[taskId,table]);
+  const saveView=async()=>{
+    if(!viewsURL||!viewName.trim()||viewSaving)return;
+    setViewSaving(true);const scope=viewsURL;
+    try {
+      const current=views.find(v=>v.name===viewName.trim());
+      await api.put(viewsURL,{name:viewName.trim(),state:{...stateRef.current,page:1},expectedVersion:current?.version??0});
+      const next=await api.get<typeof views>(viewsURL);if(scopeRef.current===scope){setViews(next);setViewMessage('个人筛选方案已保存，可跨设备恢复');}
+    }catch(cause){if(scopeRef.current===scope){setViewMessage(cause instanceof Error?cause.message:'方案保存失败');try{const next=await api.get<typeof views>(viewsURL);if(scopeRef.current===scope)setViews(next);}catch{/* keep current choices */}}}
+    finally{if(scopeRef.current===scope)setViewSaving(false);}
+  };
+  const applyView=()=>{const v=views.find(v=>v.name===selectedView);if(v){try{onChange({...JSON.parse(v.stateJson),page:1});setViewName(v.name);setViewMessage('已恢复个人筛选方案');}catch{setViewMessage('筛选方案无效');}}};
   const [exporting, setExporting] = React.useState(false);
   const [exportError, setExportError] = React.useState('');
   const exportTable = async () => {
@@ -88,6 +129,20 @@ export function ParquetColumnFilterBar({
         <button type="button" onClick={addFilter} disabled={!column || (!isPresence && !value.trim()) || (operator === 'between' && value.split(',').length !== 2)} className="h-8 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis disabled:opacity-50">应用</button>
         {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
       </div>
+      {viewsURL&&<div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        <select aria-label="筛选计算位置" value={queryMode} onChange={e=>{const mode=e.target.value as 'browser'|'server';setQueryMode(mode);setResultQueryMode(taskId!,table!,mode);onChange({...state,page:1});}} className="h-8 rounded border border-border-default bg-canvas-default px-2">
+          <option value="browser">浏览器本地计算</option><option value="server">服务器兼容模式</option>
+        </select>
+        <span className="text-fg-muted">个人筛选方案</span>
+        <button type="button" onClick={()=>{void (queryMode==='browser'?refreshBrowserTable(taskId!,table!):Promise.resolve()).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
+        <select aria-label="加载个人筛选方案" value={selectedView} className="h-8 max-w-[180px] rounded border border-border-default bg-canvas-default px-2" onChange={event=>setSelectedView(event.target.value)}>
+          <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
+        </select>
+        <button type="button" disabled={!selectedView} onClick={applyView} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">应用方案</button>
+        <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="方案名称" className="h-8 w-32 rounded border border-border-default bg-canvas-default px-2" />
+        <button type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">{viewSaving?'保存中':'保存方案'}</button>
+        {viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
+      </div>}
       {exportError && <p role="alert" className="mt-2 text-sm text-red-600">{exportError}</p>}
       {filters.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2" aria-live="polite">

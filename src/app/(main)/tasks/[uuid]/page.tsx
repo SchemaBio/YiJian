@@ -81,7 +81,7 @@ export default function AnalysisDetailPage() {
   }, [uuid]);
 
 	React.useEffect(() => {
-		if (loading || resultContext?.state === 'ready') return;
+		if (loading) return;
 		let disposed = false;
 		let requestInFlight = false;
 		const refreshContext = async () => {
@@ -98,7 +98,7 @@ export default function AnalysisDetailPage() {
 				requestInFlight = false;
 			}
 		};
-		const timer = window.setInterval(() => void refreshContext(), 5000);
+		const timer = window.setInterval(() => void refreshContext(), resultContext?.state==='ready'?30000:5000);
 		return () => {
 			disposed = true;
 			window.clearInterval(timer);
@@ -107,18 +107,23 @@ export default function AnalysisDetailPage() {
 
 	React.useEffect(() => {
 		const controller = new AbortController();
+		let refreshing=false;
 		const refreshAfterAdjustment = () => {
+			if(refreshing)return;refreshing=true;
 			void getResultContext(uuid, controller.signal).then(next => {
 				setResultContext(next);
 				setResultContextError(null);
 			}).catch(cause => {
 				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? cause.message : '无法刷新结果统计');
-			});
+			}).finally(()=>{refreshing=false;});
 		};
 		window.addEventListener('yijian:result-adjustment-saved', refreshAfterAdjustment);
+		const onSynced=(event:Event)=>{if((event as CustomEvent).detail?.taskId===uuid)refreshAfterAdjustment();};
+		window.addEventListener('yijian:result-overlays-synced',onSynced);
 		return () => {
 			controller.abort();
 			window.removeEventListener('yijian:result-adjustment-saved', refreshAfterAdjustment);
+			window.removeEventListener('yijian:result-overlays-synced',onSynced);
 		};
 	}, [uuid]);
 
