@@ -26,6 +26,8 @@ export function SNVIndelTab({
 }: SNVIndelTabProps) {
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<SNVIndel> | null>(null);
+  const [reloadToken, setReloadToken] = React.useState(0);
+  const scopeRef = React.useRef(taskId); scopeRef.current = taskId;
   const [loading, setLoading] = React.useState(true);
 	const [requestError, setRequestError] = React.useState<string | null>(null);
 	const [operationError, setOperationError] = React.useState<string | null>(null);
@@ -43,6 +45,8 @@ export function SNVIndelTab({
   // 详情面板状态
   const [selectedVariant, setSelectedVariant] = React.useState<SNVIndel | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = React.useState(false);
+
+  React.useEffect(() => { setSelectedVariant(null); setDetailPanelOpen(false); setReviewStatus({}); }, [taskId]);
 
   const filterState = externalFilterState ?? internalFilterState;
   const setFilterState = onFilterChange ?? setInternalFilterState;
@@ -141,7 +145,7 @@ export function SNVIndelTab({
     }
 		void loadData();
 		return () => controller.abort();
-  }, [taskId, filterState]);
+  }, [taskId, filterState, reloadToken]);
 
   // 处理搜索
   // 处理排序
@@ -173,34 +177,33 @@ export function SNVIndelTab({
     });
   }, [filterState, setFilterState]);
 
-  const handleUpdateClassification = React.useCallback(async (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => {
-    const saved = await saveResultRowAdjustment(taskId, 'snv-indel', variant.id, variant.adjustmentVersion ?? 0, {
+  const handleUpdateClassification = React.useCallback(async (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false) => {
+    const saved = await saveResultRowAdjustment(taskId, 'snv-indel', variant.id, variant.adjustmentVersion ?? 0, reset ? { resetAcmg: true } : {
       acmgEvidence: evidence,
       acmgOverride: override,
       acmgOverrideReason: overrideReason,
     }, reason);
-    const refreshed = await getSNVIndels(taskId, filterState);
-    setResult(refreshed);
-    const updated = refreshed.data.find(item => item.id === variant.id);
-    setSelectedVariant(updated ?? {
+    if (scopeRef.current !== taskId) return;
+    setReloadToken(value => value + 1);
+    setSelectedVariant(current => current?.id !== variant.id ? current : {
       ...variant,
       acmgEvidence: evidence,
       acmgOverride: override || undefined,
       acmgOverrideReason: overrideReason,
-      acmgClassification: saved.adjustment.adjustments.acmgClassification as ACMGClassification | undefined,
+      acmgClassification: reset ? variant.automaticAcmg?.classification : saved.adjustment.adjustments.acmgClassification as ACMGClassification | undefined,
       acmgState: String(saved.adjustment.adjustments.acmgState ?? ''),
-      acmgAssessmentSource: override ? 'manual_override' : 'manual_evidence',
+      acmgAssessmentSource: reset ? 'automatic' : override ? 'manual_override' : 'manual_evidence',
       acmgCriteria: evidence.map(item => item.code),
       adjustmentVersion: saved.adjustment.version,
     });
-  }, [filterState, taskId]);
+  }, [taskId]);
 
   const handleSaveInterpretation = React.useCallback(async (variant: SNVIndel, interpretation: string, reason: string) => {
     const saved = await saveResultRowAdjustment(taskId, 'snv-indel', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, reason);
-    const refreshed = await getSNVIndels(taskId, filterState);
-    setResult(refreshed);
-    setSelectedVariant(refreshed.data.find(item => item.id === variant.id) ?? { ...variant, interpretation, adjustmentVersion: saved.adjustment.version });
-  }, [filterState, taskId]);
+    if (scopeRef.current !== taskId) return;
+    setReloadToken(value => value + 1);
+    setSelectedVariant(current => current?.id !== variant.id ? current : { ...current, interpretation, adjustmentVersion: saved.adjustment.version });
+  }, [taskId]);
 
   // 获取当前选中的基因列表信息
   const selectedGeneList = React.useMemo(() => {
@@ -364,7 +367,7 @@ export function SNVIndelTab({
 
   return (
     <div>
-      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">

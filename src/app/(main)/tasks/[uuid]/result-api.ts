@@ -77,6 +77,7 @@ interface BackendPage<T> {
   columnTypes?: PaginatedResult<unknown>['columnTypes'];
   fieldProfileVersion?: string;
   version?: string;
+  attemptId?: string;
   rowCount?: number;
 }
 
@@ -528,8 +529,8 @@ export function getIGVSession(taskId: string, signal?: AbortSignal): Promise<IGV
 	return api.get<IGVSession>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv`, { signal });
 }
 
-export async function getIGVTrackURLs(taskId: string, version: string, trackIds: string[]): Promise<{ tracks: IGVTrackURL[]; expiresAt: string }> {
-	return api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/urls`, { version, trackIds });
+export async function getIGVTrackURLs(taskId: string, version: string, trackIds: string[], signal?: AbortSignal): Promise<{ tracks: IGVTrackURL[]; expiresAt: string }> {
+	return api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/urls`, { version, trackIds }, { signal });
 }
 
 function parquetColumn(type: ResultQueryType, column: string): string {
@@ -549,7 +550,11 @@ function parquetColumn(type: ResultQueryType, column: string): string {
   return aliases[column] ?? column;
 }
 
-async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T, signal?: AbortSignal): Promise<PaginatedResult<T>> {
+const rowSnapshots = new Map<string, { attemptId: string; datasetVersion: string; version: number }>();
+const tableSnapshots = new Map<string, { datasetVersion: string; attemptId: string }>();
+function snapshotKey(taskId: string, type: string, rowId: string) { return `${taskId}/${type}/${rowId}`; }
+
+async function buildTableQuery(type: ResultQueryType, filterState: TableFilterState) {
   const queryFilters: Array<{ column: string; operator: string; value?: string | string[] }> = [];
   for (const [column, value] of Object.entries(filterState.filters)) {
     if (value === '' || (Array.isArray(value) && value.length === 0)) continue;
@@ -572,18 +577,25 @@ async function getPage<T>(taskId: string, type: ResultQueryType, filterState: Ta
     if (genes.length) queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
   }
   const sort = filterState.sortColumn ? parquetColumn(type, filterState.sortColumn) : '';
+  return { offset: (filterState.page - 1) * filterState.pageSize, limit: filterState.pageSize,
+    search: filterState.searchQuery, sort, direction: filterState.sortDirection, filters: queryFilters };
+}
+
+async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T, signal?: AbortSignal): Promise<PaginatedResult<T>> {
+  const query = await buildTableQuery(type, filterState);
   const response = await api.post<BackendPage<BackendRow>>(
     `/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${encodeURIComponent(type)}/query`,
-    {
-      offset: (filterState.page - 1) * filterState.pageSize,
-      limit: filterState.pageSize,
-      search: filterState.searchQuery,
-      sort,
-      direction: filterState.sortDirection,
-      filters: queryFilters,
-    },
+    query,
     { signal },
   );
+  if (!signal?.aborted) {
+    tableSnapshots.set(`${taskId}/${type}`, { datasetVersion: response.version ?? '', attemptId: String(response.attemptId ?? response.items?.[0]?.attemptId ?? '') });
+    for (const row of response.items ?? []) {
+      rowSnapshots.set(snapshotKey(taskId, type, String(row.id)), {
+        attemptId: String(row.attemptId ?? ''), datasetVersion: String(row.datasetVersion ?? ''), version: Number(row.adjustmentVersion ?? 0),
+      });
+    }
+  }
   return normalizePage(response, filterState, mapper);
 }
 
@@ -651,21 +663,19 @@ export async function getGeneLists(): Promise<GeneListOption[]> {
   }
 }
 
-export function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
-	return api.put<{ reviewed: boolean }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/review`, { reviewed }).then(response => {
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
-    return response;
-  });
+export async function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
+  const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
+  if (!snapshot) throw new Error('请刷新结果后再保存');
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reviewed }, '更新复核状态');
+  return { reviewed };
 }
 
-export function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
-  if (!reported) {
-    return Promise.reject(new Error('Octopus report endpoint only supports marking a variant as reported.'));
-  }
-  return api.put<{ reported: boolean }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/${encodeURIComponent(type)}/${encodeURIComponent(variantId)}/report`, { reported }).then(response => {
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
-    return response;
-  });
+export async function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
+  if (!reported) throw new Error('已回报标记不能取消');
+  const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
+  if (!snapshot) throw new Error('请刷新结果后再保存');
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reported }, '标记已回报');
+  return { reported };
 }
 
 export async function saveResultRowAdjustment(
@@ -676,19 +686,24 @@ export async function saveResultRowAdjustment(
   adjustments: Record<string, unknown>,
   reason = '',
 ): Promise<{ adjustment: { version: number; adjustments: Record<string, unknown> } }> {
+  const snapshot = rowSnapshots.get(snapshotKey(taskId, type, rowId));
+  if (!snapshot?.attemptId || !snapshot.datasetVersion) throw new Error('结果版本未知，请刷新后再保存');
   const response = await api.put<{ adjustment: { version: number; adjustments: Record<string, unknown> } }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}`, {
     expectedVersion,
+    attemptId: snapshot.attemptId,
+    datasetVersion: snapshot.datasetVersion,
     adjustments,
     reason,
   });
+  rowSnapshots.set(snapshotKey(taskId, type, rowId), { ...snapshot, version: response.adjustment.version });
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
   return response;
 }
 
 export interface ResultRowAdjustmentEvent {
   id: string;
-  before: string;
-  after: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
   reason: string;
   actor: string;
   createdAt: string;
@@ -696,4 +711,11 @@ export interface ResultRowAdjustmentEvent {
 
 export function getResultRowAdjustmentHistory(taskId: string, type: string, rowId: string, signal?: AbortSignal): Promise<ResultRowAdjustmentEvent[]> {
   return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}/history`, { signal });
+}
+
+export async function exportEffectiveTable(taskId: string, type: ResultQueryType, state: TableFilterState) {
+ const snapshot = tableSnapshots.get(`${taskId}/${type}`);
+ if (!snapshot?.datasetVersion || !snapshot.attemptId) throw new Error('请先加载结果，再导出');
+ return api.download(`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${type}/export`,
+   { ...await buildTableQuery(type, state), ...snapshot }, { method: 'POST', fallbackFilename: `results-${type}.csv` });
 }

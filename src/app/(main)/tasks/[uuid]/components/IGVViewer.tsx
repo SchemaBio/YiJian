@@ -40,6 +40,8 @@ export interface IGVTrackConfig {
 const signedURLRefreshLeadMs = 60_000;
 
 class SignedTrackResolver {
+  private readonly controller = new AbortController();
+  close() { this.controller.abort(); this.cache.clear(); this.pending.clear(); }
   private readonly cache = new Map<string, { value: IGVTrackURL; expiresAt: number }>();
   private pending = new Set<string>();
   private pendingRequest: Promise<void> | null = null;
@@ -63,6 +65,7 @@ class SignedTrackResolver {
     // its pending ID list. Loop once more in that case so it starts the next
     // batch instead of receiving an artificial "not returned" error.
     for (;;) {
+      if (this.controller.signal.aborted) throw new Error('IGV 查看器已关闭');
       const cached = this.cache.get(trackId);
       if (cached && cached.expiresAt - Date.now() > signedURLRefreshLeadMs) return cached.value;
       this.pending.add(trackId);
@@ -71,7 +74,7 @@ class SignedTrackResolver {
           const ids = [...this.pending];
           this.pending.clear();
           try {
-            const response = await getIGVTrackURLs(this.taskId, this.version, ids);
+            const response = await getIGVTrackURLs(this.taskId, this.version, ids, this.controller.signal);
             const expiresAt = Date.parse(response.expiresAt);
             for (const track of response.tracks) {
               this.cache.set(track.id, {
@@ -186,16 +189,22 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
     let active = true;
     let createdBrowser: import('igv').IGVBrowser | null = null;
+    let igvAPI: typeof import('igv').default | null = null;
+    const removed = new Set<import('igv').IGVBrowser>();
     setLoading(true);
     setError(null);
     setTrackErrors([]);
-    resolverRef.current = new SignedTrackResolver(taskId, session.version);
+    const resolver = new SignedTrackResolver(taskId, session.version);
+    resolverRef.current = resolver;
 
     const dispose = async () => {
-      const current = createdBrowser ?? browserRef.current;
-      if (!current) return;
+      resolver.close();
+      const current = createdBrowser;
+      if (!current || removed.has(current)) return;
+      removed.add(current);
       try {
-        current.dispose();
+        if (igvAPI) igvAPI.removeBrowser(current);
+        else current.dispose();
       } catch {
         // dispose is best effort during modal close and Strict Mode replays.
       }
@@ -206,6 +215,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       try {
         const igvModule = await import('igv/dist/igv.esm.js');
         const igv = igvModule.default;
+        igvAPI = igv;
         if (!active || !containerRef.current) return;
 		if (typeof igv?.createBrowser !== 'function') {
 		  throw new Error('IGV ESM 模块未提供浏览器初始化接口');
@@ -222,7 +232,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         const geneTrack = staticGeneTrack(session);
         const configurations: IGVTrackConfig[] = [
           ...(geneTrack ? [geneTrack] : []),
-          ...tracks.map(track => trackConfiguration(track, resolverRef.current as SignedTrackResolver)),
+          ...tracks.map(track => trackConfiguration(track, resolver)),
         ];
         for (const configuration of configurations) {
           if (!active) {

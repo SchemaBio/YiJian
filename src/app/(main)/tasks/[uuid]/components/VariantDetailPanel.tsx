@@ -31,7 +31,7 @@ interface VariantDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenIGV?: (chromosome: string, position: number) => void;
-  onUpdateClassification?: (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => Promise<void>;
+  onUpdateClassification?: (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onSaveInterpretation?: (variant: SNVIndel, interpretation: string, reason: string) => Promise<void>;
 }
 
@@ -93,10 +93,10 @@ function classifyPoints(score: number, count: number): ACMGClassification | unde
   return count ? 'VUS' : undefined;
 }
 
-function adjustmentDiff(beforeJSON: string, afterJSON: string): Array<{ key: string; before: string; after: string }> {
+function adjustmentDiff(beforeJSON: Record<string, unknown> | string, afterJSON: Record<string, unknown> | string): Array<{ key: string; before: string; after: string }> {
   try {
-    const before = JSON.parse(beforeJSON || '{}') as Record<string, unknown>;
-    const after = JSON.parse(afterJSON || '{}') as Record<string, unknown>;
+    const before = (typeof beforeJSON === 'string' ? JSON.parse(beforeJSON || '{}') : beforeJSON) as Record<string, unknown>;
+    const after = (typeof afterJSON === 'string' ? JSON.parse(afterJSON || '{}') : afterJSON) as Record<string, unknown>;
     return [...new Set([...Object.keys(before), ...Object.keys(after)])]
       .filter(key => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
       .map(key => ({
@@ -115,7 +115,7 @@ function ACMGPointsEditor({
   onCancel,
 }: {
   variant: SNVIndel;
-  onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => Promise<void>;
+  onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onCancel: () => void;
 }) {
   const initialEvidence = variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
@@ -123,6 +123,7 @@ function ACMGPointsEditor({
   const [override, setOverride] = React.useState<ACMGClassification | ''>(variant.acmgOverride ?? '');
   const [overrideReason, setOverrideReason] = React.useState(variant.acmgOverrideReason ?? '');
   const [reason, setReason] = React.useState('');
+  const [restoreAutomatic, setRestoreAutomatic] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
   const score = Object.values(evidence).reduce((sum, item) => {
@@ -135,24 +136,24 @@ function ACMGPointsEditor({
   const auto = variant.automaticAcmg;
   const changed = JSON.stringify(Object.values(evidence).sort((a, b) => a.code.localeCompare(b.code))) !== JSON.stringify([...initialEvidence].sort((a, b) => a.code.localeCompare(b.code))) || override !== (variant.acmgOverride ?? '') || overrideReason !== (variant.acmgOverrideReason ?? '');
 
-  const toggle = (code: string, checked: boolean) => setEvidence(previous => {
+  const toggle = (code: string, checked: boolean) => { setRestoreAutomatic(false); setEvidence(previous => {
     const next = { ...previous };
     if (!checked) delete next[code];
     else {
       if (code === 'PP3') delete next.BP4;
       if (code === 'BP4') delete next.PP3;
-      const strength = code === 'BA1' ? 'standalone' : (code === 'PVS1' ? 'very_strong' : code.startsWith('P') && code.slice(0, 2) === 'PS' || code.startsWith('B') && code.slice(0, 2) === 'BS' ? 'strong' : 'supporting');
+      const strength = code === 'BA1' ? 'standalone' : (code === 'PVS1' ? 'very_strong' : code.startsWith('P') && code.slice(0, 2) === 'PS' || code.startsWith('B') && code.slice(0, 2) === 'BS' ? 'strong' : code.startsWith('PM') ? 'moderate' : 'supporting');
       next[code] = { code, strength, source: code === 'PP3' || code === 'BP4' ? 'AlphaMissense' : '人工证据' };
     }
     return next;
-  });
+  }); };
 
   const save = async () => {
     if (override && !overrideReason.trim()) { setError('人工覆写分类必须填写理由'); return; }
     if (changed && !reason.trim()) { setError('请填写本次调整理由'); return; }
     setSaving(true); setError('');
     try {
-      await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim());
+      await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim(), restoreAutomatic);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '保存 ACMG 证据失败');
     } finally {
@@ -162,7 +163,7 @@ function ACMGPointsEditor({
 
   return <div className="space-y-4">
     <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">自动初评 · {auto?.profile ?? 'acmg-snv-points-v1'}</span><span>自动分类：{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : '证据不足'} · {auto?.score ?? 0} 分</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">自动初评 · {auto?.profile ?? 'acmg-snv-points-v2'}</span><span>自动分类：{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : '证据不足'} · {auto?.score ?? 0} 分</span></div>
       {auto?.pending?.length ? <p className="mt-1 text-xs text-fg-muted">待确认：{auto.pending.join('；')}</p> : <p className="mt-1 text-xs text-fg-muted">未纳入缺乏当前证据前提的人群、疾病机制、家系或实验室证据。</p>}
     </div>
     {POINT_CRITERIA.map(group => <section key={group.title} className="space-y-2">
@@ -173,7 +174,7 @@ function ACMGPointsEditor({
           return <div key={code} className={`flex min-w-0 items-center gap-2 rounded-md border p-2 ${item ? (code.startsWith('B') ? 'border-success-emphasis/40 bg-success-subtle/30' : 'border-danger-emphasis/40 bg-danger-subtle/30') : 'border-border-subtle bg-canvas-default'}`}>
             <input type="checkbox" checked={Boolean(item)} onChange={event => toggle(code, event.target.checked)} aria-label={`选择 ACMG 证据 ${code}`} />
             <span className="w-12 shrink-0 text-xs font-semibold">{code}</span>
-            {item && code !== 'BA1' && <select value={item.strength} onChange={event => setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } }))} aria-label={`${code} 强度`} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
+            {item && code !== 'BA1' && <select value={item.strength} onChange={event => { setRestoreAutomatic(false); setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } })); }} aria-label={`${code} 强度`} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
               {(code === 'PVS1' ? [['very_strong', '非常强']]:[['supporting','支持'],['moderate','中等'],['strong','强'],...(code.startsWith('P') ? [['very_strong','非常强']] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} 分）</option>)}
             </select>}
             {item && code === 'BA1' && <span className="text-xs text-success-fg">独立良性证据</span>}
@@ -182,15 +183,17 @@ function ACMGPointsEditor({
       </div>
     </section>)}
     <div className="rounded-lg border border-border-subtle bg-canvas-default p-3 text-sm"><div className="flex justify-between"><span>证据积分</span><strong>{score}</strong></div><div className="mt-1 flex justify-between"><span>积分分类</span><strong>{calculated ? ACMG_CONFIG[calculated].label : '证据不足'}</strong></div></div>
-    <div><label className="mb-1 block text-sm font-medium">人工覆写最终分类</label><select value={override} onChange={event => setOverride(event.target.value as ACMGClassification | '')} className="w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm"><option value="">按证据积分显示</option>{Object.entries(ACMG_CONFIG).map(([key, config]) => <option key={key} value={key}>{config.label}</option>)}</select></div>
+    <div><label className="mb-1 block text-sm font-medium">人工覆写最终分类</label><select value={override} onChange={event => { setRestoreAutomatic(false); setOverride(event.target.value as ACMGClassification | ''); }} className="w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm"><option value="">按证据积分显示</option>{Object.entries(ACMG_CONFIG).map(([key, config]) => <option key={key} value={key}>{config.label}</option>)}</select></div>
     {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder="人工覆写理由（必填）" className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
     <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={changed ? '本次证据调整理由（必填）' : '调整理由（如有）'} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
     {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
+    <button type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason('恢复当前版本自动初评基线'); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">恢复自动基线后保存</button>
     <div className="flex gap-2"><button type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50"><Check className="h-4 w-4" />{saving ? '保存中…' : '保存证据与分类'}</button><button type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">取消</button></div>
   </div>;
 }
 
 export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
+  const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
@@ -229,16 +232,19 @@ export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
 
   // 保存 ACMG 分类
-  const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string) => {
+  const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false) => {
     if (!onUpdateClassification) return;
-    await onUpdateClassification(variant, evidence, override, overrideReason, reason);
+    await onUpdateClassification(variant, evidence, override, overrideReason, reason, reset);
+    if (selectedRef.current !== variant.id) return;
     try {
-      setAdjustmentHistory(await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id));
+      const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
+      if (selectedRef.current !== variant.id) return;
+      setAdjustmentHistory(history);
     } catch {
       // The saved assessment remains successful even if history refresh is unavailable.
     }
     const score = evidence.reduce((total, item) => total + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
-    setLocalClassification(override || classifyPoints(score, evidence.length) || null);
+    setLocalClassification(override || (evidence.some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, evidence.length)) || null);
     setLocalCriteria(evidence.map(item => item.code));
     setIsEditingACMG(false);
   };

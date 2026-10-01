@@ -285,7 +285,7 @@ export function MEITab({
 
   return (
     <div>
-      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="mei" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">

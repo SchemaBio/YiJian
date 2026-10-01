@@ -222,7 +222,7 @@ export function STRTab({
 
   return (
     <div>
-      <ParquetColumnFilterBar columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="str" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-64">

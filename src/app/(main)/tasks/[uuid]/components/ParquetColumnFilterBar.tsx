@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import type { TableFilterState } from '../types';
+import { exportEffectiveTable } from '../result-api';
 
 const OPS = [
   ['contains', '包含'], ['equals', '精确匹配'], ['in', '任一匹配'],
@@ -23,16 +24,28 @@ function label(field: string): string {
 }
 
 export function ParquetColumnFilterBar({
+  taskId, table,
   columns,
   columnTypes,
   state,
   onChange,
 }: {
+  taskId?: string;
+  table?: Parameters<typeof exportEffectiveTable>[1];
   columns: string[];
   columnTypes?: Record<string, 'text' | 'number' | 'enum' | 'boolean'>;
   state: TableFilterState;
   onChange: (state: TableFilterState) => void;
 }) {
+  const [exporting, setExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState('');
+  const exportTable = async () => {
+    if (!taskId || !table) return;
+    setExporting(true); setExportError('');
+    try { const result = await exportEffectiveTable(taskId, table, state); const url = URL.createObjectURL(result.blob); const link = document.createElement('a'); link.href = url; link.download = result.filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    catch (cause) { setExportError(cause instanceof Error ? cause.message : '导出失败'); }
+    finally { setExporting(false); }
+  };
   const [column, setColumn] = React.useState('');
   const [operator, setOperator] = React.useState<FilterOperator>('contains');
   const [value, setValue] = React.useState('');
@@ -63,6 +76,7 @@ export function ParquetColumnFilterBar({
   return (
     <div className="mb-3 rounded-lg border border-border-subtle bg-canvas-subtle/60 p-3">
       <div className="flex flex-wrap items-center gap-2">
+        {taskId && table && <button type="button" disabled={exporting} onClick={() => void exportTable()} className="ml-auto inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border-default px-3 text-sm"><Download className="h-3.5 w-3.5" />{exporting ? '导出中' : '导出筛选结果 CSV'}</button>}
         <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">列筛选</span>
         <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {columns.map(item => <option key={item} value={item}>{label(item)}</option>)}
@@ -74,6 +88,7 @@ export function ParquetColumnFilterBar({
         <button type="button" onClick={addFilter} disabled={!column || (!isPresence && !value.trim()) || (operator === 'between' && value.split(',').length !== 2)} className="h-8 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis disabled:opacity-50">应用</button>
         {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
       </div>
+      {exportError && <p role="alert" className="mt-2 text-sm text-red-600">{exportError}</p>}
       {filters.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2" aria-live="polite">
           {filters.map(filter => {

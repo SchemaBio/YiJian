@@ -121,14 +121,14 @@ export function ReportTab({ taskId }: ReportTabProps) {
       <div className="bg-canvas-subtle rounded-lg p-4">
         <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
           <Download className="w-4 h-4" />
-          数据导出
+          原始文件下载（不含人工调整）
         </h4>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="small" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => handleExport('excel')} loading={exportingKind === 'excel'}>
-            Excel 结果表
+            原始归档 Excel
           </Button>
           <Button variant="secondary" size="small" leftIcon={<Database className="w-4 h-4" />} onClick={() => handleExport('parquet')} loading={exportingKind === 'parquet'}>
-            Parquet 文件
+            原始归档 Parquet
           </Button>
           <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={() => handleExport('vcf')} loading={exportingKind === 'vcf'}>
             SNP/InDel VCF

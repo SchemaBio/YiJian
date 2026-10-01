@@ -4,7 +4,7 @@ import { getSNVIndels } from '../result-api';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { api } from '@/lib/api';
 
-vi.mock('@/lib/api', () => ({ api: { get: vi.fn() } }));
+vi.mock('@/lib/api', () => ({ api: { post: vi.fn() } }));
 
 describe('workflow SNV annotations', () => {
   it('shows population AF as a fraction and preserves missing values and zero', () => {
@@ -18,7 +18,7 @@ describe('workflow SNV annotations', () => {
   });
 
   it('maps actual prediction fields and never infers ACMG from ClinVar', async () => {
-    vi.mocked(api.get).mockResolvedValue({ total: 1, items: [{
+    vi.mocked(api.post).mockResolvedValue({ total: 1, items: [{
       id: 'stable-id', vaf: 0.5, clinvarSignificance: 'Pathogenic', acmgClassification: '',
       gnomadAF: null, gnomadEasAF: 0, pangolinGain: 0.7, pangolinAN: 'High likelihood',
       evoScore: -12, evoScoreAN: 'Pathogenic', alphaMissenseAM: null,
