@@ -13,7 +13,7 @@ interface VariantTypeNavProps {
 
 export function VariantTypeNav({ activeTab, context, onTabChange }: VariantTypeNavProps) {
   return (
-    <nav className="rounded-xl border border-border-default bg-canvas-default p-2 shadow-sm" aria-label="变异类型">
+    <nav className="self-start max-h-full overflow-auto rounded-xl border border-border-default bg-canvas-default p-2" aria-label="变异类型">
       <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-fg-muted">变异类型</p>
       <div className="space-y-1">
         {VARIANT_TAB_CONFIGS.map(item => {

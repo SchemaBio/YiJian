@@ -76,6 +76,7 @@ interface BackendPage<T> {
   pageSize?: number;
   columns?: string[];
   columnTypes?: PaginatedResult<unknown>['columnTypes'];
+  columnAliases?: Record<string, string[]>;
   fieldProfileVersion?: string;
   version?: string;
   attemptId?: string;
@@ -171,6 +172,7 @@ function normalizePage<T, U>(
     pageSize: n(response.pageSize ?? response.page_size, filterState.pageSize),
     columns: response.columns,
     columnTypes: response.columnTypes,
+    columnAliases: response.columnAliases,
     fieldProfileVersion: response.fieldProfileVersion,
     version: response.version,
   };

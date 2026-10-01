@@ -48,9 +48,9 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
   }, [onTabChange]);
 
   return (
-    <div>
+    <div className="h-full min-h-0 flex flex-col">
       {/* 标签页导航 */}
-      <div className="border-b border-border-default mb-4">
+      <div className="shrink-0 border-b border-border-default mb-4 bg-canvas-default">
         <nav
 			className="flex gap-1 overflow-x-auto whitespace-nowrap"
           role="tablist"
@@ -89,6 +89,7 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
 
       {/* 标签页内容 */}
       <div
+        className="min-h-0 flex-1 overflow-hidden"
         role="tabpanel"
 			id={`tabpanel-${primaryActiveTab}`}
 			aria-labelledby={`tab-${primaryActiveTab}`}

@@ -287,16 +287,16 @@ export default function AnalysisDetailPage() {
       {/* 样本信息汇总卡片 */}
       {sample && <SampleSummaryCard sample={sample} />}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
+      <div className="min-h-0 flex-1 overflow-hidden px-4 pb-4 md:px-6 md:pb-6">
 
       {/* 标签面板和内容 */}
 		<ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
 			{isVariantTab ? (
-				<div className="grid gap-5 xl:grid-cols-[168px_minmax(0,1fr)]">
+				<div className="grid h-full min-h-0 gap-3 grid-cols-[128px_minmax(0,1fr)] lg:grid-cols-[168px_minmax(0,1fr)]">
 					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />
-					<div className="min-w-0 rounded-xl border border-border-default bg-canvas-default p-4 shadow-sm">{renderTabContent()}</div>
+					<div className="min-h-0 min-w-0 overflow-auto rounded-xl border border-border-default bg-canvas-default p-4">{renderTabContent()}</div>
 				</div>
-			) : renderTabContent()}
+			) : <div className="h-full overflow-auto">{renderTabContent()}</div>}
 		</ResultTabs>
       </div>
     </PageContent>

@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { UPDRegion, UPDType, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getUPDRegions, reportVariant, reviewVariant } from '../result-api';
+import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
@@ -249,15 +250,16 @@ export function UPDTab({
           {requestError}
           <button onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</button>
         </div>
-      ) : loading ? (
+      ) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
-      ) : result && result.data.length > 0 ? (
+      ) : result ? (
         <>
           <DataTable
+            stickyHeader
             data={sortedData}
-            columns={columns}
+            columns={filterableColumns(columns, result, filterState, setFilterState, 'upd')}
             rowKey="id"
             striped
             density="compact"

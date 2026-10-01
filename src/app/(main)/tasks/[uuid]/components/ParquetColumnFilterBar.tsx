@@ -18,7 +18,7 @@ type FilterOperator = typeof OPS[number][0];
 
 function label(field: string): string {
   const common: Record<string, string> = {
-    Chromosome: '染色体', Position: '位置', Gene: '基因', Type: '类型', VAF: '样本 VAF',
+    Chromosome: '染色体', Position: '位置', Gene: '基因', Type: '类型', VAF: 'VAF',
     GnomAD_AF: 'gnomAD AF', GnomAD_AF_EAS: 'gnomAD 东亚 AF', ClinVar_Sig: 'ClinVar 意义',
     acmgClassification: 'ACMG 评定', reviewed: '复核状态', reported: '回报状态',
   };
@@ -117,7 +117,7 @@ export function ParquetColumnFilterBar({
     <div className="mb-3 rounded-lg border border-border-subtle bg-canvas-subtle/60 p-3">
       <div className="flex flex-wrap items-center gap-2">
         {taskId && table && <button type="button" disabled={exporting} onClick={() => void exportTable()} className="ml-auto inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border-default px-3 text-sm"><Download className="h-3.5 w-3.5" />{exporting ? '导出中' : '导出筛选结果 CSV'}</button>}
-        <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">列筛选</span>
+        <details><summary className="cursor-pointer text-xs text-fg-muted">更多注释列筛选</summary><div className="mt-2 flex flex-wrap items-center gap-2">
         <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {columns.map(item => <option key={item} value={item}>{label(item)}</option>)}
         </select>
@@ -127,10 +127,11 @@ export function ParquetColumnFilterBar({
         {!isPresence && <input aria-label="筛选值" value={value} onChange={event => setValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') addFilter(); }} placeholder={operator === 'in' ? '逗号分隔多个值' : operator === 'between' ? '最小值,最大值' : '输入匹配值'} className="h-8 min-w-[150px] rounded-md border border-border-default bg-canvas-default px-2 text-sm" />}
         <button type="button" onClick={addFilter} disabled={!column || (!isPresence && !value.trim()) || (operator === 'between' && value.split(',').length !== 2)} className="h-8 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis disabled:opacity-50">应用</button>
         {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
+        </div></details>
       </div>
       {viewsURL&&<div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
 
-        <span className="text-fg-muted">个人筛选方案</span>
+        <details><summary className="cursor-pointer text-fg-muted">保存与加载筛选</summary><div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
         <select aria-label="加载个人筛选方案" value={selectedView} className="h-8 max-w-[180px] rounded border border-border-default bg-canvas-default px-2" onChange={event=>setSelectedView(event.target.value)}>
           <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
@@ -138,7 +139,7 @@ export function ParquetColumnFilterBar({
         <button type="button" disabled={!selectedView} onClick={applyView} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">应用方案</button>
         <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="方案名称" className="h-8 w-32 rounded border border-border-default bg-canvas-default px-2" />
         <button type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">{viewSaving?'保存中':'保存方案'}</button>
-        {viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
+        </div></details>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
       </div>}
       {exportError && <p role="alert" className="mt-2 text-sm text-red-600">{exportError}</p>}
       {filters.length > 0 && (

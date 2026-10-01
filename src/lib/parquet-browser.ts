@@ -35,6 +35,7 @@ export interface BrowserPage {
     rowCount: number;
     columns: string[];
     columnTypes: Record<string, 'text' | 'number' | 'enum' | 'boolean'>;
+    columnAliases?: Record<string, string[]>;
     fieldProfileVersion: string;
     version: string;
     attemptId: string;
@@ -176,6 +177,17 @@ class BrowserTable {
             if (count !== this.info.dataset.rows || (this.info.dataset.expectedRows !== undefined && count !== this.info.dataset.expectedRows))
                 throw new Error('Parquet 行数校验失败，请联系管理员恢复数据集');
             this.raw = (await this.rows('DESCRIBE source')).map(row => String(row.column_name)).filter(s => s !== 'file_row_number' && s !== '__row_id');
+            // Interval length is displayed from endpoints. Register the same
+            // expression locally so its header filters the displayed value.
+            if (['cnv-segment', 'cnv-exon', 'upd'].includes(this.table) && !this.raw.some(f => this.info.aliases[f]?.includes('length'))) {
+                const start = this.raw.find(f => this.info.aliases[f]?.includes('startPosition'));
+                const end = this.raw.find(f => this.info.aliases[f]?.includes('endPosition'));
+                if (start && end) {
+                    await this.conn.query(`ALTER TABLE source ADD COLUMN Interval_Length BIGINT; UPDATE source SET Interval_Length=GREATEST(0, TRY_CAST(${ident(end)} AS BIGINT)-TRY_CAST(${ident(start)} AS BIGINT)+1)`);
+                    this.raw.push('Interval_Length');
+                    this.info.aliases.Interval_Length = ['length'];
+                }
+            }
             timings.parquet_materialize_ms = Math.round(performance.now() - materializeStarted);
             const baselineStarted = performance.now();
             await this.conn.query('CREATE TABLE overlays(row_id VARCHAR PRIMARY KEY,payload JSON, version BIGINT); CREATE TABLE automatic(row_id VARCHAR PRIMARY KEY,baseline JSON)');
@@ -277,7 +289,7 @@ class BrowserTable {
             const limit = Math.max(1, Math.min(200, q.limit)), offset = Math.max(0, q.offset);
             const result = await this.rows(`SELECT t.*,o.payload AS __adjustments,COALESCE(o.version,0) AS __version,a.baseline AS __acmg ${this.joined()}${selection.where} ORDER BY ${selection.order} LIMIT ${limit} OFFSET ${offset}`, signal);
             check(signal);
-            const page = { items: result.map(row => this.normalize(row)), total, rowCount: this.info.dataset.rows, columns: [...new Set([...this.raw, ...OVERLAY_FIELDS])].sort(), columnTypes: Object.fromEntries([...this.raw, ...OVERLAY_FIELDS].map(s => [s, fieldType(s)])), fieldProfileVersion: 'parquet-fields-v2', version: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId, offset, limit };
+            const page = { items: result.map(row => this.normalize(row)), total, rowCount: this.info.dataset.rows, columns: [...new Set([...this.raw, ...OVERLAY_FIELDS])].sort(), columnTypes: Object.fromEntries([...this.raw, ...OVERLAY_FIELDS].map(s => [s, fieldType(s)])), columnAliases: this.info.aliases, fieldProfileVersion: 'parquet-fields-v2', version: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId, offset, limit };
             if (this.pages.size >= 20)
                 this.pages.delete(this.pages.keys().next().value!);
             this.pages.set(key, page);

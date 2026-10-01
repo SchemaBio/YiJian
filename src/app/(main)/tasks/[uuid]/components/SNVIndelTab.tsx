@@ -11,6 +11,8 @@ import { IGVViewer, PositionLink } from './IGVViewer';
 import { VariantDetailPanel } from './VariantDetailPanel';
 import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { ClinVarBadge } from './ClinVarBadge';
+import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 
 interface SNVIndelTabProps {
@@ -302,7 +304,7 @@ export function SNVIndelTab({
     },
     {
       id: 'alleleFrequency',
-      header: 'VAF（样本）',
+      header: 'VAF',
       accessor: (row) => <span className="font-mono tabular-nums text-accent-fg">{(row.alleleFrequency * 100).toFixed(1)}%</span>,
       width: 80,
       align: 'center',
@@ -328,7 +330,7 @@ export function SNVIndelTab({
     },
     {
       id: 'clinvarSignificance', header: 'ClinVar 临床意义',
-      accessor: row => <span title={sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance)} className="block max-w-[180px] truncate">{sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance) || '未提供'}</span>,
+      accessor: row => <ClinVarBadge value={sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance)} />,
       width: 180, sortable: true,
     },
     {
@@ -371,7 +373,7 @@ export function SNVIndelTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div className={(detailPanelOpen) ? "pb-[52dvh]" : undefined}>
+    <div>
       <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-4">
@@ -431,15 +433,16 @@ export function SNVIndelTab({
 		{operationError && <div role="alert" className="mb-3 rounded-lg border border-danger-emphasis bg-danger-subtle p-3 text-sm text-danger-fg">{operationError}</div>}
 		{requestError && !loading ? (
 			<div className="rounded-lg border border-danger-emphasis bg-danger-subtle p-4 text-sm text-danger-fg">{requestError}</div>
-		) : loading ? (
+		) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
-        ) : result && result.data.length > 0 ? (
+        ) : result ? (
         <>
           <DataTable
+            stickyHeader
             data={sortedData}
-            columns={columns}
+            columns={filterableColumns(columns, result, filterState, setFilterState, 'snv-indel')}
             rowKey="id"
             striped
             density="compact"

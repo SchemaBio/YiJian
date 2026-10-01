@@ -430,6 +430,7 @@ export interface PaginatedResult<T> {
   pageSize: number;
   columns?: string[];
   columnTypes?: Record<string, 'text' | 'number' | 'enum' | 'boolean'>;
+  columnAliases?: Record<string, string[]>;
   fieldProfileVersion?: string;
   version?: string;
 }

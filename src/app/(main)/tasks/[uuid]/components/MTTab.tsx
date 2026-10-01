@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import type { MitochondrialVariant, MitochondrialPathogenicity, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getMitochondrialVariants, reportVariant, reviewVariant } from '../result-api';
+import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
@@ -262,7 +263,7 @@ export function MTTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div className={(detailPanelOpen) ? "pb-[52dvh]" : undefined}>
+    <div>
       <ParquetColumnFilterBar taskId={taskId} table="mt" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
@@ -294,15 +295,16 @@ export function MTTab({
 
 		{error && !loading ? (
 			<div className="rounded-lg border border-danger-emphasis bg-danger-subtle p-4 text-sm text-danger-fg">{error}</div>
-		) : loading ? (
+		) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
         </div>
-      ) : result && result.data.length > 0 ? (
+      ) : result ? (
         <>
           <DataTable
+            stickyHeader
             data={sortedData}
-            columns={columns}
+            columns={filterableColumns(columns, result, filterState, setFilterState, 'mt')}
             rowKey="id"
             striped
             density="compact"
