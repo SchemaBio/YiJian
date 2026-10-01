@@ -193,16 +193,22 @@ export interface SNVIndel extends VariantReviewStatus {
   rsId?: string;                 // dbSNP ID
   clinvarId?: string;            // ClinVar ID
   clinvarSignificance?: string;  // ClinVar 临床意义
+  clinvarReviewStatus?: string;
+  clinvarDisease?: string;
+  clinvarStars?: string;
+  annotationValues?: Record<string, string>;
   gnomadAF?: number;             // gnomAD 人群频率
   gnomadEasAF?: number;          // gnomAD 东亚人群频率
-  exacAF?: number;               // ExAC 人群频率
-  siftScore?: number;            // SIFT 评分
-  siftPrediction?: string;       // SIFT 预测
-  polyphenScore?: number;        // PolyPhen-2 评分
-  polyphenPrediction?: string;   // PolyPhen-2 预测
-  caddScore?: number;            // CADD 评分
-  revelScore?: number;           // REVEL 评分
-  spliceAI?: number;             // SpliceAI 评分
+  maxAF?: number;
+  gnomadNhomaltXX?: number;
+  gnomadNhomaltXY?: number;
+  pangolinGain?: number;
+  pangolinLoss?: number;
+  pangolinAnnotation?: string;
+  evoScore?: number;
+  evoAnnotation?: string;
+  alphaMissenseScore?: number;
+  alphaMissenseClass?: string;
   acmgCriteria?: string[];       // ACMG 证据项
   pubmedIds?: string[];          // PubMed 文献 ID
   omimId?: string;               // OMIM ID

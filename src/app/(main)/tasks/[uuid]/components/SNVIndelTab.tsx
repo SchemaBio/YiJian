@@ -9,6 +9,7 @@ import { DEFAULT_FILTER_STATE } from '../types';
 import { getSNVIndels, ACMG_CONFIG, getGeneLists, reportVariant, reviewVariant, type GeneListOption } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { VariantDetailPanel } from './VariantDetailPanel';
+import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
 import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 
 interface SNVIndelTabProps {
@@ -262,7 +263,7 @@ export function SNVIndelTab({
     },
     {
       id: 'alleleFrequency',
-      header: '频率',
+      header: 'VAF（样本）',
       accessor: (row) => `${(row.alleleFrequency * 100).toFixed(1)}%`,
       width: 80,
       align: 'center',
@@ -277,13 +278,28 @@ export function SNVIndelTab({
       sortable: true,
     },
     {
+      id: 'gnomadAF', header: 'gnomAD 总体 AF',
+      accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF', row.gnomadAF)),
+      width: 130, align: 'center', sortable: true,
+    },
+    {
+      id: 'gnomadEasAF', header: 'gnomAD 东亚 AF',
+      accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF_EAS', row.gnomadEasAF)),
+      width: 130, align: 'center', sortable: true,
+    },
+    {
+      id: 'clinvarSignificance', header: 'ClinVar 临床意义',
+      accessor: row => <span title={sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance)} className="block max-w-[180px] truncate">{sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance) || '未提供'}</span>,
+      width: 180, sortable: true,
+    },
+    {
       id: 'acmgClassification',
-      header: 'ACMG分类',
+      header: 'ACMG 评定',
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
         return config
           ? <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>
-          : <Tag variant="neutral" className="w-20 justify-center">未提供</Tag>;
+          : <span title="当前 SNP/Indel 流程未输出 ACMG 分级；预测标签和 ClinVar 不等同于 ACMG 评定"><Tag variant="neutral" className="w-20 justify-center">未评定</Tag></span>;
       },
       width: 100,
       align: 'center',
@@ -353,7 +369,7 @@ export function SNVIndelTab({
             onChange={(e) => handleACMGFilter(e.target.value as ACMGClassification | '')}
             className="px-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default"
           >
-            <option value="">全部ACMG分类</option>
+            <option value="">ACMG 评定（全部）</option>
             {Object.entries(ACMG_CONFIG).map(([key, config]) => (
               <option key={key} value={key}>{config.label}</option>
             ))}

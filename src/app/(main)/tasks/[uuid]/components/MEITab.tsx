@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { formatPopulationFrequency } from '../utils/snv-annotations';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
@@ -260,7 +261,7 @@ export function MEITab({
     {
       id: 'frequency',
       header: '人群频率',
-      accessor: (row) => row.frequency !== undefined ? `${(row.frequency * 100).toFixed(4)}%` : '-',
+      accessor: (row) => formatPopulationFrequency(row.frequency),
       width: 90,
       align: 'center',
       sortable: true,

@@ -5,6 +5,7 @@ import { X, ExternalLink, FileText, Database, Dna, Edit2, Check, Plus, Trash2, M
 import { Tag } from '@schema/ui-kit';
 import type { SNVIndel, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
+import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
 
 // ACMG 证据项定义
 const ACMG_CRITERIA_OPTIONS = {
@@ -71,7 +72,7 @@ function InfoItem({ label, value, link }: { label: string; value?: React.ReactNo
           <ExternalLink className="w-3 h-3" />
         </a>
       ) : (
-        <span className="text-fg-default text-sm font-medium">{value}</span>
+        <span className="max-w-[65%] break-words text-right text-fg-default text-sm font-medium">{value}</span>
       )}
     </div>
   );
@@ -316,19 +317,7 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
   const currentCriteria = localCriteria ?? variant.acmgCriteria ?? [];
   const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
   
-  // 格式化频率显示
-  const formatFrequency = (freq?: number) => {
-    if (freq === undefined || freq === null) return undefined;
-    if (freq === 0) return '0';
-    if (freq < 0.0001) return freq.toExponential(2);
-    return (freq * 100).toFixed(4) + '%';
-  };
-
-  // 格式化评分显示
-  const formatScore = (score?: number, precision = 2) => {
-    if (score === undefined || score === null) return undefined;
-    return score.toFixed(precision);
-  };
+  const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
 
   // 保存 ACMG 分类
   const handleSaveACMG = (classification: ACMGClassification, criteria: string[]) => {
@@ -351,12 +340,12 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
       />
       
       {/* 侧边面板 */}
-      <div className="fixed right-0 top-0 h-full w-[480px] bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-[480px] max-w-full bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">变异详情</h3>
-            {acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : <Tag variant="neutral">未提供</Tag>}
+            {acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : <Tag variant="neutral">ACMG 未评定</Tag>}
           </div>
           <button
             onClick={onClose}
@@ -400,36 +389,40 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
           {/* 测序质量 */}
           <SectionTitle icon={FileText} title="测序质量" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem label="等位基因频率" value={`${(variant.alleleFrequency * 100).toFixed(1)}%`} />
+            <InfoItem label="样本变异等位基因比例（VAF）" value={`${(variant.alleleFrequency * 100).toFixed(1)}%`} />
             <InfoItem label="覆盖深度" value={`${variant.depth}X`} />
+          </div>
+
+          <SectionTitle icon={Database} title="ClinVar 注释" />
+          <div className="bg-canvas-subtle rounded-lg p-3">
+            <InfoItem label="临床意义" value={annotation('ClinVar_Sig', variant.clinvarSignificance)} />
+            <InfoItem label="审核状态" value={annotation('ClinVar_RevStat', variant.clinvarReviewStatus)} />
+            <InfoItem label="审核星级" value={annotation('ClinVar_Star', variant.clinvarStars)} />
+            <InfoItem label="关联疾病" value={annotation('ClinVar_DN', variant.clinvarDisease)} />
           </div>
 
           {/* 人群频率 */}
           <SectionTitle icon={Database} title="人群频率" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem label="gnomAD 总体" value={formatFrequency(variant.gnomadAF)} />
-            <InfoItem label="gnomAD 东亚" value={formatFrequency(variant.gnomadEasAF)} />
-            <InfoItem label="ExAC" value={formatFrequency(variant.exacAF)} />
+            <InfoItem label="gnomAD 总体 AF" value={formatPopulationFrequency(annotation('GnomAD_AF', variant.gnomadAF))} />
+            <InfoItem label="gnomAD 东亚 AF" value={formatPopulationFrequency(annotation('GnomAD_AF_EAS', variant.gnomadEasAF))} />
+            <InfoItem label="VEP MAX_AF" value={formatPopulationFrequency(annotation('MAX_AF', variant.maxAF))} />
+            <InfoItem label="gnomAD nhomalt XX" value={annotation('GnomAD_nhomalt_XX', variant.gnomadNhomaltXX)} />
+            <InfoItem label="gnomAD nhomalt XY" value={annotation('GnomAD_nhomalt_XY', variant.gnomadNhomaltXY)} />
+            <p className="mt-2 text-xs text-fg-muted">AF 为 0–1 的原始比值；nhomalt 为纯合变异计数。</p>
           </div>
 
           {/* 功能预测 */}
           <SectionTitle icon={Dna} title="功能预测" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
-              label="SIFT" 
-              value={variant.siftScore !== undefined ? 
-                `${formatScore(variant.siftScore)} (${variant.siftPrediction})` : undefined
-              } 
-            />
-            <InfoItem 
-              label="PolyPhen-2" 
-              value={variant.polyphenScore !== undefined ? 
-                `${formatScore(variant.polyphenScore)} (${variant.polyphenPrediction})` : undefined
-              } 
-            />
-            <InfoItem label="CADD" value={formatScore(variant.caddScore)} />
-            <InfoItem label="REVEL" value={formatScore(variant.revelScore)} />
-            <InfoItem label="SpliceAI" value={formatScore(variant.spliceAI)} />
+            <InfoItem label="Pangolin gain" value={annotation('Pangolin_Gain', variant.pangolinGain)} />
+            <InfoItem label="Pangolin loss" value={annotation('Pangolin_Loss', variant.pangolinLoss)} />
+            <InfoItem label="Pangolin 预测标签" value={annotation('Pangolin_AN', variant.pangolinAnnotation)} />
+            <InfoItem label="EVOScore2" value={annotation('EVOScore', variant.evoScore)} />
+            <InfoItem label="EVOScore2 预测标签" value={annotation('EVOScore_AN', variant.evoAnnotation)} />
+            <InfoItem label="AlphaMissense 分数" value={annotation('AlphaMissense_AM', variant.alphaMissenseScore)} />
+            <InfoItem label="AlphaMissense 预测标签" value={annotation('AlphaMissense_AMC', variant.alphaMissenseClass)} />
+            <p className="mt-2 text-xs text-fg-muted">保留流程输出的多值与标签；功能预测标签不是 ACMG 分级。</p>
           </div>
 
           {/* ACMG 分类 */}
@@ -458,7 +451,8 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
               />
             ) : (
               <>
-                <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未提供'} />
+                <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
+                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前 SNP/Indel 流程未输出 ACMG 分级。ClinVar 临床意义和功能预测单独展示。</p>}
                 <InfoItem 
                   label="证据项" 
                   value={currentCriteria.length ? (
@@ -490,32 +484,25 @@ export function VariantDetailPanel({ variant, isOpen, onClose, onOpenIGV, onUpda
           </div>
 
           {/* 临床意义 */}
-          <SectionTitle icon={Database} title="临床意义" />
+          <SectionTitle icon={Database} title="GenCC 与变异标识" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
-              label="ClinVar" 
-              value={variant.clinvarId}
-              link={variant.clinvarId ? clinVarURL(variant.clinvarId) : undefined}
-            />
-            <InfoItem label="ClinVar 意义" value={variant.clinvarSignificance} />
             <InfoItem 
               label="dbSNP" 
               value={variant.rsId}
               link={variant.rsId ? dbSnpURL(variant.rsId) : undefined}
             />
-            <InfoItem 
-              label="OMIM" 
-              value={variant.omimId}
-              link={variant.omimId ? omimURL(variant.omimId) : undefined}
-            />
-            <InfoItem label="疾病关联" value={variant.diseaseAssociation} />
+            <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />
+            <InfoItem label="Cytoband" value={annotation('Cytoband')} />
+            <InfoItem label="GenCC 疾病关联" value={annotation('GenCC_disease_title', variant.diseaseAssociation)} />
+            <InfoItem label="GenCC 遗传模式名称" value={annotation('GenCC_moi_title')} />
+            <InfoItem label="GenCC 疾病标识" value={annotation('GenCC_disease_original_curie')} />
             <InfoItem label="遗传模式" value={
               variant.inheritanceMode === 'AD' ? '常染色体显性' :
               variant.inheritanceMode === 'AR' ? '常染色体隐性' :
               variant.inheritanceMode === 'XL' ? 'X连锁' :
               variant.inheritanceMode === 'XLD' ? 'X连锁显性' :
               variant.inheritanceMode === 'XLR' ? 'X连锁隐性' :
-              variant.inheritanceMode
+              annotation('GenCC_moi_curie', variant.inheritanceMode)
             } />
           </div>
 
