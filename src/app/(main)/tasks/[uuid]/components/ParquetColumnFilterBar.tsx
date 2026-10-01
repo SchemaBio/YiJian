@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Download, X } from 'lucide-react';
 import type { TableFilterState } from '../types';
-import { exportEffectiveTable, setResultQueryMode, getResultQueryMode } from '../result-api';
+import { exportEffectiveTable } from '../result-api';
 import { api } from '@/lib/api';
 import { retainBrowserTable, refreshBrowserTable } from '@/lib/parquet-browser';
 
@@ -44,7 +44,6 @@ export function ParquetColumnFilterBar({
   const [selectedView,setSelectedView]=React.useState('');
   const [viewMessage,setViewMessage]=React.useState('');
   const [viewSaving,setViewSaving]=React.useState(false);
-  const [queryMode,setQueryMode]=React.useState<'browser'|'server'>(()=>taskId&&table?getResultQueryMode(taskId,table):'browser');
   const stateRef=React.useRef(state);stateRef.current=state;
   const changeRef=React.useRef(onChange);changeRef.current=onChange;
   const viewsURL=taskId&&table?`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${table}/views`:'';
@@ -130,11 +129,9 @@ export function ParquetColumnFilterBar({
         {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
       </div>
       {viewsURL&&<div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <select aria-label="筛选计算位置" value={queryMode} onChange={e=>{const mode=e.target.value as 'browser'|'server';setQueryMode(mode);setResultQueryMode(taskId!,table!,mode);onChange({...state,page:1});}} className="h-8 rounded border border-border-default bg-canvas-default px-2">
-          <option value="browser">浏览器本地计算</option><option value="server">服务器兼容模式</option>
-        </select>
+
         <span className="text-fg-muted">个人筛选方案</span>
-        <button type="button" onClick={()=>{void (queryMode==='browser'?refreshBrowserTable(taskId!,table!):Promise.resolve()).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
+        <button type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
         <select aria-label="加载个人筛选方案" value={selectedView} className="h-8 max-w-[180px] rounded border border-border-default bg-canvas-default px-2" onChange={event=>setSelectedView(event.target.value)}>
           <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
         </select>

@@ -279,12 +279,15 @@ export default function AnalysisDetailPage() {
 	const isVariantTab = ['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'].includes(activeTab);
 
   return (
-    <PageContent>
+    <PageContent padded={false} className="h-full min-h-0 !overflow-hidden flex flex-col">
+      <div className="max-h-[35dvh] shrink-0 overflow-auto border-b border-border-subtle bg-canvas-default px-4 pt-4 md:px-6">
       {/* 任务信息头部 */}
       <TaskHeader task={task} onBack={handleBack} />
 
       {/* 样本信息汇总卡片 */}
       {sample && <SampleSummaryCard sample={sample} />}
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
 
       {/* 标签面板和内容 */}
 		<ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
@@ -295,6 +298,7 @@ export default function AnalysisDetailPage() {
 				</div>
 			) : renderTabContent()}
 		</ResultTabs>
+      </div>
     </PageContent>
   );
 }

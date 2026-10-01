@@ -5,12 +5,19 @@ import { DEFAULT_FILTER_STATE } from '../types';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 
 vi.mock('@/lib/api',()=>({api:{get:vi.fn(),put:vi.fn()}}));
-vi.mock('../result-api',()=>({exportEffectiveTable:vi.fn(),getResultQueryMode:()=> 'browser',setResultQueryMode:vi.fn()}));
+vi.mock('../result-api',()=>({exportEffectiveTable:vi.fn()}));
 vi.mock('@/lib/parquet-browser',()=>({retainBrowserTable:()=>()=>{},refreshBrowserTable:vi.fn().mockResolvedValue(undefined)}));
 
 describe('personal filter synchronization',()=>{
   beforeEach(()=>vi.clearAllMocks());
   const preset={...DEFAULT_FILTER_STATE,searchQuery:'GENE',page:5,columnFilters:[{column:'GnomAD_AF',operator:'lte' as const,value:'0.001'}]};
+  it('does not offer server computation switching', async () => {
+    vi.mocked(api.get).mockResolvedValue([]);
+    render(<ParquetColumnFilterBar taskId="task" table="snv-indel" columns={[]} state={DEFAULT_FILTER_STATE} onChange={vi.fn()} />);
+    await waitFor(() => expect(api.get).toHaveBeenCalled());
+    expect(screen.queryByLabelText('筛选计算位置')).not.toBeInTheDocument();
+    expect(screen.queryByText('服务器兼容模式')).not.toBeInTheDocument();
+  });
   it('restores a saved filter repeatedly and resets pagination',async()=>{
     vi.mocked(api.get).mockResolvedValue([{name:'低频候选',stateJson:JSON.stringify(preset),version:3}]);
     const change=vi.fn();

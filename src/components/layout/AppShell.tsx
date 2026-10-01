@@ -124,6 +124,7 @@ function shouldMountAIAssistant(pathname: string, isEnabled: boolean): boolean {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const fixedTaskWorkspace = /^\/tasks\/[^/]+$/.test(pathname);
   const { isEnabled: aiAssistantEnabled } = useAI();
   const showAssistant = shouldMountAIAssistant(pathname, aiAssistantEnabled);
   const { collapsed, setCollapsed } = useSidebarState();
@@ -155,7 +156,7 @@ export function AppShell({ children }: AppShellProps) {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen flex flex-col yj-modern yj-workspace">
+      <div className={`${fixedTaskWorkspace ? 'h-dvh' : 'min-h-screen'} flex flex-col yj-modern yj-workspace`}>
         {/* Mobile Header */}
         <header className="h-14 flex items-center justify-between px-4 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)]">
           <div className="flex items-center gap-2">
@@ -180,7 +181,7 @@ export function AppShell({ children }: AppShellProps) {
             onClose={() => setMobileMenuOpen(false)}
           />
         )}
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="min-h-0 flex-1 overflow-auto">{children}</main>
         {showAssistant ? <AssistantButton /> : null}
       </div>
     );

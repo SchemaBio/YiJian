@@ -371,7 +371,7 @@ export function SNVIndelTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div>
+    <div className={(detailPanelOpen) ? "pb-[52dvh]" : undefined}>
       <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-4">

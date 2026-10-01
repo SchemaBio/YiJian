@@ -363,7 +363,7 @@ export function CNVSegmentTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div>
+    <div className={(detailPanelOpen || assessmentPanelOpen) ? "pb-[52dvh]" : undefined}>
       <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">

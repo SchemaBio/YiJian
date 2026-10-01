@@ -558,9 +558,6 @@ function parquetColumn(type: ResultQueryType, column: string): string {
 
 const rowSnapshots = new Map<string, { attemptId: string; datasetVersion: string; version: number; rowOrdinal?:number }>();
 const tableSnapshots = new Map<string, { datasetVersion: string; attemptId: string }>();
-const queryModes=new Map<string,'browser'|'server'>();
-export function setResultQueryMode(task:string,table:string,mode:'browser'|'server'){queryModes.set(`${task}/${table}`,mode);}
-export function getResultQueryMode(task:string,table:string){return queryModes.get(`${task}/${table}`)??'browser';}
 function snapshotKey(taskId: string, type: string, rowId: string) { return `${taskId}/${type}/${rowId}`; }
 
 async function buildTableQuery(type: ResultQueryType, filterState: TableFilterState) {
@@ -593,9 +590,7 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
 
 async function getPage<T>(taskId: string, type: ResultQueryType, filterState: TableFilterState, mapper: (row: BackendRow) => T, signal?: AbortSignal): Promise<PaginatedResult<T>> {
   const query = await buildTableQuery(type, filterState);
-  const response: BackendPage<BackendRow> = queryModes.get(`${taskId}/${type}`)==='server'
-    ? await api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${type}/query`,query,{signal})
-    : await queryBrowserParquet(taskId,type,query,signal);
+  const response: BackendPage<BackendRow> = await queryBrowserParquet(taskId,type,query,signal);
   if (!signal?.aborted) {
     tableSnapshots.set(`${taskId}/${type}`, { datasetVersion: response.version ?? '', attemptId: String(response.attemptId ?? response.items?.[0]?.attemptId ?? '') });
     for (const row of response.items ?? []) {
@@ -735,6 +730,5 @@ export function getResultRowAdjustmentHistory(taskId: string, type: string, rowI
 export async function exportEffectiveTable(taskId: string, type: ResultQueryType, state: TableFilterState) {
  const snapshot = tableSnapshots.get(`${taskId}/${type}`);
  if (!snapshot?.datasetVersion || !snapshot.attemptId) throw new Error('请先加载结果，再导出');
- if(queryModes.get(`${taskId}/${type}`)==='server')return api.download(`/v1/tasks/${encodeURIComponent(taskId)}/results/tables/${type}/export`,{...await buildTableQuery(type,state),...snapshot},{method:'POST',fallbackFilename:`results-${type}.csv`});
  return exportBrowserParquet(taskId,type,await buildTableQuery(type,state));
 }

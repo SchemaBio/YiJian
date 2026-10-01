@@ -14,6 +14,7 @@ interface DatasetInfo {
     };
     url: string;
     automaticUrl?: string;
+    automaticEncoding?: string;
     expiresAt: string;
     columns: string[];
     aliases: Record<string, string[]>;
@@ -91,15 +92,21 @@ class BrowserTable {
             if (!response.ok)
                 throw new Error('对象存储读取失败，请检查授权与 CORS');
             if (Number(response.headers.get('Content-Length')) > 128 * 1024 * 1024)
-                throw new Error('数据文件超过本地读取限额，请选择服务器兼容模式');
+                throw new Error('数据文件超过本地读取限额，请缩小数据集或使用内存更充足的浏览器');
             const buffer = await response.arrayBuffer();
             if (buffer.byteLength > 128 * 1024 * 1024)
-                throw new Error('数据文件超过本地读取限额，请选择服务器兼容模式');
+                throw new Error('数据文件超过本地读取限额，请缩小数据集或使用内存更充足的浏览器');
             if (kind === 'url') {
                 const digest = await crypto.subtle.digest('SHA-256', buffer);
                 const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
                 if (hash !== this.info.dataset.objectSha256)
                     throw new Error('Parquet 内容校验失败');
+            }
+            if (kind === 'automaticUrl' && this.info.automaticEncoding === 'gzip') {
+                const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'));
+                const decoded = await new Response(stream).arrayBuffer();
+                if (decoded.byteLength > 128 * 1024 * 1024) throw new Error('自动评估基线超过本地读取限额');
+                return new Uint8Array(decoded);
             }
             return new Uint8Array(buffer);
         }
@@ -130,16 +137,35 @@ class BrowserTable {
     }
     async open() {
         try {
-            this.info = await api.get<DatasetInfo>(this.base() + '/browser', { signal: this.lifecycle.signal });
-            const d = await import('@duckdb/duckdb-wasm');
-            const bundle = await d.selectBundle({ mvp: { mainModule: '/duckdb/duckdb-mvp.wasm', mainWorker: '/duckdb/duckdb-browser-mvp.worker.js' }, eh: { mainModule: '/duckdb/duckdb-eh.wasm', mainWorker: '/duckdb/duckdb-browser-eh.worker.js' } });
+            const started = performance.now();
+            const timings: Record<string, number> = {};
+            const timed = async <T>(stage: string, action: () => Promise<T>) => {
+                const at = performance.now();
+                const value = await action();
+                timings[stage] = Math.round(performance.now() - at);
+                return value;
+            };
+            this.info = await timed('authorization_ms', () => api.get<DatasetInfo>(this.base() + '/browser', { signal: this.lifecycle.signal }));
+            // Object transfer and WASM startup are independent. Attach all promises
+            // immediately so failures are observed and close() aborts other downloads.
+            const [parquet, automatic] = await Promise.all([
+                timed('parquet_download_ms', () => this.binary('url')),
+                timed('assessment_download_ms', () => this.info.automaticUrl ? this.binary('automaticUrl') : Promise.resolve(undefined)),
+                timed('worker_startup_ms', async () => {
+                    const d = await import('@duckdb/duckdb-wasm');
+                    const bundle = await d.selectBundle({ mvp: { mainModule: '/duckdb/duckdb-mvp.wasm', mainWorker: '/duckdb/duckdb-browser-mvp.worker.js' }, eh: { mainModule: '/duckdb/duckdb-eh.wasm', mainWorker: '/duckdb/duckdb-browser-eh.worker.js' } });
+                    check(this.lifecycle.signal);
+                    this.worker = new Worker(bundle.mainWorker!);
+                    this.db = new d.AsyncDuckDB(new d.VoidLogger(), this.worker);
+                    await this.db.instantiate(bundle.mainModule);
+                    check(this.lifecycle.signal);
+                    this.conn = await this.db.connect();
+                    await this.conn.query("SET memory_limit='512MB'; SET threads=1; SET TimeZone='UTC'");
+                }),
+            ]);
             check(this.lifecycle.signal);
-            this.worker = new Worker(bundle.mainWorker!);
-            this.db = new d.AsyncDuckDB(new d.VoidLogger(), this.worker);
-            await this.db.instantiate(bundle.mainModule);
-            this.conn = await this.db.connect();
-            await this.conn.query("SET memory_limit='512MB'; SET threads=1; SET TimeZone='UTC'");
-            await this.db.registerFileBuffer('result.parquet', await this.binary('url'));
+            await this.db.registerFileBuffer('result.parquet', parquet);
+            const materializeStarted = performance.now();
             // Materialize once in the worker; subsequent interactive queries make no
             // server query or object-store request. Ordinal identity precedes filtering.
             const seed = this.info.dataset.id + '/' + this.info.dataset.objectSha256 + '/';
@@ -149,16 +175,22 @@ class BrowserTable {
             if (count !== this.info.dataset.rows || (this.info.dataset.expectedRows !== undefined && count !== this.info.dataset.expectedRows))
                 throw new Error('Parquet 行数校验失败，请联系管理员恢复数据集');
             this.raw = (await this.rows('DESCRIBE source')).map(row => String(row.column_name)).filter(s => s !== 'file_row_number' && s !== '__row_id');
+            timings.parquet_materialize_ms = Math.round(performance.now() - materializeStarted);
+            const baselineStarted = performance.now();
             await this.conn.query('CREATE TABLE overlays(row_id VARCHAR PRIMARY KEY,payload JSON, version BIGINT); CREATE TABLE automatic(row_id VARCHAR PRIMARY KEY,baseline JSON)');
-            if (this.info.automaticUrl) {
-                await this.db.registerFileBuffer('automatic.jsonl', await this.binary('automaticUrl'));
-                await this.conn.query("INSERT INTO automatic SELECT rowId, to_json(assessment) FROM read_json_auto('automatic.jsonl',format='newline_delimited')");
+            if (automatic) {
+                await this.db.registerFileBuffer('automatic.jsonl', automatic);
+                await this.conn.query("INSERT INTO automatic SELECT rowId, assessment FROM read_json('automatic.jsonl',columns={rowId:'VARCHAR',assessment:'JSON'},format='newline_delimited')");
                 await this.db.dropFile('automatic.jsonl');
                 const baselineCount = Number((await this.rows(`SELECT count(*) AS n FROM automatic a JOIN source t ON a.row_id=t.__row_id WHERE json_extract_string(a.baseline,'$.profile')=${literal(this.info.dataset.automaticAssessmentProfile)}`))[0].n);
                 if (baselineCount !== count)
                     throw new Error('自动评估基线不完整');
             }
-            await this.sync(true);
+            timings.assessment_materialize_ms = Math.round(performance.now() - baselineStarted);
+            await timed('adjustment_sync_ms', () => this.sync(true));
+            timings.total_load_ms = Math.round(performance.now() - started);
+            // Timings contain no object URLs, annotation values or credentials.
+            window.dispatchEvent(new CustomEvent('yijian:result-load-timing', { detail: { taskId: this.task, table: this.table, timings } }));
             this.schedule();
             return this;
         }

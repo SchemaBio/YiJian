@@ -85,12 +85,12 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
     <>
       {/* 背景遮罩 */}
       <div 
-        className="fixed inset-0 bg-black/20 z-40"
+        className="hidden"
         onClick={onClose}
       />
       
       {/* 侧边面板 */}
-      <div className="fixed right-0 top-0 h-full w-[420px] bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
+      <div className="fixed inset-x-0 bottom-0 h-[52dvh] min-h-[240px] max-h-[calc(100dvh-160px)] bg-white dark:bg-[#0d1117] border-t border-border shadow-xl z-50 flex flex-col">
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
