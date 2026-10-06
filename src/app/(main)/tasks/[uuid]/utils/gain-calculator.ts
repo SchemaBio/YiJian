@@ -17,7 +17,7 @@ import {
   ClinGenClassification,
 } from '../types';
 import { classify } from './pathogenicity-classifier';
-import { calculateSection3, calculateSection4, calculateSection5 } from './loss-calculator';
+import { calculateSection4, calculateSection5 } from './loss-calculator';
 
 // ============ Section 1: 基因组内容初始评估 ============
 
@@ -99,6 +99,12 @@ export function calculateSection2Gain(criteria: Section2GainCriteria): number {
   return score;
 }
 
+/** Gain uses different RefSeq coding-gene thresholds from Loss. */
+export function calculateSection3Gain(criteria: Section3Criteria): number {
+  if (criteria.confirmed === false) return 0;
+  return criteria.geneCount >= 50 ? 0.90 : criteria.geneCount >= 35 ? 0.45 : 0;
+}
+
 // ============ 总评分计算 ============
 
 /**
@@ -108,7 +114,7 @@ export function calculateGainTotal(criteria: GainAssessmentCriteria): ScoreResul
   const sectionScores: SectionScores = {
     section1: calculateSection1Gain(criteria.section1),
     section2: calculateSection2Gain(criteria.section2),
-    section3: calculateSection3(criteria.section3),
+    section3: calculateSection3Gain(criteria.section3),
     section4: calculateSection4(criteria.section4),
     section5: calculateSection5(criteria.section5),
   };

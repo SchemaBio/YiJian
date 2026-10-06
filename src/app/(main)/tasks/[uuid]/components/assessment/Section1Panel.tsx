@@ -127,6 +127,7 @@ export function Section1Panel({
         )}
       </div>
 
+      {criteria.selected && <button type="button" onClick={() => onChange({ selected: null })} className="text-xs text-accent-fg hover:underline">清除本节选择</button>}
       {!criteria.selected && (
         <div className="text-xs text-warning-fg">
           请选择一个选项

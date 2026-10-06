@@ -6,7 +6,7 @@ import type {Column} from '@schema/ui-kit';
 import type {PaginatedResult, TableFilterState} from '../types';
 const operators = [['contains','包含'],['equals','等于'],['in','任一值'],['gte','≥'],['lte','≤'],['between','范围'],['is_missing','缺失'],['is_not_missing','非缺失']] as const;
 type Operator = typeof operators[number][0];
-const labels:Record<string,string>={Chromosome:'染色体',Position:'位置',Ref:'参考碱基',Alt:'变异碱基',reviewed:'已复核',reported:'已回报',acmgClassification:'ACMG 分类',Interval_Length:'区间长度'};
+const labels:Record<string,string>={Chromosome:'染色体',Position:'位置',Ref:'参考碱基',Alt:'变异碱基',pinned:'置顶',reported:'回报',acmgClassification:'ACMG 分类',Interval_Length:'区间长度'};
 function ColumnFilter({fields,types,state,onChange}: {fields:string[];types?:PaginatedResult<unknown>['columnTypes'];state:TableFilterState;onChange:(state:TableFilterState)=>void}) {
  const [open,setOpen]=React.useState(false);
  const [field,setField]=React.useState(fields[0]??'');

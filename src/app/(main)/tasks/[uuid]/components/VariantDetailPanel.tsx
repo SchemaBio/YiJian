@@ -1,12 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { VariantResourceLinks } from './VariantResourceLinks';
 import { ClinVarBadge } from './ClinVarBadge';
 import { X, ExternalLink, FileText, Database, Dna, Edit2, Check, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
-import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
+import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 
 function pubMedURL(pmid: string): string {
@@ -28,6 +29,7 @@ function omimURL(omimId: string): string {
 
 interface VariantDetailPanelProps {
   taskId: string;
+  referenceGenome?: string;
   variant: SNVIndel | null;
   isOpen: boolean;
   onClose: () => void;
@@ -193,7 +195,7 @@ function ACMGPointsEditor({
   </div>;
 }
 
-export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
+export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onOpenIGV, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
@@ -231,6 +233,7 @@ export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV
   const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
   
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
+  const vaf = optionalAnnotationNumber(sourceAnnotation(variant, 'VAF'));
 
   // 保存 ACMG 分类
   const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false) => {
@@ -298,11 +301,75 @@ export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-y-auto p-4">
+          {/* 人工解读 */}
+          <SectionTitle icon={MessageSquare} title="人工解读" />
+          <div className="bg-canvas-subtle rounded-lg p-3">
+            <textarea
+              value={interpretation}
+              onChange={(e) => setInterpretation(e.target.value)}
+              placeholder="请输入您对该变异的解读分析..."
+              className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
+            />
+            <div className="mt-2 space-y-2">
+              <input value={interpretationReason} onChange={event => setInterpretationReason(event.target.value)} placeholder="本次调整理由（保存时必填）" className="h-9 w-full rounded-md border border-border-default bg-canvas-default px-2 text-sm" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
+                <button type="button" disabled={interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
+              </div>
+              {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
+            </div>
+          </div>
+
+          {/* ACMG 分类 */}
+          <SectionTitle
+            icon={FileText}
+            title="ACMG 分类"
+            action={
+              canEditACMG && !isEditingACMG && (
+                <button
+                  onClick={() => setIsEditingACMG(true)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  编辑
+                </button>
+              )
+            }
+          />
+          <div className="bg-canvas-subtle rounded-lg p-3">
+            {isEditingACMG ? (
+              <ACMGPointsEditor
+                variant={variant}
+                onSave={handleSaveACMG}
+                onCancel={() => setIsEditingACMG(false)}
+              />
+            ) : (
+              <>
+                <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
+                <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : '自动初评'} />
+                <InfoItem label="自动初评分数" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
+                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
+                <InfoItem
+                  label="证据项"
+                  value={currentCriteria.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {currentCriteria.map((c) => (
+                        <span key={c} className="px-1.5 py-0.5 text-xs bg-canvas-inset rounded">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  ) : undefined}
+                />
+              </>
+            )}
+          </div>
+
           {/* 基本信息 */}
           <SectionTitle icon={Dna} title="基本信息" />
           <div className="bg-canvas-subtle rounded-lg p-3">
             <InfoItem label="基因" value={variant.gene} />
-            <InfoItem 
+            <InfoItem
               label="位置" 
               value={
                 <button
@@ -326,11 +393,19 @@ export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV
             <InfoItem label="变异后果" value={variant.consequence} />
           </div>
 
+          <SectionTitle icon={ExternalLink} title="数据库与判读资源" />
+          <VariantResourceLinks variant={variant} referenceGenome={referenceGenome} />
+
           {/* 测序质量 */}
           <SectionTitle icon={FileText} title="测序质量" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem label="样本变异等位基因比例（VAF）" value={`${(variant.alleleFrequency * 100).toFixed(1)}%`} />
-            <InfoItem label="覆盖深度" value={`${variant.depth}X`} />
+            <InfoItem label="VAF" value={vaf === undefined || vaf < 0 || vaf > 1 ? '未提供' : `${(vaf * 100).toFixed(1)}%`} />
+            <InfoItem label="QUAL" value={annotation('Quality') ?? '未提供'} />
+            <InfoItem label="FILTER" value={annotation('Filter') ?? '未提供'} />
+            <InfoItem label="DP（覆盖深度）" value={annotation('Depth') ?? '未提供'} />
+            <InfoItem label="AD（等位基因深度）" value={annotation('AD') ?? '未提供'} />
+            <InfoItem label="GQ（基因型质量）" value={annotation('GQ') ?? '未提供'} />
+            <p className="mt-2 text-xs text-fg-muted">数值来自原始注释；QUAL 是位点质量，GQ 是基因型质量，不能相互替代。</p>
           </div>
 
           <SectionTitle icon={Database} title="ClinVar 注释" />
@@ -365,51 +440,6 @@ export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV
             <p className="mt-2 text-xs text-fg-muted">保留流程输出的多值与标签；功能预测标签不是 ACMG 分级。</p>
           </div>
 
-          {/* ACMG 分类 */}
-          <SectionTitle 
-            icon={FileText} 
-            title="ACMG 分类" 
-            action={
-              canEditACMG && !isEditingACMG && (
-                <button
-                  onClick={() => setIsEditingACMG(true)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  编辑
-                </button>
-              )
-            }
-          />
-          <div className="bg-canvas-subtle rounded-lg p-3">
-            {isEditingACMG ? (
-              <ACMGPointsEditor
-                variant={variant}
-                onSave={handleSaveACMG}
-                onCancel={() => setIsEditingACMG(false)}
-              />
-            ) : (
-              <>
-                <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
-                <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : '自动初评'} />
-                <InfoItem label="自动初评分数" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
-                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
-                <InfoItem 
-                  label="证据项" 
-                  value={currentCriteria.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {currentCriteria.map((c) => (
-                        <span key={c} className="px-1.5 py-0.5 text-xs bg-canvas-inset rounded">
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  ) : undefined}
-                />
-              </>
-            )}
-          </div>
-
           <SectionTitle icon={FileText} title="判读变更记录" />
           <div className="space-y-2 rounded-lg bg-canvas-subtle p-3">
             {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">暂无调整记录</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
@@ -419,29 +449,10 @@ export function VariantDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV
             </article>)}
           </div>
 
-          {/* 人工解读 */}
-          <SectionTitle icon={MessageSquare} title="人工解读" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
-            <textarea
-              value={interpretation}
-              onChange={(e) => setInterpretation(e.target.value)}
-              placeholder="请输入您对该变异的解读分析..."
-              className="w-full min-h-[120px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
-            />
-            <div className="mt-2 space-y-2">
-              <input value={interpretationReason} onChange={event => setInterpretationReason(event.target.value)} placeholder="本次调整理由（保存时必填）" className="h-9 w-full rounded-md border border-border-default bg-canvas-default px-2 text-sm" />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
-                <button type="button" disabled={interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
-              </div>
-              {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
-            </div>
-          </div>
-
           {/* 临床意义 */}
           <SectionTitle icon={Database} title="GenCC 与变异标识" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
+            <InfoItem
               label="dbSNP" 
               value={variant.rsId}
               link={variant.rsId ? dbSnpURL(variant.rsId) : undefined}

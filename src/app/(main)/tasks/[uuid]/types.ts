@@ -178,6 +178,8 @@ export type ACMGClassification =
 // ============ SNP/InDel变异 ============
 // ============ 变异审核状态 ============
 export interface VariantReviewStatus {
+  pinned: boolean;              // 重要位点：独立于历史复核
+  pinSource?: 'automatic' | 'manual';
   reviewed: boolean;             // 是否已审核
   reported: boolean;             // 是否已回报
   reviewedBy?: string;           // 审核人
@@ -258,6 +260,8 @@ export interface SNVIndel extends VariantReviewStatus {
 export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 
 export interface CNVSegment extends VariantReviewStatus {
+  attemptId?: string;
+  annotationValues?: Record<string, string>;
   assessment?: CNVAssessment;
   id: string;
   chromosome: string;
@@ -274,6 +278,7 @@ export interface CNVSegment extends VariantReviewStatus {
 
 // ============ CNV变异(外显子级别) ============
 export interface CNVExon extends VariantReviewStatus {
+  annotationValues?: Record<string, string>;
   assessment?: CNVAssessment;
   id: string;
   gene: string;
@@ -568,6 +573,7 @@ export interface Section2GainCriteria {
 // ============ Section 3: 基因数量评估 ============
 
 export interface Section3Criteria {
+  confirmed?: boolean;
   geneCount: number;
 }
 
@@ -740,6 +746,7 @@ export interface CNVAssessment {
   classification: ClinGenClassification;
   
   // 元数据
+  autoEvidenceNotes?: string[];
   isAutoCalculated: boolean;
   isUserModified: boolean;
   createdAt: string;

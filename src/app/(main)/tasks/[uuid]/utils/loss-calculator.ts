@@ -102,6 +102,7 @@ export function calculateSection2Loss(criteria: Section2LossCriteria): number {
  * 基于 ClinGen 标准的基因数量评分表
  */
 export function calculateSection3(criteria: Section3Criteria): number {
+  if (criteria.confirmed === false) return 0;
   const { geneCount } = criteria;
   
   if (geneCount === 0) return 0;

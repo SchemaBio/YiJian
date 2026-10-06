@@ -6,10 +6,10 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { CNVSegment, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getCNVSegments, reportVariant, reviewVariant, saveCNVAssessment } from '../result-api';
+import { getCNVSegments, reportVariant, pinVariant, saveCNVAssessment } from '../result-api';
 import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
-import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
 import { CNVAssessmentPanel } from './CNVAssessmentPanel';
@@ -50,7 +50,7 @@ export function CNVSegmentTab({
   const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
   const [assessmentError, setAssessmentError] = React.useState<string | null>(null);
   const [assessmentSaving, setAssessmentSaving] = React.useState(false);
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='cnv-segment')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -95,8 +95,8 @@ export function CNVSegmentTab({
   // 打开评估面板
   const handleOpenAssessmentPanel = React.useCallback((variant: CNVSegment) => {
     if (variant.type === 'Normal' || variant.type === 'Unknown') return;
-    setAssessmentVariant(variant);
-    const cached = assessmentCache[variant.id];
+    const cached = assessmentCache[variant.id] ?? variant.assessment;
+    setAssessmentVariant({ ...variant, adjustmentVersion: cached?.adjustmentVersion ?? variant.adjustmentVersion });
     if (cached) {
       loadAssessment(cached);
     } else {
@@ -191,19 +191,19 @@ export function CNVSegmentTab({
     setFilterState({ ...filterState, filters: newFilters, page: 1 });
   }, [filterState, setFilterState]);
 
-  // 处理审核状态变更
-  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  // 处理置顶状态变更
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reviewed: checked }
+      [id]: { ...currentState, pinned: checked }
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
     try {
-      await reviewVariant(taskId, 'cnv-segment', id, checked);
+      await pinVariant(taskId, 'cnv-segment', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '更新复核状态失败');
+      setOperationError(error instanceof Error ? error.message : '更新置顶状态失败');
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -214,7 +214,7 @@ export function CNVSegmentTab({
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -235,27 +235,12 @@ export function CNVSegmentTab({
     }
   }, [taskId]);
 
-  // 获取变异的审核状态
+  // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: CNVSegment) => {
-    return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
+    return reviewStatus[variant.id] ?? { pinned: variant.pinned, reported: variant.reported };
   }, [reviewStatus]);
 
   const columns: Column<CNVSegment>[] = [
-    {
-      id: 'reviewed',
-      header: <ReviewColumnHeader />,
-      accessor: (row) => {
-        const state = getReviewState(row);
-        return (
-          <ReviewCheckbox
-            checked={state.reviewed}
-            onChange={(checked) => handleReviewChange(row.id, checked, state)}
-            disabled={pendingVariantIDs.has(row.id)}
-          />
-        );
-      },
-      width: 60,
-    },
     {
       id: 'reported',
       header: <ReportColumnHeader />,
@@ -265,6 +250,21 @@ export function CNVSegmentTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+            disabled={pendingVariantIDs.has(row.id)}
+          />
+        );
+      },
+      width: 60,
+    },
+    {
+      id: 'pinned',
+      header: <PinColumnHeader />,
+      accessor: (row) => {
+        const state = getReviewState(row);
+        return (
+          <PinCheckbox
+            checked={state.pinned}
+            onChange={(checked) => handlePinChange(row.id, checked, state)}
             disabled={pendingVariantIDs.has(row.id)}
           />
         );
@@ -324,7 +324,8 @@ export function CNVSegmentTab({
         }
         const cachedAssessment = getAssessmentForCNV(row.id);
         // 如果有缓存的评估结果，使用缓存；否则显示默认VUS
-        const classification = cachedAssessment?.classification ?? 'VUS';
+        if (!cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenAssessmentPanel(row); }} className="text-xs text-accent-fg hover:underline">待评估 · 计算器</button>;
+        const classification = cachedAssessment.classification;
         const score = cachedAssessment?.totalScore ?? 0;
         const isUserModified = cachedAssessment?.isUserModified ?? false;
         
@@ -453,6 +454,8 @@ export function CNVSegmentTab({
 
       {/* CNV 详情面板 */}
       <CNVDetailPanel
+        taskId={taskId}
+        onOpenAssessment={variant => handleOpenAssessmentPanel(variant as CNVSegment)}
         variant={selectedVariant}
         variantType="segment"
         isOpen={detailPanelOpen}
@@ -473,7 +476,7 @@ export function CNVSegmentTab({
         </div>
       )}
       {assessmentSaving && (
-        <div className="mt-3 text-sm text-fg-muted">???? CNV ??...</div>
+        <div className="mt-3 text-sm text-fg-muted">正在保存 CNV 评估…</div>
       )}
       <CNVAssessmentPanel
         cnv={assessmentVariant}
@@ -481,6 +484,8 @@ export function CNVSegmentTab({
         isOpen={assessmentPanelOpen}
         onClose={handleCloseAssessmentPanel}
         onSave={handleSaveAssessment}
+        saving={assessmentSaving}
+        error={assessmentError}
         onReset={resetAssessment}
         onCriteriaChange={updateCriteria}
       />

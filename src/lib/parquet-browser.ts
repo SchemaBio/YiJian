@@ -289,7 +289,7 @@ class BrowserTable {
             const limit = Math.max(1, Math.min(200, q.limit)), offset = Math.max(0, q.offset);
             const result = await this.rows(`SELECT t.*,o.payload AS __adjustments,COALESCE(o.version,0) AS __version,a.baseline AS __acmg ${this.joined()}${selection.where} ORDER BY ${selection.order} LIMIT ${limit} OFFSET ${offset}`, signal);
             check(signal);
-            const page = { items: result.map(row => this.normalize(row)), total, rowCount: this.info.dataset.rows, columns: [...new Set([...this.raw, ...OVERLAY_FIELDS])].sort(), columnTypes: Object.fromEntries([...this.raw, ...OVERLAY_FIELDS].map(s => [s, fieldType(s)])), columnAliases: this.info.aliases, fieldProfileVersion: 'parquet-fields-v2', version: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId, offset, limit };
+            const page = { items: result.map(row => this.normalize(row)), total, rowCount: this.info.dataset.rows, columns: [...new Set([...this.raw, ...OVERLAY_FIELDS.filter(field => field !== 'reviewed')])].sort(), columnTypes: Object.fromEntries([...this.raw, ...OVERLAY_FIELDS.filter(field => field !== 'reviewed')].map(s => [s, fieldType(s)])), columnAliases: this.info.aliases, fieldProfileVersion: 'parquet-fields-v2', version: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId, offset, limit };
             if (this.pages.size >= 20)
                 this.pages.delete(this.pages.keys().next().value!);
             this.pages.set(key, page);
@@ -312,12 +312,22 @@ class BrowserTable {
             row.alleleFrequency = source.VAF;
             row.vaf = source.VAF;
         }
+        if (this.table === 'cnv-segment' || this.table === 'cnv-exon') row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));
+        if (this.table === 'cnv-segment') {
+            row.copyNumber = source.CN ?? source.Copy_Number ?? source.Col8;
+            row.copyRatio = source.Copy_Ratio; // Never interpret absolute CN as a ratio.
+            row.log2Ratio = source.Log2_Ratio ?? source.log2 ?? source.Col5;
+        }
         Object.assign(row, overlay);
         if (overlay.acmgOverride)
             row.acmgAssessmentSource = 'manual_override';
         else if ('acmgEvidence' in overlay)
             row.acmgAssessmentSource = 'manual_evidence';
-        row.reviewStatus = { reviewed: row.reviewed, reported: row.reported };
+        // Explicit false is an enduring user override, not a missing value.
+        const effectiveClass = overlay.acmgOverride || row.acmgClassification;
+        row.pinned = typeof overlay.pinned === 'boolean' ? overlay.pinned : this.table === 'snv-indel' && ['Pathogenic', 'Likely_Pathogenic'].includes(String(effectiveClass));
+        row.pinSource = typeof overlay.pinned === 'boolean' ? 'manual' : row.pinned ? 'automatic' : undefined;
+        row.reviewStatus = { pinned: row.pinned, reviewed: row.reviewed, reported: row.reported };
         return row;
     }
     async export(q: LocalQuery) {

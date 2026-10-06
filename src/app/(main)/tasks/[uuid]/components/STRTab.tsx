@@ -6,10 +6,10 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { STR, STRStatus, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSTRs, reportVariant, reviewVariant } from '../result-api';
+import { getSTRs, reportVariant, pinVariant } from '../result-api';
 import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
-import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface STRTabProps {
@@ -37,7 +37,7 @@ export function STRTab({
   const [requestError, setRequestError] = React.useState<string | null>(null);
   const [operationError, setOperationError] = React.useState<string | null>(null);
   const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='str')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -91,19 +91,19 @@ export function STRTab({
     setFilterState({ ...filterState, filters: newFilters, page: 1 });
   }, [filterState, setFilterState]);
 
-  // 处理审核状态变更
-  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  // 处理置顶状态变更
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reviewed: checked }
+      [id]: { ...currentState, pinned: checked }
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
     try {
-      await reviewVariant(taskId, 'str', id, checked);
+      await pinVariant(taskId, 'str', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '更新复核状态失败');
+      setOperationError(error instanceof Error ? error.message : '更新置顶状态失败');
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -114,7 +114,7 @@ export function STRTab({
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -135,29 +135,14 @@ export function STRTab({
     }
   }, [taskId]);
 
-  // 获取变异的审核状态
+  // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: STR) => {
-    return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
+    return reviewStatus[variant.id] ?? { pinned: variant.pinned, reported: variant.reported };
   }, [reviewStatus]);
 
   const sortedData = result?.data ?? [];
 
   const columns: Column<STR>[] = [
-    {
-      id: 'reviewed',
-      header: <ReviewColumnHeader />,
-      accessor: (row) => {
-        const state = getReviewState(row);
-        return (
-          <ReviewCheckbox
-            checked={state.reviewed}
-            onChange={(checked) => handleReviewChange(row.id, checked, state)}
-            disabled={pendingVariantIDs.has(row.id)}
-          />
-        );
-      },
-      width: 60,
-    },
     {
       id: 'reported',
       header: <ReportColumnHeader />,
@@ -167,6 +152,21 @@ export function STRTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+            disabled={pendingVariantIDs.has(row.id)}
+          />
+        );
+      },
+      width: 60,
+    },
+    {
+      id: 'pinned',
+      header: <PinColumnHeader />,
+      accessor: (row) => {
+        const state = getReviewState(row);
+        return (
+          <PinCheckbox
+            checked={state.pinned}
+            onChange={(checked) => handlePinChange(row.id, checked, state)}
             disabled={pendingVariantIDs.has(row.id)}
           />
         );

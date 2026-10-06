@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { Tooltip } from '@schema/ui-kit';
 import { HelpCircle } from 'lucide-react';
+import { calculateSection3Gain } from '../../utils/gain-calculator';
+import { calculateSection3 } from '../../utils/loss-calculator';
 import type { Section3Criteria } from '../../types';
 
 interface Section3PanelProps {
@@ -22,26 +24,22 @@ const GENE_COUNT_SCORES = [
 ] as const;
 
 /**
- * 根据基因数量获取评分
- */
-function getScoreForGeneCount(count: number): number {
-  if (count === 0) return 0;
-  if (count >= 1 && count <= 24) return 0;
-  if (count >= 25 && count <= 34) return 0.45;
-  if (count >= 35) return 0.90;
-  return 0;
-}
-
-/**
  * Section 3: 基因数量评估面板
  */
 export function Section3Panel({ cnvType, criteria, onChange }: Section3PanelProps) {
-  const currentScore = getScoreForGeneCount(criteria.geneCount);
+  const gain = cnvType === 'Amplification';
+  const ranges = gain ? [
+    { range: '0-34', min: 0, max: 34, score: 0, description: '0-34个蛋白编码基因' },
+    { range: '35-49', min: 35, max: 49, score: 0.45, description: '35-49个蛋白编码基因' },
+    { range: '50+', min: 50, max: Infinity, score: 0.90, description: '50个或更多蛋白编码基因' },
+  ] : GENE_COUNT_SCORES;
+  const currentScore = gain ? calculateSection3Gain(criteria) : calculateSection3(criteria);
 
   const handleGeneCountChange = (value: string) => {
-    const count = parseInt(value, 10);
-    if (!isNaN(count) && count >= 0) {
-      onChange({ geneCount: count });
+    if (value === '') { onChange({ geneCount: 0, confirmed: false }); return; }
+    const count = Number(value);
+    if (Number.isSafeInteger(count) && count >= 0) {
+      onChange({ geneCount: count, confirmed: true });
     }
   };
 
@@ -61,7 +59,8 @@ export function Section3Panel({ cnvType, criteria, onChange }: Section3PanelProp
             type="number"
             id="gene-count"
             min={0}
-            value={criteria.geneCount}
+            value={criteria.confirmed === false ? '' : criteria.geneCount}
+            placeholder="待确认"
             onChange={(e) => handleGeneCountChange(e.target.value)}
             className="w-24 px-3 py-2 text-sm border border-border rounded-md bg-canvas-default focus:outline-none focus:ring-2 focus:ring-accent-emphasis"
           />
@@ -85,10 +84,10 @@ export function Section3Panel({ cnvType, criteria, onChange }: Section3PanelProp
             </tr>
           </thead>
           <tbody>
-            {GENE_COUNT_SCORES.map((item, index) => {
+            {ranges.map((item, index) => {
               const isActive = 
-                (item.min === 0 && criteria.geneCount === 0) ||
-                (criteria.geneCount >= item.min && criteria.geneCount <= item.max);
+                criteria.confirmed !== false && ((item.min === 0 && criteria.geneCount === 0) ||
+                (criteria.geneCount >= item.min && criteria.geneCount <= item.max));
               
               return (
                 <tr 

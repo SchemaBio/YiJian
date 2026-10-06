@@ -37,13 +37,13 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
     const known = Boolean(count) && !unqueried;
     return { ...item, count, known, status: unqueried ? '待查询' : !count ? '未提供' : count.total === 0 ? '无检出结果' : '可判读' };
   });
-  const value = (item: typeof counts[number], key: 'total' | 'reviewed' | 'reported') => item.known ? String(item.count[key]) : '—';
+  const value = (item: typeof counts[number], key: 'total' | 'reported') => item.known ? String(item.count[key]) : '—';
   const rows = [
-    ['结果类型', '检出数量', '已复核', '已标记回报', '数据状态'],
-    ...counts.map(item => [item.label, value(item, 'total'), value(item, 'reviewed'), value(item, 'reported'), item.status]),
+    ['结果类型', '检出数量', '回报', '数据状态'],
+    ...counts.map(item => [item.label, value(item, 'total'), value(item, 'reported'), item.status]),
   ];
   const allKnown = counts.every(item => item.known);
-  const totals = ['total', 'reviewed', 'reported'].map(key => allKnown ? String(counts.reduce((sum, item) => sum + item.count[key as 'total' | 'reviewed' | 'reported'], 0)) : '—');
+  const totals = ['total', 'reported'].map(key => allKnown ? String(counts.reduce((sum, item) => sum + item.count[key as 'total' | 'reported'], 0)) : '—');
   rows.push(['合计', ...totals, allKnown ? '完整统计' : '部分数据未就绪']);
 
   return (
@@ -67,14 +67,14 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
             <tbody>{counts.map(item => (
               <tr key={item.key} className="border-t border-border-default hover:bg-canvas-subtle/50">
                 <th scope="row" className="whitespace-nowrap px-2 py-1 font-medium text-fg-default"><button type="button" onClick={() => onNavigate(item.tab)} className="text-accent-fg hover:underline" title={`查看 ${item.label}`}>{item.label}</button></th>
-                {(['total', 'reviewed', 'reported'] as const).map(key => <td key={key} className="px-2 py-1 tabular-nums text-fg-default">{value(item, key)}</td>)}
+                {(['total', 'reported'] as const).map(key => <td key={key} className="px-2 py-1 tabular-nums text-fg-default">{value(item, key)}</td>)}
                 <td className="whitespace-nowrap px-2 py-1 text-xs text-fg-muted">{item.status}</td>
               </tr>
             ))}</tbody>
             <tfoot className="border-t border-border-default bg-canvas-subtle font-medium text-fg-default"><tr><th scope="row" className="px-2 py-1">合计</th>{totals.map((total, index) => <td key={index} className="px-2 py-1 tabular-nums">{total}</td>)}<td colSpan={1} className="px-2 py-1 text-xs font-normal text-fg-muted">{allKnown ? '完整统计' : '部分数据未就绪'}</td></tr></tfoot>
           </table>
         </div>
-        <p className="border-t border-border-default px-2 py-1 text-xs text-fg-muted">“已标记回报”不等同于正式报告签发。</p>
+        <p className="border-t border-border-default px-2 py-1 text-xs text-fg-muted">“回报”不等同于正式报告签发。</p>
       </section>
 
       <SampleFamilyTable context={context} />

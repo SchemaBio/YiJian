@@ -26,6 +26,8 @@ import { Section4Panel } from './assessment/Section4Panel';
 import { Section5Panel } from './assessment/Section5Panel';
 
 interface CNVAssessmentPanelProps {
+  saving?: boolean;
+  error?: string | null;
   /** CNV变异数据 */
   cnv: CNVSegment | CNVExon | null;
   /** 当前评估数据 */
@@ -173,6 +175,8 @@ function CollapsibleSection({
  */
 export function CNVAssessmentPanel({
   cnv,
+  saving = false,
+  error,
   assessment,
   isOpen,
   onClose,
@@ -271,6 +275,8 @@ export function CNVAssessmentPanel({
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-y-auto p-4">
+          <p className="mb-3 text-xs text-fg-muted">基于 ACMG/ClinGen 2020 标准；预勾选仅使用已提供证据，评分不是自动确诊。</p>
+          {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
           {/* 分数汇总 */}
           <ScoreSummaryCard
             classification={assessment.classification}
@@ -341,9 +347,11 @@ export function CNVAssessmentPanel({
 
         {/* 底部操作栏 */}
         <div className="border-t border-border p-4 bg-canvas-subtle">
+          {error && <p role="alert" className="mb-2 text-sm text-danger-fg">{error}</p>}
           <div className="flex gap-3">
             {onReset && (
               <button
+                disabled={saving}
                 onClick={onReset}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
               >
@@ -353,11 +361,12 @@ export function CNVAssessmentPanel({
             )}
             {onSave && (
               <button
+                disabled={saving}
                 onClick={() => onSave(assessment)}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-accent-emphasis text-white rounded-md hover:bg-accent-fg transition-colors"
               >
                 <Save className="w-4 h-4" />
-                保存
+                {saving ? '保存中…' : '保存'}
               </button>
             )}
           </div>

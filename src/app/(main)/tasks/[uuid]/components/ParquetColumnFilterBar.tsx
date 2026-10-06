@@ -20,7 +20,7 @@ function label(field: string): string {
   const common: Record<string, string> = {
     Chromosome: '染色体', Position: '位置', Gene: '基因', Type: '类型', VAF: 'VAF',
     GnomAD_AF: 'gnomAD AF', GnomAD_AF_EAS: 'gnomAD 东亚 AF', ClinVar_Sig: 'ClinVar 意义',
-    acmgClassification: 'ACMG 评定', reviewed: '复核状态', reported: '回报状态',
+    acmgClassification: 'ACMG 评定', pinned: '置顶', reported: '回报',
   };
   return common[field] ?? field.replaceAll('_', ' ');
 }

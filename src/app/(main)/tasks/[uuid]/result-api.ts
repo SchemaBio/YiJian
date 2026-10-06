@@ -140,6 +140,8 @@ function nums(value: unknown): number[] {
 function normalizeReview(row: BackendRow): VariantReviewStatus {
   const review = row.reviewStatus ?? row.review_status ?? {};
   return {
+    pinned: row.pinned === true || review.pinned === true,
+    pinSource: row.pinSource === 'automatic' ? 'automatic' : row.pinSource === 'manual' ? 'manual' : undefined,
     reviewed: Boolean(review.reviewed ?? row.reviewed),
     reported: Boolean(review.reported ?? row.reported),
     reviewedBy: s(review.reviewedBy ?? review.reviewed_by ?? row.reviewedBy ?? row.reviewed_by, undefined as unknown as string),
@@ -391,13 +393,15 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
   const end = n(row.endPosition);
   return {
     id: s(row.id),
+    attemptId: s(row.attemptId),
+    annotationValues: row.annotationValues as Record<string, string> | undefined,
     chromosome: s(row.chromosome),
     startPosition: start,
     endPosition: end,
-    length: Math.max(0, end - start + 1),
+    length: Math.max(0, end - start),
     type: cnvType(row.type),
-    copyNumber: nullableNumber(row.copyNumber),
-    copyRatio: nullableNumber(row.copyRatio),
+    copyNumber: nullableNumber(row.copyNumber ?? row.CN ?? row.Col8),
+    copyRatio: nullableNumber(row.Copy_Ratio ?? row.copyRatio),
     log2Ratio: nullableNumber(row.log2Ratio),
     genes: arr(row.dosageGenes ?? row.genccADGenes),
     confidence: nullableNumber(row.weight ?? row.quality),
@@ -548,7 +552,7 @@ function parquetColumn(type: ResultQueryType, column: string): string {
     zygosity: 'Zygosity', genotype: 'Genotype', alleleFrequency: 'VAF', depth: 'Depth',
     gnomadAF: 'GnomAD_AF', gnomadEasAF: 'GnomAD_AF_EAS', clinvarSignificance: 'ClinVar_Sig',
     pathogenicity: 'ClinVar_Sig', status: 'Status', teType: 'TE_Family', acmgClassification: 'acmgClassification',
-    gene: 'Gene', reviewed: 'reviewed', reported: 'reported',
+    gene: 'Gene', pinned: 'pinned', reviewed: 'reviewed', reported: 'reported',
     repeatUnit: 'Repeat_Unit', normalRangeMax: 'Normal_Max',
   };
   if (type === 'str' && column === 'status') return 'STR_Status';
@@ -669,6 +673,13 @@ export async function getGeneLists(): Promise<GeneListOption[]> {
   }
 }
 
+export async function pinVariant(taskId: string, type: string, variantId: string, pinned: boolean): Promise<{ pinned: boolean }> {
+  const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
+  if (!snapshot) throw new Error('结果版本未知，请刷新检出表后再操作');
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { pinned }, pinned ? '手动置顶' : '取消置顶');
+  return { pinned };
+}
+
 export async function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
   if (!snapshot) throw new Error('请刷新结果后再保存');
@@ -679,7 +690,7 @@ export async function reviewVariant(taskId: string, type: string, variantId: str
 export async function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
   if (!snapshot) throw new Error('请刷新结果后再保存');
-  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reported }, reported ? '标记已回报' : '撤回已回报标记');
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reported }, reported ? '选入回报' : '撤回回报');
   return { reported };
 }
 

@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { X, ExternalLink, FileText, Database, Dna, MapPin, BarChart3, GripHorizontal } from 'lucide-react';
+import { CNVRegionPlot } from './CNVRegionPlot';
+import { X, ExternalLink, FileText, Database, Dna, MapPin } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { CNVSegment, CNVExon } from '../types';
 
@@ -10,8 +11,10 @@ interface CNVDetailPanelProps {
   variantType: 'segment' | 'exon';
   isOpen: boolean;
   onClose: () => void;
-  allSegments?: CNVSegment[];  // 所有CNV片段数据，用于绘制全基因组图
+  allSegments?: CNVSegment[];  // 保留旧调用方兼容；区域图从完整本地数据集查询
   referenceId?: string;
+  taskId?: string;
+  onOpenAssessment?: (variant: CNVSegment | CNVExon) => void;
 }
 
 function geneCardsURL(gene: string): string {
@@ -97,244 +100,18 @@ function formatLength(length: number): string {
 }
 
 // 拖动 Hook
-function useDraggable(initialPosition: { x: number; y: number } = { x: 0, y: 0 }) {
-  const [position, setPosition] = React.useState(initialPosition);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const dragStartRef = React.useRef({ x: 0, y: 0 });
-  const positionRef = React.useRef(position);
-
-  React.useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX - positionRef.current.x,
-      y: e.clientY - positionRef.current.y,
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (!isDragging) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      setPosition({
-        x: e.clientX - dragStartRef.current.x,
-        y: e.clientY - dragStartRef.current.y,
-      });
-    };
-    const handleMouseUp = () => setIsDragging(false);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const resetPosition = React.useCallback(() => setPosition({ x: 0, y: 0 }), []);
-  return { position, isDragging, handleMouseDown, resetPosition };
-}
-
-// 判断是否为 CNVExon 类型
 function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
-  return 'gene' in variant && 'exon' in variant;
+  return 'gene' in variant;
 }
 
-// CNV 图弹窗组件
-function CNVPlotModal({
-  variant,
-  allSegments,
-  isOpen,
-  onClose
-}: {
-  variant: CNVSegment;
-  allSegments: CNVSegment[];
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const { position, isDragging, handleMouseDown, resetPosition } = useDraggable();
-
-  React.useEffect(() => {
-    if (!isOpen) resetPosition();
-  }, [isOpen, resetPosition]);
-
-  // 当前接口提供的是当前页的 segment 调用结果，而不是 CNR/bin 级原始信号。
-  // 因此只画已加载片段与调用出的 copy number，不以零值填充未检出区域。
-  const segmentData = React.useMemo(() => {
-    const segments = allSegments
-      .filter((segment) => segment.chromosome === variant.chromosome)
-      .sort((left, right) => left.startPosition - right.startPosition || left.endPosition - right.endPosition);
-    const starts = segments.map((segment) => segment.startPosition).concat(variant.startPosition);
-    const ends = segments.map((segment) => segment.endPosition).concat(variant.endPosition);
-    const first = Math.min(...starts);
-    const last = Math.max(...ends);
-    const padding = Math.max(Math.round((last - first) * 0.08), 1_000);
-
-    return {
-      segments,
-      rangeStart: Math.max(0, first - padding),
-      rangeEnd: last + padding,
-    };
-  }, [allSegments, variant.chromosome, variant.endPosition, variant.startPosition]);
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const containerWidth = container.clientWidth - 40;
-    canvas.width = containerWidth * dpr;
-    canvas.height = 280 * dpr;
-    canvas.style.width = `${containerWidth}px`;
-    canvas.style.height = '280px';
-    ctx.scale(dpr, dpr);
-
-    const width = containerWidth;
-    const height = 280;
-    const padding = { top: 38, right: 20, bottom: 48, left: 74 };
-    const plotWidth = width - padding.left - padding.right;
-    const plotHeight = height - padding.top - padding.bottom;
-
-    // 背景
-    ctx.fillStyle = '#f6f8fa';
-    ctx.fillRect(0, 0, width, height);
-
-    // 绑定区域背景
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(padding.left, padding.top, plotWidth, plotHeight);
-
-    const { segments, rangeStart, rangeEnd } = segmentData;
-    const coordinateRange = Math.max(rangeEnd - rangeStart, 1);
-    const laneLabels: Record<CNVSegment['type'], string> = {
-      Amplification: '扩增',
-      Deletion: '缺失',
-      Normal: '其他',
-      Unknown: '未提供',
-    };
-    const laneIndex: Record<CNVSegment['type'], number> = {
-      Amplification: 0,
-      Deletion: 1,
-      Normal: 2,
-      Unknown: 3,
-    };
-    const laneHeight = 34;
-    const laneGap = 17;
-    const laneTop = padding.top + 12;
-
-    Object.entries(laneLabels).forEach(([type, label]) => {
-      const lane = laneIndex[type as CNVSegment['type']];
-      const y = laneTop + lane * (laneHeight + laneGap);
-      ctx.fillStyle = '#f6f8fa';
-      ctx.fillRect(padding.left, y, plotWidth, laneHeight);
-      ctx.fillStyle = '#586069';
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(label, padding.left - 8, y + 21);
-    });
-
-    segments.forEach((segment) => {
-      const x = padding.left + ((segment.startPosition - rangeStart) / coordinateRange) * plotWidth;
-      const end = padding.left + ((segment.endPosition - rangeStart) / coordinateRange) * plotWidth;
-      const y = laneTop + laneIndex[segment.type] * (laneHeight + laneGap);
-      const selected = segment.id === variant.id;
-      ctx.fillStyle = segment.type === 'Amplification'
-        ? '#cf222e'
-        : segment.type === 'Deletion'
-          ? '#0969da'
-          : '#8b949e';
-      ctx.globalAlpha = selected ? 1 : 0.62;
-      ctx.fillRect(x, y + 5, Math.max(end - x, 3), laneHeight - 10);
-      if (selected) {
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = '#24292f';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(x, y + 5, Math.max(end - x, 3), laneHeight - 10);
-      }
-      if (end - x > 54 && segment.copyNumber !== null) {
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`CN ${segment.copyNumber}`, x + (end - x) / 2, y + 21);
-      }
-    });
-    ctx.globalAlpha = 1;
-
-    // X轴标签只描述当前已导入片段的坐标范围，不推断整条染色体的长度。
-    ctx.font = '9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#586069';
-    const tickCount = 5;
-    for (let i = 0; i <= tickCount; i++) {
-      const pos = rangeStart + (coordinateRange / tickCount) * i;
-      const x = padding.left + ((pos - rangeStart) / coordinateRange) * plotWidth;
-      const label = pos >= 1000000 ? `${(pos / 1000000).toFixed(0)}Mb` : `${(pos / 1000).toFixed(0)}kb`;
-      ctx.fillText(label, x, padding.top + plotHeight + 15);
-    }
-
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillStyle = '#24292f';
-    ctx.fillText(`${variant.chromosome} 坐标`, padding.left + plotWidth / 2, padding.top + plotHeight + 32);
-
-  }, [isOpen, segmentData, variant]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed left-1/2 top-1/2 w-[900px] max-w-[calc(100vw-480px)] bg-white rounded-lg shadow-2xl z-[51]"
-      style={{
-        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-        cursor: isDragging ? 'grabbing' : 'default',
-      }}
-    >
-      <div
-        className="flex items-center justify-between px-4 py-2.5 border-b border-border cursor-grab active:cursor-grabbing select-none"
-        onMouseDown={handleMouseDown}
-      >
-        <div className="flex items-center gap-3">
-          <GripHorizontal className="w-4 h-4 text-fg-muted" />
-          <BarChart3 className="w-4 h-4 text-fg-muted" />
-          <span className="font-medium text-sm text-fg-default">{variant.chromosome} 当前页 CNV 片段概览</span>
-          <Tag variant={cnvTypeVariant(variant.type)}>
-            {variant.startPosition.toLocaleString()}-{variant.endPosition.toLocaleString()}
-          </Tag>
-        </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); onClose(); }}
-          className="p-1 text-fg-muted hover:text-fg-default rounded hover:bg-canvas-inset"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <div ref={containerRef} className="p-4">
-        <p className="mb-2 text-xs text-amber-700">
-          仅显示当前页已加载的 CNV 片段和调用出的拷贝数。该任务未提供原始 CNR/bin log2 ratio，因此本图不能用于判断覆盖度波动。
-        </p>
-        <canvas ref={canvasRef} className="rounded" style={{ display: 'block', maxWidth: '100%' }} />
-      </div>
-      <div className="flex items-center justify-center gap-6 px-4 pb-4 text-xs text-fg-muted">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-danger-fg" />扩增</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-accent-fg" />缺失</span>
-        <span className="flex items-center gap-1.5"><span className="w-4 h-2.5 rounded-sm bg-danger-subtle" />选中区域</span>
-      </div>
-    </div>
-  );
-}
-
-export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegments = [], referenceId }: CNVDetailPanelProps) {
+export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, onOpenAssessment }: CNVDetailPanelProps) {
+  const [plotOpen, setPlotOpen] = React.useState(false);
+  React.useEffect(() => setPlotOpen(false), [variant?.id, isOpen]);
   if (!isOpen || !variant) return null;
 
   const isExon = isCNVExon(variant);
   const exonRatio = isExon ? variant.ratio : null;
-  const showPlot = variantType === 'segment' && allSegments.length > 0;
+  const showPlot = variantType === 'segment' && Boolean(taskId);
   const typeVariant = cnvTypeVariant(variant.type);
   const typeLabel = cnvTypeLabel(variant.type);
   const externalReference = ucscDatabase(referenceId);
@@ -370,6 +147,10 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-y-auto p-4">
+          <div className="mb-3 flex flex-wrap gap-2">
+            {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 计算器</button>}
+            {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">区域信号图 · 设置窗口</button>}
+          </div>
           {/* 基本信息 */}
           <SectionTitle icon={Dna} title="基本信息" />
           <div className="bg-canvas-subtle rounded-lg p-3">
@@ -391,7 +172,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title="CNV 特征" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
+            <InfoItem
               label="类型" 
               value={
                 <Tag variant={typeVariant}>
@@ -451,7 +232,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
               <InfoItem label="外部资源" value="未提供任务参考版本" />
             )}
             {isExon && (
-              <InfoItem 
+              <InfoItem
                 label="GeneCards" 
                 value={(variant as CNVExon).gene}
                 link={geneCardsURL((variant as CNVExon).gene)}
@@ -459,24 +240,19 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
             )}
           </div>
 
-          {/* 审核状态 */}
-          <SectionTitle icon={FileText} title="审核状态" />
+          {/* 置顶状态 */}
+          <SectionTitle icon={FileText} title="置顶状态" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
-              label="审核状态" 
-              value={variant.reviewed ? (
-                <Tag variant="success">已审核</Tag>
+            <InfoItem
+              label="置顶状态"
+              value={variant.pinned ? (
+                <Tag variant="success">已置顶</Tag>
               ) : (
-                <Tag variant="neutral">未审核</Tag>
+                <Tag variant="neutral">未置顶</Tag>
               )} 
             />
-            {variant.reviewed && variant.reviewedBy && (
-              <>
-                <InfoItem label="审核人" value={variant.reviewedBy} />
-                <InfoItem label="审核时间" value={variant.reviewedAt} />
-              </>
-            )}
-            <InfoItem 
+
+            <InfoItem
               label="回报状态" 
               value={variant.reported ? (
                 <Tag variant="info">已回报</Tag>
@@ -506,11 +282,11 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, allSegme
 
       {/* CNV 图弹窗 */}
       {showPlot && !isExon && (
-        <CNVPlotModal
+        <CNVRegionPlot
           variant={variant as CNVSegment}
-          allSegments={allSegments}
-          isOpen={isOpen}
-          onClose={onClose}
+          taskId={taskId!}
+          isOpen={plotOpen}
+          onClose={() => setPlotOpen(false)}
         />
       )}
     </>

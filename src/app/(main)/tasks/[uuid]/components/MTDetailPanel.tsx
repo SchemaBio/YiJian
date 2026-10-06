@@ -112,7 +112,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <SectionTitle icon={Dna} title="基本信息" />
           <div className="bg-canvas-subtle rounded-lg p-3">
             <InfoItem label="基因" value={variant.gene} />
-            <InfoItem 
+            <InfoItem
               label="位置" 
               value={
                 <button
@@ -133,7 +133,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <SectionTitle icon={FileText} title="异质性分析" />
           <div className="bg-canvas-subtle rounded-lg p-3">
             <InfoItem label="异质性比例" value={`${(variant.heteroplasmy * 100).toFixed(1)}%`} />
-            <InfoItem 
+            <InfoItem
               label="异质性水平" 
               value={
                 variant.heteroplasmy >= 0.8 ? '高异质性 (≥80%)' :
@@ -146,7 +146,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           {/* 致病性评估 */}
           <SectionTitle icon={Database} title="致病性评估" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
+            <InfoItem
               label="致病性" 
               value={<Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>} 
             />
@@ -156,41 +156,36 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           {/* 外部资源 */}
           <SectionTitle icon={ExternalLink} title="外部资源" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
+            <InfoItem
               label="MITOMAP" 
               value="查看"
               link={mitomapAlleleURL(variant.position)}
             />
-            <InfoItem 
+            <InfoItem
               label="HmtVar" 
               value="查看"
               link={hmtVarURL(variant.position, variant.ref, variant.alt)}
             />
-            <InfoItem 
+            <InfoItem
               label="MitoTIP" 
               value="查看"
               link={mitoTipURL(variant.position)}
             />
           </div>
 
-          {/* 审核状态 */}
-          <SectionTitle icon={FileText} title="审核状态" />
+          {/* 置顶状态 */}
+          <SectionTitle icon={FileText} title="置顶状态" />
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <InfoItem 
-              label="审核状态" 
-              value={variant.reviewed ? (
-                <Tag variant="success">已审核</Tag>
+            <InfoItem
+              label="置顶状态"
+              value={variant.pinned ? (
+                <Tag variant="success">已置顶</Tag>
               ) : (
-                <Tag variant="neutral">未审核</Tag>
+                <Tag variant="neutral">未置顶</Tag>
               )} 
             />
-            {variant.reviewed && variant.reviewedBy && (
-              <>
-                <InfoItem label="审核人" value={variant.reviewedBy} />
-                <InfoItem label="审核时间" value={variant.reviewedAt} />
-              </>
-            )}
-            <InfoItem 
+
+            <InfoItem
               label="回报状态" 
               value={variant.reported ? (
                 <Tag variant="info">已回报</Tag>

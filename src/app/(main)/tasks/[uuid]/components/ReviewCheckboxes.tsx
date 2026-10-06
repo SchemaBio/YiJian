@@ -1,20 +1,21 @@
 ﻿'use client';
 
 import * as React from 'react';
-import { CheckCircle2, FileCheck2 } from 'lucide-react';
+import { Pin, FileCheck2 } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
 
 interface ReviewCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
+  source?: 'automatic' | 'manual';
 }
 
 /**
- * 审核标记。审核和撤销都会写入 Octopus 的不可变审计事件。
+ * 置顶标记。置顶和取消都会写入 Octopus 的不可变审计事件。
  */
-export function ReviewCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
-  const tooltip = checked ? '已审核；点击可撤销审核' : '点击标记为已审核';
+export function PinCheckbox({ checked, onChange, disabled, source }: ReviewCheckboxProps) {
+  const tooltip = checked ? `${source === 'automatic' ? '系统自动置顶（有效 ACMG 分类为致病或可能致病）' : '重要位点已置顶'}；点击取消置顶` : '点击置顶重要位点';
 
   return (
     <Tooltip content={tooltip} placement="top" variant="nav">
@@ -32,11 +33,11 @@ export function ReviewCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
-        data-result-mark="review"
-        aria-label={checked ? '撤销审核' : '标记为已审核'}
+        data-result-mark="pin"
+        aria-label={checked ? '取消置顶' : '置顶重要位点'}
         aria-pressed={checked}
       >
-        <CheckCircle2 className={`w-5 h-5 ${checked ? 'fill-success-subtle' : ''}`} />
+        <Pin className={`w-5 h-5 ${checked ? 'fill-success-subtle' : ''}`} />
       </button>
     </Tooltip>
   );
@@ -48,7 +49,7 @@ export function ReviewCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
 export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
   const tooltip = checked
     ? '已标记回报；点击可撤回，此标记不代表正式报告已签发'
-    : '点击标记为已回报';
+    : '点击选入回报';
 
   return (
     <Tooltip content={tooltip} placement="top" variant="nav">
@@ -67,7 +68,7 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
         data-result-mark="report"
-        aria-label={checked ? '撤回已回报标记' : '标记为已回报'}
+        aria-label={checked ? '撤回回报' : '选入回报'}
         aria-pressed={checked}
       >
         <FileCheck2 className={`w-5 h-5 ${checked ? 'fill-accent-subtle' : ''}`} />
@@ -77,12 +78,12 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
 }
 
 /**
- * 审核和回报状态的列头。
+ * 置顶和回报状态的列头。
  */
-export function ReviewColumnHeader() {
-  return '复核';
+export function PinColumnHeader() {
+  return '置顶';
 }
 
 export function ReportColumnHeader() {
-  return '已回报';
+  return '回报';
 }

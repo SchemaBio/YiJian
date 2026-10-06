@@ -228,7 +228,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         }
         browserRef.current = browser;
         const failures: string[] = [];
-        const tracks = session.tracks.filter(track => track.available);
+        const tracks = session.tracks.filter(track => track.available && track.format !== 'cnr');
         const geneTrack = staticGeneTrack(session);
         const configurations: IGVTrackConfig[] = [
           ...(geneTrack ? [geneTrack] : []),
@@ -272,7 +272,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
   if (!isOpen) return null;
 
-  const unavailableTracks = session?.tracks.filter(track => !track.available) ?? [];
+  const unavailableTracks = session?.tracks.filter(track => !track.available && track.format !== 'cnr') ?? [];
   return (
     <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="large" className="!w-[min(1100px,94vw)] !max-w-none">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">

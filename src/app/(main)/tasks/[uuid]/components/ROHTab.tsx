@@ -6,10 +6,10 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { PaginatedResult, ROHRegion, TableFilterState } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getROHRegions, reportVariant, reviewVariant } from '../result-api';
+import { getROHRegions, reportVariant, pinVariant } from '../result-api';
 import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
-import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface ROHTabProps {
@@ -25,7 +25,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
   const [requestError, setRequestError] = React.useState<string | null>(null);
   const [operationError, setOperationError] = React.useState<string | null>(null);
   const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='roh')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -70,18 +70,18 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     });
   }, [filterState, setFilterState]);
 
-  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reviewed: checked },
+      [id]: { ...currentState, pinned: checked },
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
     try {
-      await reviewVariant(taskId, 'roh', id, checked);
+      await pinVariant(taskId, 'roh', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '更新复核状态失败');
+      setOperationError(error instanceof Error ? error.message : '更新置顶状态失败');
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -91,7 +91,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     }
   }, [taskId]);
 
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -113,27 +113,27 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
   }, [taskId]);
 
   const getReviewState = React.useCallback((region: ROHRegion) => {
-    return reviewStatus[region.id] ?? { reviewed: region.reviewed, reported: region.reported };
+    return reviewStatus[region.id] ?? { pinned: region.pinned, reported: region.reported };
   }, [reviewStatus]);
 
   const sortedData = result?.data ?? [];
 
   const columns: Column<ROHRegion>[] = [
     {
-      id: 'reviewed',
-      header: <ReviewColumnHeader />,
-      accessor: (row) => {
-        const state = getReviewState(row);
-        return <ReviewCheckbox checked={state.reviewed} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handleReviewChange(row.id, checked, state)} />;
-      },
-      width: 60,
-    },
-    {
       id: 'reported',
       header: <ReportColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
         return <ReportCheckbox checked={state.reported} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handleReportChange(row.id, checked, state)} />;
+      },
+      width: 60,
+    },
+    {
+      id: 'pinned',
+      header: <PinColumnHeader />,
+      accessor: (row) => {
+        const state = getReviewState(row);
+        return <PinCheckbox checked={state.pinned} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handlePinChange(row.id, checked, state)} />;
       },
       width: 60,
     },

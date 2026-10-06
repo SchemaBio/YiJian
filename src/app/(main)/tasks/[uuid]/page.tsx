@@ -184,6 +184,7 @@ export default function AnalysisDetailPage() {
         return (
           <SNVIndelTab
             taskId={uuid}
+            referenceGenome={resultContext?.reference.declaredId}
             filterState={getFilterState('snv-indel')}
             onFilterChange={(state) => setFilterState('snv-indel', state)}
           />

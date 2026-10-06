@@ -6,11 +6,11 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { MitochondrialVariant, MitochondrialPathogenicity, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMitochondrialVariants, reportVariant, reviewVariant } from '../result-api';
+import { getMitochondrialVariants, reportVariant, pinVariant } from '../result-api';
 import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { IGVViewer, PositionLink } from './IGVViewer';
-import { ReviewCheckbox, ReportCheckbox, ReviewColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { MTDetailPanel } from './MTDetailPanel';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
@@ -41,7 +41,7 @@ export function MTTab({
 	const [error, setError] = React.useState<string | null>(null);
 	const [operationError, setOperationError] = React.useState<string | null>(null);
 	const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { reviewed: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='mt')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -83,19 +83,19 @@ export function MTTab({
     setIgvState(prev => ({ ...prev, isOpen: false }));
   }, []);
 
-  // 处理审核状态变更
-  const handleReviewChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  // 处理置顶状态变更
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
 		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reviewed: checked }
+      [id]: { ...currentState, pinned: checked }
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
 		try {
-			await reviewVariant(taskId, 'mt', id, checked);
+			await pinVariant(taskId, 'mt', id, checked);
 		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '更新复核状态失败');
+			setOperationError(cause instanceof Error ? cause.message : '更新置顶状态失败');
 		} finally {
 			setPendingVariantIDs((previous) => {
 				const next = new Set(previous); next.delete(id); return next;
@@ -104,7 +104,7 @@ export function MTTab({
   }, [taskId]);
 
   // 处理回报状态变更
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { reviewed: boolean; reported: boolean }) => {
+  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
 		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -123,9 +123,9 @@ export function MTTab({
 		}
   }, [taskId]);
 
-  // 获取变异的审核状态
+  // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: MitochondrialVariant) => {
-    return reviewStatus[variant.id] ?? { reviewed: variant.reviewed, reported: variant.reported };
+    return reviewStatus[variant.id] ?? { pinned: variant.pinned, reported: variant.reported };
   }, [reviewStatus]);
 
 	const sortedData = result?.data ?? [];
@@ -173,21 +173,6 @@ export function MTTab({
 
   const columns: Column<MitochondrialVariant>[] = [
     {
-      id: 'reviewed',
-      header: <ReviewColumnHeader />,
-      accessor: (row) => {
-        const state = getReviewState(row);
-        return (
-          <ReviewCheckbox
-            checked={state.reviewed}
-            onChange={(checked) => handleReviewChange(row.id, checked, state)}
-			disabled={pendingVariantIDs.has(row.id)}
-          />
-        );
-      },
-      width: 60,
-    },
-    {
       id: 'reported',
       header: <ReportColumnHeader />,
       accessor: (row) => {
@@ -196,6 +181,21 @@ export function MTTab({
           <ReportCheckbox
             checked={state.reported}
             onChange={(checked) => handleReportChange(row.id, checked, state)}
+			disabled={pendingVariantIDs.has(row.id)}
+          />
+        );
+      },
+      width: 60,
+    },
+    {
+      id: 'pinned',
+      header: <PinColumnHeader />,
+      accessor: (row) => {
+        const state = getReviewState(row);
+        return (
+          <PinCheckbox
+            checked={state.pinned}
+            onChange={(checked) => handlePinChange(row.id, checked, state)}
 			disabled={pendingVariantIDs.has(row.id)}
           />
         );
