@@ -78,6 +78,10 @@ export interface QCMetric {
 }
 
 export interface QCMemberSummary {
+  declaredGender?: string;
+  predictedGender?: string;
+  genderComparison?: string;
+  sryCutoff?: number;
   memberId: string;
   memberRole: string;
   sampleId?: string;
@@ -376,7 +380,7 @@ export interface ROHRegion extends VariantReviewStatus {
 }
 
 // ============ 标签页类型 ============
-export type TabType = 'overview' | 'qc' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
+export type TabType = 'overview' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
 
 export interface TabConfig {
   id: TabType;
@@ -386,7 +390,6 @@ export interface TabConfig {
 export const TAB_CONFIGS: TabConfig[] = [
   { id: 'overview', label: '总览' },
   { id: 'snv-indel', label: '变异判读' },
-  { id: 'qc', label: '质控与家系' },
   { id: 'report', label: '报告与文件' },
 ];
 

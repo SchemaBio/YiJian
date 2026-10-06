@@ -7,7 +7,6 @@ import type { SampleDetail } from '@/app/(main)/samples/types';
 import { TAB_CONFIGS } from '../[uuid]/types';
 import { GENDER_CONFIG } from '@/app/(main)/samples/types';
 import {
-  QCResultTab,
   SNVIndelTab,
   CNVSegmentTab,
   CNVExonTab,
@@ -85,7 +84,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   const [task, setTask] = React.useState<AnalysisTaskDetail | null>(null);
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [activeTab, setActiveTab] = React.useState<TabType>('qc');
+  const [activeTab, setActiveTab] = React.useState<TabType>('snv-indel');
 
   // 各标签页的筛选状态
   const [tabStates, setTabStates] = React.useState({
@@ -146,8 +145,6 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   // 渲染当前标签页内容
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'qc':
-        return <QCResultTab taskId={taskId} />;
       case 'snv-indel':
         return (
           <SNVIndelTab

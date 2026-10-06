@@ -1,13 +1,9 @@
 'use client';
 
-import * as React from 'react';
-import { ArrowRight, CheckCircle2, Clock3, FileWarning, Layers3 } from 'lucide-react';
+import { CheckCircle2, Clock3, FileWarning } from 'lucide-react';
 import type { ResultContext, TabType } from '../types';
-
-interface ResultOverviewProps {
-  context: ResultContext;
-  onNavigate: (tab: TabType) => void;
-}
+import { CopyTableButton } from './CopyTableButton';
+import { QCAndFamilyTables, SampleFamilyTable } from './QCResultTab';
 
 const TYPE_LABELS: Array<{ key: string; label: string; tab: TabType }> = [
   { key: 'snv-indel', label: 'SNP / InDel', tab: 'snv-indel' },
@@ -22,105 +18,74 @@ const TYPE_LABELS: Array<{ key: string; label: string; tab: TabType }> = [
 
 function stateDescription(context: ResultContext) {
   switch (context.state) {
-    case 'ready': return { title: '结果可判读', detail: '结果已固定到当前执行与导入批次，可开始复核。', icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' };
-    case 'importing': return { title: '结果导入中', detail: '计算归档完成后正在建立结构化结果，请稍后刷新。', icon: Clock3, tone: 'text-warning-fg bg-warning-subtle border-warning-emphasis' };
-    case 'import_failed': return { title: '结果导入失败', detail: '归档存在但结构化导入未完成，请查看运行记录并重试导入。', icon: FileWarning, tone: 'text-danger-fg bg-danger-subtle border-danger-emphasis' };
-    case 'workflow_running': return { title: '工作流运行中', detail: '尚未生成可判读结果。', icon: Clock3, tone: 'text-accent-fg bg-accent-subtle border-accent-emphasis' };
-    default: return { title: '等待结果导入', detail: '任务尚未产生可判读的结构化结果。', icon: Clock3, tone: 'text-fg-muted bg-canvas-subtle border-border-default' };
+    case 'ready': return { title: '结果可判读', detail: '下方统计及质控来自本次执行。', icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' };
+    case 'importing': return { title: '结果导入中', detail: '正在准备结果，页面会自动刷新。', icon: Clock3, tone: 'text-warning-fg bg-warning-subtle border-warning-emphasis' };
+    case 'import_failed': return { title: '结果导入失败', detail: '归档结果尚未完成导入，请重试导入或联系管理员。', icon: FileWarning, tone: 'text-danger-fg bg-danger-subtle border-danger-emphasis' };
+    case 'workflow_running': return { title: '尚未产生结果', detail: '分析完成后将在此展示结果。', icon: Clock3, tone: 'text-accent-fg bg-accent-subtle border-accent-emphasis' };
+    default: return { title: '等待结果', detail: '该执行尚未提供可判读结果。', icon: Clock3, tone: 'text-fg-muted bg-canvas-subtle border-border-default' };
   }
 }
 
-function MemberLabel({ role }: { role: string }) {
-  const labels: Record<string, string> = { proband: '先证者', father: '父亲', mother: '母亲', unknown: '成员未知' };
-  return <span>{labels[role.toLowerCase()] ?? role}</span>;
-}
-
-export function ResultOverview({ context, onNavigate }: ResultOverviewProps) {
+export function ResultOverview({ context, onNavigate }: { context: ResultContext; onNavigate: (tab: TabType) => void }) {
   const state = context.parquet?.available && context.importStatus === 'failed'
-    ? { title: 'Parquet 检出表可查询', detail: '当前执行的原始 Parquet 归档可直接查询；旧的结构化数据库导入失败不会阻断检出表。', icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' }
+    ? { title: '检出表可判读', detail: '原始检出表已可读取，部分辅助数据尚未完成导入。', icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' }
     : stateDescription(context);
   const StateIcon = state.icon;
-  const allCounts = TYPE_LABELS.map(item => ({
-    ...item,
-    count: context.types[item.key]?.total ?? 0,
-    unqueried: Boolean(context.parquet?.available && context.parquet.tables.includes(item.key) && !context.parquet.preparedTables.includes(item.key)),
-  }));
-  const countsPending = allCounts.some(item => item.unqueried);
-  const total = allCounts.reduce((sum, item) => sum + item.count, 0);
-  const reviewed = TYPE_LABELS.reduce((sum, item) => sum + (context.types[item.key]?.reviewed ?? 0), 0);
-  const reported = TYPE_LABELS.reduce((sum, item) => sum + (context.types[item.key]?.reported ?? 0), 0);
-  const maxCount = Math.max(1, ...allCounts.map(item => item.count));
-  const progress = total === 0 ? 0 : Math.round((reviewed / total) * 100);
+  const counts = TYPE_LABELS.map(item => {
+    const unqueried = Boolean(context.parquet?.available && context.parquet.tables.includes(item.key) && !context.parquet.preparedTables.includes(item.key));
+    const count = context.types[item.key];
+    const known = Boolean(count) && !unqueried;
+    return { ...item, count, known, status: unqueried ? '待查询' : !count ? '未提供' : count.total === 0 ? '无检出结果' : '可判读' };
+  });
+  const value = (item: typeof counts[number], key: 'total' | 'reviewed' | 'reported') => item.known ? String(item.count[key]) : '—';
+  const rows = [
+    ['结果类型', '检出数量', '已复核', '已标记回报', '数据状态'],
+    ...counts.map(item => [item.label, value(item, 'total'), value(item, 'reviewed'), value(item, 'reported'), item.status]),
+  ];
+  const allKnown = counts.every(item => item.known);
+  const totals = ['total', 'reviewed', 'reported'].map(key => allKnown ? String(counts.reduce((sum, item) => sum + item.count[key as 'total' | 'reviewed' | 'reported'], 0)) : '—');
+  rows.push(['合计', ...totals, allKnown ? '完整统计' : '部分数据未就绪']);
 
   return (
-    <section className="space-y-5" aria-labelledby="result-overview-heading">
-      <div className={`flex flex-wrap items-start gap-3 rounded-xl border p-4 ${state.tone}`}>
-        <StateIcon className="mt-0.5 h-5 w-5 shrink-0" />
-        <div>
-          <h2 id="result-overview-heading" className="font-semibold">{state.title}</h2>
-          <p className="mt-1 text-sm opacity-90">{state.detail}</p>
-        </div>
-        <div className="ml-auto flex flex-wrap gap-2 text-xs">
-          <span className="rounded bg-canvas-default/70 px-2 py-1">{context.reference.declaredId || '参考未知'}</span>
-          <span className="rounded bg-canvas-default/70 px-2 py-1">尝试 {context.executionAttemptId.slice(0, 8)}</span>
-        </div>
+    <section className="space-y-2" aria-labelledby="result-overview-heading">
+      <div className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2 ${state.tone}`}>
+        <StateIcon className="h-5 w-5 shrink-0" />
+        <div><h2 id="result-overview-heading" className="font-semibold">{state.title}</h2><span className="sr-only">{state.detail}</span></div>
+        <span className="ml-auto shrink-0 rounded bg-canvas-default/70 px-2 py-1 text-xs">{context.reference.declaredId || '参考未知'}</span>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label={context.parquet?.available ? 'Parquet 候选' : '已导入候选'} value={countsPending && total === 0 ? '按需查询' : total.toLocaleString()} detail={countsPending && total === 0 ? '打开结果类型后读取 Parquet 完整计数' : '完整结果集，不受当前筛选影响'} icon={<Layers3 className="h-5 w-5" />} />
-        <SummaryCard label="已复核" value={countsPending && total === 0 ? '按需查询' : `${reviewed.toLocaleString()} / ${total.toLocaleString()}`} detail={countsPending && total === 0 ? '复核调整与结果查询同步读取' : `复核进度 ${progress}%`} icon={<CheckCircle2 className="h-5 w-5" />} />
-        <SummaryCard label="已标记回报" value={reported.toLocaleString()} detail="此标记不等同于正式报告签发" icon={<FileWarning className="h-5 w-5" />} />
-        <SummaryCard label="质控成员" value={context.qc.length.toLocaleString()} detail={context.members.map(member => member.role).join(' · ') || '未导入'} icon={<Clock3 className="h-5 w-5" />} />
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+      <div className="space-y-3">
+      <section aria-labelledby="result-counts-heading" className="overflow-hidden rounded-lg border border-border-default bg-canvas-default">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default px-3 py-2">
+          <div><h3 id="result-counts-heading" className="text-sm font-semibold text-fg-default">结果类型概览</h3></div>
+          <CopyTableButton rows={rows} label="复制" />
+        </header>
+        <div className="overflow-x-auto">
+          <table className="w-full select-text border-collapse text-center text-xs">
+            <thead className="bg-canvas-subtle text-xs text-fg-muted"><tr>{rows[0].map(label => <th key={label} scope="col" className="whitespace-nowrap px-2 py-1 font-medium">{label}</th>)}</tr></thead>
+            <tbody>{counts.map(item => (
+              <tr key={item.key} className="border-t border-border-default hover:bg-canvas-subtle/50">
+                <th scope="row" className="whitespace-nowrap px-2 py-1 font-medium text-fg-default"><button type="button" onClick={() => onNavigate(item.tab)} className="text-accent-fg hover:underline" title={`查看 ${item.label}`}>{item.label}</button></th>
+                {(['total', 'reviewed', 'reported'] as const).map(key => <td key={key} className="px-2 py-1 tabular-nums text-fg-default">{value(item, key)}</td>)}
+                <td className="whitespace-nowrap px-2 py-1 text-xs text-fg-muted">{item.status}</td>
+              </tr>
+            ))}</tbody>
+            <tfoot className="border-t border-border-default bg-canvas-subtle font-medium text-fg-default"><tr><th scope="row" className="px-2 py-1">合计</th>{totals.map((total, index) => <td key={index} className="px-2 py-1 tabular-nums">{total}</td>)}<td colSpan={1} className="px-2 py-1 text-xs font-normal text-fg-muted">{allKnown ? '完整统计' : '部分数据未就绪'}</td></tr></tfoot>
+          </table>
+        </div>
+        <p className="border-t border-border-default px-2 py-1 text-xs text-fg-muted">“已标记回报”不等同于正式报告签发。</p>
+      </section>
+
+      <SampleFamilyTable context={context} />
+      </div>
+      <QCAndFamilyTables context={context} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <article className="rounded-xl border border-border-default bg-canvas-default p-5 shadow-sm">
-          <header className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="font-semibold text-fg-default">结果类型概览</h3>
-              <p className="mt-1 text-sm text-fg-muted">每一项来自当前执行的完整结果集。</p>
-            </div>
-            <button onClick={() => onNavigate('snv-indel')} className="inline-flex items-center gap-1 text-sm text-accent-fg hover:underline">开始判读 <ArrowRight className="h-4 w-4" /></button>
-          </header>
-          <div className="mt-5 space-y-3">
-            {allCounts.map(item => (
-              <button key={item.key} onClick={() => onNavigate(item.tab)} className="group grid w-full grid-cols-[112px_minmax(0,1fr)_56px] items-center gap-3 text-left">
-                <span className="text-sm text-fg-default group-hover:text-accent-fg">{item.label}</span>
-                <span className="h-3 overflow-hidden rounded-full bg-canvas-subtle" aria-label={item.unqueried ? `${item.label} Parquet待查询` : `${item.label} ${item.count} 条`}>
-                  <span className={`block h-full rounded-full transition-[width] ${item.unqueried ? 'bg-accent-subtle' : 'bg-accent-emphasis'}`} style={{ width: `${item.unqueried ? 12 : (item.count / maxCount) * 100}%` }} />
-                </span>
-                <span className="text-right text-xs tabular-nums text-fg-muted">{item.unqueried ? '待查询' : item.count.toLocaleString()}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-
-        <aside className="rounded-xl border border-border-default bg-canvas-default p-5 shadow-sm">
-          <h3 className="font-semibold text-fg-default">家系与证据</h3>
-          <div className="mt-4 space-y-2">
-            {context.members.length > 0 ? context.members.map(member => (
-              <div key={member.id} className="flex items-center justify-between rounded-lg bg-canvas-subtle px-3 py-2 text-sm">
-                <MemberLabel role={member.role} />
-                <span className="max-w-[145px] truncate text-xs text-fg-muted">{member.sampleId || member.id}</span>
-              </div>
-            )) : <p className="text-sm text-fg-muted">尚未从归档识别成员信息。</p>}
-          </div>
-          <div className="mt-5 border-t border-border-default pt-4 text-sm">
-            <p className="font-medium text-fg-default">测序证据</p>
-            <p className="mt-1 text-fg-muted">{context.reference.available ? '参考资源已配置。选择变异后可在 IGV 中核对 reads。' : (context.reference.reason || '该执行尚未配置可判读参考。')}</p>
-          </div>
-        </aside>
+      <div className="rounded-lg border border-border-default bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">
+        <span className="mr-2 font-medium text-fg-default">测序证据</span>
+        {context.reference.available ? '参考资源已配置。选择变异后可在 IGV 中核对 reads。' : (context.reference.reason || '该执行尚未配置可判读参考。')}
       </div>
     </section>
-  );
-}
-
-function SummaryCard({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: React.ReactNode }) {
-  return (
-    <article className="rounded-xl border border-border-default bg-canvas-default p-4 shadow-sm">
-      <div className="flex items-center justify-between text-fg-muted"><span className="text-sm">{label}</span>{icon}</div>
-      <p className="mt-3 text-2xl font-semibold tabular-nums text-fg-default">{value}</p>
-      <p className="mt-1 text-xs text-fg-muted">{detail}</p>
-    </article>
   );
 }

@@ -12,7 +12,6 @@ import {
   TaskHeader,
   ResultTabs,
   SampleSummaryCard,
-  QCResultTab,
   SNVIndelTab,
   CNVSegmentTab,
   CNVExonTab,
@@ -181,8 +180,6 @@ export default function AnalysisDetailPage() {
     switch (activeTab) {
 		case 'overview':
 			return resultContext ? <ResultOverview context={resultContext} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
-		case 'qc':
-			return <QCResultTab taskId={uuid} context={resultContext} />;
       case 'snv-indel':
         return (
           <SNVIndelTab
