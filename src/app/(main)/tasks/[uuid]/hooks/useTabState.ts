@@ -9,7 +9,7 @@ type ResultTableTab = 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' |
 type TabStates = Record<ResultTableTab, TableFilterState>;
 
 const TABLE_TABS: ResultTableTab[] = ['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'];
-const ALL_TABS: TabType[] = ['overview', 'runtime', 'qc', 'snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh', 'report'];
+const ALL_TABS: TabType[] = ['overview', 'qc', 'snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh', 'report'];
 
 interface UseTabStateReturn {
   activeTab: TabType;

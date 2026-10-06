@@ -59,11 +59,6 @@ export function ResultOverview({ context, onNavigate }: ResultOverviewProps) {
         <div>
           <h2 id="result-overview-heading" className="font-semibold">{state.title}</h2>
           <p className="mt-1 text-sm opacity-90">{state.detail}</p>
-          {context.state === 'import_failed' && (
-            <button type="button" onClick={() => onNavigate('runtime')} className="mt-2 text-sm font-medium underline underline-offset-2">
-              查看运行记录并重试导入
-            </button>
-          )}
         </div>
         <div className="ml-auto flex flex-wrap gap-2 text-xs">
           <span className="rounded bg-canvas-default/70 px-2 py-1">{context.reference.declaredId || '参考未知'}</span>

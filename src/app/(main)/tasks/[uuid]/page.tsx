@@ -22,7 +22,6 @@ import {
   UPDTab,
   ROHTab,
   ReportTab,
-  TaskRuntimeTab,
 	ResultOverview,
 	VariantTypeNav,
 } from './components';
@@ -130,7 +129,7 @@ export default function AnalysisDetailPage() {
 	React.useEffect(() => {
 		if (loading || manuallySelectedTabRef.current) return;
 		if (hasExplicitTab && automaticallySelectedTabRef.current === null) return;
-		const nextTab: TabType = resultContext?.state === 'ready' ? 'overview' : 'runtime';
+		const nextTab: TabType = 'overview';
 		if (activeTab === nextTab) {
 			automaticallySelectedTabRef.current = nextTab;
 			return;
@@ -182,19 +181,6 @@ export default function AnalysisDetailPage() {
     switch (activeTab) {
 		case 'overview':
 			return resultContext ? <ResultOverview context={resultContext} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
-      case 'runtime':
-        return <TaskRuntimeTab
-          taskId={uuid}
-          initialStatus={task.status}
-          onResultImportChange={async () => {
-            try {
-              setResultContext(await getResultContext(uuid));
-              setResultContextError(null);
-            } catch (cause) {
-              setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
-            }
-          }}
-        />;
 		case 'qc':
 			return <QCResultTab taskId={uuid} context={resultContext} />;
       case 'snv-indel':

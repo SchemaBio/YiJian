@@ -5,14 +5,11 @@ import { Button, Select, FormItem, Modal, ModalHeader, ModalBody, ModalFooter } 
 import {
   AlertCircle,
   CheckCircle2,
-  Database,
-  Download,
-  FileCode,
-  FileSpreadsheet,
   FileText,
   Loader2,
   Play,
 } from 'lucide-react';
+import { RawResultDownloads } from './RawResultDownloads';
 import { reportsApi, saveDownload, type ReportTemplate } from '@/lib/reports';
 
 interface ReportTabProps {
@@ -25,7 +22,6 @@ export function ReportTab({ taskId }: ReportTabProps) {
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [generating, setGenerating] = React.useState(false);
   const [generationStage, setGenerationStage] = React.useState<'idle' | 'preparing' | 'calling' | 'downloading'>('idle');
-  const [exportingKind, setExportingKind] = React.useState<string>('');
   const [lastDownloadedFile, setLastDownloadedFile] = React.useState('');
   const [errorModalOpen, setErrorModalOpen] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
@@ -94,50 +90,9 @@ export function ReportTab({ taskId }: ReportTabProps) {
     }
   };
 
-  const handleExport = async (kind: 'excel' | 'parquet' | 'vcf' | 'mt-vcf') => {
-    setExportingKind(kind);
-    try {
-      const download = await reportsApi.exportTaskFile(taskId, kind);
-      saveDownload(download);
-      setLastDownloadedFile(download.filename);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Export failed. Please try again.');
-      setErrorModalOpen(true);
-    } finally {
-      setExportingKind('');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="bg-canvas-subtle rounded-lg p-4">
-        <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          原始文件下载（不含人工调整）
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="small" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => handleExport('excel')} loading={exportingKind === 'excel'}>
-            原始归档 Excel
-          </Button>
-          <Button variant="secondary" size="small" leftIcon={<Database className="w-4 h-4" />} onClick={() => handleExport('parquet')} loading={exportingKind === 'parquet'}>
-            原始归档 Parquet
-          </Button>
-          <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={() => handleExport('vcf')} loading={exportingKind === 'vcf'}>
-            SNP/InDel VCF
-          </Button>
-          <Button variant="secondary" size="small" leftIcon={<FileCode className="w-4 h-4" />} onClick={() => handleExport('mt-vcf')} loading={exportingKind === 'mt-vcf'}>
-            线粒体 VCF
-          </Button>
-        </div>
-      </div>
+      <RawResultDownloads taskId={taskId} />
 
       <div className="bg-canvas-subtle rounded-lg p-4">
         <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
@@ -151,7 +106,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
                 value={selectedTemplate}
                 onChange={(value) => { if (typeof value === 'string') setSelectedTemplate(value); }}
                 options={templateOptions}
-                placeholder="请选择报告模板..."
+                placeholder={loading ? "正在加载报告模板..." : "请选择报告模板..."}
               />
             </FormItem>
           </div>
@@ -159,7 +114,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
             variant="primary"
             leftIcon={generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             onClick={handleGenerate}
-            disabled={!selectedTemplate || generating || templates.length === 0}
+            disabled={loading || !selectedTemplate || generating || templates.length === 0}
           >
             {generating ? '生成中...' : '生成并下载'}
           </Button>
