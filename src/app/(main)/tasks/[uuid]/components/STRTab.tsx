@@ -181,12 +181,6 @@ export function STRTab({
       sortable: true,
     },
     {
-      id: 'transcript',
-      header: '转录本',
-      accessor: 'transcript',
-      width: 130,
-    },
-    {
       id: 'locus',
       header: '位点',
       accessor: 'locus',

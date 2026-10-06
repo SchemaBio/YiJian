@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { CNVRegionPlot } from './CNVRegionPlot';
+import { CNVExonPlot } from './CNVExonPlot';
 import { X, ExternalLink, FileText, Database, Dna, MapPin } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { CNVSegment, CNVExon } from '../types';
@@ -149,6 +150,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
         <div className="flex-1 overflow-y-auto p-4">
           <div className="mb-3 flex flex-wrap gap-2">
             {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 计算器</button>}
+            {isExon && taskId && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">外显子 CN 分布图</button>}
             {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">区域信号图 · 设置窗口</button>}
           </div>
           {/* 基本信息 */}
@@ -158,7 +160,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
               <>
                 <InfoItem label="基因" value={variant.gene} />
                 <InfoItem label="转录本" value={variant.transcript} />
-                <InfoItem label="外显子" value={variant.exon} />
+                <InfoItem label="外显子数" value={variant.exon} />
               </>
             )}
             <InfoItem label="染色体" value={variant.chromosome} />
@@ -169,6 +171,12 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             )}
           </div>
 
+          {(variant.type === 'Amplification' || variant.type === 'Deletion') && <div className="mt-4 rounded-lg border border-border-default p-3">
+            <h4 className="mb-2 text-sm font-medium">ISCN 候选注释</h4>
+            <p className="select-text break-words font-mono text-sm">{variant.iscnCandidate || '无法生成：拷贝状态、参考版本或染色体带区待确认'}</p>
+            <p className="mt-2 text-xs leading-relaxed text-fg-muted">基于测序 CN 估计取整；x 表示候选拷贝状态。坐标由 BED 转为 1-based。需要确认准确拷贝数后用于回报，尤其是性染色体及嵌合事件。</p>
+            {variant.annotationValues?.ISCN && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">工作流原始注释（保留原值）</summary><p className="mt-1 select-text break-words font-mono">{variant.annotationValues.ISCN}</p></details>}
+          </div>}
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title="CNV 特征" />
           <div className="bg-canvas-subtle rounded-lg p-3">
@@ -186,7 +194,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             {isExon && (
               <InfoItem label="外显子比值" value={exonRatio === null ? undefined : exonRatio.toFixed(2)} />
             )}
-            <InfoItem label="置信度" value={variant.confidence === null ? undefined : `${(variant.confidence * 100).toFixed(0)}%`} />
+            <InfoItem label={isExon ? "置信度" : "信号权重"} value={isExon ? ({HIGH:"高",MEDIUM:"中",LOW:"低"}[variant.confidenceLabel ?? ""] ?? variant.confidenceLabel) : variant.confidence ?? undefined} />
           </div>
 
           {/* 涉及基因 (仅 Segment) */}
@@ -280,6 +288,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
         </div>
       </div>
 
+      {isExon && taskId && <CNVExonPlot variant={variant} taskId={taskId} isOpen={plotOpen} onClose={() => setPlotOpen(false)} />}
       {/* CNV 图弹窗 */}
       {showPlot && !isExon && (
         <CNVRegionPlot

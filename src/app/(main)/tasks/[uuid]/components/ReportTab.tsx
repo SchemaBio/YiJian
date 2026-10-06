@@ -91,14 +91,15 @@ export function ReportTab({ taskId }: ReportTabProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
 
-      <div className="bg-canvas-subtle rounded-lg p-4">
+      <div className="rounded-xl border border-border-default bg-canvas-default p-5">
         <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
           <FileText className="w-4 h-4" />
-          报告生成
+          判读报告生成
         </h4>
+        <p className="mb-4 text-xs text-fg-muted">选择模板，将当前判读记录生成报告；原始文件下载使用上方独立入口。</p>
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="flex-1 min-w-0">
             <FormItem label="报告模板">

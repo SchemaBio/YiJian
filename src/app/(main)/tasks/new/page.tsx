@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
-import { Coins, Play, Info } from 'lucide-react';
+import { Coins, Play, Info, AlertTriangle } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
@@ -169,6 +169,11 @@ export default function NewAnalysisPage() {
       <div className="yj-page-header">
         <h2 className="yj-page-title">新建分析任务</h2>
       </div>
+
+      {isSaaS && <aside role="note" aria-label="BAM 文件保留期限" className="mb-5 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+        <div><h3 className="text-sm font-semibold">重要：BAM 文件仅保留至任务完成后 7 天</h3><p className="mt-1 text-sm leading-6">到期后 BAM 将自动删除，无法再下载，也无法通过 IGV 复核样本 reads。请在保留期内完成复核，或下载 BAM 并自行备份。</p><p className="mt-1 text-xs">分析结果表与已保存的人工判读记录继续保留。</p></div>
+      </aside>}
 
       <div className="yj-panel yj-form-card space-y-6">
         <div className="yj-info-panel">

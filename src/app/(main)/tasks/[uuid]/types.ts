@@ -262,6 +262,7 @@ export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 export interface CNVSegment extends VariantReviewStatus {
   attemptId?: string;
   annotationValues?: Record<string, string>;
+  iscnCandidate?: string;
   assessment?: CNVAssessment;
   id: string;
   chromosome: string;
@@ -278,7 +279,10 @@ export interface CNVSegment extends VariantReviewStatus {
 
 // ============ CNV变异(外显子级别) ============
 export interface CNVExon extends VariantReviewStatus {
+  attemptId?: string;
+  confidenceLabel?: string;
   annotationValues?: Record<string, string>;
+  iscnCandidate?: string;
   assessment?: CNVAssessment;
   id: string;
   gene: string;

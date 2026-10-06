@@ -1,5 +1,6 @@
 'use client';
 import { api, ApiError } from './api';
+import {iscnCandidateSQL} from '@/app/(main)/tasks/[uuid]/utils/cnv-nomenclature';
 import { awaitWorkerStartup, configureBrowserRuntime } from './parquet-runtime';
 import { buildLocalSelection, effectiveField, fieldType, ident, literal, OVERLAY_FIELDS, type LocalQuery } from './parquet-browser-sql';
 import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
@@ -183,9 +184,17 @@ class BrowserTable {
                 const start = this.raw.find(f => this.info.aliases[f]?.includes('startPosition'));
                 const end = this.raw.find(f => this.info.aliases[f]?.includes('endPosition'));
                 if (start && end) {
-                    await this.conn.query(`ALTER TABLE source ADD COLUMN Interval_Length BIGINT; UPDATE source SET Interval_Length=GREATEST(0, TRY_CAST(${ident(end)} AS BIGINT)-TRY_CAST(${ident(start)} AS BIGINT)+1)`);
+                    await this.conn.query(`ALTER TABLE source ADD COLUMN Interval_Length BIGINT; UPDATE source SET Interval_Length=GREATEST(0, TRY_CAST(${ident(end)} AS BIGINT)-TRY_CAST(${ident(start)} AS BIGINT)${this.table === 'upd' ? '+1' : ''})`);
                     this.raw.push('Interval_Length');
                     this.info.aliases.Interval_Length = ['length'];
+                }
+            }
+            if (this.table === 'cnv-segment' || this.table === 'cnv-exon') {
+                const expression=iscnCandidateSQL(this.raw,this.table);
+                if(expression){
+                    await this.conn.query(`ALTER TABLE source ADD COLUMN ISCN_Candidate VARCHAR; UPDATE source SET ISCN_Candidate=${expression}`);
+                    this.raw.push('ISCN_Candidate');
+                    this.info.aliases.ISCN_Candidate=['iscnCandidate'];
                 }
             }
             timings.parquet_materialize_ms = Math.round(performance.now() - materializeStarted);
@@ -317,6 +326,13 @@ class BrowserTable {
             row.copyNumber = source.CN ?? source.Copy_Number ?? source.Col8;
             row.copyRatio = source.Copy_Ratio; // Never interpret absolute CN as a ratio.
             row.log2Ratio = source.Log2_Ratio ?? source.log2 ?? source.Col5;
+        }
+        if (this.table === 'cnv-exon') {
+            row.copyNumber = source.Copy_Number ?? source.CN ?? source.Col12;
+            row.copyRatio = source.Copy_Ratio;
+            row.log2Ratio = source.Log2_Ratio ?? source.Col9;
+            row.weight = source.Col14;
+            row.confidenceLabel = source.Col18;
         }
         Object.assign(row, overlay);
         if (overlay.acmgOverride)

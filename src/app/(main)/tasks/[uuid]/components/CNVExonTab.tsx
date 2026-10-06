@@ -276,7 +276,7 @@ export function CNVExonTab({
     },
     {
       id: 'exon',
-      header: '外显子',
+      header: '外显子数',
       accessor: 'exon',
       width: 100,
     },
@@ -299,6 +299,12 @@ export function CNVExonTab({
       header: '终止位置',
       accessor: (row) => row.endPosition,
       width: 120,
+    },
+    {
+      id: 'iscnCandidate',
+      header: 'ISCN 候选',
+      accessor: row => <span className="block whitespace-normal break-words font-mono text-xs" title="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based">{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span>,
+      width: 300,
     },
     {
       id: 'type',
@@ -346,15 +352,14 @@ export function CNVExonTab({
     },
     {
       id: 'ratio',
-      header: '比值',
+      header: 'Copy ratio',
       accessor: (row) => row.ratio === null ? '未提供' : row.ratio.toFixed(2),
       width: 80,
-      sortable: true,
     },
     {
       id: 'confidence',
       header: '置信度',
-      accessor: (row) => row.confidence === null ? '未提供' : `${(row.confidence * 100).toFixed(0)}%`,
+      accessor: (row) => ({HIGH:'高',MEDIUM:'中',LOW:'低'}[row.confidenceLabel ?? ''] ?? row.confidenceLabel) || '未提供',
       width: 80,
       sortable: true,
     },

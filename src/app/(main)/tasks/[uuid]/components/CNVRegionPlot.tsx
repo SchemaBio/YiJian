@@ -2,35 +2,10 @@
 
 import * as React from 'react';
 import { X } from 'lucide-react';
-import { getCNVSegments, getIGVSession, getIGVTrackURLs } from '../result-api';
+import { getCNVSegments } from '../result-api';
+import {loadCNR, normalizeContig as contig, type CNRBin} from '../utils/cnv-signal';
 import { DEFAULT_FILTER_STATE } from '../types';
 import type { CNVSegment } from '../types';
-
-interface CNRBin { chromosome: string; start: number; end: number; log2: number; }
-const contig = (value: string) => value.replace(/^chr/i, '').toUpperCase().replace(/^M$/, 'MT');
-async function readCNR(url: string, signal: AbortSignal): Promise<CNRBin[]> {
-  const response = await fetch(url, { signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
-  if (!response.ok || !response.body) throw new Error('CNR 对象不可读取，请检查授权或 COS 浏览器访问配置');
-  const reader = response.body.getReader(); const decoder = new TextDecoder();
-  let text = '', bytes = 0;
-  try { for (;;) { const chunk = await reader.read(); if(chunk.done)break;
-    bytes += chunk.value.byteLength;
-    if(bytes > 32*1024*1024)throw new Error('CNR 超过浏览器图形读取上限（32 MiB）');
-    text += decoder.decode(chunk.value,{stream:true});
-  } text += decoder.decode(); } finally { await reader.cancel(); }
-  const lines = text.split(/\r?\n/).filter(line=>line.trim() && !line.startsWith('#'));
-  const fields = lines.shift()?.split('\t').map(field=>field.toLowerCase()) ?? [];
-  const indexes = ['chromosome','start','end','log2'].map(field=>fields.indexOf(field));
-  if(indexes.some(index=>index<0))throw new Error('CNR 缺少 chromosome/start/end/log2 列');
-  const result: CNRBin[] = [];
-  for(const line of lines){const parts=line.split('\t');
-    if(indexes.some(index=>parts[index]===undefined || parts[index]==='' || parts[index]==='.'))continue;
-    const [chromosome,start,end,log2]=indexes.map(index=>parts[index]);
-    const bin={chromosome,start:Number(start),end:Number(end),log2:Number(log2)};
-    if(Number.isSafeInteger(bin.start)&&Number.isSafeInteger(bin.end)&&bin.start>=0&&bin.end>bin.start&&Number.isFinite(bin.log2))result.push(bin);
-  }
-  return result;
-}
 
 // Region rows are merged genomic bins, not the original CNR target probes.
 export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
@@ -38,7 +13,6 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
 }) {
   const [cnr, setCNR] = React.useState<CNRBin[]>([]);
   const [cnrStatus, setCNRStatus] = React.useState('');
-  const cnrCache = React.useRef<{task: string; version: string; bins: CNRBin[]} | null>(null);
   const [flankKB, setFlankKB] = React.useState(100);
   const [rows, setRows] = React.useState<CNVSegment[]>([]);
   const [error, setError] = React.useState('');
@@ -54,18 +28,7 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
     if(!isOpen)return;
     const controller=new AbortController(); setCNR([]);setCNRStatus('原始 CNR 读取中…');
     void (async()=>{
-      const session=await getIGVSession(taskId,controller.signal);
-      if(variant.attemptId && session.executionAttemptId !== variant.attemptId)throw new Error('执行版本已改变');
-      const track=session.tracks?.find(track=>track.format==='cnr');
-      if(!track?.available){setCNRStatus('当前归档接口未提供可读取的原始 CNR，仅显示 Region 合并信号');return;}
-      let bins=cnrCache.current?.task===taskId&&cnrCache.current.version===session.version?cnrCache.current.bins:undefined;
-      if(!bins){
-        const signed=await getIGVTrackURLs(taskId,session.version,[track.id],controller.signal);
-        const target=signed.tracks.find(value=>value.id===track.id);if(!target)throw new Error('CNR 读取授权缺失');
-        bins=await readCNR(target.url,controller.signal);
-        if(controller.signal.aborted)return;
-        cnrCache.current={task:taskId,version:session.version,bins};
-      }
+      const bins=await loadCNR(taskId,variant.attemptId,controller.signal);
       if(!controller.signal.aborted){setCNR(bins);setCNRStatus(`原始 CNR 已读取，${bins.length.toLocaleString()} 个有效 bin`);}
     })().catch(()=>{if(!controller.signal.aborted)setCNRStatus('原始 CNR 读取失败：请检查短时授权、对象可用性或 COS CORS；Region 信号仍可查看');});
     return ()=>controller.abort();

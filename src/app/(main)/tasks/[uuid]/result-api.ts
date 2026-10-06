@@ -395,6 +395,7 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     id: s(row.id),
     attemptId: s(row.attemptId),
     annotationValues: row.annotationValues as Record<string, string> | undefined,
+    iscnCandidate: s(row.iscnCandidate ?? row.ISCN_Candidate),
     chromosome: s(row.chromosome),
     startPosition: start,
     endPosition: end,
@@ -418,7 +419,9 @@ function mapCNVExon(row: BackendRow): CNVExon {
     gene: s(row.gene, '-'),
     transcript: s(row.transcript, '-'),
     exon: s(row.exon ?? row.exonCount, '-'),
-    ratio: nullableNumber(row.copyRatio ?? row.depthRatio ?? row.ratio2),
+    copyNumber: nullableNumber(row.copyNumber),
+    ratio: nullableNumber(row.copyRatio),
+    confidenceLabel: s(row.confidenceLabel),
   };
 }
 
@@ -553,11 +556,14 @@ function parquetColumn(type: ResultQueryType, column: string): string {
     gnomadAF: 'GnomAD_AF', gnomadEasAF: 'GnomAD_AF_EAS', clinvarSignificance: 'ClinVar_Sig',
     pathogenicity: 'ClinVar_Sig', status: 'Status', teType: 'TE_Family', acmgClassification: 'acmgClassification',
     gene: 'Gene', pinned: 'pinned', reviewed: 'reviewed', reported: 'reported',
+    iscnCandidate: 'ISCN_Candidate',
     repeatUnit: 'Repeat_Unit', normalRangeMax: 'Normal_Max',
   };
   if (type === 'str' && column === 'status') return 'STR_Status';
   if (type === 'cnv-segment' && column === 'log2Ratio') return 'Col5';
   if (type === 'cnv-exon' && column === 'log2Ratio') return 'Col9';
+  if (type === 'cnv-exon' && column === 'gene') return 'Col5';
+  if (type === 'cnv-exon' && column === 'confidence') return 'Col18';
   if (type === 'mei' && column === 'teType') return 'TE_Type';
   return aliases[column] ?? column;
 }
@@ -573,7 +579,7 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
     queryFilters.push({
       column: parquetColumn(type, column),
       operator: Array.isArray(value) ? 'in' : (column === 'acmgClassification' || column === 'status' || column === 'type' || column === 'pathogenicity' ? 'equals' : 'contains'),
-      value,
+      value: column === "type" && type.startsWith("cnv-") ? (Array.isArray(value) ? value.map(toBackendCnvType) : toBackendCnvType(value)) : value,
     });
   }
   for (const filter of filterState.columnFilters ?? []) {

@@ -303,6 +303,12 @@ export function CNVSegmentTab({
       sortable: true,
     },
     {
+      id: 'iscnCandidate',
+      header: 'ISCN 候选',
+      accessor: row => <span className="block whitespace-normal break-words font-mono text-xs" title="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based">{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span>,
+      width: 300,
+    },
+    {
       id: 'type',
       header: '类型',
       accessor: (row) => {
