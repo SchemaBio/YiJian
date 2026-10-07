@@ -17,7 +17,10 @@ interface ReportTabProps {
 }
 
 export function ReportTab({ taskId }: ReportTabProps) {
-  const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
+  const requestIds=React.useRef<Record<string,string>>({});
+ const [generations,setGenerations]=React.useState<Array<{id:string;state:string;createdAt:string;errorCode:string;contractVersion:string}>>([]);
+ React.useEffect(()=>{let alive=true;reportsApi.listGenerations(taskId).then(rows=>{if(alive)setGenerations(rows)}).catch(()=>{});return()=>{alive=false;requestIds.current={}}},[taskId]);
+ const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [generating, setGenerating] = React.useState(false);
@@ -37,7 +40,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
         setTemplates(tpls);
       } catch (error) {
         if (ignore) return;
-        setErrorMessage(error instanceof Error ? error.message : '报告模板加载失败，请稍后重试。');
+        setErrorMessage(error instanceof Error ? error.message : '报告服务加载失败，请稍后重试。');
         setErrorModalOpen(true);
       } finally {
         if (!ignore) setLoading(false);
@@ -63,7 +66,8 @@ export function ReportTab({ taskId }: ReportTabProps) {
     setGenerationStage('preparing');
     setLastDownloadedFile('');
     try {
-      let packageState = await reportsApi.prepareTaskResultPackage(taskId);
+      if(template.contractVersion!=='report-snapshot-v2'){
+ let packageState = await reportsApi.prepareTaskResultPackage(taskId);
       const deadline = Date.now() + 5 * 60 * 1000;
       while (packageState.status !== 'ready') {
         if (packageState.status === 'failed') {
@@ -75,8 +79,11 @@ export function ReportTab({ taskId }: ReportTabProps) {
         await new Promise((resolve) => window.setTimeout(resolve, 2000));
         packageState = await reportsApi.getTaskResultPackage(taskId);
       }
-      setGenerationStage('calling');
-      const download = await reportsApi.generateTaskReport(taskId, template);
+      }
+ setGenerationStage('calling');
+      const requestId=requestIds.current[template.id]??crypto.randomUUID();requestIds.current[template.id]=requestId;
+ const download = await reportsApi.generateTaskReport(taskId, template,requestId);
+ delete requestIds.current[template.id];setGenerations(await reportsApi.listGenerations(taskId));
       setGenerationStage('downloading');
       saveDownload(download);
       setLastDownloadedFile(download.filename);
@@ -85,7 +92,8 @@ export function ReportTab({ taskId }: ReportTabProps) {
       setErrorMessage(error instanceof Error ? error.message : `报告 "${template.name}" 生成失败，请稍后重试。`);
       setErrorModalOpen(true);
     } finally {
-      setGenerating(false);
+      reportsApi.listGenerations(taskId).then(setGenerations).catch(()=>{});
+ setGenerating(false);
       setGenerationStage('idle');
     }
   };
@@ -93,21 +101,22 @@ export function ReportTab({ taskId }: ReportTabProps) {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
+ {generations.length>0&&<div className="rounded-lg border border-border-default bg-canvas-default p-4"><h4 className="mb-2 text-sm font-medium">报告生成记录</h4><table className="w-full text-left text-xs"><thead><tr><th>时间</th><th>协议</th><th>状态</th></tr></thead><tbody>{generations.map(g=><tr key={g.id}><td className="py-2">{new Date(g.createdAt).toLocaleString()}</td><td>{g.contractVersion}</td><td>{({ready:'已生成',generating:'生成中',failed:'失败',unknown:'远端结果待核对',pending:'等待生成'} as Record<string,string>)[g.state]??g.state}{g.errorCode&&` · ${g.errorCode}`}</td></tr>)}</tbody></table></div>}
 
       <div className="rounded-xl border border-border-default bg-canvas-default p-5">
         <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
           <FileText className="w-4 h-4" />
           判读报告生成
         </h4>
-        <p className="mb-4 text-xs text-fg-muted">选择模板，将当前判读记录生成报告；原始文件下载使用上方独立入口。</p>
+        <p className="mb-4 text-xs text-fg-muted">回报快照 v2 将已选入回报的位点、最新人工判读与质控固定为本次报告版本。旧版服务仅接收原始结果包。</p>
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="flex-1 min-w-0">
-            <FormItem label="报告模板">
+            <FormItem label="报告服务">
               <Select
                 value={selectedTemplate}
                 onChange={(value) => { if (typeof value === 'string') setSelectedTemplate(value); }}
                 options={templateOptions}
-                placeholder={loading ? "正在加载报告模板..." : "请选择报告模板..."}
+                placeholder={loading ? "正在加载报告服务..." : "请选择报告服务..."}
               />
             </FormItem>
           </div>
@@ -138,7 +147,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
           </div>
         )}
         {templates.length === 0 && (
-          <div className="mt-4 text-center py-6 text-sm text-fg-muted border border-border rounded-lg">暂无可用报告模板</div>
+          <div className="mt-4 text-center py-6 text-sm text-fg-muted border border-border rounded-lg">暂无可用报告服务</div>
         )}
         {lastDownloadedFile && (
           <div className="mt-3 flex items-center gap-2 text-sm text-success-fg">

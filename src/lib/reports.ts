@@ -1,6 +1,7 @@
 import { api, type DownloadResult } from './api';
 
 export interface ReportTemplate {
+ contractVersion:string;
   id: string;
   name: string;
   description: string;
@@ -24,6 +25,7 @@ interface RawReportTemplate {
   id?: unknown;
   name?: unknown;
   description?: unknown;
+ contractVersion?:unknown;
 }
 
 type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] } };
@@ -42,7 +44,7 @@ function unwrapList<T>(value: MaybeList<T>): T[] {
 
 function normalizeTemplate(raw: RawReportTemplate): ReportTemplate {
   return {
-    id: asString(raw.id),
+    id: asString(raw.id),contractVersion:asString(raw.contractVersion,'legacy-v1'),
     name: asString(raw.name),
     description: asString(raw.description),
   };
@@ -66,16 +68,17 @@ export function saveDownload(download: DownloadResult) {
 }
 
 export const reportsApi = {
+  listGenerations(taskId:string):Promise<Array<{id:string;state:string;createdAt:string;errorCode:string;contractVersion:string}>>{return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/report-generations`);},
   async listTemplates(): Promise<ReportTemplate[]> {
     const templates = await api.get<MaybeList<RawReportTemplate>>('/v1/report-templates');
     return unwrapList(templates).map(normalizeTemplate).filter(template => template.id && template.name);
   },
 
-  async generateTaskReport(taskId: string, template: ReportTemplate): Promise<DownloadResult> {
+  async generateTaskReport(taskId: string, template: ReportTemplate,clientRequestId:string): Promise<DownloadResult> {
     return api.download(
       `/v1/tasks/${encodeURIComponent(taskId)}/reports`,
       {
-        name: template.name,
+        name: template.name,clientRequestId,
         templateId: template.id,
         templateName: template.name,
       },

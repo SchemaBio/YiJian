@@ -1,8 +1,10 @@
 import { api } from './api';
+import {readResourcePages} from './resource-pages';
 
 export type GeneListCategory = 'core' | 'important' | 'optional';
 
 export interface GeneList {
+ revision:number;scope:string;canMaintain:boolean;
   id: string;
   name: string;
   disease: string;
@@ -50,11 +52,11 @@ function normalizeCategory(value: unknown): GeneListCategory {
 export function normalizeGeneList(rawValue: unknown): GeneList {
   const raw = asRecord(rawValue);
   return {
-    id: String(raw.id ?? ''),
+    id: String(raw.id ?? ''),revision:Number(raw.revision??1),scope:String(raw.scope??'personal'),canMaintain:raw.can_maintain===true,
     name: rawString(raw, 'name', 'name'),
     disease: rawString(raw, 'disease', 'disease_category'),
     description: rawString(raw, 'description', 'description'),
-    genes: rawGenes(raw.genes),
+    genes: [...new Set(rawGenes(raw.genes))],
     category: normalizeCategory(raw.category),
     createdAt: rawString(raw, 'createdAt', 'created_at'),
     updatedAt: rawString(raw, 'updatedAt', 'updated_at'),
@@ -78,10 +80,8 @@ export function geneListPayload(data: {
   };
 }
 
-export async function listGeneLists(params: Record<string, string> = { page: '1', page_size: '100' }): Promise<GeneList[]> {
-  const response = await api.get<MaybeList<unknown>>('/v1/gene-lists', { params });
-  return unwrapList(response).map(normalizeGeneList).filter(list => list.id);
-}
+export async function listGeneLists(params:Record<string,string>={},signal?:AbortSignal):Promise<GeneList[]>{return (await readResourcePages<unknown>('/v1/gene-lists',params,signal)).map(normalizeGeneList).filter(x=>x.id);}
+export async function publishGeneList(list:GeneList):Promise<GeneList>{return normalizeGeneList(await api.post(`/v1/gene-lists/${encodeURIComponent(list.id)}/publish`,{expected_revision:list.revision}));}
 
 export async function createGeneList(data: {
   name: string;
@@ -95,13 +95,14 @@ export async function createGeneList(data: {
 }
 
 export async function updateGeneList(id: string, data: {
+ expectedRevision:number;
   name: string;
   disease?: string;
   description?: string;
   genes: string[];
   category?: GeneListCategory;
 }): Promise<GeneList> {
-  const response = await api.put<unknown>(`/v1/gene-lists/${encodeURIComponent(id)}`, geneListPayload(data));
+  const response = await api.put<unknown>(`/v1/gene-lists/${encodeURIComponent(id)}`, {...geneListPayload(data),expected_revision:data.expectedRevision});
   return normalizeGeneList(response);
 }
 

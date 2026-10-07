@@ -1,10 +1,13 @@
 'use client';
+import {ResourcePager} from '@/components/shared/ResourcePager';
+import {useAuth} from '@/components/providers/AuthProvider';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
 import {
   Button,
   Input,
+  Select,
   DataTable,
   Tag,
   Modal,
@@ -23,6 +26,7 @@ import { ReportEndpointExamples } from './ReportEndpointExamples';
 type TemplateStatus = 'active' | 'inactive';
 
 interface ReportTemplate {
+ revision:number;scope:string;canMaintain:boolean;contractVersion:string;
   id: string;
   name: string;
   description: string;
@@ -57,7 +61,7 @@ function normalizeTemplate(value: unknown): ReportTemplate {
   const raw = asRecord(value);
   const isActive = raw.isActive ?? raw.is_active;
   return {
-    id: String(raw.id ?? ''),
+    id: String(raw.id ?? ''),revision:Number(raw.revision??1),scope:String(raw.scope??'personal'),canMaintain:raw.canMaintain===true,contractVersion:String(raw.contractVersion??'legacy-v1'),
     name: typeof raw.name === 'string' ? raw.name : '',
     description: typeof raw.description === 'string' ? raw.description : '',
     // The owner can read the endpoint and key-presence flag, but never the key itself.
@@ -89,9 +93,9 @@ function isValidReportEndpoint(value: string): boolean {
   }
 }
 
-async function fetchReportTemplates(): Promise<ReportTemplate[]> {
+async function fetchReportTemplates(signal?:AbortSignal): Promise<ReportTemplate[]> {
   const response = await api.get<MaybeList<unknown>>('/v1/report-templates', {
-    params: { include_inactive: 'true' },
+    params: { include_inactive: 'true' },signal,
   });
   return unwrapList(response).map(normalizeTemplate).filter(template => template.id && template.name);
 }
@@ -100,17 +104,17 @@ async function createReportTemplate(data: FormData): Promise<ReportTemplate> {
   const response = await api.post<unknown>('/v1/report-templates', {
     name: data.name.trim(),
     description: data.description.trim(),
-    apiEndpoint: data.apiEndpoint.trim(),
+    apiEndpoint: data.apiEndpoint.trim(),contractVersion:data.contractVersion,
     ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
   });
   return normalizeTemplate(response);
 }
 
-async function updateReportTemplate(id: string, data: FormData): Promise<ReportTemplate> {
+async function updateReportTemplate(id: string, data: FormData,expectedRevision:number): Promise<ReportTemplate> {
   const response = await api.put<unknown>(`/v1/report-templates/${encodeURIComponent(id)}`, {
-    name: data.name.trim(),
+    name: data.name.trim(),expectedRevision,
     description: data.description.trim(),
-    apiEndpoint: data.apiEndpoint.trim(),
+    apiEndpoint: data.apiEndpoint.trim(),contractVersion:data.contractVersion,
     ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
   });
   return normalizeTemplate(response);
@@ -126,6 +130,7 @@ async function deleteReportTemplate(id: string): Promise<void> {
 }
 
 interface FormData {
+ contractVersion:string;
   name: string;
   description: string;
   apiEndpoint: string;
@@ -133,15 +138,18 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
+ contractVersion:'report-snapshot-v2',
   name: '',
   description: '',
   apiEndpoint: '',
   apiKey: '',
 };
 
-export default function ReportTemplatesPage() {
+function ReportTemplatesPageContent() {
+ const [page,setPage]=React.useState(1);
   const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
+ React.useEffect(()=>setPage(1),[searchQuery]);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [formData, setFormData] = React.useState<FormData>(initialFormData);
@@ -153,22 +161,24 @@ export default function ReportTemplatesPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const refreshTemplates = React.useCallback(async () => {
+  const loadController=React.useRef<AbortController|null>(null);
+ const refreshTemplates = React.useCallback(async () => {
+ loadController.current?.abort();const controller=new AbortController();loadController.current=controller;
     setLoading(true);
     setError(null);
     try {
-      setTemplates(await fetchReportTemplates());
+      const rows=await fetchReportTemplates(controller.signal);if(!controller.signal.aborted)setTemplates(rows);
     } catch (err) {
-      console.error('加载报告服务失败', err);
+      if(controller.signal.aborted)return;console.error('加载报告服务失败', err);
       setTemplates([]);
       setError('加载报告服务失败，请稍后重试');
     } finally {
-      setLoading(false);
+      if(!controller.signal.aborted)setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    refreshTemplates();
+    refreshTemplates();return()=>loadController.current?.abort();
   }, [refreshTemplates]);
 
   const filteredTemplates = React.useMemo(() => {
@@ -213,7 +223,7 @@ export default function ReportTemplatesPage() {
     setFormData({
       name: template.name,
       description: template.description,
-      apiEndpoint: template.apiEndpoint,
+      apiEndpoint: template.apiEndpoint,contractVersion:template.contractVersion,
       apiKey: '',
     });
     setApiTestResult(null);
@@ -235,8 +245,8 @@ export default function ReportTemplatesPage() {
       setTemplates((prev) => prev.filter((template) => template.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err) {
-      console.error('删除报告模板失败', err);
-      setError(err instanceof Error ? err.message : '删除报告模板失败');
+      console.error('删除报告服务失败', err);
+      setError(err instanceof Error ? err.message : '删除报告服务失败');
     } finally {
       setLoading(false);
     }
@@ -249,8 +259,8 @@ export default function ReportTemplatesPage() {
       const updated = await setReportTemplateActive(template.id, template.status !== 'active');
       setTemplates((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
-      console.error('更新报告模板状态失败', err);
-      setError(err instanceof Error ? err.message : '更新报告模板状态失败');
+      console.error('更新报告服务状态失败', err);
+      setError(err instanceof Error ? err.message : '更新报告服务状态失败');
     } finally {
       setLoading(false);
     }
@@ -268,13 +278,13 @@ export default function ReportTemplatesPage() {
       if (!isValidReportEndpoint(endpoint)) {
         throw new Error('请输入不含访问凭据或片段标识的 HTTPS 报告服务地址');
       }
-      const result = await api.post<{ reachable: boolean; status_code: number }>('/v1/report-templates/validate-endpoint', {
+      const result = await api.post<{ reachable: boolean; status_code: number;authenticated:boolean;protocol_verified:boolean;head_supported:boolean }>('/v1/report-templates/validate-endpoint', {
         apiEndpoint: endpoint,
         ...(editingId ? { templateId: editingId } : {}),
         ...(formData.apiKey.trim() ? { apiKey: formData.apiKey.trim() } : {}),
       });
-      setApiTestResult('success');
-      setApiTestMessage(`端点可达（HTTP ${result.status_code}）`);
+      setApiTestResult(result.authenticated?'success':'error');
+ setApiTestMessage(result.head_supported?`端点可达，认证通过（HTTP ${result.status_code}）；生成协议需通过实际报告验证。`:'端点可达，但不支持 HEAD；认证和生成协议尚未验证。');
     } catch (err) {
       setApiTestResult('error');
       setApiTestMessage(err instanceof Error ? err.message : '端点连接失败');
@@ -299,7 +309,7 @@ export default function ReportTemplatesPage() {
     setError(null);
     try {
       if (editingId) {
-        const updated = await updateReportTemplate(editingId, formData);
+        const updated = await updateReportTemplate(editingId, formData,templates.find(x=>x.id===editingId)?.revision??0);
         setTemplates((prev) => prev.map((template) => (template.id === updated.id ? updated : template)));
       } else {
         const newTemplate = await createReportTemplate(formData);
@@ -317,6 +327,7 @@ export default function ReportTemplatesPage() {
   };
 
   const columns: Column<ReportTemplate>[] = [
+ {id:'contract',header:'报告协议',width:150,align:'center',accessor:row=><div><Tag variant={row.contractVersion==='report-snapshot-v2'?'info':'warning'}>{row.contractVersion==='report-snapshot-v2'?'回报快照 v2':'旧版契约'}</Tag>{row.scope==='personal'&&row.canMaintain&&<button type="button" className="mt-1 block w-full text-xs text-accent-fg" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</button>}</div>},
     {
       id: 'name',
       header: '服务名称',
@@ -385,7 +396,7 @@ export default function ReportTemplatesPage() {
           <button
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
             title="编辑"
-            onClick={() => handleEdit(row)}
+            disabled={!row.canMaintain} onClick={() => handleEdit(row)}
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -393,7 +404,7 @@ export default function ReportTemplatesPage() {
             className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="删除"
             onClick={() => handleDelete(row)}
-            disabled={row.status === 'active'}
+            disabled={!row.canMaintain || row.status === 'active'}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -404,7 +415,7 @@ export default function ReportTemplatesPage() {
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-green-600'
             }`}
             title={row.status === 'active' ? '停用' : '启用'}
-            onClick={() => handleToggleStatus(row)}
+            disabled={!row.canMaintain} onClick={() => handleToggleStatus(row)}
           >
             {row.status === 'active' ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
           </button>
@@ -424,7 +435,7 @@ export default function ReportTemplatesPage() {
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">报告生成服务</h2>
+          <h2 className="yj-page-title">报告服务</h2>
           <p className="yj-page-subtitle">配置你自己的 FastAPI 报告端点，并使用任务结果 UUID 生成报告。</p>
         </div>
       </div>
@@ -456,7 +467,7 @@ export default function ReportTemplatesPage() {
         </div>
       ) : filteredTemplates.length > 0 ? (
         <DataTable
-          data={filteredTemplates}
+          data={filteredTemplates.slice((page-1)*20,page*20)}
           columns={columns}
           rowKey="id"
           density="default"
@@ -471,6 +482,7 @@ export default function ReportTemplatesPage() {
         />
       )}
 
+      <ResourcePager page={page} total={filteredTemplates.length} onChange={setPage} />
       {/* 新建/编辑弹窗 */}
       <AppModal
         open={isModalOpen}
@@ -535,7 +547,7 @@ export default function ReportTemplatesPage() {
               <ModalSectionHeading
                 icon={<Server className="h-4 w-4" />}
                 title="服务连接"
-                description="配置报告生成服务地址及访问凭据"
+                description="配置报告服务地址及访问凭据"
               />
               <div className="space-y-4">
 
@@ -608,7 +620,7 @@ export default function ReportTemplatesPage() {
               </ul>
             </div>
 
-            <ReportEndpointExamples />
+            <FormItem label="报告协议"><Select value={formData.contractVersion} options={[{value:'report-snapshot-v2',label:'回报快照 v2（含最新判读）'},{value:'legacy-v1',label:'旧版契约（原始结果包）'}]} onChange={v=>setFormData({...formData,contractVersion:Array.isArray(v)?v[0]:v})}/></FormItem><ReportEndpointExamples />
           </div>
       </AppModal>
 
@@ -641,3 +653,5 @@ export default function ReportTemplatesPage() {
     </PageContent>
   );
 }
+
+export default function ReportTemplatesPage(){const {user,currentOrg}=useAuth();return <ReportTemplatesPageContent key={`${user?.id??""}:${currentOrg?.id??""}`} />;}

@@ -52,7 +52,7 @@ const pathLabelMap: Record<string, string> = {
   'gene-list': '基因列表',
   database: '数据库管理',
   baseline: '基线管理',
-  templates: '报告模板',
+  templates: '报告服务',
   // 分析中心子页面
   running: '进行中',
   pending: '待解读',

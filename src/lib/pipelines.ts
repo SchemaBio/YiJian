@@ -1,9 +1,10 @@
-import { api } from './api';
+import {readResourcePages} from './resource-pages';
 
 export type PipelineBaseType = 'wes_single' | 'wes_family';
 export type PipelineStatus = 'active' | 'inactive';
 
 export interface Pipeline {
+ resourceAvailable:boolean;resourceError:string;
   id: string;
   name: string;
   basePipelineId: string;
@@ -54,7 +55,7 @@ function unwrapList(value: unknown): unknown[] {
 export function normalizePipeline(value: unknown): Pipeline {
   const raw = (value ?? {}) as Record<string, unknown>;
   return {
-    id: String(raw.id ?? ''),
+    id: String(raw.id ?? ''),resourceAvailable:raw.resource_available!==false,resourceError:String(raw.resource_error??''),
     name: rawString(raw, 'name', 'name'),
     basePipelineId: rawString(raw, 'basePipelineId', 'base_pipeline_id'),
     baseType: normalizeBaseType(rawString(raw, 'baseType', 'base_type', 'wes_single')),
@@ -77,12 +78,6 @@ export async function listPipelines(params: {
   pageSize?: number;
   search?: string;
 } = {}): Promise<Pipeline[]> {
-  const data = await api.get<PipelineListResponse | unknown[]>('/v1/pipelines', {
-    params: {
-      page: String(params.page ?? 1),
-      page_size: String(params.pageSize ?? 100),
-      ...(params.search ? { search: params.search } : {}),
-    },
-  });
-  return unwrapList(data).map(normalizePipeline);
+  const data=await readResourcePages<unknown>('/v1/pipelines',params.search?{search:params.search}:{});
+  return data.map(normalizePipeline);
 }

@@ -165,9 +165,6 @@ function MatchedCell({ sample }: { sample: Sample }) {
           {status.icon}
           {status.label}
         </span>
-        {sample.matchStatus === 'matched' && sample.matchMode && (
-          <span className="text-[10px] text-fg-muted">{sample.matchMode === 'manual' ? '手动关联' : '自动匹配'}</span>
-        )}
       </div>
     </Tooltip>
   );

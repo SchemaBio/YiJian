@@ -1,0 +1,4 @@
+{"temporary_gene_fixtures": [{"count": 0}]}
+{"service": "octopus", "image": "schemabio/octopus:workflow-center-20261007-f553661f", "health": "healthy"}
+{"service": "squid", "image": "schemabio/squid:workflow-center-20261007-f553661f", "health": "healthy"}
+{"service": "yijian", "image": "schemabio/yijian:workflow-center-20261007-f553661f", "health": "healthy"}

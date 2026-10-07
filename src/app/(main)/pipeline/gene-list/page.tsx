@@ -1,11 +1,13 @@
 'use client';
+import {ResourcePager} from '@/components/shared/ResourcePager';
+import {useAuth} from '@/components/providers/AuthProvider';
 
 import { PageContent } from '@/components/layout';
 import { Button, Input, Tag } from '@schema/ui-kit';
 import { Plus, Search, Pencil, Trash2, ChevronDown, ChevronRight, ListTree, BookOpen, Dna, Loader2 } from 'lucide-react';
 import * as React from 'react';
 import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
-import { createGeneList, deleteGeneList, listGeneLists, updateGeneList, type GeneList } from '@/lib/gene-lists';
+import { createGeneList, publishGeneList, deleteGeneList, listGeneLists, updateGeneList, type GeneList } from '@/lib/gene-lists';
 
 // 删除确认弹窗
 function DeleteConfirmModal({
@@ -67,7 +69,7 @@ function GeneListModal({
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.disease || !formData.genes || submitting) return;
+    if (!formData.name || !formData.genes || submitting) return;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -103,7 +105,7 @@ function GeneListModal({
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={!formData.name || !formData.disease || !formData.genes || submitting}
+            disabled={!formData.name || !formData.genes || submitting}
             leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
             {submitting ? (mode === 'add' ? '添加中...' : '保存中...') : (mode === 'add' ? '添加' : '保存')}
@@ -130,7 +132,7 @@ function GeneListModal({
                 <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病 Panel" />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-fg-muted">关联疾病 *</label>
+                <label className="mb-1.5 block text-xs font-medium text-fg-muted">关联疾病（选填）</label>
                 <Input value={formData.disease} onChange={(e) => handleChange('disease', e.target.value)} placeholder="如：遗传性心肌病" />
               </div>
             </div>
@@ -166,8 +168,10 @@ function GeneListModal({
   );
 }
 
-export default function GeneListPage() {
+function GeneListPageContent() {
+ const [page,setPage]=React.useState(1);
   const [searchQuery, setSearchQuery] = React.useState('');
+ React.useEffect(()=>setPage(1),[searchQuery]);
   const [geneLists, setGeneLists] = React.useState<GeneList[]>([]);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -177,22 +181,25 @@ export default function GeneListPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const refreshGeneLists = React.useCallback(async () => {
+  const loadController=React.useRef<AbortController|null>(null);
+ const refreshGeneLists = React.useCallback(async () => {
+ loadController.current?.abort();const controller=new AbortController();loadController.current=controller;
     setLoading(true);
     setError(null);
     try {
-      setGeneLists(await listGeneLists());
+      const lists=await listGeneLists({},controller.signal);if(!controller.signal.aborted)setGeneLists(lists);
     } catch (err) {
-      console.error('加载基因列表失败', err);
+      if(controller.signal.aborted)return;
+ console.error('加载基因列表失败', err);
       setGeneLists([]);
       setError('加载基因列表失败，请稍后重试');
     } finally {
-      setLoading(false);
+      if(!controller.signal.aborted)setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
-    refreshGeneLists();
+    refreshGeneLists();return()=>loadController.current?.abort();
   }, [refreshGeneLists]);
 
   const toggleExpand = (id: string) => {
@@ -232,7 +239,7 @@ export default function GeneListPage() {
         const newList = await createGeneList({
           name: data.name,
           disease: data.disease,
-          description: data.description || `${data.name} 基因列表`,
+          description: data.description,
           genes,
         });
         setGeneLists((prev) => [newList, ...prev]);
@@ -240,7 +247,7 @@ export default function GeneListPage() {
         const updated = await updateGeneList(editingList.id, {
           name: data.name,
           disease: data.disease,
-          description: data.description || editingList.description,
+          description: data.description,expectedRevision:editingList.revision,
           genes,
           category: editingList.category,
         });
@@ -317,7 +324,7 @@ export default function GeneListPage() {
       {/* 列表展示 */}
       <div className="yj-list-panel">
         <div className="divide-y divide-border">
-          {filteredLists.map((list) => {
+          {filteredLists.slice((page-1)*20,page*20).map((list) => {
             const isExpanded = expandedIds.has(list.id);
             return (
               <div key={list.id}>
@@ -350,21 +357,22 @@ export default function GeneListPage() {
                     <button
                       className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
                       title="编辑"
-                      onClick={() => handleOpenEditModal(list)}
+                      disabled={!list.canMaintain} onClick={() => handleOpenEditModal(list)}
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
                       title="删除"
-                      onClick={() => setDeleteTarget(list)}
+                      disabled={!list.canMaintain} onClick={() => setDeleteTarget(list)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* 展开的基因列表 */}
+                {list.scope==='personal'&&list.canMaintain&&<div className="px-4 pb-2"><Button size="small" variant="secondary" onClick={async()=>{try{await publishGeneList(list);await refreshGeneLists();}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</Button></div>}
+ {/* 展开的基因列表 */}
                 {isExpanded && (
                   <div className="px-4 py-3 bg-canvas-subtle border-t border-border">
                     <div className="flex flex-wrap gap-2">
@@ -399,6 +407,7 @@ export default function GeneListPage() {
         )}
       </div>
 
+      <ResourcePager page={page} total={filteredLists.length} onChange={setPage} />
       <GeneListModal
         isOpen={isModalOpen}
         mode={modalMode}
@@ -425,3 +434,5 @@ export default function GeneListPage() {
     </PageContent>
   );
 }
+
+export default function GeneListPage(){const {user,currentOrg}=useAuth();return <GeneListPageContent key={`${user?.id??""}:${currentOrg?.id??""}`} />;}

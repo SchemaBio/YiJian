@@ -131,8 +131,7 @@ export function SNVIndelTab({
   // 加载基因列表
   React.useEffect(() => {
     async function loadGeneLists() {
-      const lists = await getGeneLists();
-      setGeneLists(lists);
+      try{const lists=await getGeneLists();setGeneLists(lists)}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}
     }
     loadGeneLists();
   }, []);
@@ -181,10 +180,10 @@ export function SNVIndelTab({
   const handleGeneListFilter = React.useCallback((geneListId: string) => {
     setFilterState({ 
       ...filterState, 
-      geneListId: geneListId || undefined, 
+      geneListId: geneListId || undefined,geneListRevision:geneLists.find(x=>x.id===geneListId)?.revision,
       page: 1 
     });
-  }, [filterState, setFilterState]);
+  }, [filterState, setFilterState,geneLists]);
 
   const handleUpdateClassification = React.useCallback(async (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false) => {
     const saved = await saveResultRowAdjustment(taskId, 'snv-indel', variant.id, variant.adjustmentVersion ?? 0, reset ? { resetAcmg: true } : {
@@ -418,6 +417,8 @@ export function SNVIndelTab({
               ))}
             </select>
           </div>
+
+          <button className="shrink-0 whitespace-nowrap text-xs text-accent-fg" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</button>
 
           {/* ACMG筛选 */}
           <select

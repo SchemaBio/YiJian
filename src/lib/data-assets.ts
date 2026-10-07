@@ -12,6 +12,9 @@ export type DataAssetStatus = 'pending' | 'uploading' | 'completed' | 'failed' |
 export type DataReadType = 'read1' | 'read2' | 'single' | 'bed';
 
 export interface DataAsset {
+ validation_status?:'pending'|'validating'|'valid'|'invalid'|'unavailable';
+ validation_code?:string;
+ validated_at?:string;
   id: string;
   file_name: string;
   internal_id?: string;
@@ -79,11 +82,12 @@ export interface UploadBatchResult {
   cancelledFileIds: string[];
 }
 
-export async function listDataAssets(search = '', filters?: { readType?: DataReadType; status?: DataAssetStatus; referenceGenome?: 'GRCh37' | 'GRCh38' }): Promise<AssetListResponse> {
+export async function listDataAssets(search = '', filters?: { readType?: DataReadType; status?: DataAssetStatus; referenceGenome?: 'GRCh37' | 'GRCh38'; page?: number; signal?: AbortSignal }): Promise<AssetListResponse> {
   return api.get<AssetListResponse>('/v1/data/assets', {
     cache: 'no-store',
+    signal: filters?.signal,
     params: {
-      page: '1', page_size: '100',
+      page: String(filters?.page || 1), page_size: '100',
       ...(search.trim() ? { search: search.trim() } : {}),
       ...(filters?.readType ? { read_type: filters.readType } : {}),
       ...(filters?.status ? { status: filters.status } : {}),
@@ -580,3 +584,6 @@ export function downloadDataAsset(id: string, filename: string) {
     method: 'GET', fallbackFilename: filename,
   });
 }
+
+export async function listAllBEDAssets(signal?:AbortSignal):Promise<DataAsset[]>{const items:DataAsset[]=[];for(let page=1;page<=10000;page++){const r=await listDataAssets('',{readType:'bed',page,signal});items.push(...r.items);if(items.length>=r.total||r.items.length<100)return items;}throw new Error('BED 列表过大');}
+export function validateBEDAsset(id:string):Promise<DataAsset>{return api.post(`/v1/data/assets/${encodeURIComponent(id)}/validate`,{});}

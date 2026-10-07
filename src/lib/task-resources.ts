@@ -1,4 +1,5 @@
 import { api } from './api';
+import {readResourcePages} from './resource-pages';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 
 type MaybeList<T> = T[] | { items?: T[]; list?: T[]; data?: T[] | { items?: T[]; list?: T[] } };
@@ -33,6 +34,7 @@ export interface TaskPipelineOption {
   template?: string;
   status?: string;
   isBuiltin?: boolean;
+  resourceAvailable?: boolean;
 }
 
 export interface TaskTemplateOption {
@@ -116,6 +118,7 @@ function normalizePipeline(rawValue: unknown): TaskPipelineOption {
     template: valueOf<string | undefined>(raw, 'template', 'template', undefined),
     status: String(raw.status ?? ''),
     isBuiltin: Boolean(raw.isBuiltin ?? raw.is_builtin),
+    resourceAvailable: (raw.resourceAvailable ?? raw.resource_available) !== false,
   };
 }
 
@@ -151,12 +154,10 @@ export const samplesApi = {
 
 export const pipelinesApi = {
   async list(): Promise<TaskPipelineOption[]> {
-    const response = await api.get<MaybeList<unknown>>('/v1/pipelines', {
-      params: { page: '1', page_size: '100' },
-    });
-    return unwrapList(response)
+    const response = await readResourcePages<unknown>('/v1/pipelines');
+    return response
       .map(normalizePipeline)
-      .filter(pipeline => pipeline.id && pipeline.name && pipeline.status !== 'inactive');
+      .filter(pipeline => pipeline.id && pipeline.name && pipeline.status !== 'inactive' && pipeline.resourceAvailable !== false);
   },
 };
 

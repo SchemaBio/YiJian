@@ -422,6 +422,7 @@ export interface TableFilterState {
   sortDirection?: 'asc' | 'desc';
   page: number;
   pageSize: number;
+  geneListRevision?:number;
   geneListId?: string;  // 基因列表过滤
 }
 

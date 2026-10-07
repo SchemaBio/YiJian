@@ -115,7 +115,34 @@ app.post("/reports/generate", async (req, res) => {
 
 app.listen(8000);`;
 
+const snapshotExample = `POST /reports/generate
+Authorization: Bearer <service-key>
+Idempotency-Key: <report-generation-uuid>
+
+{
+  "contract_version": "report-snapshot-v2",
+  "request_id": "<report-generation-uuid>",
+  "report_snapshot_sha256": "<sha256>",
+  "report_snapshot": {
+    "contract": "report-snapshot-v2",
+    "task_uuid": "<task>", "attempt_id": "<attempt>",
+    "datasets": [{"id":"<dataset>","table":"snv-indel","version":"<version>","adjustment_revision":3}],
+    "members": [], "qc": [],
+    "reported_variants": [{
+      "table":"snv-indel", "row_id":"<stable-row>", "dataset_version":"<version>", "adjustment_version":2,
+      "original": {}, "automatic_assessment": {},
+      "interpretation": {"reported":true}
+    }]
+  }
+}
+
+仅使用 reported_variants 生成回报表；空数组表示未选择回报位点。
+interpretation 是最新人工调整，automatic_assessment 是自动基线。
+服务须按 Idempotency-Key 缓存生成结果；相同键不得重新签发另一份报告。
+返回 2xx + PDF/DOCX 等二进制文件 + Content-Disposition。
+HEAD 应校验 Bearer Key 并返回 2xx；只支持 POST 可返回 405。`;
 const examples = [
+ {language:'回报快照 v2 · 接口契约',code:snapshotExample},
   { language: 'Python · FastAPI', code: pythonExample },
   { language: 'Go · net/http', code: goExample },
   { language: 'JavaScript · Express', code: javascriptExample },
@@ -129,7 +156,7 @@ export function ReportEndpointExamples() {
       </summary>
       <div className="space-y-4 border-t border-border-default px-3 py-3">
         <p className="text-xs text-fg-muted">
-          示例会下载短期预签名 ZIP，读取 outputs.resolved.json 和 Parquet；把注释位置替换为你的 PDF/DOCX 生成逻辑即可。
+          新服务使用回报快照 v2；下面的 Python、Go、JavaScript 代码是旧版原始结果包示例，不包含人工判读。
         </p>
         {examples.map((example) => (
           <section key={example.language} className="space-y-1.5">

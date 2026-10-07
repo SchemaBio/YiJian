@@ -1,3 +1,4 @@
+import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
 import { queryBrowserParquet, exportBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
@@ -48,6 +49,7 @@ const ACMG_ALIASES: Record<string, ACMGClassification> = {
 };
 
 export interface GeneListOption {
+ revision:number;
   id: string;
   name: string;
   geneCount: number;
@@ -592,7 +594,8 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
   if (filterState.geneListId) {
     const lists = await getGeneLists();
     const genes = lists.find(list => list.id === filterState.geneListId)?.genes;
-    if (!genes?.length) throw new Error('所选基因列表不可用，请刷新列表或清除该筛选');
+    const current=lists.find(list=>list.id===filterState.geneListId);if(filterState.geneListRevision!==undefined&&current?.revision!==filterState.geneListRevision)throw new Error('基因列表已更新，请刷新基因列表并重新确认筛选');
+ if (!genes?.length) throw new Error('所选基因列表不可用，请刷新列表或清除该筛选');
     queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
   }
   const sort = filterState.sortColumn ? parquetColumn(type, filterState.sortColumn) : '';
@@ -664,20 +667,7 @@ export async function saveCNVAssessment(
   return { ...assessment, cnvId: variantId, isUserModified: true, updatedAt: new Date().toISOString(), adjustmentVersion: response.adjustment.version };
 }
 
-export async function getGeneLists(): Promise<GeneListOption[]> {
-  try {
-    const response = await api.get<BackendPage<BackendRow>>('/v1/gene-lists', { params: { page: '1', page_size: '100' } });
-    const items = response.items ?? response.data ?? [];
-    return items.map(item => ({
-      id: s(item.id),
-      name: s(item.name),
-      geneCount: n(item.geneCount ?? item.gene_count, arr(item.genes).length),
-      genes: arr(item.genes),
-    }));
-  } catch {
-    return [];
-  }
-}
+export async function getGeneLists():Promise<GeneListOption[]>{return (await listGeneLists()).map(x=>({id:x.id,name:x.name,geneCount:x.genes.length,genes:x.genes,revision:x.revision}));}
 
 export async function pinVariant(taskId: string, type: string, variantId: string, pinned: boolean): Promise<{ pinned: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));

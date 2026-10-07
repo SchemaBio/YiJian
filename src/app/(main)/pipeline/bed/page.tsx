@@ -1,11 +1,12 @@
 'use client';
+import {ResourcePager} from '@/components/shared/ResourcePager';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { Button, Checkbox, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
 import { AlertTriangle, FileText, HardDrive, Loader2, Search, Trash2, Upload } from 'lucide-react';
-import { deleteDataAsset, getDataCenterConfig, getUploadStorageStats, listDataAssets, uploadBEDFile, type DataAsset, type DataCenterConfig, type UploadStorageStats } from '@/lib/data-assets';
+import { deleteDataAsset, getDataCenterConfig, getUploadStorageStats, listAllBEDAssets, validateBEDAsset, uploadBEDFile, type DataAsset, type DataCenterConfig, type UploadStorageStats } from '@/lib/data-assets';
 import { BUILTIN_BED_ASSETS } from '@/lib/builtin-resources';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -30,9 +31,11 @@ function formatBytes(value: number): string {
   return `${(value / 1024 ** 4).toFixed(1)} TB`;
 }
 
-export default function BedFilesPage() {
+function BedFilesPageContent() {
+ const [page,setPage]=React.useState(1);
   const { currentOrg } = useAuth();
   const [searchQuery, setSearchQuery] = React.useState('');
+ React.useEffect(()=>setPage(1),[searchQuery]);
   const [items, setItems] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
   const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
@@ -47,28 +50,33 @@ export default function BedFilesPage() {
   const [uploadError, setUploadError] = React.useState('');
   const [deleting, setDeleting] = React.useState<DataAsset | null>(null);
   const [deleteBusy, setDeleteBusy] = React.useState(false);
+  const [references,setReferences]=React.useState<{kind:string;id:string;name:string}[]>([]);
 
-  const loadData = React.useCallback(async () => {
+  const loadController=React.useRef<AbortController|null>(null);
+ const loadData = React.useCallback(async () => {
+ loadController.current?.abort();const controller=new AbortController();loadController.current=controller;
     setIsLoading(true);
     setError(null);
     try {
       const [response, dataCenterConfig, uploadStorageStats] = await Promise.all([
-        listDataAssets('', { readType: 'bed' }),
+        listAllBEDAssets(controller.signal),
         getDataCenterConfig(),
         getUploadStorageStats(),
       ]);
-      setItems([...BUILTIN_BED_ASSETS, ...response.items]);
+      if(controller.signal.aborted)return;
+ setItems([...BUILTIN_BED_ASSETS, ...response]);
       setConfig(dataCenterConfig);
       setStorageStats(uploadStorageStats);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载 BED 文件失败');
+      if(controller.signal.aborted)return;setError(err instanceof Error ? err.message : '加载 BED 文件失败');
       setItems([]);
     } finally {
-      setIsLoading(false);
+      if(!controller.signal.aborted)setIsLoading(false);
     }
   }, []);
 
-  React.useEffect(() => { void loadData(); }, [loadData]);
+  React.useEffect(() => { void loadData();return()=>loadController.current?.abort(); }, [loadData]);
+ React.useEffect(()=>{if(!items.some(x=>!x.is_builtin&&(x.validation_status==='pending'||x.validation_status==='validating')))return;const t=setInterval(()=>void loadData(),5000);return()=>clearInterval(t)},[items,loadData]);
 
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const storageQuotaBytes = isSaaS && (currentOrg?.storageQuotaBytes ?? 0) > 0
@@ -123,13 +131,14 @@ export default function BedFilesPage() {
   const handleDelete = async () => {
     if (!deleting || deleteBusy) return;
     setDeleteBusy(true);
-    setError(null);
+    setError(null);setReferences([]);
     try {
       await deleteDataAsset(deleting.id);
       setDeleting(null);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除 BED 文件失败');
+      const data=(err as {data?:{references?:{kind:string;id:string;name:string}[]}}).data;setReferences(data?.references??[]);
     } finally {
       setDeleteBusy(false);
     }
@@ -151,10 +160,10 @@ export default function BedFilesPage() {
     },
     {
       id: 'status', header: '状态', width: 100, align: 'center',
-      accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? '可用' : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
+      accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:'可用',invalid:'内容无效',unavailable:'校验暂不可用',validating:'校验中',pending:'待校验'}[row.validation_status??'pending']) : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
     },
     { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
-    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button> },
+    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <div className="flex items-center gap-1">{row.status==='completed'&&row.validation_status!=='valid'&&<button type="button" className="whitespace-nowrap text-xs text-accent-fg" title={row.validation_code} onClick={async()=>{try{await validateBEDAsset(row.id);await loadData()}catch(e){setError(e instanceof Error?e.message:'校验失败')}}}>重新校验</button>}<button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></div> },
   ];
 
   return (
@@ -175,14 +184,16 @@ export default function BedFilesPage() {
 
       {error && <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
 
+      {references.length>0&&<div className="rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm">此 BED 正在被以下资源使用：<ul className="mt-2 space-y-1">{references.map(r=><li key={`${r.kind}:${r.id}`}><a className="text-accent-fg underline" href={r.kind==='task'?`/tasks/${r.id}`:r.kind==='baseline'?'/pipeline/baseline':'/pipeline'}>{r.name||r.id}</a></li>)}</ul></div>}
       {isLoading ? (
         <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 BED 文件...</p></div>
       ) : filteredFiles.length === 0 ? (
         <EmptyState className="yj-panel" icon={<FileText />} title="暂无 BED 文件" description="上传 BED 文件后即可在分析流程和 CNV 基线任务中选择。" />
       ) : (
-        <DataTable data={filteredFiles} columns={columns} rowKey="id" density="default" striped />
+        <DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped />
       )}
 
+      <ResourcePager page={page} total={filteredFiles.length} onChange={setPage} />
       <AppModal
         open={modalOpen}
         onOpenChange={(open) => !open && closeModal()}
@@ -223,3 +234,5 @@ export default function BedFilesPage() {
     </PageContent>
   );
 }
+
+export default function BedFilesPage(){const {user,currentOrg}=useAuth();return <BedFilesPageContent key={`${user?.id??""}:${currentOrg?.id??""}`} />;}

@@ -8,6 +8,7 @@ export interface CNVBaselineAsset {
 }
 
 export interface CNVBaseline {
+  start_error?: string;
   id: string;
   name: string;
   reference_genome: 'GRCh37' | 'GRCh38';
