@@ -24,7 +24,7 @@ function dbSnpURL(rsId: string): string {
 }
 
 function omimURL(omimId: string): string {
-  return `https://omim.org/entry/${encodeURIComponent(String(omimId).trim())}`;
+  return `https://www.omim.org/entry/${encodeURIComponent(String(omimId).trim())}`;
 }
 
 interface VariantDetailPanelProps {
@@ -57,6 +57,7 @@ function InfoItem({ label, value, link }: { label: string; value?: React.ReactNo
           href={link}
           target="_blank"
           rel="noopener noreferrer"
+          referrerPolicy="no-referrer"
           className="text-accent-fg text-sm hover:underline flex items-center gap-1"
         >
           {value}
@@ -455,9 +456,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <InfoItem
               label="dbSNP" 
               value={variant.rsId}
-              link={variant.rsId ? dbSnpURL(variant.rsId) : undefined}
+              link={/^rs[0-9]+$/i.test(variant.rsId || '') ? dbSnpURL(variant.rsId!) : undefined}
             />
-            <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />
+            <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} link={/^(?:HGNC:)?[0-9]+$/i.test(annotation('HGNC_ID') || '') ? `https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/${encodeURIComponent(`HGNC:${annotation('HGNC_ID')!.replace(/^HGNC:/i, '')}`)}` : undefined} />
             <InfoItem label="Cytoband" value={annotation('Cytoband')} />
             <InfoItem label="GenCC 疾病关联" value={annotation('GenCC_disease_title', variant.diseaseAssociation)} />
             <InfoItem label="GenCC 遗传模式名称" value={annotation('GenCC_moi_title')} />
@@ -484,6 +485,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                       href={pubMedURL(pmid)}
                       target="_blank"
                       rel="noopener noreferrer"
+          referrerPolicy="no-referrer"
                       className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-canvas-inset text-accent-fg rounded hover:bg-accent-subtle transition-colors"
                     >
                       PMID:{pmid}

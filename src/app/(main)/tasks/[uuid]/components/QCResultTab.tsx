@@ -17,6 +17,7 @@ const METRICS: MetricDefinition[] = [
   { key: 'totalReads', label: '过滤后 reads', unit: 'reads', warningMin: 80_000_000, prompt: '≥80,000,000 reads' },
   { key: 'mappedReads', label: '已比对 reads', unit: 'reads' },
   { key: 'mappedReadsFraction', label: '比对率', unit: 'percent', warningMin: 0.95, prompt: '≥95%' },
+  { key: 'targetDataFraction', label: '靶向捕获效率', unit: 'percent' },
   { key: 'averageDepth', label: '平均深度', unit: '×', warningMin: 100, prompt: '≥100×' },
   { key: 'dedupDepth', label: '去重深度', unit: '×', warningMin: 80, prompt: '≥80×' },
   { key: 'coverageGt02Avg', label: '均一性（>0.2× 平均深度）', unit: 'percent' },
@@ -27,7 +28,6 @@ const METRICS: MetricDefinition[] = [
   { key: 'q30Rate', label: 'Q30 比例', unit: 'percent', warningMin: 0.85, prompt: '≥85%' },
   { key: 'gcContent', label: 'GC 比例', unit: 'percent' },
   { key: 'insertSizeMedian', label: '插入片段中位数', unit: 'bp' },
-  { key: 'targetDataFraction', label: '目标区域数据占比', unit: 'percent' },
   { key: 'mtAverageDepth', label: '线粒体平均深度', unit: '×' },
   { key: 'mtCoverageGt0x', label: '线粒体 >0× 覆盖率', unit: 'percent' },
 ];
@@ -128,11 +128,11 @@ export function QCAndFamilyTables({ context }: { context: ResultContext }) {
           const metric = metricFor(member.id, definition.key);
           const attention = needsAttention(metric, definition);
           return <td key={member.id} title={`来源：${metric?.source || '未提供'}${definition.prompt ? `；复核提示：${definition.prompt}` : ''}`} className={`whitespace-nowrap px-2 py-0.5 tabular-nums ${attention ? 'bg-warning-subtle text-warning-fg' : 'text-fg-default'}`}>
-            <span className="font-medium">{formatMetric(metric, definition)}</span>{attention && <span className="ml-1" aria-label="需关注">!</span>}
+            <span className="font-medium">{formatMetric(metric, definition)}</span>
           </td>;
         })}
       </tr>)}</tbody>
     </table></div>}
-    <p className="border-t border-border-default px-3 py-0.5 text-[11px] text-fg-muted">! 表示需关注。悬停查看来源及复核提示；提示不作为报告放行结论。</p>
+    <p className="border-t border-border-default px-3 py-0.5 text-[11px] text-fg-muted">悬停查看来源及复核提示；提示不作为报告放行结论。</p>
   </section>;
 }

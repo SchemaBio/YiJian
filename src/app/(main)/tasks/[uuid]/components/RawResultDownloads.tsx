@@ -26,6 +26,23 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
   const generation = React.useRef(0);
   const catalogExpiry = React.useRef<number | null>(null);
   const base = `/v1/tasks/${encodeURIComponent(taskId)}/downloads`;
+  const downloadZIP = async (grant: Issued) => {
+    // Use the application's authenticated transport, including session refresh.
+    // Only this task's paid grant can be used; no external response URL is fetched.
+    const result = await api.download(`${base}/${encodeURIComponent(grant.id)}/file`, undefined, { method: 'GET', fallbackFilename: grant.filename });
+    const url = URL.createObjectURL(result.blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = grant.filename;
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+  const retryZIP = async () => {
+    if (!issued || busy) return;
+    setBusy(true); setError('');
+    try { await downloadZIP(issued); }
+    catch (cause) { setError(`${cause instanceof Error ? cause.message : 'ZIP 下载失败'}。请重试本申请，不要重新支付。`); }
+    finally { setBusy(false); }
+  };
   React.useEffect(() => {
     const current = ++generation.current;
     let disposed = false;
@@ -72,13 +89,11 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
       setIssued({...next, kind: quote.kind}); setQuote(null);
       void api.get<Quote[]>(`${base}/active`).then(rows => {if(current === generation.current)setActive(rows);}).catch(() => {});
       if (quote.kind === 'zip') {
-        const link = document.createElement('a');
-        link.href = next.url; link.download = next.filename; link.rel = 'noreferrer noopener';
-        document.body.appendChild(link); link.click(); link.remove();
+        await downloadZIP(next);
       }
     } catch (cause) {
       // Retain the quote: retrying this exact ID is billing-idempotent.
-      if (current === generation.current) setError(cause instanceof Error ? cause.message : '申请结果暂未确认，请重试同一申请');
+      if (current === generation.current) setError(`${cause instanceof Error ? cause.message : '申请结果暂未确认'}。请重试同一申请，不要重新支付。`);
     } finally { if (current === generation.current) setBusy(false); }
   };
 
@@ -129,7 +144,7 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
     {issued&&<div role="status" className="rounded-xl border border-success-muted bg-success-subtle p-4">
       <p className="break-all text-sm font-medium">下载链接已就绪 · {issued.filename}</p>
       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-fg-muted"><span>本申请费用：{issued.credits_charged} 积分</span><span>到期：{new Date(issued.expires_at).toLocaleString('zh-CN')}</span><span>绑定申请 IP</span></div>
-      <div className="mt-3 flex flex-wrap items-center gap-2"><a href={issued.url} download={issued.filename} rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-sm text-fg-on-emphasis"><Download className="h-4 w-4"/>开始下载 / 续传</a><Button size="small" variant="secondary" className="whitespace-nowrap" leftIcon={<Copy className="h-3.5 w-3.5"/>} onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError('复制失败，请允许浏览器访问剪贴板'));}}>{copied?'已复制链接':'复制下载链接'}</Button><span className="text-xs text-fg-muted">使用此链接不重复扣费。</span></div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">{issued.kind === 'zip' ? <Button size="small" variant="primary" className="whitespace-nowrap" loading={busy} leftIcon={<Download className="h-4 w-4"/>} onClick={()=>void retryZIP()}>下载 ZIP / 重试（不重复扣费）</Button> : <><a href={issued.url} download={issued.filename} rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-sm text-fg-on-emphasis"><Download className="h-4 w-4"/>开始下载 / 续传</a><Button size="small" variant="secondary" className="whitespace-nowrap" leftIcon={<Copy className="h-3.5 w-3.5"/>} onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError('复制失败，请允许浏览器访问剪贴板'));}}>{copied?'已复制链接':'复制下载链接'}</Button></>}<span className="text-xs text-fg-muted">使用此链接不重复扣费。</span></div>
     </div>}
     {!!active.length&&<details className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">已有下载申请 · 取回已付费链接不重复扣费</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?'取回已付费链接':'继续原申请'}</Button></div>)}</div></details>}
     <Modal open={!!quote} onOpenChange={open=>{if(!open&&!busy)setQuote(null);}}>

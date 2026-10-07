@@ -124,7 +124,7 @@ function shouldMountAIAssistant(pathname: string, isEnabled: boolean): boolean {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const fixedTaskWorkspace = /^\/tasks\/[^/]+$/.test(pathname);
+  const fixedTaskWorkspace = /^\/tasks\/[^/]+$/.test(pathname) || pathname === '/history';
   const { isEnabled: aiAssistantEnabled } = useAI();
   const showAssistant = shouldMountAIAssistant(pathname, aiAssistantEnabled);
   const { collapsed, setCollapsed } = useSidebarState();

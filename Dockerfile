@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 COPY . .
 
 # 构建
-RUN pnpm build
+RUN pnpm typecheck && pnpm build
 
 # ============ 运行时阶段 ============
 FROM node:22-alpine3.22 AS runner
