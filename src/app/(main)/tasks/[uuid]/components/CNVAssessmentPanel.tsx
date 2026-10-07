@@ -52,14 +52,16 @@ function ScoreSummaryCard({
   totalScore,
   sectionScores,
   isUserModified,
+  insufficient,
 }: {
   classification: ClinGenClassification;
   totalScore: number;
   sectionScores: SectionScores;
   isUserModified: boolean;
+  insufficient?: boolean;
 }) {
-  const variant = getClassificationVariant(classification);
-  const label = getClassificationLabel(classification);
+  const variant = insufficient ? 'neutral' : getClassificationVariant(classification);
+  const label = insufficient ? '证据不足' : getClassificationLabel(classification);
 
   return (
     <div className="bg-canvas-subtle rounded-lg p-4 mb-4">
@@ -283,6 +285,7 @@ export function CNVAssessmentPanel({
             totalScore={assessment.totalScore}
             sectionScores={assessment.sectionScores}
             isUserModified={assessment.isUserModified}
+            insufficient={assessment.assessmentState === 'insufficient_evidence'}
           />
 
           {/* Section 面板 */}

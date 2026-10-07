@@ -159,14 +159,14 @@ function calculateSection4Segregation(criteria: Section4Criteria['segregation'])
   let score = 0;
   const maxTotal = 0.45;
 
-  // 4F: 3+ affected, LOD ≥ 2 (0.45 each)
-  score += criteria['4F'] * 0.45;
+  // 4F: 3–4 observed segregations (0.15 per independent family).
+  score += criteria['4F'] * 0.15;
 
-  // 4G: 2 affected (0.30 each)
+  // 4G: 5–6 observed segregations (0.30 per independent family).
   score += criteria['4G'] * 0.30;
 
-  // 4H: 1 affected (0.15 each)
-  score += criteria['4H'] * 0.15;
+  // 4H: 7 or more observed segregations (0.45 per independent family).
+  score += criteria['4H'] * 0.45;
 
   return Math.min(score, maxTotal);
 }

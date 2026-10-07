@@ -253,6 +253,8 @@ export function CNVExonTab({
         const state = getReviewState(row);
         return (
           <PinCheckbox
+            reasons={row.pinReasons?.length?row.pinReasons:row.automaticAssessment?.pending}
+            source={row.pinSource}
             checked={state.pinned}
             onChange={(checked) => handlePinChange(row.id, checked, state)}
             disabled={pendingVariantIDs.has(row.id)}
@@ -328,6 +330,7 @@ export function CNVExonTab({
         }
         const cachedAssessment = getAssessmentForCNV(row.id);
         if (!cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenAssessmentPanel(row); }} className="text-xs text-accent-fg hover:underline">待评估 · 计算器</button>;
+        if(cachedAssessment.assessmentState==='insufficient_evidence')return <button type="button" onClick={event=>{event.stopPropagation();handleOpenAssessmentPanel(row);}} className="text-xs text-fg-muted hover:underline" title={cachedAssessment.autoEvidenceNotes?.join('；')}>证据不足 · 计算器</button>;
         const classification = cachedAssessment.classification;
         const score = cachedAssessment?.totalScore ?? 0;
         const isUserModified = cachedAssessment?.isUserModified ?? false;

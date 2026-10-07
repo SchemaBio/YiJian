@@ -1,5 +1,6 @@
 import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
+import {assessmentStatus} from '@/lib/assessment/client';
 import { queryBrowserParquet, exportBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
 import type {
@@ -143,6 +144,8 @@ function normalizeReview(row: BackendRow): VariantReviewStatus {
   const review = row.reviewStatus ?? row.review_status ?? {};
   return {
     pinned: row.pinned === true || review.pinned === true,
+    automaticAssessment: row.automaticAssessment as VariantReviewStatus['automaticAssessment'],
+    pinReasons: Array.isArray(row.pinReasons) ? row.pinReasons.filter((x):x is string=>typeof x==='string') : undefined,
     pinSource: row.pinSource === 'automatic' ? 'automatic' : row.pinSource === 'manual' ? 'manual' : undefined,
     reviewed: Boolean(review.reviewed ?? row.reviewed),
     reported: Boolean(review.reported ?? row.reported),
@@ -410,9 +413,15 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     confidence: nullableNumber(row.weight ?? row.quality),
     assessment: row.cnvAssessment && typeof row.cnvAssessment === "object"
       ? { ...(row.cnvAssessment as CNVAssessment), adjustmentVersion: n(row.adjustmentVersion) }
-      : undefined,
+      : automaticCNVAssessment(row),
     ...normalizeReview(row),
   };
+}
+
+function automaticCNVAssessment(row:BackendRow):CNVAssessment|undefined{
+ const auto=row.automaticAssessment as VariantReviewStatus['automaticAssessment'];
+ if(!auto?.cnvCriteria)return undefined;
+ return {id:'automatic-'+s(row.id),cnvId:s(row.id),cnvType:cnvType(row.type),criteria:auto.cnvCriteria as unknown as CNVAssessment['criteria'],sectionScores:auto.sectionScores as unknown as CNVAssessment['sectionScores'],totalScore:auto.cnvScore??0,classification:auto.cnvClassification??'VUS',assessmentState:auto.cnvClassification?'evaluated':'insufficient_evidence',assessmentVersion:auto.contextVersion,autoEvidenceNotes:auto.pending,isAutoCalculated:true,isUserModified:false,createdAt:'',updatedAt:''};
 }
 
 function mapCNVExon(row: BackendRow): CNVExon {
@@ -570,7 +579,7 @@ function parquetColumn(type: ResultQueryType, column: string): string {
   return aliases[column] ?? column;
 }
 
-const rowSnapshots = new Map<string, { attemptId: string; datasetVersion: string; version: number; rowOrdinal?:number }>();
+const rowSnapshots = new Map<string, { attemptId: string; datasetVersion: string; version: number; rowOrdinal?:number; adjustments?:Record<string,unknown>; automatic?:BackendRow; cnvBaseline?:CNVAssessment }>();
 const tableSnapshots = new Map<string, { datasetVersion: string; attemptId: string }>();
 function snapshotKey(taskId: string, type: string, rowId: string) { return `${taskId}/${type}/${rowId}`; }
 
@@ -612,6 +621,9 @@ async function getPage<T>(taskId: string, type: ResultQueryType, filterState: Ta
       rowSnapshots.set(snapshotKey(taskId, type, String(row.id)), {
         attemptId: String(row.attemptId ?? ''), datasetVersion: String(row.datasetVersion ?? ''), version: Number(row.adjustmentVersion ?? 0),
         rowOrdinal:typeof row.rowOrdinal==='number'&&Number.isSafeInteger(row.rowOrdinal)?row.rowOrdinal:undefined,
+        adjustments:row.adjustments as Record<string,unknown>|undefined,
+        automatic:row.automaticAssessment as BackendRow|undefined,
+        cnvBaseline:type==='cnv-segment'||type==='cnv-exon'?automaticCNVAssessment(row):undefined,
       });
     }
   }
@@ -686,7 +698,18 @@ export async function reviewVariant(taskId: string, type: string, variantId: str
 export async function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
   if (!snapshot) throw new Error('请刷新结果后再保存');
-  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reported }, reported ? '选入回报' : '撤回回报');
+  const adjustments:Record<string,unknown>={reported};
+  // Reporting is an explicit user confirmation. Capture the displayed baseline
+  // only for that selected row; automatic pinning alone never writes evidence.
+  // Existing manual interpretation must survive reporting and withdrawing.
+  if(reported&&snapshot.automatic?.contextVersion){
+    const manual=snapshot.adjustments??{};
+    if(type==='snv-indel'&&!('acmgEvidence' in manual)&&!manual.acmgOverride){adjustments.acmgEvidence=snapshot.automatic.criteria??[];}
+    if((type==='cnv-segment'||type==='cnv-exon')&&!('cnvAssessment' in manual)&&snapshot.cnvBaseline){adjustments.cnvAssessment={...snapshot.cnvBaseline,cnvId:variantId};}
+    if(snapshot.adjustments?.assessmentVersion)adjustments.assessmentVersion=snapshot.adjustments.assessmentVersion;
+    else if(!('acmgEvidence' in (snapshot.adjustments??{}))&&!('cnvAssessment' in (snapshot.adjustments??{})))adjustments.assessmentVersion=snapshot.automatic.contextVersion;
+  }
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, adjustments, reported ? '选入回报，确认当前有效判读及初评证据快照' : '撤回回报');
   return { reported };
 }
 
@@ -700,13 +723,18 @@ export async function saveResultRowAdjustment(
 ): Promise<{ adjustment: { version: number; adjustments: Record<string, unknown> } }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, rowId));
   if (!snapshot?.attemptId || !snapshot.datasetVersion) throw new Error('结果版本未知，请刷新后再保存');
+  const changesEvidence=['acmgEvidence','acmgOverride','resetAcmg','cnvAssessment'].some(key=>key in adjustments);
+  const existingVersion=snapshot.adjustments?.assessmentVersion;
+  const existingEvidence='acmgEvidence' in (snapshot.adjustments??{})||'cnvAssessment' in (snapshot.adjustments??{})||!!snapshot.adjustments?.acmgOverride;
+  const currentVersion=assessmentStatus(taskId)?.state==='ready'?assessmentStatus(taskId)?.version:undefined;
+  const evidenceVersion=changesEvidence?currentVersion:existingVersion??(!existingEvidence?currentVersion:undefined);
   const payload = {
     clientMutationId: crypto.randomUUID(),
     expectedVersion,
     attemptId: snapshot.attemptId,
     datasetVersion: snapshot.datasetVersion,
     rowOrdinal:snapshot.rowOrdinal,
-    adjustments,
+    adjustments: {...(evidenceVersion?{assessmentVersion:evidenceVersion}:{}),...adjustments},
     reason,
   };
   const endpoint=`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}`;
@@ -715,7 +743,7 @@ export async function saveResultRowAdjustment(
   try {response=await write();} catch(cause) {
     if(cause instanceof TypeError || (cause instanceof ApiError && cause.status>=500))response=await write();else throw cause;
   }
-  rowSnapshots.set(snapshotKey(taskId, type, rowId), { ...snapshot, version: Math.max(rowSnapshots.get(snapshotKey(taskId,type,rowId))?.version??0,response.adjustment.version) });
+  rowSnapshots.set(snapshotKey(taskId, type, rowId), { ...snapshot, adjustments:response.adjustment.adjustments,version: Math.max(rowSnapshots.get(snapshotKey(taskId,type,rowId))?.version??0,response.adjustment.version) });
   await updateBrowserOverlay(taskId,type,{rowId,version:response.adjustment.version,adjustments:response.adjustment.adjustments}).catch(()=>undefined);
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('yijian:result-adjustment-saved'));
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('yijian:result-overlays-synced',{detail:{taskId,table:type}}));

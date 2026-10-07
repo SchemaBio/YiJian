@@ -29,13 +29,13 @@ export function fieldType(s: string): 'text' | 'number' | 'enum' | 'boolean' {
 export function effectiveField(s: string, raw: string[]): string {
     const overlay = `json_extract_string(o.payload, ${literal('$.' + s)})`;
     if (s === 'pinned')
-        return `COALESCE(${overlay}, CASE WHEN ${effectiveField('acmgClassification', raw)} IN ('Pathogenic','Likely_Pathogenic') THEN 'true' ELSE 'false' END)`;
+        return `COALESCE(${overlay}, CASE WHEN json_exists(o.payload,'$.acmgEvidence') OR json_exists(o.payload,'$.acmgOverride') OR json_exists(o.payload,'$.cnvAssessment') THEN CASE WHEN (CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END) IN ('Pathogenic','Likely_Pathogenic') THEN 'true' ELSE 'false' END ELSE COALESCE(json_extract_string(a.baseline,'$.pinned'),'false') END)`;
     if (s === 'reviewed' || s === 'reported')
         return `COALESCE(${overlay}, 'false')`;
     if (s === 'cnvAssessment')
         return overlay;
     if (s === 'cnvClassification' || s === 'cnvScore')
-        return `json_extract_string(o.payload, ${literal('$.cnvAssessment.' + (s === 'cnvScore' ? 'totalScore' : 'classification'))})`;
+        return `CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN json_extract_string(o.payload, ${literal('$.cnvAssessment.' + (s === 'cnvScore' ? 'totalScore' : 'classification'))}) ELSE json_extract_string(a.baseline, ${literal('$.'+s)}) END`;
     const names: Record<string, string> = { acmgClassification: 'classification', acmgScore: 'score', acmgProfile: 'profile', acmgState: 'state', acmgEvidence: 'criteria' };
     if (s in names) {
         const baseline = `json_extract_string(a.baseline, ${literal('$.' + names[s])})`;
@@ -98,6 +98,8 @@ export function buildLocalSelection(q: LocalQuery, raw: string[]) {
     // must promote it across the whole dataset, not just within the visible page.
     const pinned = `COALESCE(TRY_CAST(${effectiveField('pinned', raw)} AS BOOLEAN), FALSE)`;
     const reported = `COALESCE(TRY_CAST(${effectiveField('reported', raw)} AS BOOLEAN), FALSE)`;
-    order = `CASE WHEN ${pinned} THEN 0 WHEN ${reported} THEN 1 ELSE 2 END ASC, ${order}`;
+    const classification=`CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END`;
+    const priority=`CASE ${classification} WHEN 'Pathogenic' THEN 0 WHEN 'Likely_Pathogenic' THEN 1 WHEN 'VUS' THEN 2 WHEN 'Likely_Benign' THEN 3 WHEN 'Benign' THEN 4 ELSE 5 END`;
+    order = `CASE WHEN ${pinned} THEN 0 WHEN ${reported} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} THEN ${priority} ELSE 0 END ASC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypeScore') AS DOUBLE),0) ELSE 0 END DESC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.familySupport') AS INTEGER),0) ELSE 0 END DESC, ${order}`;
     return { where: where.length ? ' WHERE ' + where.join(' AND ') : '', order };
 }

@@ -174,6 +174,8 @@ export function MEITab({
         const state = getReviewState(row);
         return (
           <PinCheckbox
+            reasons={row.pinReasons?.length?row.pinReasons:row.automaticAssessment?.pending}
+            source={row.pinSource}
             checked={state.pinned}
             onChange={(checked) => handlePinChange(row.id, checked, state)}
 			disabled={pendingVariantIDs.has(row.id)}

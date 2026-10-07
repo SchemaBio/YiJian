@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { tasksApi } from '@/lib/tasks';
+import {AssessmentStatusBar} from './components/AssessmentStatusBar';
 import { useTabState } from './hooks/useTabState';
 import { getResultContext } from './result-api';
 import type { AnalysisTaskDetail, ResultContext, TabType } from './types';
@@ -30,6 +31,9 @@ export default function AnalysisDetailPage() {
   const router = useRouter();
 
   const uuid = params.uuid as string;
+  const [assessmentRevision,setAssessmentRevision]=React.useState(0);
+ React.useEffect(()=>{const changed=(event:Event)=>{if((event as CustomEvent).detail?.taskId===uuid)setAssessmentRevision(x=>x+1);};window.addEventListener("yijian:assessment-reloaded",changed);return()=>window.removeEventListener("yijian:assessment-reloaded",changed);},[uuid]);
+
   const [task, setTask] = React.useState<AnalysisTaskDetail | null>(null);
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -254,7 +258,7 @@ export default function AnalysisDetailPage() {
     }
   };
 
-	const resultContextKey = [
+	 const resultContextKey = [assessmentRevision,
 		uuid,
 		resultContext?.executionAttemptId ?? 'no-attempt',
 		resultContext?.importBatchId ?? 'no-batch',
@@ -271,17 +275,18 @@ export default function AnalysisDetailPage() {
       {/* 样本信息汇总卡片 */}
       {sample && <SampleSummaryCard sample={sample} />}
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3 md:px-4 md:pb-4">
+      <div className="min-h-0 flex-1 flex flex-col overflow-hidden px-3 pb-3 md:px-4 md:pb-4">
 
+      <AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />
       {/* 标签面板和内容 */}
-		<ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
+		<div className="flex-1 min-h-0"><ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
 			{isVariantTab ? (
 				<div className="grid h-full min-h-0 gap-3 grid-cols-[164px_minmax(0,1fr)]">
 					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />
 					<div className="min-h-0 min-w-0 overflow-hidden rounded-xl border border-border-default bg-canvas-default p-3">{renderTabContent()}</div>
 				</div>
 			) : <div className="h-full overflow-auto">{renderTabContent()}</div>}
-		</ResultTabs>
+		</ResultTabs></div>
       </div>
     </PageContent>
   );

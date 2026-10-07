@@ -9,13 +9,14 @@ interface ReviewCheckboxProps {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   source?: 'automatic' | 'manual';
+  reasons?: string[];
 }
 
 /**
  * 置顶标记。置顶和取消都会写入 Octopus 的不可变审计事件。
  */
-export function PinCheckbox({ checked, onChange, disabled, source }: ReviewCheckboxProps) {
-  const tooltip = checked ? `${source === 'automatic' ? '系统自动置顶（有效 ACMG 分类为致病或可能致病）' : '重要位点已置顶'}；点击取消置顶` : '点击置顶重要位点';
+export function PinCheckbox({ checked, onChange, disabled, source, reasons }: ReviewCheckboxProps) {
+  const tooltip = checked ? `${source === 'automatic' ? `系统自动置顶：${reasons?.join('；')||'证据支持的重要候选'}` : '重要位点已置顶'}；点击取消置顶` : `点击置顶重要位点${reasons?.length?'；初评：'+reasons.join('；'):''}`;
 
   return (
     <Tooltip content={tooltip} placement="top" variant="nav">

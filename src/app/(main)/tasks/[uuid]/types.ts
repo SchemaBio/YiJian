@@ -178,6 +178,8 @@ export type ACMGClassification =
 // ============ SNP/InDel变异 ============
 // ============ 变异审核状态 ============
 export interface VariantReviewStatus {
+  automaticAssessment?: import('@/lib/assessment/types').AutomaticAssessment;
+  pinReasons?: string[];
   pinned: boolean;              // 重要位点：独立于历史复核
   pinSource?: 'automatic' | 'manual';
   reviewed: boolean;             // 是否已审核
@@ -610,11 +612,11 @@ export interface Section4UnknownInheritanceCriteria {
  * Section 4 分离证据
  */
 export interface Section4SegregationCriteria {
-  // 4F: 3+受累家属，LOD ≥ 2
+  // 4F: 每个独立家系观察到 3–4 次分离，+0.15
   '4F': number;
-  // 4G: 2个受累家属
+  // 4G: 每个独立家系观察到 5–6 次分离，+0.30
   '4G': number;
-  // 4H: 1个受累家属
+  // 4H: 每个独立家系观察到至少 7 次分离，+0.45
   '4H': number;
 }
 
@@ -738,6 +740,8 @@ export interface SectionScores {
  * CNV 致病性评估完整数据模型
  */
 export interface CNVAssessment {
+  assessmentState?: 'evaluated' | 'insufficient_evidence';
+  assessmentVersion?: string;
   id: string;
   cnvId: string;
   cnvType: CNVType;

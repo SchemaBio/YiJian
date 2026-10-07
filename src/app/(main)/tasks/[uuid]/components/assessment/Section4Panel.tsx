@@ -252,18 +252,18 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
         <div className="space-y-2">
           <div className="bg-canvas-subtle rounded-lg p-3">
             <Counter
-              label="4F. 3+受累家属, LOD ≥ 2"
+              label="4F. 观察到 3–4 次分离的独立家系数"
               value={criteria.segregation['4F']}
               onChange={(v) => onChange({
                 ...criteria,
                 segregation: { ...criteria.segregation, '4F': v },
               })}
-              tooltip="每次 +0.45, 最大 +0.45"
+              tooltip="每个独立家系 +0.15，分离证据累计最多 +0.45；同一家系不能重复计分"
             />
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <Counter
-              label="4G. 2个受累家属"
+              label="4G. 观察到 5–6 次分离的独立家系数"
               value={criteria.segregation['4G']}
               onChange={(v) => onChange({
                 ...criteria,
@@ -274,13 +274,13 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <Counter
-              label="4H. 1个受累家属"
+              label="4H. 观察到至少 7 次分离的独立家系数"
               value={criteria.segregation['4H']}
               onChange={(v) => onChange({
                 ...criteria,
                 segregation: { ...criteria.segregation, '4H': v },
               })}
-              tooltip="每次 +0.15"
+              tooltip="每个独立家系 +0.45，分离证据累计最多 +0.45"
             />
           </div>
         </div>

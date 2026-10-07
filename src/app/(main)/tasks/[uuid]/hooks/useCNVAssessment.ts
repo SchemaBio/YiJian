@@ -37,37 +37,11 @@ function createDefaultAssessment(cnv: CNVSegment | CNVExon): CNVAssessment {
     ? createDefaultLossAssessmentCriteria() 
     : createDefaultGainAssessmentCriteria();
   
-  const annotation = cnv.annotationValues ?? {};
-  const number = (field: string): number | undefined => {
-    const raw = annotation[field];
-    if (raw === undefined || raw === null || String(raw).trim() === '' || raw === '.') return undefined;
-    const value = Number(raw); return Number.isFinite(value) ? value : undefined;
-  };
-  const selected = (field: string) => number(field) === 1;
-  const autoEvidenceNotes: string[] = [];
-  // Only explicit source flags with compatible score semantics are selected.
-  if (selected('Evidence_1A') && !selected('Evidence_1B') && number('Section1') === 0) {
-    criteria.section1.selected = '1A';
-    autoEvidenceNotes.push('1A：流程 Evidence_1A=1 且 Section1=0；预选后请核对功能元素注释。');
-  } else if (selected('Evidence_1B') && !selected('Evidence_1A') && number('Section1') === -0.6) {
-    criteria.section1.selected = '1B';
-    autoEvidenceNotes.push('1B：流程 Evidence_1B=1 且 Section1=-0.60；预选后请确认不含功能元素。');
-  } else autoEvidenceNotes.push('1A/1B：没有可一致映射的流程证据，保持未选。');
-  if (isLoss && selected('Evidence_2F') && number('Section2') === -1 && annotation.Benign_Regions_Overlap && annotation.Benign_Regions_Overlap !== '.') {
-    (criteria as LossAssessmentCriteria).section2.benignOverlap = { selected: '2F', score: -1 };
-    autoEvidenceNotes.push('Loss 2F：流程已标记良性区域重叠并给出 -1.00 分；请核对完整包含关系。');
-  }
-  const populationScore = number('Section4');
-  if (selected('Evidence_4O') && populationScore !== undefined && populationScore < 0 && populationScore >= -1
-      && ['Evidence_4A', 'Evidence_4L'].every(field => !selected(field))) {
-    criteria.section4.caseControl['4O'] = { score: populationScore };
-    autoEvidenceNotes.push(`4O：流程人群证据预选，保留 Section4=${populationScore} 分；请核对人群来源与适用性。`);
-  }
-  criteria.section3.confirmed = false;
-  criteria.section5.other = { selected: '5F', score: 0 };
-  autoEvidenceNotes.push(`流程 Gene_Count=${annotation.Gene_Count ?? '未提供'}；尚未证明是完整蛋白编码 RefSeq 基因计数，不自动计分。`);
-  autoEvidenceNotes.push('5F：当前检出表未提供可靠遗传信息（0 分）；请按家系证据调整。');
-  autoEvidenceNotes.push('其他 HI/TS、断点、病例或表型证据若无法对应明确条款，保持未选，不推断计分。');
+  const baseline = cnv.automaticAssessment;
+  const autoEvidenceNotes: string[] = baseline?.pending ? [...baseline.pending] : ['本地证据不足，所有条款保持未选。'];
+  if (baseline?.cnvCriteria) Object.assign(criteria, structuredClone(baseline.cnvCriteria));
+  else {criteria.section3.confirmed = false; criteria.section5.other = {selected: null, score: 0};}
+  if (baseline) autoEvidenceNotes.unshift(`规则 ${baseline.profile}；评估版本 ${baseline.contextVersion}`);
 
   // 计算初始评分
   const scoreResult: ScoreResult = isLoss
@@ -75,6 +49,8 @@ function createDefaultAssessment(cnv: CNVSegment | CNVExon): CNVAssessment {
     : calculateGainTotal(criteria as GainAssessmentCriteria);
 
   return {
+    assessmentState: baseline?.cnvClassification ? 'evaluated' : 'insufficient_evidence',
+    assessmentVersion: baseline?.contextVersion,
     id: generateId(),
     cnvId: cnv.id,
     cnvType: cnv.type,
@@ -124,6 +100,7 @@ export function useCNVAssessment(cnv: CNVSegment | CNVExon | null) {
 
     setAssessment({
       ...assessment,
+      assessmentState: hasCNVEvidence(newCriteria) ? 'evaluated' : 'insufficient_evidence',
       criteria: newCriteria,
       sectionScores: scoreResult.sectionScores,
       totalScore: scoreResult.totalScore,
@@ -199,6 +176,12 @@ export function useCNVAssessment(cnv: CNVSegment | CNVExon | null) {
     hasUnsavedChanges,
     initializeAssessment,
   };
+}
+
+function hasCNVEvidence(criteria:LossAssessmentCriteria|GainAssessmentCriteria):boolean{
+ if(criteria.section1.selected||criteria.section3.confirmed)return true;
+ const selected=(value:unknown):boolean=>!!value&&typeof value==='object'&&Object.entries(value).some(([key,item])=>key==='selected'?!!item:key==='score'||key==='count'||key==='confirmedCount'||key==='assumedCount'||/^4[F-H]$/.test(key)?typeof item==='number'&&item!==0:selected(item));
+ return selected(criteria.section2)||selected(criteria.section4)||selected(criteria.section5);
 }
 
 /**

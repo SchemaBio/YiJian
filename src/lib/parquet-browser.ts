@@ -1,5 +1,7 @@
 'use client';
 import { api, ApiError } from './api';
+import {assessTask, clearAssessments, invalidateAssessment, reassessTask} from './assessment/client';
+import type {AssessmentContext, AssessmentRow, ResultTable} from './assessment/types';
 import {iscnCandidateSQL} from '@/app/(main)/tasks/[uuid]/utils/cnv-nomenclature';
 import { awaitWorkerStartup, configureBrowserRuntime } from './parquet-runtime';
 import { buildLocalSelection, effectiveField, fieldType, ident, literal, OVERLAY_FIELDS, type LocalQuery } from './parquet-browser-sql';
@@ -151,9 +153,8 @@ class BrowserTable {
             this.info = await timed('authorization_ms', () => api.get<DatasetInfo>(this.base() + '/browser', { signal: this.lifecycle.signal }));
             // Object transfer and WASM startup are independent. Attach all promises
             // immediately so failures are observed and close() aborts other downloads.
-            const [parquet, automatic] = await Promise.all([
+            const [parquet] = await Promise.all([
                 timed('parquet_download_ms', () => this.binary('url')),
-                timed('assessment_download_ms', () => this.info.automaticUrl ? this.binary('automaticUrl') : Promise.resolve(undefined)),
                 timed('worker_startup_ms', async () => {
                     const d = await import('@duckdb/duckdb-wasm');
                     const bundle = await d.selectBundle({ mvp: { mainModule: '/duckdb/1.32.0-csp2/duckdb-mvp.wasm', mainWorker: '/duckdb/1.32.0-csp2/duckdb-browser-mvp.worker.js' }, eh: { mainModule: '/duckdb/1.32.0-csp2/duckdb-eh.wasm', mainWorker: '/duckdb/1.32.0-csp2/duckdb-browser-eh.worker.js' } });
@@ -200,13 +201,14 @@ class BrowserTable {
             timings.parquet_materialize_ms = Math.round(performance.now() - materializeStarted);
             const baselineStarted = performance.now();
             await this.conn.query('CREATE TABLE overlays(row_id VARCHAR PRIMARY KEY,payload JSON, version BIGINT); CREATE TABLE automatic(row_id VARCHAR PRIMARY KEY,baseline JSON)');
-            if (automatic) {
-                await this.db.registerFileBuffer('automatic.jsonl', automatic);
+            const evaluated=await assessTask(this.task,(context,table,consume,signal)=>this.readAssessmentRows(context,table,consume,signal),this.lifecycle.signal);
+            const baseline=evaluated.filter(row=>row.table===this.table);
+            if(baseline.length!==count)throw new Error('全量初评与当前数据集不一致，请刷新结果');
+            for(let offset=0;offset<baseline.length;offset+=2000){
+                await this.db.registerFileBuffer('automatic.jsonl',new TextEncoder().encode(baseline.slice(offset,offset+2000).map(row=>JSON.stringify(row)).join('\n')));
                 await this.conn.query("INSERT INTO automatic SELECT rowId, assessment FROM read_json('automatic.jsonl',columns={rowId:'VARCHAR',assessment:'JSON'},format='newline_delimited')");
                 await this.db.dropFile('automatic.jsonl');
-                const baselineCount = Number((await this.rows(`SELECT count(*) AS n FROM automatic a JOIN source t ON a.row_id=t.__row_id WHERE json_extract_string(a.baseline,'$.profile')=${literal(this.info.dataset.automaticAssessmentProfile)}`))[0].n);
-                if (baselineCount !== count)
-                    throw new Error('自动评估基线不完整');
+                await new Promise(resolve=>setTimeout(resolve,0));
             }
             timings.assessment_materialize_ms = Math.round(performance.now() - baselineStarted);
             await timed('adjustment_sync_ms', () => this.sync(true));
@@ -220,6 +222,33 @@ class BrowserTable {
             await this.close();
             throw new Error(e instanceof Error && !/https?:\/\//.test(e.message) ? e.message : '浏览器数据加载失败，请检查对象存储授权、CORS 或浏览器内存');
         }
+    }
+    private async readAssessmentRows(context:AssessmentContext,table:ResultTable,consume:(rows:AssessmentRow[])=>Promise<void>,signal:AbortSignal) {
+        const combined=AbortSignal.any([signal,this.lifecycle.signal]);
+        if(context.attemptId!==this.info.dataset.executionAttemptId)throw new Error('评估执行批次不匹配');
+        let relation='source',temporary=false;
+        if(table!==this.table){
+            const info=await api.get<DatasetInfo>(`/v1/tasks/${encodeURIComponent(this.task)}/results/tables/${table}/browser`,{signal:combined});
+            if(info.dataset.executionAttemptId!==context.attemptId)throw new Error('评估执行批次发生变化');
+            const response=await fetch(info.url,{credentials:'omit',signal:combined});
+            if(!response.ok || Number(response.headers.get('Content-Length'))>128*1024*1024)throw new Error('评估数据读取失败');
+            const buffer=await response.arrayBuffer();if(buffer.byteLength>128*1024*1024)throw new Error('评估文件超过限额');
+            const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer)),b=>b.toString(16).padStart(2,'0')).join('');
+            if(hash!==info.dataset.objectSha256)throw new Error('评估数据内容校验失败');
+            await this.db.registerFileBuffer('assessment.parquet',new Uint8Array(buffer));
+            const seed=info.dataset.id+'/'+info.dataset.objectSha256+'/';
+            await this.conn.query(`CREATE TEMP TABLE assessment_source AS SELECT *,sha256(${literal(seed)}||CAST(file_row_number AS VARCHAR)) AS __row_id FROM read_parquet('assessment.parquet',file_row_number=true)`);
+            relation='assessment_source';temporary=true;
+            const count=Number((await this.rows('SELECT count(*) AS n FROM assessment_source'))[0].n);
+            if(count!==info.dataset.rows || (info.dataset.expectedRows!==undefined&&count!==info.dataset.expectedRows))throw new Error('评估数据行数校验失败');
+        }
+        try {
+            for(let offset=0;;offset+=1000){
+                const batch=await this.rows(`SELECT * FROM ${relation} ORDER BY file_row_number LIMIT 1000 OFFSET ${offset}`,combined);
+                if(!batch.length)break;
+                await consume(batch.map(values=>({id:String(values.__row_id),table,values})));
+            }
+        } finally {if(temporary){await this.conn.query('DROP TABLE assessment_source');await this.db.dropFile('assessment.parquet');}}
     }
     private serialize<T>(fn: () => Promise<T>): Promise<T> {
         const result = this.queue.then(() => { if (this.disposed)
@@ -311,6 +340,8 @@ class BrowserTable {
             for (const key of this.info.aliases[col] ?? [col])
                 row[key] = source[col];
         const auto = object(source.__acmg), overlay = object(source.__adjustments);
+        row.automaticAssessment=auto;
+        row.pinReasons=auto.pinReasons;
         Object.assign(row, { id: source.__row_id, rowId: source.__row_id, rowOrdinal: Number(source.file_row_number), reviewed: false, reported: false, adjustments: overlay, adjustmentVersion: Number(source.__version), datasetVersion: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId });
         if (this.table === 'snv-indel') {
             row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));
@@ -321,7 +352,13 @@ class BrowserTable {
             row.alleleFrequency = source.VAF;
             row.vaf = source.VAF;
         }
-        if (this.table === 'cnv-segment' || this.table === 'cnv-exon') row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));
+        if (this.table === 'cnv-segment' || this.table === 'cnv-exon') {
+            row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));
+            row.cnvClassification=auto.cnvClassification;
+            row.cnvScore=auto.cnvScore;
+            row.classification=auto.cnvClassification;
+            row.totalScore=auto.cnvScore;
+        }
         if (this.table === 'cnv-segment') {
             row.copyNumber = source.CN ?? source.Copy_Number ?? source.Col8;
             row.copyRatio = source.Copy_Ratio; // Never interpret absolute CN as a ratio.
@@ -340,9 +377,10 @@ class BrowserTable {
         else if ('acmgEvidence' in overlay)
             row.acmgAssessmentSource = 'manual_evidence';
         // Explicit false is an enduring user override, not a missing value.
-        const effectiveClass = overlay.acmgOverride || row.acmgClassification;
-        row.pinned = typeof overlay.pinned === 'boolean' ? overlay.pinned : this.table === 'snv-indel' && ['Pathogenic', 'Likely_Pathogenic'].includes(String(effectiveClass));
-        row.pinSource = typeof overlay.pinned === 'boolean' ? 'manual' : row.pinned ? 'automatic' : undefined;
+        const effectiveClass = overlay.acmgOverride || row.acmgClassification || object(overlay.cnvAssessment).classification;
+        const manualClassification=!!overlay.acmgOverride || 'acmgEvidence' in overlay || 'cnvAssessment' in overlay;
+        row.pinned = typeof overlay.pinned === 'boolean' ? overlay.pinned : manualClassification ? ['Pathogenic', 'Likely_Pathogenic'].includes(String(effectiveClass)) : auto.pinned===true;
+        row.pinSource = typeof overlay.pinned === 'boolean' || manualClassification ? 'manual' : row.pinned ? 'automatic' : undefined;
         row.reviewStatus = { pinned: row.pinned, reviewed: row.reviewed, reported: row.reported };
         return row;
     }
@@ -419,11 +457,14 @@ export function retainBrowserTable(task: string, table: string) {
     else
         activeTables.set(key, count); };
 }
-export async function clearBrowserResults() { const active = [...sessions.values()]; sessions.clear(); await Promise.allSettled(active.map(r => r.engine.close())); }
+export async function clearBrowserResults() { clearAssessments();const active = [...sessions.values()]; sessions.clear(); await Promise.allSettled(active.map(r => r.engine.close())); }
+export async function reevaluateBrowserResults(task:string){await reassessTask(task);const active=[...sessions].filter(([key])=>key.startsWith(task+'/'));for(const[key]of active)sessions.delete(key);await Promise.allSettled(active.map(([,r])=>r.engine.close()));window.dispatchEvent(new CustomEvent('yijian:assessment-reloaded',{detail:{taskId:task}}));}
+export async function retryBrowserAssessment(task:string){invalidateAssessment(task);const active=[...sessions].filter(([key])=>key.startsWith(task+'/'));for(const[key]of active)sessions.delete(key);await Promise.allSettled(active.map(([,r])=>r.engine.close()));window.dispatchEvent(new CustomEvent('yijian:assessment-reloaded',{detail:{taskId:task}}));}
 export async function updateBrowserContext(task: string, attempt: string, version: string) {
     const next = attempt + '/' + version, previous = contexts.get(task);
     contexts.set(task, next);
     if (previous && previous !== next) {
+        invalidateAssessment(task);
         const active = [...sessions].filter(([key]) => key.startsWith(task + '/'));
         for (const [key] of active)
             sessions.delete(key);

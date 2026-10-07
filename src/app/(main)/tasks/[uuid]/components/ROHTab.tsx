@@ -133,7 +133,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       header: <PinColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
-        return <PinCheckbox checked={state.pinned} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handlePinChange(row.id, checked, state)} />;
+        return <PinCheckbox checked={state.pinned} source={reviewStatus[row.id]?'manual':row.pinSource} reasons={row.pinReasons?.length?row.pinReasons:row.automaticAssessment?.pending} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handlePinChange(row.id, checked, state)} />;
       },
       width: 60,
     },

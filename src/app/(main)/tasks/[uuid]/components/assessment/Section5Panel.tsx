@@ -258,13 +258,13 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
             name="section5-other"
             label="5H. 遗传信息不可用，高度特异表型与类似病例一致"
             description="遗传信息不可用或无信息，患者表型高度特异且与类似病例描述一致"
-            score={criteria.other.selected === '5H' ? criteria.other.score : 0.30}
+            score={criteria.other.selected === '5H' ? criteria.other.score : 0.15}
             checked={criteria.other.selected === '5H'}
             onChange={() => onChange({
               ...criteria,
               deNovo: { selected: null, score: 0 },
               inherited: { selected: null, score: 0 },
-              other: { selected: '5H', score: 0.30 },
+              other: { selected: '5H', score: 0.15 },
             })}
             hasRange
             range={{ min: 0, max: 0.30 }}

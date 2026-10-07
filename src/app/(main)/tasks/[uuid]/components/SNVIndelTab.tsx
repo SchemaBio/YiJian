@@ -244,6 +244,7 @@ export function SNVIndelTab({
         const state = getReviewState(row);
         return (
           <PinCheckbox
+            reasons={row.pinReasons?.length?row.pinReasons:row.automaticAssessment?.pending}
             checked={state.pinned}
             source={reviewStatus[row.id] ? 'manual' : row.pinSource}
             onChange={(checked) => handlePinChange(row.id, checked, state)}
