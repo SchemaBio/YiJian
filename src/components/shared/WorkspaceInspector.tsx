@@ -37,24 +37,22 @@ export function WorkspaceInspector({ children, label, onClose }: {
   </>;
 }
 
-export type InspectorSection = 'overview' | 'annotation' | 'evidence' | 'assessment';
-const SECTIONS: Array<{ id: InspectorSection; label: string }> = [
-  { id: 'overview', label: '概览' }, { id: 'annotation', label: '注释' },
-  { id: 'evidence', label: '证据' }, { id: 'assessment', label: '评定' },
-];
+export type InspectorSection = 'annotation' | 'evidence' | 'assessment' | 'history';
+const LABELS: Record<InspectorSection, string> = { annotation: '注释', evidence: '证据', assessment: '评定', history: '变更记录' };
+const DEFAULT_SECTIONS: InspectorSection[] = ['annotation', 'evidence', 'assessment'];
 
-export function InspectorTabs({ value, onChange, id }: {
-  value: InspectorSection; onChange: (value: InspectorSection) => void; id: string;
+export function InspectorTabs({ value, onChange, id, sections = DEFAULT_SECTIONS }: {
+  value: InspectorSection; onChange: (value: InspectorSection) => void; id: string; sections?: InspectorSection[];
 }) {
   return <div className="yj-inspector-tabs" role="tablist" aria-label="详情内容">
-    {SECTIONS.map((section, index) => <button key={section.id} type="button" role="tab"
-      id={`${id}-${section.id}`} aria-controls={`${id}-content`} aria-selected={value === section.id}
-      tabIndex={value === section.id ? 0 : -1} onClick={() => onChange(section.id)}
+    {sections.map((section, index) => <button key={section} type="button" role="tab"
+      id={`${id}-${section}`} aria-controls={`${id}-content`} aria-selected={value === section}
+      tabIndex={value === section ? 0 : -1} onClick={() => onChange(section)}
       onKeyDown={event => {
-        const next = event.key === 'ArrowRight' ? (index + 1) % SECTIONS.length : event.key === 'ArrowLeft' ? (index + SECTIONS.length - 1) % SECTIONS.length : event.key === 'Home' ? 0 : event.key === 'End' ? SECTIONS.length - 1 : -1;
+        const next = event.key === 'ArrowRight' ? (index + 1) % sections.length : event.key === 'ArrowLeft' ? (index + sections.length - 1) % sections.length : event.key === 'Home' ? 0 : event.key === 'End' ? sections.length - 1 : -1;
         if (next < 0) return;
-        event.preventDefault(); onChange(SECTIONS[next].id);
+        event.preventDefault(); onChange(sections[next]);
         (event.currentTarget.parentElement?.children[next] as HTMLElement)?.focus();
-      }}>{section.label}</button>)}
+      }}>{LABELS[section]}</button>)}
   </div>;
 }

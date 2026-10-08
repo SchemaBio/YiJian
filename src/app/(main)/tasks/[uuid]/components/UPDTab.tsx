@@ -1,5 +1,7 @@
 'use client';
 
+import { GeneLinks } from './GeneLinks';
+
 import * as React from 'react';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
@@ -208,7 +210,7 @@ export function UPDTab({
     {
       id: 'genes',
       header: '涉及基因',
-      accessor: (row) => row.genes.join(', '),
+      accessor: (row) => <GeneLinks genes={row.genes} />,
       width: 200,
     },
     {

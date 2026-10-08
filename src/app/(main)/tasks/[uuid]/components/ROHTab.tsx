@@ -1,5 +1,7 @@
 'use client';
 
+import { GeneLinks } from './GeneLinks';
+
 import * as React from 'react';
 import { DataTable, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
@@ -158,7 +160,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     {
       id: 'genes',
       header: '隐性疾病基因',
-      accessor: (row) => row.genes.join(', ') || '-',
+      accessor: (row) => <GeneLinks genes={row.genes} />,
       width: 220,
     },
   ];

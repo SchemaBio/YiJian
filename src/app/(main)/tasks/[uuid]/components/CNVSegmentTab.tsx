@@ -1,5 +1,7 @@
 'use client';
 
+import { GeneLinks } from './GeneLinks';
+
 import * as React from 'react';
 import { TableViewControls, useTableView } from '@/components/shared/TableViewControls';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
@@ -363,7 +365,7 @@ export function CNVSegmentTab({
     {
       id: 'genes',
       header: '涉及基因',
-      accessor: (row) => row.genes.join(', '),
+      accessor: (row) => <GeneLinks genes={row.genes} />,
       width: 200,
     },
     {

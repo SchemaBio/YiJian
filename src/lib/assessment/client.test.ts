@@ -1,6 +1,6 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {api} from '../api';
-import {assessTask,assessmentStatus,clearAssessments,invalidateAssessment} from './client';
+import {assessTask,assessmentStatus,clearAssessments,invalidateAssessment,cancelAssessment} from './client';
 import type {AssessmentContext} from './types';
 vi.mock('../api',()=>({api:{get:vi.fn(),post:vi.fn()}}));
 
@@ -36,4 +36,33 @@ it('does not publish ready after receiving incomplete drain results',async()=>{
   worker.postMessage.mockImplementation(({id,action})=>queueMicrotask(()=>worker.onmessage?.({data:{id,value:action==='drain'?[]:1}} as MessageEvent)));
   await expect(next).rejects.toThrow('结果传输不完整');
   expect(assessmentStatus('task')?.state).toBe('error');
+});
+
+it('cancels a pending context request without leaking its AbortError into result loading',async()=>{
+  vi.mocked(api.get).mockImplementationOnce((_url, options)=>new Promise((_resolve,reject)=>{
+    options?.signal?.addEventListener('abort',()=>reject(new DOMException('signal is aborted without reason','AbortError')),{once:true});
+  }));
+  const pending=assessTask('task',vi.fn(),new AbortController().signal);
+  cancelAssessment('task');
+  expect(assessmentStatus('task')?.state).toBe('cancelled');
+  await expect(pending).resolves.toEqual([]);
+  expect(assessmentStatus('task')?.error).toBeUndefined();
+  expect(worker.terminate).toHaveBeenCalled();
+  // Opening another result type must not silently restart the cancelled run.
+  await expect(assessTask('task',vi.fn(),new AbortController().signal)).resolves.toEqual([]);
+  expect(api.get).toHaveBeenCalledTimes(1);
+});
+it('discards a partially processed baseline on cancellation and permits explicit retry',async()=>{
+  vi.mocked(api.get).mockResolvedValue({active:{...context,tables:['snv-indel']}});
+  const pending=assessTask('task',async(_context,_table,consume,signal)=>{
+    await consume([]);
+    cancelAssessment('task');
+    throw signal.reason;
+  },new AbortController().signal);
+  await expect(pending).resolves.toEqual([]);
+  expect(assessmentStatus('task')?.state).toBe('cancelled');
+  invalidateAssessment('task');
+  vi.mocked(api.get).mockResolvedValue({active:context});
+  await expect(assessTask('task',vi.fn(),new AbortController().signal)).resolves.toEqual([]);
+  expect(assessmentStatus('task')?.state).toBe('ready');
 });

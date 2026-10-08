@@ -11,30 +11,12 @@ import { ACMG_CONFIG } from '../result-api';
 import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 
-function pubMedURL(pmid: string): string {
-  return `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(pmid).trim())}`;
-}
-
-function clinVarURL(clinvarId: string): string {
-  const id = String(clinvarId).trim().replace(/^VCV/i, '');
-  return `https://www.ncbi.nlm.nih.gov/clinvar/variation/${encodeURIComponent(id)}`;
-}
-
-function dbSnpURL(rsId: string): string {
-  return `https://www.ncbi.nlm.nih.gov/snp/${encodeURIComponent(String(rsId).trim())}`;
-}
-
-function omimURL(omimId: string): string {
-  return `https://www.omim.org/entry/${encodeURIComponent(String(omimId).trim())}`;
-}
-
 interface VariantDetailPanelProps {
   taskId: string;
   referenceGenome?: string;
   variant: SNVIndel | null;
   isOpen: boolean;
   onClose: () => void;
-  onOpenIGV?: (chromosome: string, position: number) => void;
   onUpdateClassification?: (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onSaveInterpretation?: (variant: SNVIndel, interpretation: string, reason: string) => Promise<void>;
 }
@@ -43,7 +25,7 @@ interface VariantDetailPanelProps {
 function InfoItem({ label, value, link }: { label: string; value?: React.ReactNode; link?: string }) {
   if (value === undefined || value === null || value === '' || value === '-') {
     return (
-      <div className="flex justify-between py-1.5 border-b border-border-subtle last:border-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3 py-2 border-b border-border-subtle last:border-0">
         <span className="text-fg-muted text-sm">{label}</span>
         <span className="text-fg-subtle text-sm">-</span>
       </div>
@@ -51,7 +33,7 @@ function InfoItem({ label, value, link }: { label: string; value?: React.ReactNo
   }
 
   return (
-    <div className="flex justify-between py-1.5 border-b border-border-subtle last:border-0">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3 py-2 border-b border-border-subtle last:border-0">
       <span className="text-fg-muted text-sm">{label}</span>
       {link ? (
         <a
@@ -59,16 +41,20 @@ function InfoItem({ label, value, link }: { label: string; value?: React.ReactNo
           target="_blank"
           rel="noopener noreferrer"
           referrerPolicy="no-referrer"
-          className="text-accent-fg text-sm hover:underline flex items-center gap-1"
+          className="min-w-0 break-words text-right text-accent-fg text-sm hover:underline flex items-start justify-end gap-1"
         >
           {value}
           <ExternalLink className="w-3 h-3" />
         </a>
       ) : (
-        <span className="max-w-[65%] break-words text-right text-fg-default text-sm font-medium">{value}</span>
+        <span className="min-w-0 break-words text-right text-fg-default text-sm font-medium">{value}</span>
       )}
     </div>
   );
+}
+
+function AnnotationField({ label, value }: { label: string; value?: string }) {
+  return <div><dt className="text-xs text-fg-muted">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-fg-default">{value && !['.', '-'].includes(value) ? value : '未提供'}</dd></div>;
 }
 
 // 分组标题组件
@@ -197,8 +183,8 @@ function ACMGPointsEditor({
   </div>;
 }
 
-export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onOpenIGV, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
-  const [section, setSection] = React.useState<InspectorSection>('overview');
+export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
+  const [section, setSection] = React.useState<InspectorSection>('annotation');
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
@@ -212,7 +198,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   // 当 variant 变化时重置编辑状态
   React.useEffect(() => {
-    setSection('overview');
+    setSection('annotation');
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
@@ -304,7 +290,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {!acmgConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
         </div>
         {/* 内容区域 */}
-        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} />
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'assessment', 'history']} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
           <section hidden={section !== 'assessment'} >
           {/* 人工解读 */}
@@ -372,41 +358,6 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </div>
 
           </section>
-          <section hidden={section !== 'overview'} >
-          {/* 基本信息 */}
-          <SectionTitle icon={Dna} title="基本信息" />
-          <div className="space-y-0">
-            <InfoItem label="基因" value={variant.gene} />
-            <InfoItem
-              label="位置" 
-              value={
-                <button
-                  onClick={() => onOpenIGV?.(variant.chromosome, variant.position)}
-                  className="text-accent-fg hover:underline"
-                >
-                  {variant.chromosome}:{variant.position}
-                </button>
-              }
-            />
-            <InfoItem label="参考/变异" value={`${variant.ref} > ${variant.alt}`} />
-            <InfoItem label="变异类型" value={variant.variantType} />
-            <InfoItem label="杂合性" value={
-              variant.zygosity === 'Heterozygous' ? '杂合' :
-              variant.zygosity === 'Homozygous' ? '纯合' :
-              variant.zygosity === 'Hemizygous' ? '半合' : '未提供'
-            } />
-            <InfoItem label="转录本" value={variant.transcript} />
-            <InfoItem label="cDNA变化" value={variant.hgvsc} />
-            <InfoItem label="蛋白质变化" value={variant.hgvsp} />
-            <InfoItem label="变异后果" value={variant.consequence} />
-          </div>
-
-          </section>
-          <section hidden={section !== 'annotation'} >
-          <SectionTitle icon={ExternalLink} title="数据库与判读资源" />
-          <VariantResourceLinks variant={variant} referenceGenome={referenceGenome} />
-
-          </section>
           <section hidden={section !== 'evidence'} >
           {/* 测序质量 */}
           <SectionTitle icon={FileText} title="测序质量" />
@@ -453,7 +404,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </div>
 
           </section>
-          <section hidden={section !== 'assessment'} >
+          <section hidden={section !== 'history'} >
           <SectionTitle icon={FileText} title="判读变更记录" />
           <div className="space-y-2">
             {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">暂无调整记录</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
@@ -464,73 +415,29 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </div>
 
           </section>
-          <section hidden={section !== 'annotation'} >
-          {/* 临床意义 */}
-          <SectionTitle icon={Database} title="GenCC 与变异标识" />
-          <div className="space-y-0">
-            <InfoItem
-              label="dbSNP" 
-              value={variant.rsId}
-              link={/^rs[0-9]+$/i.test(variant.rsId || '') ? dbSnpURL(variant.rsId!) : undefined}
-            />
-            <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} link={/^(?:HGNC:)?[0-9]+$/i.test(annotation('HGNC_ID') || '') ? `https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/${encodeURIComponent(`HGNC:${annotation('HGNC_ID')!.replace(/^HGNC:/i, '')}`)}` : undefined} />
-            <InfoItem label="Cytoband" value={annotation('Cytoband')} />
-            <InfoItem label="GenCC 疾病关联" value={annotation('GenCC_disease_title', variant.diseaseAssociation)} />
-            <InfoItem label="GenCC 遗传模式名称" value={annotation('GenCC_moi_title')} />
-            <InfoItem label="GenCC 疾病标识" value={annotation('GenCC_disease_original_curie')} />
-            <InfoItem label="遗传模式" value={
-              variant.inheritanceMode === 'AD' ? '常染色体显性' :
-              variant.inheritanceMode === 'AR' ? '常染色体隐性' :
-              variant.inheritanceMode === 'XL' ? 'X连锁' :
-              variant.inheritanceMode === 'XLD' ? 'X连锁显性' :
-              variant.inheritanceMode === 'XLR' ? 'X连锁隐性' :
-              annotation('GenCC_moi_curie', variant.inheritanceMode)
-            } />
-          </div>
-
-          {/* 文献 */}
-          {variant.pubmedIds && variant.pubmedIds.length > 0 && (
-            <>
-              <SectionTitle icon={FileText} title="相关文献" />
-              <div className="space-y-0">
-                <div className="flex flex-wrap gap-2">
-                  {variant.pubmedIds.map((pmid) => (
-                    <a
-                      key={pmid}
-                      href={pubMedURL(pmid)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-          referrerPolicy="no-referrer"
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-canvas-inset text-accent-fg rounded hover:bg-accent-subtle transition-colors"
-                    >
-                      PMID:{pmid}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+          <section hidden={section !== 'annotation'} className="yj-annotation-layout">
+            <section aria-labelledby="gencc-heading">
+              <h4 id="gencc-heading" className="yj-annotation-heading">GenCC · 基因与疾病关联</h4>
+              <dl className="yj-annotation-fields">
+                <AnnotationField label="疾病关联" value={annotation('GenCC_disease_title', variant.diseaseAssociation)} />
+                <AnnotationField label="遗传模式" value={annotation('GenCC_moi_title') || ({ AD: '常染色体显性', AR: '常染色体隐性', XL: 'X 连锁', XLD: 'X 连锁显性', XLR: 'X 连锁隐性' }[variant.inheritanceMode || '']) || annotation('GenCC_moi_curie', variant.inheritanceMode)} />
+                <AnnotationField label="遗传模式标识" value={annotation('GenCC_moi_curie', variant.inheritanceMode)} />
+                <AnnotationField label="疾病标识" value={annotation('GenCC_disease_original_curie')} />
+              </dl>
+            </section>
+            <section aria-labelledby="variant-ids-heading">
+              <h4 id="variant-ids-heading" className="yj-annotation-heading">变异标识</h4>
+              <InfoItem label="dbSNP" value={variant.rsId} />
+              <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />
+              <InfoItem label="染色体带区" value={annotation('Cytoband')} />
+            </section>
+            <section aria-labelledby="variant-links-heading">
+              <h4 id="variant-links-heading" className="yj-annotation-heading">数据库与判读资源</h4>
+              <VariantResourceLinks variant={variant} referenceGenome={referenceGenome} />
+            </section>
           </section>
         </div>
 
-        {/* 底部操作栏 */}
-        <div className="border-t border-border p-3">
-          <div className="flex gap-2">
-            <button
-              onClick={() => onOpenIGV?.(variant.chromosome, variant.position)}
-              className="flex-1 px-4 py-2 text-sm bg-accent-emphasis text-fg-on-emphasis rounded-md hover:bg-accent-emphasis/90 transition-colors"
-            >
-              在 IGV 中查看
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
-            >
-              关闭
-            </button>
-          </div>
-        </div>
       </WorkspaceInspector>
     </>
   );

@@ -1,5 +1,7 @@
 'use client';
 
+import { GeneLinks } from './GeneLinks';
+
 import * as React from 'react';
 import { TableViewControls, useTableView } from '@/components/shared/TableViewControls';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
@@ -260,7 +262,7 @@ export function SNVIndelTab({
     {
       id: 'gene',
       header: '基因',
-      accessor: (row) => <span className="font-semibold text-accent-fg">{row.gene}</span>,
+      accessor: (row) => <GeneLinks genes={row.gene} annotationValues={row.annotationValues} />,
       width: 100,
       align: 'center',
       sortable: true,
@@ -346,7 +348,7 @@ export function SNVIndelTab({
     {
       id: 'clinvarSignificance', header: 'ClinVar 临床意义',
       accessor: row => <ClinVarBadge value={sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance)} />,
-      width: 180, sortable: true,
+      width: 240, minWidth: 200, maxWidth: 360, sortable: true,
     },
     {
       id: 'acmgClassification',
@@ -519,7 +521,6 @@ export function SNVIndelTab({
         variant={selectedVariant}
         isOpen={detailPanelOpen}
         onClose={handleCloseDetailPanel}
-        onOpenIGV={handleOpenIGV}
         onUpdateClassification={handleUpdateClassification}
         onSaveInterpretation={handleSaveInterpretation}
       />

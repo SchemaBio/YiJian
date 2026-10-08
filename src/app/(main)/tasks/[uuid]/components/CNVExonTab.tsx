@@ -1,5 +1,7 @@
 'use client';
 
+import { GeneLinks } from './GeneLinks';
+
 import * as React from 'react';
 import { TableViewControls, useTableView } from '@/components/shared/TableViewControls';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
@@ -270,7 +272,7 @@ export function CNVExonTab({
     {
       id: 'gene',
       header: '基因',
-      accessor: 'gene',
+      accessor: (row) => <GeneLinks genes={row.gene} />,
       width: 100,
       sortable: true,
     },

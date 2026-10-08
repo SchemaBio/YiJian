@@ -1,12 +1,12 @@
 'use client';
 import {api} from '../api';
 import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable} from './types';
-export interface AssessmentStatus {taskId:string;state:'loading'|'ready'|'error';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;}
+export interface AssessmentStatus {taskId:string;state:'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
 interface Envelope {active?:AssessmentContext;latestVersion:string;reassessmentAvailable:boolean}
 interface Session {worker:Worker;promise:Promise<Entry[]>;byRow?:Map<string,AutomaticAssessment>;context?:AssessmentContext;status:AssessmentStatus;controller:AbortController;timer?:ReturnType<typeof setTimeout>}
 const sessions=new Map<string,Session>();
-const publish=(session:Session,update:Partial<AssessmentStatus>)=>{session.status={...session.status,...update};window.dispatchEvent(new CustomEvent('yijian:assessment-status',{detail:session.status}));};
+const publish=(session:Session,update:Partial<AssessmentStatus>)=>{if(sessions.get(session.status.taskId)!==session)return;session.status={...session.status,...update};window.dispatchEvent(new CustomEvent('yijian:assessment-status',{detail:session.status}));};
 export function assessmentStatus(taskId:string){return sessions.get(taskId)?.status;}
 export async function assessmentForRow(taskId:string,rowId:string){const session=sessions.get(taskId);if(!session||session.status.state!=='ready')return undefined;return session.byRow?.get(rowId);}
 export async function assessTask(taskId:string,read:(context:AssessmentContext,table:ResultTable,consume:(rows:AssessmentRow[])=>Promise<void>,signal:AbortSignal)=>Promise<void>,signal:AbortSignal) {
@@ -52,7 +52,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     session.timer=setTimeout(poll,60000);
     controller.signal.addEventListener('abort',()=>{clearTimeout(session.timer);},{once:true});
     return result;
-  })().catch(error=>{publish(session,{state:'error',error:controller.signal.aborted?'初评已取消，可重试本地初评':error instanceof Error?error.message:'初评失败'});throw error;}).finally(()=>{signal.removeEventListener('abort',abort);worker.terminate();});
+  })().catch(error=>{if(controller.signal.aborted){publish(session,{state:'cancelled',error:undefined});return [];}publish(session,{state:'error',error:error instanceof Error?error.message:'初评失败'});throw error;}).finally(()=>{signal.removeEventListener('abort',abort);worker.terminate();});
   return session.promise;
 }
 export async function reassessTask(taskId:string){
@@ -62,4 +62,4 @@ export async function reassessTask(taskId:string){
 }
 export function clearAssessments(){for(const session of sessions.values())session.controller.abort();sessions.clear();}
 export function invalidateAssessment(taskId:string){const session=sessions.get(taskId);session?.controller.abort();sessions.delete(taskId);}
-export function cancelAssessment(taskId:string){sessions.get(taskId)?.controller.abort();}
+export function cancelAssessment(taskId:string){const session=sessions.get(taskId);if(session?.status.state!=='loading')return;session.controller.abort();publish(session,{state:'cancelled',error:undefined});}

@@ -108,9 +108,9 @@ function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
 }
 
 export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, onOpenAssessment }: CNVDetailPanelProps) {
-  const [section, setSection] = React.useState<InspectorSection>('overview');
+  const [section, setSection] = React.useState<InspectorSection>('annotation');
   const [plotOpen, setPlotOpen] = React.useState(false);
-  React.useEffect(() => { setPlotOpen(false); setSection('overview'); }, [variant?.id, isOpen]);
+  React.useEffect(() => { setPlotOpen(false); setSection('annotation'); }, [variant?.id, isOpen]);
   if (!isOpen || !variant) return null;
 
   const isExon = isCNVExon(variant);
@@ -155,26 +155,6 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             {isExon && taskId && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">外显子 CN 分布图</button>}
             {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">区域信号图 · 设置窗口</button>}
           </div>
-          </section>
-          <section hidden={section !== 'overview'} >
-          {/* 基本信息 */}
-          <SectionTitle icon={Dna} title="基本信息" />
-          <div className="space-y-0">
-            {isExon && (
-              <>
-                <InfoItem label="基因" value={variant.gene} />
-                <InfoItem label="转录本" value={variant.transcript} />
-                <InfoItem label="外显子数" value={variant.exon} />
-              </>
-            )}
-            <InfoItem label="染色体" value={variant.chromosome} />
-            <InfoItem label="起始位置" value={variant.startPosition} />
-            <InfoItem label="终止位置" value={variant.endPosition} />
-            {!isExon && (
-              <InfoItem label="长度" value={formatLength((variant as CNVSegment).length)} />
-            )}
-          </div>
-
           </section>
           <section hidden={section !== 'annotation'} >
           {(variant.type === 'Amplification' || variant.type === 'Deletion') && <div className="mt-4 rounded-lg border border-border-default p-3">
@@ -290,15 +270,6 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           </section>
         </div>
 
-        {/* 底部操作栏 */}
-        <div className="border-t border-border p-3">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
-          >
-            关闭
-          </button>
-        </div>
       </WorkspaceInspector>
 
       {isExon && taskId && <CNVExonPlot variant={variant} taskId={taskId} isOpen={plotOpen} onClose={() => setPlotOpen(false)} />}

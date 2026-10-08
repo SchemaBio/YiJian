@@ -1,5 +1,7 @@
 'use client';
 
+import { GeneLinks } from './GeneLinks';
+
 import * as React from 'react';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
@@ -227,7 +229,7 @@ export function MTTab({
     {
       id: 'gene',
       header: '基因',
-      accessor: 'gene',
+      accessor: (row) => <GeneLinks genes={row.gene} />,
       width: 100,
       sortable: true,
     },

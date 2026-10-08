@@ -27,7 +27,25 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('tab', { name: '评定' }));
     expect(editor).toBeVisible();
     expect(editor).toHaveValue('待复核的解读');
-    await waitFor(() => expect(screen.getByText('暂无调整记录')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('tab', { name: '变更记录' }));
+    await waitFor(() => expect(screen.getByText('暂无调整记录')).toBeVisible());
+    fireEvent.click(screen.getByRole('tab', { name: '评定' }));
+    expect(editor).toHaveValue('待复核的解读');
+  });
+
+  it('opens on annotation, puts GenCC before resource links and keeps only the header close control', async () => {
+    const annotated = { ...variant('BRCA1'), annotationValues: { GenCC_disease_title: '示例疾病关联', GenCC_moi_title: '常染色体显性', GenCC_disease_original_curie: 'OMIM:123456' } };
+    render(<VariantDetailPanel taskId="task" variant={annotated} isOpen onClose={vi.fn()} />);
+    expect(screen.queryByRole('tab', { name: '概览' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '注释' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('示例疾病关联')).toBeVisible();
+    const headings = screen.getAllByRole('heading').map(item => item.textContent);
+    expect(headings.indexOf('GenCC · 基因与疾病关联')).toBeLessThan(headings.indexOf('数据库与判读资源'));
+    expect(screen.getAllByRole('button', { name: /^关闭$/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: '在 IGV 中查看' })).not.toBeInTheDocument();
+    expect(screen.getByText('判读变更记录')).not.toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: '变更记录' }));
+    await waitFor(() => expect(screen.getByText('判读变更记录')).toBeVisible());
   });
 
   it('does not clear another variant’s reason when an earlier save completes', async () => {

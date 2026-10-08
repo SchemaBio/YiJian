@@ -1,3 +1,4 @@
+import { ncbiGeneURL } from './ncbi-gene';
 import type { SNVIndel } from '../types';
 
 export interface VariantResourceLink { label: string; href?: string; reason?: string }
@@ -50,7 +51,7 @@ export function variantResourceGroups(variant: SNVIndel, referenceGenome?: strin
       { label: 'Google', href: alleleValid ? `https://www.google.com.hk/search?q=${encode([present(variant.gene), variantQuery].filter(Boolean).join(' '))}` : undefined, reason: '未提供兼容的变异坐标' },
     ] },
     { label: '基因与蛋白', links: [
-      ...idLinks('NCBI Gene', genes, id => `https://www.ncbi.nlm.nih.gov/gene/?term=${encode(id)}`),
+      ...idLinks('NCBI Gene', genes, id => ncbiGeneURL(id, genes.length === 1 && hpoGene.length === 1 ? hpoGene[0] : undefined)),
       ...idLinks('HGNC', [...new Set(hgnc)], id => `https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/${encode(id)}`),
       ...idLinks('OMIM', [...new Set(omim)], id => `https://www.omim.org/entry/${encode(id)}`),
       ...idLinks('HPO Gene', hpoGene, id => `https://hpo.jax.org/app/browse/gene/${encode(id)}`),

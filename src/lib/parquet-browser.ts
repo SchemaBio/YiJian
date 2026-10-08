@@ -1,6 +1,6 @@
 'use client';
 import { api, ApiError } from './api';
-import {assessTask, clearAssessments, invalidateAssessment, reassessTask} from './assessment/client';
+import {assessmentStatus,assessTask, clearAssessments, invalidateAssessment, reassessTask} from './assessment/client';
 import type {AssessmentContext, AssessmentRow, ResultTable} from './assessment/types';
 import {streamAssessmentRows} from './assessment/stream';
 import {iscnCandidateSQL} from '@/app/(main)/tasks/[uuid]/utils/cnv-nomenclature';
@@ -204,8 +204,11 @@ class BrowserTable {
             const baselineStarted = performance.now();
             await this.conn.query('CREATE TABLE overlays(row_id VARCHAR PRIMARY KEY,payload JSON, version BIGINT); CREATE TABLE automatic(row_id VARCHAR PRIMARY KEY,baseline JSON)');
             const evaluated=await assessTask(this.task,(context,table,consume,signal)=>this.readAssessmentRows(context,table,consume,signal),this.lifecycle.signal);
+            check(this.lifecycle.signal);
             const baseline=evaluated.filter(row=>row.table===this.table);
-            if(baseline.length!==count)throw new Error('全量初评与当前数据集不一致，请刷新结果');
+            // Cancellation leaves the validated source and saved adjustments readable.
+            // No partial automatic baseline is published or applied.
+            if(assessmentStatus(this.task)?.state!=='cancelled' && baseline.length!==count)throw new Error('全量初评与当前数据集不一致，请刷新结果');
             for(let offset=0;offset<baseline.length;offset+=2000){
                 await this.db.registerFileBuffer('automatic.jsonl',new TextEncoder().encode(baseline.slice(offset,offset+2000).map(row=>JSON.stringify(row)).join('\n')));
                 await this.conn.query("INSERT INTO automatic SELECT rowId, assessment FROM read_json('automatic.jsonl',columns={rowId:'VARCHAR',assessment:'JSON'},format='newline_delimited')");
@@ -347,15 +350,16 @@ class BrowserTable {
             for (const key of this.info.aliases[col] ?? [col])
                 row[key] = source[col];
         const auto = object(source.__acmg), overlay = object(source.__adjustments);
-        row.automaticAssessment=auto;
+        const hasAutomatic=Object.keys(auto).length>0;
+        row.automaticAssessment=hasAutomatic?auto:undefined;
         row.pinReasons=auto.pinReasons;
         Object.assign(row, { id: source.__row_id, rowId: source.__row_id, rowOrdinal: Number(source.file_row_number), reviewed: false, reported: false, adjustments: overlay, adjustmentVersion: Number(source.__version), datasetVersion: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId });
         if (this.table === 'snv-indel') {
             row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));
-            row.automaticAcmg = auto;
+            row.automaticAcmg = hasAutomatic?auto:undefined;
             row.acmgClassification = auto.classification;
             row.acmgClassificationComputed = auto.classification;
-            row.acmgAssessmentSource = 'automatic';
+            row.acmgAssessmentSource = hasAutomatic?'automatic':undefined;
             row.alleleFrequency = source.VAF;
             row.vaf = source.VAF;
         }
