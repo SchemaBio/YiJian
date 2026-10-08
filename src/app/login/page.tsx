@@ -76,25 +76,15 @@ export default function LoginPage() {
         <DnaHelix />
       </div>
 
-      <div className="flex flex-1 items-center justify-center bg-[var(--yj-panel-bg)] p-8">
+      <div className="flex flex-1 items-center justify-center bg-[var(--yj-panel-bg)] px-5 py-8 sm:p-8">
         <div className="w-full max-w-md">
-          <div className="mb-8 text-center lg:hidden">
-            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--yj-panel-subtle)] shadow-sm">
-              <Image
-                src="/logo.svg"
-                alt="YiJian"
-                width={40}
-                height={40}
-                className="object-contain"
-              />
-            </div>
-            <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">YiJian</h1>
-            <p className="mt-1 text-[var(--yj-text-muted)]">遗传病胚系突变分析平台</p>
-          </div>
-
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-[var(--yj-text-strong)]">贻鉴分析平台</h2>
-            <p className="mt-1 text-[var(--yj-text-muted)]">请登录您的账号</p>
+            <div className="yj-brand-lockup mb-6">
+              <span className="yj-brand-mark"><Image src="/logo.svg" alt="" width={28} height={28} className="object-contain" /></span>
+              <span>YiJian</span>
+            </div>
+            <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">登录</h1>
+            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">贻鉴 · 遗传病胚系突变分析平台</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form space-y-5">
@@ -111,30 +101,31 @@ export default function LoginPage() {
 
             <Input
               id="email"
+              aria-label="邮箱"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="邮箱"
               autoComplete="email"
               autoFocus
-              className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+              className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
             />
 
             <div className="relative">
               <Input
                 id="password"
+                aria-label="密码"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="密码"
                 autoComplete="current-password"
-                className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+                className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted transition-colors hover:text-fg-default"
-                tabIndex={-1}
                 aria-label={showPassword ? '隐藏密码' : '显示密码'}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -173,7 +164,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               variant="primary"
-              className="yj-public-primary w-full !h-12 !rounded-xl !text-base font-medium transition-shadow"
+              className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
               disabled={loading || (privacyConsentRequired && !agreePrivacy)}
               leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
             >

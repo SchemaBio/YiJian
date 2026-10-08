@@ -17,23 +17,23 @@ export default function PrivacyPage() {
           onClick={(event) => {
             if (isLoading) event.preventDefault();
           }}
-          className={`mb-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3.5 py-2 text-sm text-fg-muted shadow-sm transition-colors hover:text-fg-default ${isLoading ? 'cursor-wait opacity-60' : ''}`}
+          className={`mb-6 inline-flex items-center gap-1.5 rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3.5 py-2 text-sm text-fg-muted transition-colors hover:text-fg-default ${isLoading ? 'cursor-wait opacity-60' : ''}`}
         >
           <ArrowLeft className="w-4 h-4" />
           返回
         </Link>
 
         {/* Header */}
-        <div className="yj-panel mb-6 p-8 text-center">
+        <div className="yj-panel mb-6 p-5 sm:p-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--yj-border-subtle)] bg-[var(--yj-sage-subtle)]">
             <Shield className="h-7 w-7 text-success-fg" />
           </div>
-          <h1 className="mb-2 text-[30px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">用户服务协议与隐私政策</h1>
+          <h1 className="mb-2 text-2xl sm:text-[30px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">用户服务协议与隐私政策</h1>
           <p className="text-sm text-[var(--yj-text-muted)]">贻鉴遗传病胚系突变分析平台</p>
         </div>
 
         {/* 生效日期 */}
-        <div className="yj-info-panel mb-6 flex items-center gap-4 text-xs text-fg-muted">
+        <div className="yj-info-panel mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-muted">
           <span>发布日期：2026年6月26日</span>
           <span className="text-border">|</span>
           <span>生效日期：2026年6月26日</span>
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
               <span className="text-accent-fg">第二条</span> 平台性质与使用限制
             </h2>
             <div className="space-y-3 text-sm text-fg-muted leading-relaxed pl-0 md:pl-6">
-              <p><strong className="text-fg-default">2.1</strong> 本平台<strong className="text-red-600">仅供科学研究使用，不作为临床诊断依据</strong>。任何基于本平台分析结果做出的医学决策，应由具有相应资质的专业人员独立判断。</p>
+              <p><strong className="text-fg-default">2.1</strong> 本平台<strong className="text-danger-fg">仅供科学研究使用，不作为临床诊断依据</strong>。任何基于本平台分析结果做出的医学决策，应由具有相应资质的专业人员独立判断。</p>
               <p><strong className="text-fg-default">2.2</strong> 平台输出结果仅作为研究参考，不构成医疗建议、诊断或治疗方案。</p>
               <p><strong className="text-fg-default">2.3</strong> 用户不得将本平台用于任何违法目的，不得上传非法获取的遗传数据。</p>
             </div>
@@ -119,17 +119,17 @@ export default function PrivacyPage() {
           </section>
 
           {/* 第五条 数据保留与删除策略 */}
-          <section className="rounded-[var(--yj-radius-panel)] border border-amber-200 bg-amber-50/80 p-4">
-            <h2 className="text-base font-semibold text-amber-900 mb-3 flex items-center gap-2">
+          <section className="rounded-[var(--yj-radius-panel)] border border-warning-muted bg-warning-subtle p-4">
+            <h2 className="text-base font-semibold text-warning-fg mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>第五条 数据保留与删除策略</span>
             </h2>
-            <div className="space-y-3 text-sm text-amber-800 leading-relaxed pl-0 md:pl-6">
-              <p><strong className="text-amber-900">5.1 原始测序数据：</strong>用户上传的原始测序文件（FASTQ/BAM 等），自上传完成之日起保留 <strong className="text-red-600">7 个自然日</strong>，到期后由系统自动永久删除，<strong className="text-red-600">不可恢复</strong>。请用户在删除前确认已完成所需分析。</p>
-              <p><strong className="text-amber-900">5.2 分析结果：</strong>分析任务产生的结果数据（变异列表、注释、报告等）在用户账户存续期间保留，用户可随时手动删除。</p>
-              <p><strong className="text-amber-900">5.3 账户信息：</strong>用户注册信息在账户存续期间保留。用户注销账户后，我们将在 30 个工作日内删除全部关联数据。</p>
-              <p><strong className="text-amber-900">5.4 系统日志：</strong>操作日志和系统日志保留不超过 180 天，到期自动清理。</p>
-              <p><strong className="text-amber-900">5.5 数据备份：</strong>为保障服务连续性，系统可能对分析结果进行备份。备份数据随主数据一同删除，删除操作完成后 72 小时内备份数据将被彻底清除。</p>
+            <div className="space-y-3 text-sm text-warning-fg leading-relaxed pl-0 md:pl-6">
+              <p><strong className="text-warning-fg">5.1 原始测序数据：</strong>用户上传的原始测序文件（FASTQ/BAM 等），自上传完成之日起保留 <strong className="text-danger-fg">7 个自然日</strong>，到期后由系统自动永久删除，<strong className="text-danger-fg">不可恢复</strong>。请用户在删除前确认已完成所需分析。</p>
+              <p><strong className="text-warning-fg">5.2 分析结果：</strong>分析任务产生的结果数据（变异列表、注释、报告等）在用户账户存续期间保留，用户可随时手动删除。</p>
+              <p><strong className="text-warning-fg">5.3 账户信息：</strong>用户注册信息在账户存续期间保留。用户注销账户后，我们将在 30 个工作日内删除全部关联数据。</p>
+              <p><strong className="text-warning-fg">5.4 系统日志：</strong>操作日志和系统日志保留不超过 180 天，到期自动清理。</p>
+              <p><strong className="text-warning-fg">5.5 数据备份：</strong>为保障服务连续性，系统可能对分析结果进行备份。备份数据随主数据一同删除，删除操作完成后 72 小时内备份数据将被彻底清除。</p>
             </div>
           </section>
 

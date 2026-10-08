@@ -37,7 +37,7 @@ export interface AppModalProps {
 interface ModalSectionHeadingProps {
   icon: React.ReactNode;
   title: string;
-  description: string;
+  description?: string;
 }
 
 export function ModalSectionHeading({ icon, title, description }: ModalSectionHeadingProps) {
@@ -48,7 +48,7 @@ export function ModalSectionHeading({ icon, title, description }: ModalSectionHe
       </span>
       <div className="min-w-0">
         <h3 className="text-sm font-semibold text-fg-default">{title}</h3>
-        <p className="mt-0.5 text-xs leading-5 text-fg-muted">{description}</p>
+        {description && <p className="mt-0.5 text-xs leading-5 text-fg-muted">{description}</p>}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
-import { Coins, Play, Info, AlertTriangle } from 'lucide-react';
+import { Coins, Play, AlertTriangle } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
@@ -24,6 +24,7 @@ export default function NewAnalysisPage() {
   const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
   const [pedigrees, setPedigrees] = React.useState<Pedigree[]>([]);
+  const pedigreeCache = React.useRef<Pedigree[] | null>(null);
   const [loadError, setLoadError] = React.useState('');
   const [selectedSample, setSelectedSample] = React.useState('');
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
@@ -48,16 +49,13 @@ export default function NewAnalysisPage() {
 
     async function loadOptions() {
       try {
-        const [sampleOptions, pipelineOptions, pedigreeOptions] = await Promise.all([
+        const [sampleOptions, pipelineOptions] = await Promise.all([
           samplesApi.list({ page: 1, page_size: 100 }),
           pipelinesApi.list(),
-          listPedigrees(),
         ]);
-        const pedigreeDetails = (await Promise.all(pedigreeOptions.map((item) => getPedigree(item.id)))).filter((item): item is Pedigree => item !== null);
         if (cancelled) return;
         setSamples(sampleOptions);
         setPipelines(pipelineOptions);
-        setPedigrees(pedigreeDetails);
         setSelectedPipeline((current) => current || pipelineOptions[0]?.id || '');
         setLoadError('');
       } catch (err) {
@@ -72,6 +70,23 @@ export default function NewAnalysisPage() {
       cancelled = true;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!isTrio || pedigreeCache.current !== null) return;
+    let cancelled = false;
+    listPedigrees()
+      .then(items => Promise.all(items.map(item => getPedigree(item.id))))
+      .then(items => {
+        if (cancelled) return;
+        const details = items.filter((item): item is Pedigree => item !== null);
+        pedigreeCache.current = details;
+        setPedigrees(details);
+      })
+      .catch(err => {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : '加载家系选项失败');
+      });
+    return () => { cancelled = true; };
+  }, [isTrio]);
 
   React.useEffect(() => {
     if (!isSaaS) return;
@@ -170,20 +185,21 @@ export default function NewAnalysisPage() {
         <h2 className="yj-page-title">新建分析任务</h2>
       </div>
 
-      {isSaaS && <aside role="note" aria-label="BAM 文件保留期限" className="mb-5 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+      {isSaaS && <aside role="note" aria-label="BAM 文件保留期限" className="mb-5 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-4 text-warning-fg">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-        <div><h3 className="text-sm font-semibold">重要：BAM 文件仅保留至任务完成后 7 天</h3><p className="mt-1 text-sm leading-6">到期后 BAM 将自动删除，无法再下载，也无法通过 IGV 复核样本 reads。请在保留期内完成复核，或下载 BAM 并自行备份。</p><p className="mt-1 text-xs">分析结果表与已保存的人工判读记录继续保留。</p></div>
+        <div><h3 className="text-sm font-semibold">BAM 文件仅保留至任务完成后 7 天</h3><p className="mt-1 text-sm leading-6">到期后 BAM 将自动删除，无法再下载，也无法通过 IGV 复核样本 reads。请在保留期内完成复核，或下载 BAM 并自行备份。</p><p className="mt-1 text-xs">分析结果表与已保存的人工判读记录继续保留。</p></div>
       </aside>}
 
-      <div className="yj-panel yj-form-card space-y-6">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="yj-panel min-w-0 space-y-5 p-5">
         {loadError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             {loadError}
           </div>
         )}
 
         {formError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             {formError}
           </div>
         )}
@@ -199,15 +215,6 @@ export default function NewAnalysisPage() {
             placeholder="选择样本"
             searchable
           />
-          {selectedSampleInfo && (
-            <div className="mt-2 text-xs text-fg-muted">
-              {selectedSampleInfo.matchedPair ? (
-                <span className="text-success-fg">测序数据已就绪</span>
-              ) : (
-                <span className="text-warning-fg">任务创建后将等待测序数据</span>
-              )}
-            </div>
-          )}
         </FormItem>}
 
         {isTrio && <FormItem label="家系（父母 + 先证者）" required>
@@ -242,13 +249,32 @@ export default function NewAnalysisPage() {
 
         <FormItem label="任务备注">
           <Input
+            aria-label="任务备注"
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
             placeholder="任务备注（可选）"
           />
         </FormItem>
 
-        <div className="rounded-md border border-border-default bg-canvas-subtle px-4 py-3">
+        <div>
+          <h3 className="text-sm font-medium text-fg-default mb-3">高级选项</h3>
+          <div className="flex flex-wrap gap-x-5 gap-y-3">
+            <Checkbox
+              checked={enableCNV}
+              onCheckedChange={(checked) => setEnableCNV(checked === true)}
+              label="启用 CNV 分析"
+            />
+            <Checkbox
+              checked={enableSV}
+              onCheckedChange={(checked) => setEnableSV(checked === true)}
+              label="启用 SV 分析"
+            />
+          </div>
+        </div>
+
+      </section>
+      <aside className="yj-panel min-w-0 space-y-5 p-5" aria-label="任务预估与提交">
+        <div className="border-b border-border-default pb-4">
           <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
           <p className="mt-1 text-xs leading-5 text-fg-muted">
             {estimateStatus === 'loading'
@@ -262,19 +288,13 @@ export default function NewAnalysisPage() {
         </div>
 
         {isSaaS && (
-          <div className={`flex items-center justify-between gap-4 border-y py-3 ${insufficientCredits ? 'border-danger-muted' : 'border-border-default'}`}>
+          <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-4 ${insufficientCredits ? 'border-danger-muted' : 'border-border-default'}`}>
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
                 <div className="text-sm font-medium text-fg-default">预计预扣 {estimatedCredits ?? '--'} 积分</div>
                 <div className="text-xs text-fg-muted">
-                  {estimateStatus === 'loading'
-                    ? '正在计算预计预扣；最终按实际运行分钟结算'
-                    : estimateStatus === 'ready'
-                      ? `预计 ${estimatedMinutes} 分钟计算；最终按实际运行分钟结算`
-                      : estimateStatus === 'fallback'
-                        ? '暂按基础预估 60 分钟计算；最终按实际运行分钟结算'
-                        : '选择输入和流程后计算预计预扣'}
+                  最终按实际运行分钟结算
                 </div>
               </div>
             </div>
@@ -303,25 +323,10 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">高级选项</h3>
-          <div className="space-y-2">
-            <Checkbox
-              checked={enableCNV}
-              onCheckedChange={(checked) => setEnableCNV(checked === true)}
-              label="启用 CNV 分析"
-            />
-            <Checkbox
-              checked={enableSV}
-              onCheckedChange={(checked) => setEnableSV(checked === true)}
-              label="启用 SV 分析"
-            />
-          </div>
-        </div>
-
-        <div className="pt-5 border-t border-[var(--yj-border-subtle)] flex items-center justify-end">
+        <div className="flex items-center justify-end">
           <Button
             variant="primary"
+            className="w-full"
             leftIcon={<Play className="w-4 h-4" />}
             onClick={handleSubmit}
             loading={submitting}
@@ -330,6 +335,7 @@ export default function NewAnalysisPage() {
             {submitting ? '提交中...' : '提交任务'}
           </Button>
         </div>
+      </aside>
       </div>
     </PageContent>
   );

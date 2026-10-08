@@ -1,8 +1,14 @@
+const sampleFixture = {id:'detail-preview',internal_id:'DEMO-示例样本',gender:'male',age:10,sample_type:'全血',batch:'DEMO-2026',matched_pair:{r1_path:'/synthetic/DEMO_R1.fastq.gz',r2_path:'/synthetic/DEMO_R2.fastq.gz'},clinical_diagnosis:{mainDiagnosis:'合成诊断，仅用于界面检查',symptoms:['合成症状'],hpoTerms:[{id:'HP:0000001',name:'合成表型名称'}]},created_at:'2026-10-08T09:00:00Z',updated_at:'2026-10-08T09:00:00Z'};
+const pedigreeFixture = {id:'preview-family',name:'FAM-示例',disease:'合成家系 · 用于布局检查',note:'不含真实患者资料',proband_member_id:'child',updated_at:'2026-10-08T09:00:00Z',members:[{id:'father',name:'父亲',gender:'male',relation:'father',affected_status:'unaffected',generation:0,position:0},{id:'mother',name:'母亲',gender:'female',relation:'mother',affected_status:'unaffected',generation:0,position:1},{id:'child',name:'先证者',gender:'male',relation:'proband',affected_status:'affected',generation:1,position:0,father_id:'father',mother_id:'mother',phenotypes:['合成表型']} ]};
 export class ApiError extends Error { status = 500; }
 const views: any[] = [];
 const transactions = ['recharge','pre_deduction','deduction','refund','failure_refund','adjust','download'].map((type,i)=>({id:i+1,type,org_id:'preview',amount:[1000,-75,-20,55,75,10,-1][i],balance_after:1000,description:'合成账单 · 仅用于界面预览',created_by:1,created_at:'2026-10-08T09:00:00Z'}));
 export const api = {
   get: async (url: string) => {
+    if(url.endsWith('/v1/samples')) return [sampleFixture];
+    if(url.endsWith('/v1/samples/detail-preview')) return sampleFixture;
+    if(url.endsWith('/v1/pedigrees')) return [pedigreeFixture];
+    if(url.endsWith('/v1/pedigrees/preview-family')) return pedigreeFixture;
     if(url.endsWith('/v1/report-templates')) return [{id:'preview-report',name:'合成遗传病报告',description:'用于界面检查的报告服务',apiEndpoint:'https://example.invalid/reports/generate',hasApiKey:true,isActive:true,canMaintain:true,revision:1,contractVersion:'report-snapshot-v2',updatedAt:'2026-10-08T09:00:00Z'}];
     if(url.endsWith('/v1/users/pending')) return [{id:'preview-pending',name:'待审批示例',email:'pending@example.invalid',org_id:'preview-org',system_role:'ORG_USER',approval_status:'pending',is_active:false,created_at:'2026-10-08T09:00:00Z'}];
     if(url.endsWith('/v1/users')) return {items:[{id:'preview-user',name:'示例用户',email:'user@example.invalid',org_id:'preview-org',system_role:'ORG_USER',approval_status:'approved',is_active:true,created_at:'2026-10-08T09:00:00Z'}],total:1,total_pages:1};

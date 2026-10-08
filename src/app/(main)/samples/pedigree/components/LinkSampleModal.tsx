@@ -68,7 +68,7 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
     >
       <div className="space-y-6">
         {submitError && (
-        <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
           {submitError}
         </div>
       )}

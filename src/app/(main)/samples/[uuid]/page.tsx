@@ -5,11 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Button, Tag } from '@schema/ui-kit';
 import { ArrowLeft, Database, User, FileText, Activity, Users } from 'lucide-react';
+import { formatDateTime } from '@/lib/date-time';
 import { getSampleDetail } from '@/lib/samples';
+import { getFamilyHistoryLabel } from '@/lib/sample-display';
+import { ApiError } from '@/lib/api';
 import type { SampleDetail } from '../types';
 import { GENDER_CONFIG } from '../types';
 import { MatchingTab } from './components/MatchingTab';
-import { SampleInfoTab } from './components/SampleInfoTab';
+import { SampleInfoTab, ClinicalInfoTab } from './components/SampleInfoTab';
 
 type TabType = 'info' | 'matching' | 'clinical' | 'family' | 'analysis';
 
@@ -29,12 +32,15 @@ export default function SampleDetailPage() {
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
+  const [loadError, setLoadError] = React.useState(false);
+  const [retryCount, setRetryCount] = React.useState(0);
   const [activeTab, setActiveTab] = React.useState<TabType>('info');
 
   React.useEffect(() => {
     async function loadSample() {
       setLoading(true);
       setNotFound(false);
+      setLoadError(false);
       try {
         const data = await getSampleDetail(uuid);
         if (!data) {
@@ -43,19 +49,33 @@ export default function SampleDetailPage() {
         } else {
           setSample(data);
         }
-      } catch {
+      } catch (error) {
         setSample(null);
-        setNotFound(true);
+        if (error instanceof ApiError && error.status === 404) setNotFound(true);
+        else setLoadError(true);
       } finally {
         setLoading(false);
       }
     }
     loadSample();
-  }, [uuid]);
+  }, [uuid, retryCount]);
 
   const handleBack = React.useCallback(() => {
     router.push('/samples');
   }, [router]);
+
+  if (loadError) {
+    return <PageContent className="yj-page-shell">
+      <div role="alert" className="yj-panel flex flex-col items-center gap-4 p-8">
+        <h2 className="text-lg font-semibold text-fg-default">加载样本失败</h2>
+        <p className="text-sm text-fg-muted">暂时无法读取样本信息，请重试。</p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={handleBack}>返回样本列表</Button>
+          <Button variant="primary" onClick={() => setRetryCount(count => count + 1)}>重试</Button>
+        </div>
+      </div>
+    </PageContent>;
+  }
 
   if (notFound) {
     return (
@@ -98,33 +118,15 @@ export default function SampleDetailPage() {
       case 'matching':
         return <MatchingTab sample={sample} onSampleUpdated={setSample} />;
       case 'clinical':
-        return (
-          <div className="bg-canvas-subtle rounded-lg p-4">
-            <h4 className="text-sm font-medium text-fg-default mb-3">临床诊断</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs text-fg-muted">主要诊断</span>
-                <p className="text-sm text-fg-default">{sample.clinicalDiagnosis?.mainDiagnosis || '-'}</p>
-              </div>
-              <div>
-                <span className="text-xs text-fg-muted">临床症状</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {sample.clinicalDiagnosis?.symptoms?.map((s: string, i: number) => (
-                    <Tag key={i} variant="neutral">{s}</Tag>
-                  )) || <span className="text-sm text-fg-muted">-</span>}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        return <ClinicalInfoTab sample={sample} />;
       case 'family':
         return (
-          <div className="bg-canvas-subtle rounded-lg p-4">
+          <div className="yj-panel p-5">
             <h4 className="text-sm font-medium text-fg-default mb-3">家族史</h4>
             <div className="space-y-3">
               <div>
                 <span className="text-xs text-fg-muted">是否有家族史</span>
-                <p className="text-sm text-fg-default">{sample.familyHistory?.hasHistory ? '有' : '无'}</p>
+                <p className="text-sm text-fg-default">{getFamilyHistoryLabel(sample.familyHistory?.hasHistory)}</p>
               </div>
               {sample.familyHistory?.hasHistory && sample.familyHistory.affectedMembers && (
                 <div>
@@ -143,19 +145,19 @@ export default function SampleDetailPage() {
         );
       case 'analysis':
         return (
-          <div className="bg-canvas-subtle rounded-lg p-4">
+          <div className="yj-panel p-5">
             <h4 className="text-sm font-medium text-fg-default mb-3">关联分析任务</h4>
             {sample.analysisTasks?.length > 0 ? (
               <div className="space-y-2">
                 {sample.analysisTasks.map((task: { id: string; name: string; status: string; createdAt: string }) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-3 bg-canvas-default rounded hover:bg-canvas-inset transition-colors cursor-pointer"
+                    className="flex flex-wrap items-center justify-between gap-3 p-3 bg-canvas-default rounded hover:bg-canvas-inset transition-colors cursor-pointer"
                     onClick={() => router.push(`/tasks/${encodeURIComponent(task.id)}`)}
                   >
                     <div>
                       <span className="text-sm font-medium text-fg-default">{task.name}</span>
-                      <span className="text-xs text-fg-muted ml-2">{task.createdAt}</span>
+                      <span className="text-xs text-fg-muted ml-2">{formatDateTime(task.createdAt)}</span>
                     </div>
                     <Tag variant={task.status === 'completed' ? 'success' : task.status === 'running' ? 'info' : 'neutral'}>
                       {task.status === 'completed' ? '已完成' : task.status === 'running' ? '运行中' : task.status}
@@ -183,9 +185,9 @@ export default function SampleDetailPage() {
           </Button>
         </div>
 
-        <div className="flex items-center justify-between pb-3 border-b border-border-default">
-          <div className="flex items-center gap-3">
-            <h2 className="yj-page-title">{sample.internalId}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-default">
+          <div className="flex flex-wrap items-center gap-3 min-w-0">
+            <h2 className="yj-page-title break-all">{sample.internalId}</h2>
             <span className={`text-sm ${genderInfo.color}`}>{genderInfo.label}</span>
             <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? '已匹配' : '未匹配'}</Tag>
           </div>
@@ -193,16 +195,15 @@ export default function SampleDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-muted mt-2">
-          <span>样本编号: <span className="font-mono">{uuid}</span></span>
+          <span>样本编号: <span className="font-mono break-all">{uuid}</span></span>
           <span>样本类型: {sample.sampleType}</span>
-          <span>匹配数据: {sample.matchedPair ? '已匹配' : '无'}</span>
-          <span>创建时间: {sample.createdAt}</span>
+          <span>创建时间: {formatDateTime(sample.createdAt)}</span>
         </div>
       </div>
 
       {/* 标签页导航 */}
       <div className="border-b border-border-default mb-4">
-        <nav className="flex gap-1" role="tablist">
+        <nav className="flex gap-1 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="样本详情标签页">
           {TAB_CONFIGS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -212,7 +213,7 @@ export default function SampleDetailPage() {
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
-                  flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
+                  flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
                   ${isActive
                     ? 'border-accent-emphasis text-accent-fg'
                     : 'border-transparent text-fg-muted hover:text-fg-default'

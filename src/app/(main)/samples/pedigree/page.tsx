@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button, Input, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, List, X, UserPlus, GitBranch, Trash2, Pencil, Save, Download, Upload } from 'lucide-react';
+import { Search, Plus, List, X, UserPlus, GitBranch, Trash2, Pencil, Save, Download } from 'lucide-react';
 import { PedigreeTree, MemberDetailPanel, AddMemberModal, LinkSampleModal, NewPedigreeModal, EditPedigreeModal, ConfirmDialog, EditMemberModal, ContextMenu } from './components';
 import type { ContextMenuItem } from './components';
 import type { NewPedigreeFormData } from './components/NewPedigreeModal';
@@ -661,20 +661,21 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
       id: 'id',
       header: '家系编号',
       accessor: (row) => (
-        <span
-          className="font-mono text-sm text-accent-fg hover:underline cursor-pointer"
+        <button
+          type="button"
+          className="text-sm text-accent-fg hover:underline"
           onClick={(e) => { e.stopPropagation(); handleOpenTab(row); }}
         >
-          {row.id.substring(0, 8)}
-        </span>
+          {row.internalId}
+        </button>
       ),
       width: 100,
       align: 'center',
     },
     {
       id: 'internalId',
-      header: '内部编号',
-      accessor: 'internalId',
+      header: '系统编号',
+      accessor: (row) => <span className="font-mono text-xs">{row.id.substring(0, 8)}</span>,
       width: 90,
       align: 'center',
     },
@@ -694,7 +695,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
             row.sampleIds.map((id, index) => (
               <div
                 key={id}
-                className={`font-mono text-xs ${id === row.probandSampleId ? 'text-blue-600 font-semibold' : 'text-fg-default'}`}
+                className={`font-mono text-xs ${id === row.probandSampleId ? 'text-accent-fg font-semibold' : 'text-fg-default'}`}
               >
                 {id.substring(0, 8)}
               </div>
@@ -716,7 +717,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
             row.sampleInternalIds.map((id, index) => (
               <div
                 key={id}
-                className={`text-xs ${row.sampleIds[index] === row.probandSampleId ? 'text-blue-600 font-semibold' : 'text-fg-default'}`}
+                className={`text-xs ${row.sampleIds[index] === row.probandSampleId ? 'text-accent-fg font-semibold' : 'text-fg-default'}`}
               >
                 {id}
               </div>
@@ -745,21 +746,21 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
       ),
       width: 100,
     },
-    { id: 'updatedAt', header: '更新时间', accessor: 'updatedAt', width: 150 },
+    { id: 'updatedAt', header: '更新时间', accessor: (row) => row.updatedAt && Number.isFinite(Date.parse(row.updatedAt)) ? new Date(row.updatedAt).toLocaleString('zh-CN', { hour12: false }) : '-', width: 150 },
     {
       id: 'actions',
       header: '操作',
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
           <button
-            className="p-1.5 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+            className="p-1.5 rounded text-fg-muted hover:text-accent-fg hover:bg-accent-subtle transition-colors"
             onClick={() => handleOpenEditPedigree(row)}
             aria-label="编辑"
           >
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="p-1.5 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors"
             onClick={() => handleOpenDeletePedigree(row.id)}
             aria-label="删除"
           >
@@ -776,10 +777,10 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
   const hasOpenTabs = openTabs.length > 0;
 
   return (
-    <div className="flex h-full">
+    <div className="relative flex h-[calc(100dvh-3.5rem)] min-w-0 md:h-full">
       {/* 左侧家系列表 */}
       {hasOpenTabs ? (
-        <div className="w-56 flex-shrink-0 border-r border-border-default bg-canvas-subtle flex flex-col">
+        <div className="hidden md:flex w-56 flex-shrink-0 border-r border-border-default bg-canvas-subtle flex-col">
             <div className="px-3 py-2 border-b border-border-default flex items-center gap-2">
               <List className="w-4 h-4 text-fg-muted" />
               <span className="text-sm font-medium text-fg-default">家系列表</span>
@@ -795,46 +796,54 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                   <div key={pedigree.id} onClick={() => handleOpenTab(pedigree)} className={`px-3 py-2 cursor-pointer border-b border-border-muted transition-colors ${isActive ? 'bg-accent-subtle border-l-2 border-l-accent-emphasis' : isOpen ? 'bg-canvas-inset' : 'hover:bg-canvas-inset'}`}>
                     <div className="flex items-center gap-2">
                       <GitBranch className="w-3 h-3 text-fg-muted" />
-                      <span className={`font-mono text-sm ${isActive ? 'text-accent-fg font-medium' : 'text-fg-default'}`}>{pedigree.id.substring(0, 8)}</span>
+                      <span className={`truncate text-sm ${isActive ? 'text-accent-fg font-medium' : 'text-fg-default'}`}>{pedigree.internalId}</span>
                     </div>
-                    <div className="text-xs text-fg-muted ml-5 truncate">{pedigree.internalId} · {pedigree.sampleIds.length}样本</div>
+                    <div className="text-xs text-fg-muted ml-5 truncate">{pedigree.sampleIds.length} 个样本</div>
                   </div>
                 );
               })}
             </div>
           </div>
       ) : (
-        <div className="flex-1">
-          <div className="p-6 xl:p-8 h-full overflow-auto yj-page-shell">
+        <div className="flex-1 min-w-0">
+          <div className="p-4 md:p-6 h-full overflow-auto yj-page-shell">
             <div className="yj-page-header">
               <h2 className="yj-page-title">家系管理</h2>
             </div>
             <div className="yj-toolbar-panel">
-              <div className="w-64">
+              <div className="w-full sm:w-72">
                 <Input placeholder="搜索家系编号、内部编号、样本..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="secondary" leftIcon={<Download className="w-4 h-4" />} onClick={handleDownloadTemplate}>下载模板</Button>
-                <Button variant="secondary" leftIcon={<Upload className="w-4 h-4" />}>批量导入</Button>
                 <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewPedigreeOpen(true)}>新建家系</Button>
               </div>
             </div>
             {error && (
-              <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
                 {error}
               </div>
             )}
             {listLoading && (
               <div className="mb-3 text-sm text-fg-muted">加载家系列表...</div>
             )}
-            <DataTable data={filteredPedigrees} columns={columns} rowKey="id" striped density="compact" />
+            <div className="overflow-x-auto [&_table]:min-w-[990px]"><DataTable data={filteredPedigrees} columns={columns} rowKey="id" striped density="compact" /></div>
           </div>
         </div>
       )}
 
       {/* 中间家系树区域 */}
       {hasOpenTabs && (
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          <div className="md:hidden border-b border-border-default p-3">
+            <label htmlFor="pedigree-switch" className="sr-only">切换家系</label>
+            <select id="pedigree-switch" className="w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm text-fg-default" value={activeTab?.pedigreeId || ''} onChange={(event) => {
+              const pedigree = pedigrees.find(item => item.id === event.target.value);
+              if (pedigree) handleOpenTab(pedigree);
+            }}>
+              {pedigrees.map(item => <option key={item.id} value={item.id}>{item.internalId}</option>)}
+            </select>
+          </div>
           {/* 标签栏 */}
           <div className="flex items-center border-b border-border-default bg-canvas-subtle flex-shrink-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] overflow-x-auto">
             {openTabs.map((tab) => (
@@ -848,8 +857,8 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
           </div>
 
           {/* 工具栏 */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border-default bg-canvas-subtle">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-border-default bg-canvas-subtle">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               {currentPedigree && (
                 <>
                   <span className="text-sm text-fg-default font-medium">{currentPedigree.internalId}</span>
@@ -879,7 +888,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
           </div>
 
           {/* 家系树 */}
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden relative">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />

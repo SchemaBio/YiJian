@@ -84,7 +84,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="yj-modern yj-public-shell flex items-center justify-center p-8">
+    <div className="yj-modern yj-public-shell flex items-center justify-center px-4 py-8 sm:p-8">
       <div className="yj-panel yj-auth-card yj-auth-single">
         <div className="mb-8">
           <div className="yj-brand-lockup mb-8">
@@ -95,7 +95,7 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">创建账号</h2>
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
-            注册你的研究团队账号。Squid SaaS 模式会创建机构并进入审批流程；Octopus 直连模式仅创建本地用户。
+            {requireOrgFields ? '创建团队账号，提交后等待管理员审批。' : '创建账号，开始使用贻鉴。'}
           </p>
         </div>
 
@@ -108,57 +108,62 @@ export default function RegisterPage() {
 
           <Input
             id="register-name"
+            aria-label="姓名"
             type="text"
             value={form.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="姓名 *"
             autoComplete="name"
-            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-email"
+            aria-label="邮箱"
             type="email"
             value={form.email}
             onChange={(e) => handleChange('email', e.target.value)}
             placeholder="邮箱 *"
             autoComplete="email"
-            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-password"
+            aria-label="密码（至少 8 位）"
             type="password"
             value={form.password}
             onChange={(e) => handleChange('password', e.target.value)}
             placeholder="密码（至少 8 位）*"
             autoComplete="new-password"
-            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-org-name"
+            aria-label="团队/机构名称"
             type="text"
             value={form.orgName}
             onChange={(e) => handleChange('orgName', e.target.value)}
-            placeholder={requireOrgFields ? '团队/机构名称 *' : '团队/机构名称（Octopus 可选）'}
+            placeholder={requireOrgFields ? '团队/机构名称 *' : '团队/机构名称（选填）'}
             autoComplete="organization"
-            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-org-slug"
+            aria-label="机构标识"
             type="text"
             value={form.orgSlug}
             onChange={(e) => handleChange('orgSlug', e.target.value)}
-            placeholder={requireOrgFields ? '机构标识（如 my-lab）*' : '机构标识（Octopus 可选）'}
-            className="!h-12 !rounded-xl text-base shadow-sm transition-shadow focus-within:shadow-md"
+            placeholder={requireOrgFields ? '机构标识（如 my-lab）*' : '机构标识（选填）'}
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Button
             type="submit"
             variant="primary"
-            className="yj-public-primary w-full !h-12 !rounded-xl !text-base font-medium transition-shadow"
+            className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
             disabled={loading}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >

@@ -1,4 +1,5 @@
 'use client';
+import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel, formatTurnaroundDays } from '@/lib/sample-display';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -71,15 +72,19 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
         </div>
         {sample.projectInfo && (
           <>
+            {(sample.projectInfo.panel || sample.projectInfo.projectName) && (
             <div className="flex items-center gap-1 text-xs text-fg-muted">
               <span>检测Panel:</span>
               <span>{sample.projectInfo.panel || sample.projectInfo.projectName}</span>
             </div>
+            )}
+            {(sample.projectInfo.priority === 'normal' || sample.projectInfo.priority === 'urgent') && (
             <Tag
               variant={sample.projectInfo.priority === 'urgent' ? 'danger' : 'neutral'}
             >
-              {sample.projectInfo.priority === 'urgent' ? '加急' : '普通'}
+              {getSamplePriorityLabel(sample.projectInfo.priority)}
             </Tag>
+            )}
           </>
         )}
       </div>
@@ -90,38 +95,28 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
           <div className="flex items-center gap-1 text-fg-muted">
             <Calendar className="w-3.5 h-3.5" />
             <span>送检日期:</span>
-            <span className="text-fg-default">{sample.submissionInfo.submissionDate}</span>
+            <span className="text-fg-default">{sample.submissionInfo.submissionDate || '—'}</span>
           </div>
           <div className="flex items-center gap-1 text-fg-muted">
             <span>采样日期:</span>
-            <span className="text-fg-default">{sample.submissionInfo.sampleCollectionDate}</span>
+            <span className="text-fg-default">{sample.submissionInfo.sampleCollectionDate || '—'}</span>
           </div>
           <div className="flex items-center gap-1 text-fg-muted">
             <span>收样日期:</span>
-            <span className="text-fg-default">{sample.submissionInfo.sampleReceiveDate}</span>
+            <span className="text-fg-default">{sample.submissionInfo.sampleReceiveDate || '—'}</span>
           </div>
           <div className="flex items-center gap-1 text-fg-muted">
             <span>样本质量:</span>
             <Tag
-              variant={
-                sample.submissionInfo.sampleQuality === 'good'
-                  ? 'success'
-                  : sample.submissionInfo.sampleQuality === 'acceptable'
-                  ? 'warning'
-                  : 'danger'
-              }
+              variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality).variant}
             >
-              {sample.submissionInfo.sampleQuality === 'good'
-                ? '良好'
-                : sample.submissionInfo.sampleQuality === 'acceptable'
-                ? '合格'
-                : '不合格'}
+              {getSampleQualityDisplay(sample.submissionInfo.sampleQuality).label}
             </Tag>
           </div>
           {sample.projectInfo && (
             <div className="flex items-center gap-1 text-fg-muted">
               <span>承诺周期:</span>
-              <span className="text-fg-default">{sample.projectInfo.turnaroundDays}天</span>
+              <span className="text-fg-default">{formatTurnaroundDays(sample.projectInfo.turnaroundDays)}</span>
             </div>
           )}
         </div>
@@ -164,7 +159,7 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
 
         <InfoSection icon={<Users className="w-3.5 h-3.5" />} title="家族史">
           <div className="space-y-1">
-            <span>{sample.familyHistory?.hasHistory ? '有' : '无'}</span>
+            <span>{getFamilyHistoryLabel(sample.familyHistory?.hasHistory)}</span>
             {sample.familyHistory?.hasHistory && sample.familyHistory.affectedMembers && (
               <div className="flex flex-wrap gap-1">
                 {sample.familyHistory.affectedMembers.map((member, i) => (

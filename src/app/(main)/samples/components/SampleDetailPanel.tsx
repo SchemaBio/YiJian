@@ -1,4 +1,5 @@
 'use client';
+import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel, formatTurnaroundDays } from '@/lib/sample-display';
 
 import * as React from 'react';
 import { Tag, Button, Input } from '@schema/ui-kit';
@@ -340,12 +341,8 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
               <InfoItem
                 label="样本质量"
                 value={
-                  <Tag variant={
-                    sample.submissionInfo.sampleQuality === 'good' ? 'success' :
-                    sample.submissionInfo.sampleQuality === 'acceptable' ? 'warning' : 'danger'
-                  }>
-                    {sample.submissionInfo.sampleQuality === 'good' ? '良好' :
-                     sample.submissionInfo.sampleQuality === 'acceptable' ? '合格' : '不合格'}
+                  <Tag variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality).variant}>
+                    {getSampleQualityDisplay(sample.submissionInfo.sampleQuality).label}
                   </Tag>
                 }
               />
@@ -370,12 +367,12 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                     : '-'
                 } 
               />
-              <InfoItem label="承诺周期" value={`${sample.projectInfo.turnaroundDays}天`} />
+              <InfoItem label="承诺周期" value={formatTurnaroundDays(sample.projectInfo.turnaroundDays)} />
               <InfoItem 
                 label="优先级" 
                 value={
                   <Tag variant={sample.projectInfo.priority === 'urgent' ? 'danger' : 'neutral'}>
-                    {sample.projectInfo.priority === 'urgent' ? '加急' : '普通'}
+                    {getSamplePriorityLabel(sample.projectInfo.priority)}
                   </Tag>
                 } 
               />
@@ -391,7 +388,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                 label="是否有家族史"
                 value={
                   <Tag variant={sample.familyHistory.hasHistory ? 'warning' : 'neutral'}>
-                    {sample.familyHistory.hasHistory ? '有' : '无'}
+                    {getFamilyHistoryLabel(sample.familyHistory.hasHistory)}
                   </Tag>
                 }
               />

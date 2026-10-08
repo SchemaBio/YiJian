@@ -143,7 +143,7 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
           </div>
         )}
@@ -151,7 +151,6 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
           <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
             title="成员信息"
-            description="填写成员姓名、性别和出生年份"
           />
           <div className="space-y-4">
         <div>
@@ -174,7 +173,6 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
           <ModalSectionHeading
             icon={<Network className="h-4 w-4" />}
             title="家系关系"
-            description="设置成员与先证者及父母的关系"
           />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -201,7 +199,6 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
           <ModalSectionHeading
             icon={<Activity className="h-4 w-4" />}
             title="表型信息"
-            description="记录成员的表型描述，多个表型可用逗号分隔"
           />
         <div>
           <label className="mb-1.5 block text-xs font-medium text-fg-muted">表型描述</label>

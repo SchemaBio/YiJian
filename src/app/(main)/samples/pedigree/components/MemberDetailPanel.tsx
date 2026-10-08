@@ -31,7 +31,7 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
   const statusInfo = AFFECTED_STATUS_CONFIG[member.affectedStatus];
 
   return (
-    <div className="w-80 border-l border-border-default bg-canvas-subtle flex flex-col h-full">
+    <div role="region" aria-label="成员详情" className="absolute inset-y-3 right-3 z-20 w-[calc(100%-1.5rem)] max-w-80 rounded-lg border border-border-default bg-canvas-default shadow-lg flex flex-col md:static md:inset-auto md:z-auto md:w-80 md:max-w-none md:shrink-0 md:rounded-none md:border-0 md:border-l md:shadow-none md:h-full">
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-default">
         <div className="flex items-center gap-2">
@@ -40,6 +40,7 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
         </div>
         <button
           onClick={onClose}
+          aria-label="关闭成员详情"
           className="p-1 rounded hover:bg-canvas-inset text-fg-muted hover:text-fg-default transition-colors"
         >
           <X className="w-4 h-4" />
@@ -50,7 +51,7 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {/* 基本信息 */}
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-fg-muted uppercase tracking-wider">基本信息</h4>
+          <h4 className="text-xs font-medium text-fg-muted">基本信息</h4>
           <div className="grid grid-cols-2 gap-3">
             <InfoItem label="姓名" value={member.name} />
             <InfoItem 
@@ -75,7 +76,7 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
 
         {/* 患病状态 */}
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-fg-muted uppercase tracking-wider">患病状态</h4>
+          <h4 className="text-xs font-medium text-fg-muted">患病状态</h4>
           <div className="space-y-2">
             <Tag 
               variant={
@@ -101,11 +102,11 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
 
         {/* 样本关联 */}
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-fg-muted uppercase tracking-wider">样本关联</h4>
+          <h4 className="text-xs font-medium text-fg-muted">样本关联</h4>
           {member.sampleId ? (
             <div className="flex items-center gap-2 p-2 bg-success-subtle rounded">
               <div className="w-2 h-2 rounded-full bg-success-emphasis" />
-              <span className="text-sm text-success-fg">已关联样本: {member.sampleId}</span>
+              <span className="text-sm break-all text-success-fg">已关联样本: {member.sampleId}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 p-2 bg-canvas-inset rounded">

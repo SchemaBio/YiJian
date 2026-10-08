@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 
 const TAU = Math.PI * 2;
 const COLUMNS = 56;
@@ -302,7 +302,7 @@ function buildOctopusTargets(count: number): CellPoint[] {
 const pixelSources = buildPixelSources();
 const octopusTargets = buildOctopusTargets(pixelSources.length);
 
-export function DnaHelix() {
+export const DnaHelix = memo(function DnaHelix() {
   return (
     <div
       className="dna-helix-container group relative w-full h-full overflow-hidden"
@@ -418,4 +418,4 @@ export function DnaHelix() {
       </svg>
     </div>
   );
-}
+});

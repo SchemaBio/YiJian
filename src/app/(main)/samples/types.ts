@@ -57,7 +57,7 @@ export interface SampleDetail {
     submissionDate: string;
     sampleCollectionDate: string;
     sampleReceiveDate: string;
-    sampleQuality: 'good' | 'acceptable' | 'poor';
+    sampleQuality?: 'good' | 'acceptable' | 'poor';
   };
 
   // 项目信息
@@ -66,13 +66,13 @@ export interface SampleDetail {
     projectName: string;
     testItems: string[];
     panel?: string;
-    turnaroundDays: number;
-    priority: 'normal' | 'urgent';
+    turnaroundDays?: number;
+    priority?: 'normal' | 'urgent';
   };
 
   // 家族史
   familyHistory: {
-    hasHistory: boolean;
+    hasHistory?: boolean;
     affectedMembers?: {
       relation: string;
       condition: string;

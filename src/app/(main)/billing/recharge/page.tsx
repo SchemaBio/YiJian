@@ -77,7 +77,7 @@ export default function RechargePage() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+        <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
           {error}
         </div>
       )}
@@ -95,6 +95,7 @@ export default function RechargePage() {
                 key={preset}
                 type="button"
                 onClick={() => setAmount(preset)}
+                aria-pressed={amount === preset}
                 className={`h-10 rounded-md border text-sm font-medium transition-colors ${
                   amount === preset
                     ? 'border-accent-emphasis bg-accent-subtle text-accent-fg'
@@ -107,8 +108,10 @@ export default function RechargePage() {
           </div>
 
           <div className="mt-5 max-w-xs">
-            <label className="mb-2 block text-sm font-medium text-fg-default">自定义数量</label>
+            <label htmlFor="recharge-amount" className="mb-2 block text-sm font-medium text-fg-default">自定义数量</label>
             <Input
+              id="recharge-amount"
+              aria-label="自定义积分数量"
               type="number"
               min="1"
               step="100"
@@ -151,7 +154,7 @@ export default function RechargePage() {
           </div>
           <div className="yj-panel p-4 text-sm text-fg-muted">
             <p className="font-medium text-fg-default">入账方式</p>
-            <p className="mt-2">平台运营确认申请后，通过 Squid 管理端完成入账。费用中心会显示充值流水和最新余额。</p>
+            <p className="mt-2">平台确认申请后完成入账。费用中心可查看充值流水和最新余额。</p>
           </div>
         </aside>
       </div>

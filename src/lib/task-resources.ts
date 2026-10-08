@@ -88,19 +88,19 @@ export function normalizeSampleDetail(rawValue: unknown): SampleDetail {
       raw,
       'submissionInfo',
       'submission_info',
-      { submissionDate: '', sampleCollectionDate: '', sampleReceiveDate: '', sampleQuality: 'acceptable' }
+      { submissionDate: '', sampleCollectionDate: '', sampleReceiveDate: '', sampleQuality: undefined }
     ),
     projectInfo: valueOf<SampleDetail['projectInfo']>(
       raw,
       'projectInfo',
       'project_info',
-      { projectId: '', projectName: '', testItems: [], turnaroundDays: 0, priority: 'normal' }
+      { projectId: '', projectName: '', testItems: [], turnaroundDays: undefined, priority: undefined }
     ),
     familyHistory: valueOf<SampleDetail['familyHistory']>(
       raw,
       'familyHistory',
       'family_history',
-      { hasHistory: false }
+      { hasHistory: undefined }
     ),
     analysisTasks: valueOf<SampleDetail['analysisTasks']>(raw, 'analysisTasks', 'analysis_tasks', []),
     createdAt: valueOf<string>(raw, 'createdAt', 'created_at', ''),

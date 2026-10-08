@@ -131,7 +131,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
           </div>
         )}
@@ -139,7 +139,6 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
           <ModalSectionHeading
             icon={<Users className="h-4 w-4" />}
             title="家系信息"
-            description="填写家系编号、批次和临床诊断"
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -248,7 +247,6 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
           <ModalSectionHeading
             icon={<FileText className="h-4 w-4" />}
             title="备注"
-            description="补充记录家系相关的分析说明"
           />
           <label className="mb-1.5 block text-xs font-medium text-fg-muted">备注内容</label>
           <TextArea

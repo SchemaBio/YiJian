@@ -185,7 +185,7 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
           </div>
         )}
@@ -193,15 +193,15 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
           <h3 className="text-sm font-medium text-gray-700 mb-3">家系信息</h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">内部编号 *</label>
+              <label className="block text-xs text-fg-muted mb-1">内部编号 *</label>
               <Input value={formData.internalId} onChange={(e) => handleChange('internalId', e.target.value)} placeholder="如：FAM-001" required />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">批次</label>
+              <label className="block text-xs text-fg-muted mb-1">批次</label>
               <Input value={formData.batch} onChange={(e) => handleChange('batch', e.target.value)} placeholder="如：BATCH-2024-001" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">临床诊断</label>
+              <label className="block text-xs text-fg-muted mb-1">临床诊断</label>
               <Input value={formData.clinicalDiagnosis} onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)} placeholder="如：遗传性心肌病待查" />
             </div>
           </div>
@@ -215,20 +215,20 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
                 const sample = getSampleInfo(sampleId);
                 const isProband = formData.probandSampleId === sampleId;
                 return (
-                  <div key={sampleId} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${isProband ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div key={sampleId} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${isProband ? 'bg-accent-subtle border-accent-muted' : 'bg-canvas-subtle border-border-default'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded-full border-2 ${isProband ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`} />
+                      <div className={`w-4 h-4 rounded-full border-2 ${isProband ? 'bg-accent-subtle0 border-blue-500' : 'border-gray-300'}`} />
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm text-gray-900">{sampleId.substring(0, 8)}</span>
-                        {sample && <span className="text-gray-500 text-sm">({sample.internalId})</span>}
+                        {sample && <span className="text-fg-muted text-sm">({sample.internalId})</span>}
                         {isProband && <Tag variant="info">先证者</Tag>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {!isProband && (
-                        <button type="button" onClick={() => handleSetProband(sampleId)} className="text-xs text-blue-600 hover:text-blue-700">设为先证者</button>
+                        <button type="button" onClick={() => handleSetProband(sampleId)} className="text-xs text-accent-fg hover:underline">设为先证者</button>
                       )}
-                      <button type="button" onClick={() => handleRemoveSample(sampleId)} className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                      <button type="button" onClick={() => handleRemoveSample(sampleId)} className="p-1 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -237,28 +237,28 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
               })}
             </div>
           ) : (
-            <div className="text-sm text-gray-500 mb-3 p-4 bg-gray-50 rounded-lg text-center">暂无样本，请从下方添加</div>
+            <div className="text-sm text-fg-muted mb-3 p-4 bg-canvas-subtle rounded-lg text-center">暂无样本，请从下方添加</div>
           )}
           <div className="mb-3">
             <Input placeholder="搜索样本编号、内部编号..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
           </div>
           <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-gray-500">加载样本列表...</div>
+              <div className="p-4 text-center text-fg-muted">加载样本列表...</div>
             ) : filteredSamples.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {filteredSamples.map((sample) => {
                   const isSelected = formData.sampleIds.includes(sample.id);
                   return (
-                    <div key={sample.id} onClick={() => handleToggleSample(sample.id)} className={`px-4 py-2 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                    <div key={sample.id} onClick={() => handleToggleSample(sample.id)} className={`px-4 py-2 cursor-pointer transition-colors ${isSelected ? 'bg-accent-subtle' : 'hover:bg-canvas-subtle'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-accent-subtle0 border-blue-500' : 'border-gray-300'}`}>
                             {isSelected && <Check className="w-3 h-3 text-white" />}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-sm text-gray-900">{sample.id.substring(0, 8)}</span>
-                            <span className="text-gray-500 text-sm">({sample.internalId})</span>
+                            <span className="text-fg-muted text-sm">({sample.internalId})</span>
                             <Tag variant={sample.gender === 'male' ? 'info' : sample.gender === 'female' ? 'warning' : 'neutral'}>{genderLabels[sample.gender]}</Tag>
                           </div>
                         </div>
@@ -268,14 +268,14 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-gray-500">未找到匹配的样本</div>
+              <div className="p-4 text-center text-fg-muted">未找到匹配的样本</div>
             )}
           </div>
           <p className="mt-2 text-xs text-gray-400">点击样本可添加/移除，第一个添加的样本自动设为先证者</p>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">备注</label>
+          <label className="block text-xs text-fg-muted mb-1">备注</label>
           <TextArea value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder="请输入家系相关备注信息" rows={3} />
         </div>
       </form>

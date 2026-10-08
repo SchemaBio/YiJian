@@ -110,18 +110,18 @@ export function normalizeSampleDetail(rawValue: unknown): SampleDetail {
       sampleReceiveDate: rawString(submission, 'sampleReceiveDate', 'sample_receive_date'),
       sampleQuality: (submission.sampleQuality === 'good' || submission.sampleQuality === 'acceptable' || submission.sampleQuality === 'poor')
         ? submission.sampleQuality
-        : 'acceptable',
+        : undefined,
     },
     projectInfo: {
       projectId: rawString(project, 'projectId', 'project_id'),
       projectName: rawString(project, 'projectName', 'project_name'),
       testItems: rawStringArray(project.testItems ?? project.test_items),
       panel: rawString(project, 'panel', 'panel'),
-      turnaroundDays: rawNumber(project.turnaroundDays ?? project.turnaround_days) ?? 0,
-      priority: project.priority === 'urgent' ? 'urgent' : 'normal',
+      turnaroundDays: rawNumber(project.turnaroundDays ?? project.turnaround_days),
+      priority: project.priority === 'urgent' || project.priority === 'normal' ? project.priority : undefined,
     },
     familyHistory: {
-      hasHistory: Boolean(family.hasHistory ?? family.has_history),
+      hasHistory: typeof (family.hasHistory ?? family.has_history) === 'boolean' ? (family.hasHistory ?? family.has_history) as boolean : undefined,
       affectedMembers: affectedMembers.map((member) => {
         const item = asRecord(member);
         return {
