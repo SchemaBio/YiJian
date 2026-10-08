@@ -50,7 +50,7 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
   return (
     <div className="h-full min-h-0 flex flex-col">
       {/* 标签页导航 */}
-      <div className="shrink-0 border-b border-border-default mb-4 bg-canvas-default">
+      <div className="shrink-0 border-b border-border-default mb-0 bg-canvas-default">
         <nav
 			className="flex gap-1 overflow-x-auto whitespace-nowrap"
           role="tablist"

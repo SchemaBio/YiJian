@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import * as React from 'react';
 import { api } from '@/lib/api';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 
+vi.mock('@/components/shared/ToolbarPopover', () => ({ ToolbarPopover: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('@/lib/api',()=>({api:{get:vi.fn(),put:vi.fn()}}));
 vi.mock('../result-api',()=>({exportEffectiveTable:vi.fn()}));
 vi.mock('@/lib/parquet-browser',()=>({retainBrowserTable:()=>()=>{},refreshBrowserTable:vi.fn().mockResolvedValue(undefined)}));

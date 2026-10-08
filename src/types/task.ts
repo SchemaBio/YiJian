@@ -9,6 +9,7 @@ export type TaskStatus =
 
 export interface AnalysisTask {
   id: string;
+  name?: string;
   sampleId: string;
   internalId: string;
   pipeline: string;

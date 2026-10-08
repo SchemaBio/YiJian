@@ -1,0 +1,25 @@
+export * from '../../src/app/(main)/tasks/[uuid]/result-api';
+const genes = ['BRCA1', 'SCN1A', 'COL1A1', 'CFTR', 'DMD', 'FBN1', 'GBA1', 'ATP7B'];
+const rows = Array.from({ length: 55393 }, (_, i) => ({ id: `demo-snv-${i}`, gene: genes[i % genes.length], chromosome: String(i % 22 + 1), position: 100000 + i * 37, ref: 'A', alt: 'G', variantType: 'SNV', zygosity: 'Heterozygous', transcript: `NM_${String(1000 + i % 50).padStart(6, '0')}`, hgvsc: `c.${i % 600 + 1}A>G`, hgvsp: `p.(Lys${i % 200 + 1}Arg)`, consequence: 'missense_variant', acmgClassification: i % 6 === 0 ? 'Likely_Pathogenic' : 'VUS', acmgCriteria: i % 6 === 0 ? ['PM2', 'PP3'] : [], gnomadAF: 0.0001, clinvarSignificance: 'Uncertain_significance', pinned: i < 3, reported: false, interpretation: '', alleleFrequency: 0.48, depth: 132, annotationValues: { Gene: genes[i % genes.length], Position: String(100000 + i * 37), VAF: '0.48', Depth: '132', GnomAD_AF: '0.0001', ClinVar_Sig: 'Uncertain_significance' }, automaticAcmg: { score: i % 6 === 0 ? 6 : 2, classification: i % 6 === 0 ? 'Likely_Pathogenic' : 'VUS', criteria: [{ code: 'PM2', strength: 'supporting', source: 'gnomAD' }], pending: ['缺少家系证据'], profile: 'acmg-snv-points-v2' } }));
+const columns = ['Gene', 'Chromosome', 'Position', 'VAF', 'Depth', 'GnomAD_AF', 'ClinVar_Sig'];
+export const getSNVIndels = async (_task: string, state: any) => {
+  let filtered = rows.filter(row => !state.searchQuery || `${row.gene} ${row.chromosome}:${row.position}`.toLowerCase().includes(state.searchQuery.toLowerCase()));
+  if (state.filters.acmgClassification) filtered = filtered.filter(row => row.acmgClassification === state.filters.acmgClassification);
+  for (const filter of state.columnFilters || []) filtered = filtered.filter(row => { const value = row.annotationValues[filter.column] ?? row[filter.column]; return filter.operator === 'equals' ? String(value) === filter.value : filter.operator === 'contains' ? String(value).includes(filter.value) : filter.operator === 'lte' ? Number(value) <= Number(filter.value) : true; });
+  if (state.sortColumn) filtered.sort((a, b) => String(a[state.sortColumn] ?? '').localeCompare(String(b[state.sortColumn] ?? ''), undefined, { numeric: true }) * (state.sortDirection === 'desc' ? -1 : 1));
+  return { data: filtered.slice((state.page - 1) * state.pageSize, state.page * state.pageSize), total: filtered.length, page: state.page, pageSize: state.pageSize, columns, columnTypes: { Gene: 'text', Position: 'number', VAF: 'number', Depth: 'number', GnomAD_AF: 'number' } };
+};
+export const getGeneLists = async () => [];
+export const getResultRowAdjustmentHistory = async () => [];
+export const getResultContext = async (taskUuid: string) => ({ taskUuid, executionAttemptId: 'preview-attempt', importStatus: 'success', state: 'ready', version: 'preview-v1', reference: { declaredId: 'hg38', available: true }, members: [], types: { 'snv-indel': { total: 55393 }, 'cnv-segment': { total: 64732 }, 'cnv-exon': { total: 18414 } }, qc: [], permissions: { canReview: true, canReport: true } });
+export const pinVariant = async () => {};
+export const reportVariant = async () => {};
+export const saveResultRowAdjustment = async (_task: string, _table: string, id: string, version: number, adjustments: any) => { const row = rows.find(row => row.id === id); if (row) Object.assign(row, adjustments, { acmgClassification: adjustments.acmgOverride || row.acmgClassification }); return { adjustment: { version: version + 1, adjustments } }; };
+export const exportEffectiveTable = async (_task: string, _table: string, state: any) => ({ blob: new Blob(['Gene,Position\nBRCA1,100000']), filename: 'preview.csv' });
+
+const cnvs = Array.from({ length: 64732 }, (_, i) => ({ id: `demo-cnv-${i}`, chromosome: String(i % 22 + 1), startPosition: 100000 + i * 1000, endPosition: 150000 + i * 1000, length: 50000, type: i % 2 ? 'Amplification' : 'Deletion', copyNumber: i % 2 ? 3 : 1, copyRatio: i % 2 ? 1.5 : 0.5, log2Ratio: i % 2 ? 0.585 : -1, genes: [genes[i % 8]], gene: genes[i % 8], transcript: 'NM_001000', exon: '3–5', ratio: 0.5, confidence: 0.96, confidenceLabel: 'HIGH', pinned: false, reported: false, reviewed: false, annotationValues: {} }));
+function cnvPage(total: number, state: any) { return { data: cnvs.slice((state.page - 1) * state.pageSize, state.page * state.pageSize), total, page: state.page, pageSize: state.pageSize, columns: ['Chromosome', 'Start', 'End', 'Copy_Ratio'], columnTypes: { Copy_Ratio: 'number' } }; }
+export const getCNVSegments = async (_task: string, state: any) => { const page = cnvPage(64732, state); return { ...page, data: page.data.map(({ gene, transcript, exon, ratio, ...segment }) => segment) }; };
+export const getCNVExons = async (_task: string, state: any) => cnvPage(18414, state);
+
+export const saveCNVAssessment = async (_task: string, _type: string, id: string, assessment: any, version = 0) => { const saved = { ...assessment, cnvId: id, isUserModified: true, updatedAt: new Date().toISOString(), adjustmentVersion: version + 1 }; const row = cnvs.find(row => row.id === id); if (row) Object.assign(row, { assessment: saved }); return saved; };

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { TableViewControls, useTableView } from '@/components/shared/TableViewControls';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
@@ -28,6 +29,7 @@ export function SNVIndelTab({
   filterState: externalFilterState,
   onFilterChange 
 }: SNVIndelTabProps) {
+  const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<SNVIndel> | null>(null);
   const [reloadToken, setReloadToken] = React.useState(0);
@@ -386,8 +388,8 @@ export function SNVIndelTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
-      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
+    <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen ? 'yj-has-inspector' : ''}`}>
+      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex flex-wrap items-center gap-4">
@@ -459,13 +461,14 @@ export function SNVIndelTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
-            columns={filterableColumns(columns, result, filterState, setFilterState, 'snv-indel')}
+            columns={filterableColumns(tableView.apply(columns), result, filterState, setFilterState, 'snv-indel')}
             rowKey="id"
             striped
-            density="compact"
+            density={tableView.density}
             sortColumn={filterState.sortColumn}
             sortDirection={filterState.sortDirection}
             onSortChange={handleSortChange}
+            selectedRows={new Set(detailPanelOpen && selectedVariant ? [selectedVariant.id] : [])}
             onRowClick={handleRowClick}
           />
 

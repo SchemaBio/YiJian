@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, Play, Square, Pencil, Trash2, BookOpen, Eye, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet, List, MoreHorizontal } from 'lucide-react';
+import { Search, Plus, RotateCcw, Play, Square, Pencil, Trash2, BookOpen, Eye, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet, List, MoreHorizontal, Clock } from 'lucide-react';
 import { NewTaskModal, BatchTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
@@ -43,6 +43,7 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
   return previous.length === next.length && previous.every((task, index) => {
     const candidate = next[index];
     return task.id === candidate.id
+      && task.name === candidate.name
       && task.sampleId === candidate.sampleId
       && task.internalId === candidate.internalId
       && task.pipeline === candidate.pipeline
@@ -187,13 +188,21 @@ function TaskActionsCell({
     if (task.executionPhase === 'terminating') return null;
     if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
       return {
-        label: task.status === 'completed' ? '释放节点' : '取消执行',
+        label: task.status === 'completed' ? '释放节点' : '取消',
         icon: Square,
         onClick: () => onStop(task.id),
         className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
       };
     }
     switch (task.status) {
+      case 'waiting_for_data':
+        return {
+          label: '等待',
+          icon: Clock,
+          onClick: undefined,
+          disabled: true,
+          className: 'border-border-default bg-canvas-subtle text-fg-muted cursor-default',
+        };
       case 'queued':
         return {
           label: '启动',
@@ -203,7 +212,7 @@ function TaskActionsCell({
         };
       case 'running':
         return {
-          label: '停止',
+          label: '取消',
           icon: Square,
           onClick: () => onStop(task.id),
           className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
@@ -248,9 +257,9 @@ function TaskActionsCell({
           <button
             type="button"
             onClick={primaryAction.onClick}
-            disabled={isLoading}
+            disabled={isLoading || primaryAction.disabled}
             aria-label={primaryAction.label}
-            className={`task-primary-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors ${isLoading ? 'cursor-wait opacity-60' : 'active:translate-y-px'} ${primaryAction.className}`}
+            className={`task-primary-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors ${isLoading ? 'cursor-wait opacity-60' : primaryAction.disabled ? '' : 'active:translate-y-px'} ${primaryAction.className}`}
           >
             {isLoading ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <primaryAction.icon className="h-3.5 w-3.5 shrink-0" />}
             {isLoading ? '处理中' : primaryAction.label}
@@ -347,6 +356,7 @@ export default function AnalysisPage() {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
+  const [recentCounts, setRecentCounts] = React.useState<Record<string, number>>({});
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
   const [isBatchTaskModalOpen, setIsBatchTaskModalOpen] = React.useState(false);
@@ -360,6 +370,11 @@ export default function AnalysisPage() {
     const params: Record<string, string> = { page: '1', page_size: '100' };
     if (statusFilter !== 'all') params.status = statusFilter;
     const data = await tasksApi.list(params);
+    if (statusFilter === 'all') {
+      const counts: Record<string, number> = { all: data.items.length };
+      for (const task of data.items) counts[task.status] = (counts[task.status] ?? 0) + 1;
+      setRecentCounts(counts);
+    }
     return data.items;
   }, [statusFilter]);
 
@@ -500,6 +515,7 @@ export default function AnalysisPage() {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (t) =>
+          (t.name ?? '').toLowerCase().includes(query) ||
           t.id.toLowerCase().includes(query) ||
           t.sampleId.toLowerCase().includes(query) ||
           t.internalId.toLowerCase().includes(query)
@@ -511,10 +527,10 @@ export default function AnalysisPage() {
   const columns: Column<AnalysisTask>[] = [
     {
       id: 'taskId',
-      header: '任务编号',
-      accessor: (row) => <IdCell id={row.id} />,
-      width: 100,
-      align: 'center',
+      header: '任务',
+      accessor: (row) => <div className="min-w-0 text-left"><button type="button" onClick={() => handleOpenDetails(row)} title={row.name || row.pipeline} className="block max-w-[220px] truncate text-sm font-medium text-fg-default hover:text-accent-fg">{row.name || row.pipeline || '分析任务'}</button><div className="mt-1 text-xs text-fg-muted"><IdCell id={row.id} /></div></div>,
+      width: 240,
+      align: 'left',
     },
     {
       id: 'sample',
@@ -550,7 +566,7 @@ export default function AnalysisPage() {
         const cleanupPhase = terminalStatus && ['terminating', 'release_failed'].includes(row.executionPhase ?? '');
         const vmStatus = row.vmStatus?.toUpperCase();
         const releaseConfirmed = row.executionPhase === 'terminal' && ['TERMINATED', 'RECLAIMED'].includes(vmStatus ?? '');
-        const label = row.status === 'completed' ? '分析已完成' : terminalStatus || !phaseLabel ? config.label : phaseLabel;
+        const label = config.label;
         const releaseLabel = cleanupPhase
           ? phaseLabel
           : releaseConfirmed
@@ -559,7 +575,7 @@ export default function AnalysisPage() {
               ? '未创建计算节点'
               : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><Tag variant={config.variant} className="min-w-14 justify-center">{label}</Tag>{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
+        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><span className="yj-task-state-label" data-tone={config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
       },
       width: 90,
       align: 'center',
@@ -649,9 +665,13 @@ export default function AnalysisPage() {
   return (
     <div className="flex h-full min-w-0 w-full">
         <div className="min-w-0 flex-1">
-          <div className="yj-page-shell h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
-            <div className="yj-page-header">
-              <h2 className="yj-page-title">任务列表</h2>
+          <div className="yj-page-shell yj-task-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
+            <div className="yj-task-heading">
+              <div><h2 className="yj-page-title">任务中心</h2><p className="yj-page-subtitle">跟踪分析进度，进入结果判读。</p></div>
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setIsBatchTaskModalOpen(true)}>批量新建</Button>
+                <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewTaskModalOpen(true)}>新建任务</Button>
+              </div>
             </div>
 
             {actionError && (
@@ -693,11 +713,16 @@ export default function AnalysisPage() {
 
             {tasks !== null && (
               <>
-                <div className="yj-toolbar-panel">
-                  <div className="flex items-center gap-4">
+                <div className="yj-task-metrics" aria-label="最近任务状态概览" title="汇总最近一批任务，最多 100 个；完整状态筛选可通过工具栏选择。">
+                  {([{ label: '最近任务', value: 'all' }, { label: '运行中', value: 'running' }, { label: '待解读', value: 'pending_interpretation' }, { label: '已完成', value: 'completed' }, { label: '失败', value: 'failed' }] as const).map(item => <button type="button" key={item.label} aria-pressed={statusFilter === item.value} onClick={() => setStatusFilter(item.value)}>
+                    <strong>{(recentCounts[item.value] ?? 0).toLocaleString()}</strong>{item.label}
+                  </button>)}
+                </div>
+                <div className="yj-task-toolbar">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="w-64">
                       <Input
-                        placeholder="搜索样本编号..."
+                        placeholder="搜索任务或样本编号..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         leftElement={<Search className="w-4 h-4" />}
@@ -710,14 +735,7 @@ export default function AnalysisPage() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="secondary" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setIsBatchTaskModalOpen(true)}>
-                      批量新建
-                    </Button>
-                    <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewTaskModalOpen(true)}>
-                      新建任务
-                    </Button>
-                  </div>
+                  <span className="ml-auto text-xs text-fg-muted">显示 {filteredTasks.length.toLocaleString()} 个任务</span>
                 </div>
 
                 {filteredTasks.length > 0 ? (

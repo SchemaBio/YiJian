@@ -1,0 +1,10 @@
+export const retainBrowserTable = () => () => {};
+export const refreshBrowserTable = async () => {};
+export const reevaluateBrowserResults = async () => {};
+export const retryBrowserAssessment = async () => {};
+export const flushPendingResultSync = async () => {};
+export const readBrowserTable = async () => [];
+export const queryBrowserParquet = async () => ({ data: [], total: 0, page: 1, pageSize: 20, columns: [] });
+export const exportBrowserParquet = async () => ({ blob: new Blob(), filename: 'preview.csv' });
+export const updateBrowserOverlay = async () => {};
+export const updateBrowserContext = () => {};

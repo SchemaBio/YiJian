@@ -281,9 +281,9 @@ export default function AnalysisDetailPage() {
       {/* 标签面板和内容 */}
 		<div className="flex-1 min-h-0"><ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
 			{isVariantTab ? (
-				<div className="grid h-full min-h-0 gap-3 grid-cols-[164px_minmax(0,1fr)]">
+				<div className="yj-result-workspace">
 					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />
-					<div className="min-h-0 min-w-0 overflow-hidden rounded-xl border border-border-default bg-canvas-default p-3">{renderTabContent()}</div>
+					<div className="yj-result-content">{renderTabContent()}</div>
 				</div>
 			) : <div className="h-full overflow-auto">{renderTabContent()}</div>}
 		</ResultTabs></div>

@@ -64,7 +64,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
       className={`
         flex flex-col bg-[var(--yj-workspace-rail)] border-r border-[var(--yj-border-subtle)]
         transition-[width] duration-normal ease-default shrink-0
-        ${collapsed ? 'w-16' : 'w-[244px]'}
+        ${collapsed ? 'w-16' : 'w-[224px]'}
       `}
       data-collapsed={collapsed}
     >
@@ -185,7 +185,7 @@ function MainNavItemComponent({ item, collapsed, currentPath }: MainNavItemCompo
         transition-all duration-fast
         ${
           isActive
-            ? 'bg-[var(--yj-sage)] text-accent-fg font-medium shadow-[inset_2px_0_0_var(--color-accent-emphasis)]'
+            ? 'bg-[var(--yj-sage-subtle)] text-accent-fg font-medium'
             : 'text-fg-default hover:bg-[var(--yj-panel-subtle)] hover:text-fg-default'
         }
         ${collapsed ? 'justify-center' : ''}

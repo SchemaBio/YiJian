@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { VariantResourceLinks } from './VariantResourceLinks';
 import { ClinVarBadge } from './ClinVarBadge';
 import { X, ExternalLink, FileText, Database, Dna, Edit2, Check, Plus, Trash2, MessageSquare } from 'lucide-react';
@@ -197,6 +198,7 @@ function ACMGPointsEditor({
 }
 
 export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onOpenIGV, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
+  const [section, setSection] = React.useState<InspectorSection>('overview');
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
@@ -210,12 +212,14 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   // 当 variant 变化时重置编辑状态
   React.useEffect(() => {
+    setSection('overview');
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
     setInterpretation(variant?.interpretation ?? '');
     setInterpretationReason('');
     setInterpretationError('');
+    setInterpretationSaving(false);
   }, [variant?.id]);
 
   React.useEffect(() => {
@@ -265,26 +269,20 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     setInterpretationError('');
     try {
       await onSaveInterpretation(variant, interpretation, interpretationReason.trim());
+      if (selectedRef.current !== variant.id) return;
       setInterpretationReason('');
       const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
-      setAdjustmentHistory(history);
+      if (selectedRef.current === variant.id) setAdjustmentHistory(history);
     } catch (cause) {
-      setInterpretationError(cause instanceof Error ? cause.message : '保存人工解读失败');
+      if (selectedRef.current === variant.id) setInterpretationError(cause instanceof Error ? cause.message : '保存人工解读失败');
     } finally {
-      setInterpretationSaving(false);
+      if (selectedRef.current === variant.id) setInterpretationSaving(false);
     }
   };
 
   return (
     <>
-      {/* 背景遮罩 */}
-      <div 
-        className="hidden"
-        onClick={onClose}
-      />
-      
-      {/* 侧边面板 */}
-      <div role="region" aria-label="变异详情" tabIndex={-1} onKeyDown={event => { if (event.key === 'Escape') onClose(); }} className="fixed right-0 top-0 h-dvh w-[min(480px,100vw)] bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
+      <WorkspaceInspector label="变异详情" onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
@@ -300,11 +298,18 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </button>
         </div>
 
+        <div className="yj-inspector-summary">
+          <strong className="text-fg-default">{variant.gene || '未提供基因'}</strong> · {variant.chromosome}:{variant.position}<br />
+          {variant.ref} → {variant.alt} · 自动初评 {variant.automaticAcmg?.score ?? '—'} 分
+          {!acmgConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
+        </div>
         {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} />
+        <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
+          <section hidden={section !== 'assessment'} >
           {/* 人工解读 */}
           <SectionTitle icon={MessageSquare} title="人工解读" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <textarea
               value={interpretation}
               onChange={(e) => setInterpretation(e.target.value)}
@@ -337,7 +342,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               )
             }
           />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             {isEditingACMG ? (
               <ACMGPointsEditor
                 variant={variant}
@@ -366,9 +371,11 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             )}
           </div>
 
+          </section>
+          <section hidden={section !== 'overview'} >
           {/* 基本信息 */}
           <SectionTitle icon={Dna} title="基本信息" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem label="基因" value={variant.gene} />
             <InfoItem
               label="位置" 
@@ -394,12 +401,16 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <InfoItem label="变异后果" value={variant.consequence} />
           </div>
 
+          </section>
+          <section hidden={section !== 'annotation'} >
           <SectionTitle icon={ExternalLink} title="数据库与判读资源" />
           <VariantResourceLinks variant={variant} referenceGenome={referenceGenome} />
 
+          </section>
+          <section hidden={section !== 'evidence'} >
           {/* 测序质量 */}
           <SectionTitle icon={FileText} title="测序质量" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem label="VAF" value={vaf === undefined || vaf < 0 || vaf > 1 ? '未提供' : `${(vaf * 100).toFixed(1)}%`} />
             <InfoItem label="QUAL" value={annotation('Quality') ?? '未提供'} />
             <InfoItem label="FILTER" value={annotation('Filter') ?? '未提供'} />
@@ -410,7 +421,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </div>
 
           <SectionTitle icon={Database} title="ClinVar 注释" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem label="临床意义" value={<ClinVarBadge value={annotation('ClinVar_Sig', variant.clinvarSignificance)} />} />
             <InfoItem label="审核状态" value={annotation('ClinVar_RevStat', variant.clinvarReviewStatus)} />
             <InfoItem label="审核星级" value={annotation('ClinVar_Star', variant.clinvarStars)} />
@@ -419,7 +430,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
           {/* 人群频率 */}
           <SectionTitle icon={Database} title="人群频率" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem label="gnomAD 总体 AF" value={formatPopulationFrequency(annotation('GnomAD_AF', variant.gnomadAF))} />
             <InfoItem label="gnomAD 东亚 AF" value={formatPopulationFrequency(annotation('GnomAD_AF_EAS', variant.gnomadEasAF))} />
             <InfoItem label="VEP MAX_AF" value={formatPopulationFrequency(annotation('MAX_AF', variant.maxAF))} />
@@ -430,7 +441,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
           {/* 功能预测 */}
           <SectionTitle icon={Dna} title="功能预测" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem label="Pangolin gain" value={annotation('Pangolin_Gain', variant.pangolinGain)} />
             <InfoItem label="Pangolin loss" value={annotation('Pangolin_Loss', variant.pangolinLoss)} />
             <InfoItem label="Pangolin 预测标签" value={annotation('Pangolin_AN', variant.pangolinAnnotation)} />
@@ -441,8 +452,10 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <p className="mt-2 text-xs text-fg-muted">保留流程输出的多值与标签；功能预测标签不是 ACMG 分级。</p>
           </div>
 
+          </section>
+          <section hidden={section !== 'assessment'} >
           <SectionTitle icon={FileText} title="判读变更记录" />
-          <div className="space-y-2 rounded-lg bg-canvas-subtle p-3">
+          <div className="space-y-2">
             {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">暂无调整记录</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
               <div className="flex flex-wrap justify-between gap-1 text-xs text-fg-muted"><span>{event.actor || '用户'}</span><time>{event.createdAt ? new Date(event.createdAt).toLocaleString() : ''}</time></div>
               <p className="mt-1 text-sm text-fg-default">{event.reason || '未填写理由'}</p>
@@ -450,9 +463,11 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             </article>)}
           </div>
 
+          </section>
+          <section hidden={section !== 'annotation'} >
           {/* 临床意义 */}
           <SectionTitle icon={Database} title="GenCC 与变异标识" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem
               label="dbSNP" 
               value={variant.rsId}
@@ -477,7 +492,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {variant.pubmedIds && variant.pubmedIds.length > 0 && (
             <>
               <SectionTitle icon={FileText} title="相关文献" />
-              <div className="bg-canvas-subtle rounded-lg p-3">
+              <div className="space-y-0">
                 <div className="flex flex-wrap gap-2">
                   {variant.pubmedIds.map((pmid) => (
                     <a
@@ -496,10 +511,11 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               </div>
             </>
           )}
+          </section>
         </div>
 
         {/* 底部操作栏 */}
-        <div className="border-t border-border p-4 bg-canvas-subtle">
+        <div className="border-t border-border p-3">
           <div className="flex gap-2">
             <button
               onClick={() => onOpenIGV?.(variant.chromosome, variant.position)}
@@ -515,7 +531,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             </button>
           </div>
         </div>
-      </div>
+      </WorkspaceInspector>
     </>
   );
 }

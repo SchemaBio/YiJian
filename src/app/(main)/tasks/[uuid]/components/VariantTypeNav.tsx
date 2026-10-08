@@ -13,9 +13,9 @@ interface VariantTypeNavProps {
 
 export function VariantTypeNav({ activeTab, context, onTabChange }: VariantTypeNavProps) {
   return (
-    <nav className="self-start max-h-full overflow-auto rounded-xl border border-border-default bg-canvas-default p-2" aria-label="变异类型">
+    <nav className="yj-variant-nav" aria-label="变异类型">
       <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-fg-muted">变异类型</p>
-      <div className="space-y-1">
+      <div className="yj-variant-nav-items">
         {VARIANT_TAB_CONFIGS.map(item => {
           const active = activeTab === item.id;
           const count = context?.types[item.id]?.total;
@@ -24,7 +24,7 @@ export function VariantTypeNav({ activeTab, context, onTabChange }: VariantTypeN
               key={item.id}
               type="button"
               onClick={() => onTabChange(item.id)}
-              className={`flex w-full items-center gap-1 rounded-md px-2 py-2 text-left text-sm transition-colors ${active ? 'bg-accent-subtle text-accent-fg' : 'text-fg-muted hover:bg-canvas-subtle hover:text-fg-default'}`}
+              className={`flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors ${active ? 'bg-accent-subtle text-accent-fg' : 'text-fg-muted hover:bg-canvas-subtle hover:text-fg-default'}`}
               aria-current={active ? 'page' : undefined}
             >
               <span className="flex-1 whitespace-nowrap">{item.label}</span>

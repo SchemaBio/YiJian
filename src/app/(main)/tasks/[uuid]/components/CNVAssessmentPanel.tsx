@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { X, Calculator, Save, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
+import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
+import { X, Calculator, Save, RotateCcw } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
-import type { 
-  CNVSegment, 
-  CNVExon, 
+import type {
+  CNVSegment,
+  CNVExon,
   CNVAssessment,
   ClinGenClassification,
   SectionScores,
@@ -14,8 +15,8 @@ import type {
   Section2LossCriteria,
   Section2GainCriteria,
 } from '../types';
-import { 
-  getClassificationLabel, 
+import {
+  getClassificationLabel,
   getClassificationVariant,
   formatScore,
 } from '../utils/pathogenicity-classifier';
@@ -74,7 +75,7 @@ function ScoreSummaryCard({
           <span className="text-xs text-warning-fg">已手动修改</span>
         )}
       </div>
-      
+
       <div className="flex items-center gap-3 mb-4">
         <Tag variant={variant} className="text-base px-3 py-1">
           {label}
@@ -100,25 +101,24 @@ function ScoreSummaryCard({
  * 单个分数条
  */
 function ScoreBar({ label, score }: { label: string; score: number }) {
-  const isPositive = score > 0;
   const isNegative = score < 0;
-  
+
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className="w-20 text-fg-muted">{label}</span>
       <div className="flex-1 h-2 bg-canvas-inset rounded-full overflow-hidden">
-        <div 
+        <div
           className={`h-full transition-all ${
-            isPositive ? 'bg-success-fg' : isNegative ? 'bg-danger-fg' : 'bg-fg-muted'
+            'bg-fg-muted'
           }`}
-          style={{ 
+          style={{
             width: `${Math.min(Math.abs(score) * 50, 100)}%`,
             marginLeft: isNegative ? 'auto' : 0,
           }}
         />
       </div>
       <span className={`w-12 text-right font-mono ${
-        isPositive ? 'text-success-fg' : isNegative ? 'text-danger-fg' : 'text-fg-muted'
+        'text-fg-muted'
       }`}>
         {score >= 0 ? '+' : ''}{formatScore(score)}
       </span>
@@ -129,47 +129,13 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 /**
  * 可折叠的Section面板
  */
-function CollapsibleSection({
-  title,
-  score,
-  defaultOpen = false,
-  children,
-}: {
-  title: string;
-  score: number;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [isOpen, setIsOpen] = React.useState(defaultOpen);
-
-  return (
-    <div className="border border-border rounded-lg mb-3">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 hover:bg-canvas-subtle transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          {isOpen ? (
-            <ChevronDown className="w-4 h-4 text-fg-muted" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-fg-muted" />
-          )}
-          <span className="text-sm font-medium text-fg-default">{title}</span>
-        </div>
-        <span className={`text-sm font-mono ${
-          score > 0 ? 'text-success-fg' : score < 0 ? 'text-danger-fg' : 'text-fg-muted'
-        }`}>
-          {score >= 0 ? '+' : ''}{formatScore(score)}
-        </span>
-      </button>
-      {isOpen && (
-        <div className="p-3 pt-0 border-t border-border">
-          {children}
-        </div>
-      )}
-    </div>
-  );
+function AssessmentSection({ title, score, children }: { title: string; score: number; children: React.ReactNode }) {
+  const number = title.match(/Section ([1-5])/)?.[1];
+  return <section id={`cnv-section-${number}`} className="scroll-mt-4 border-b border-border-subtle pb-4 pt-3">
+    <div className="mb-3 flex items-start justify-between gap-3"><h4 className="text-sm font-semibold">{title}</h4>
+      <span className="font-mono text-sm text-fg-muted">{score >= 0 ? '+' : ''}{formatScore(score)}</span></div>
+    {children}
+  </section>;
 }
 
 /**
@@ -245,14 +211,7 @@ export function CNVAssessmentPanel({
 
   return (
     <>
-      {/* 背景遮罩 */}
-      <div 
-        className="hidden"
-        onClick={onClose}
-      />
-      
-      {/* 侧边面板 */}
-      <div role="region" aria-label="变异详情" tabIndex={-1} onKeyDown={event => { if (event.key === 'Escape') onClose(); }} className="fixed right-0 top-0 h-dvh w-[min(480px,100vw)] bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
+      <WorkspaceInspector label="ClinGen CNV 评估" onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
@@ -276,7 +235,7 @@ export function CNVAssessmentPanel({
         </div>
 
         {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="yj-inspector-content">
           <p className="mb-3 text-xs text-fg-muted">基于 ACMG/ClinGen 2020 标准；预勾选仅使用已提供证据，评分不是自动确诊。</p>
           {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
           {/* 分数汇总 */}
@@ -288,21 +247,23 @@ export function CNVAssessmentPanel({
             insufficient={assessment.assessmentState === 'insufficient_evidence'}
           />
 
+          <nav aria-label="评估章节" className="mb-3 flex flex-wrap gap-2">
+            {['基因组内容', '区域重叠', '基因数量', '文献证据', '家族史'].map((label, index) => <a key={label} href={`#cnv-section-${index + 1}`} className="yj-tool-button">{index + 1}. {label}</a>)}
+          </nav>
           {/* Section 面板 */}
           <div className="space-y-2">
-            <CollapsibleSection 
-              title="Section 1: 基因组内容初始评估" 
+            <AssessmentSection
+              title="Section 1: 基因组内容初始评估"
               score={assessment.sectionScores.section1}
-              defaultOpen
             >
               <Section1Panel
                 cnvType={cnv.type}
                 criteria={criteria.section1}
                 onChange={handleSection1Change}
               />
-            </CollapsibleSection>
+            </AssessmentSection>
 
-            <CollapsibleSection 
+            <AssessmentSection
               title={`Section 2: ${isLoss ? 'HI' : 'TS/HI'}基因/区域重叠`}
               score={assessment.sectionScores.section2}
             >
@@ -311,10 +272,10 @@ export function CNVAssessmentPanel({
                 criteria={criteria.section2}
                 onChange={handleSection2Change}
               />
-            </CollapsibleSection>
+            </AssessmentSection>
 
-            <CollapsibleSection 
-              title="Section 3: 基因数量评估" 
+            <AssessmentSection
+              title="Section 3: 基因数量评估"
               score={assessment.sectionScores.section3}
             >
               <Section3Panel
@@ -322,10 +283,10 @@ export function CNVAssessmentPanel({
                 criteria={criteria.section3}
                 onChange={handleSection3Change}
               />
-            </CollapsibleSection>
+            </AssessmentSection>
 
-            <CollapsibleSection 
-              title="Section 4: 文献和数据库证据" 
+            <AssessmentSection
+              title="Section 4: 文献和数据库证据"
               score={assessment.sectionScores.section4}
             >
               <Section4Panel
@@ -333,10 +294,10 @@ export function CNVAssessmentPanel({
                 criteria={criteria.section4}
                 onChange={handleSection4Change}
               />
-            </CollapsibleSection>
+            </AssessmentSection>
 
-            <CollapsibleSection 
-              title="Section 5: 遗传模式/家族史" 
+            <AssessmentSection
+              title="Section 5: 遗传模式/家族史"
               score={assessment.sectionScores.section5}
             >
               <Section5Panel
@@ -344,7 +305,7 @@ export function CNVAssessmentPanel({
                 criteria={criteria.section5}
                 onChange={handleSection5Change}
               />
-            </CollapsibleSection>
+            </AssessmentSection>
           </div>
         </div>
 
@@ -374,7 +335,7 @@ export function CNVAssessmentPanel({
             )}
           </div>
         </div>
-      </div>
+      </WorkspaceInspector>
     </>
   );
 }

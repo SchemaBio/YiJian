@@ -89,6 +89,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
   const raw = asRawTask(rawValue);
   return {
     id: String(raw.id ?? ''),
+    name: typeof raw.name === 'string' ? raw.name : undefined,
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),
     internalId: String(raw.internalId ?? raw.internal_id ?? ''),
     pipeline: String(raw.pipeline ?? ''),

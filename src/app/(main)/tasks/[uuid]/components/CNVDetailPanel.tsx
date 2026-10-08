@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { CNVRegionPlot } from './CNVRegionPlot';
 import { CNVExonPlot } from './CNVExonPlot';
 import { X, ExternalLink, FileText, Database, Dna, MapPin } from 'lucide-react';
+import { getClassificationLabel, formatScore } from '../utils/pathogenicity-classifier';
 import { Tag } from '@schema/ui-kit';
 import type { CNVSegment, CNVExon } from '../types';
 
@@ -106,8 +108,9 @@ function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
 }
 
 export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, onOpenAssessment }: CNVDetailPanelProps) {
+  const [section, setSection] = React.useState<InspectorSection>('overview');
   const [plotOpen, setPlotOpen] = React.useState(false);
-  React.useEffect(() => setPlotOpen(false), [variant?.id, isOpen]);
+  React.useEffect(() => { setPlotOpen(false); setSection('overview'); }, [variant?.id, isOpen]);
   if (!isOpen || !variant) return null;
 
   const isExon = isCNVExon(variant);
@@ -119,14 +122,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
 
   return (
     <>
-      {/* 背景遮罩 */}
-      <div 
-        className="hidden"
-        onClick={onClose}
-      />
-      
-      {/* 侧边面板 */}
-      <div role="region" aria-label="变异详情" tabIndex={-1} onKeyDown={event => { if (event.key === 'Escape') onClose(); }} className="fixed right-0 top-0 h-dvh w-[min(480px,100vw)] bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
+      <WorkspaceInspector label="变异详情" onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
@@ -146,16 +142,24 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           </button>
         </div>
 
+        <div className="yj-inspector-summary">
+          <strong className="text-fg-default">{variant.chromosome}:{variant.startPosition}–{variant.endPosition}</strong>
+          <p className="mt-1">{variant.assessment?.assessmentState === 'insufficient_evidence' ? '证据不足' : variant.assessment ? getClassificationLabel(variant.assessment.classification) : '尚未评定'} · {variant.assessment ? `${formatScore(variant.assessment.totalScore)} 分` : '—'}</p>
+        </div>
         {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} />
+        <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
+          <section hidden={section !== 'assessment'} >
           <div className="mb-3 flex flex-wrap gap-2">
             {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 计算器</button>}
             {isExon && taskId && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">外显子 CN 分布图</button>}
             {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">区域信号图 · 设置窗口</button>}
           </div>
+          </section>
+          <section hidden={section !== 'overview'} >
           {/* 基本信息 */}
           <SectionTitle icon={Dna} title="基本信息" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             {isExon && (
               <>
                 <InfoItem label="基因" value={variant.gene} />
@@ -171,15 +175,19 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             )}
           </div>
 
+          </section>
+          <section hidden={section !== 'annotation'} >
           {(variant.type === 'Amplification' || variant.type === 'Deletion') && <div className="mt-4 rounded-lg border border-border-default p-3">
             <h4 className="mb-2 text-sm font-medium">ISCN 候选注释</h4>
             <p className="select-text break-words font-mono text-sm">{variant.iscnCandidate || '无法生成：拷贝状态、参考版本或染色体带区待确认'}</p>
             <p className="mt-2 text-xs leading-relaxed text-fg-muted">基于测序 CN 估计取整；x 表示候选拷贝状态。坐标由 BED 转为 1-based。需要确认准确拷贝数后用于回报，尤其是性染色体及嵌合事件。</p>
             {variant.annotationValues?.ISCN && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">工作流原始注释（保留原值）</summary><p className="mt-1 select-text break-words font-mono">{variant.annotationValues.ISCN}</p></details>}
           </div>}
+          </section>
+          <section hidden={section !== 'evidence'} >
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title="CNV 特征" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem
               label="类型" 
               value={
@@ -197,11 +205,13 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             <InfoItem label={isExon ? "置信度" : "信号权重"} value={isExon ? ({HIGH:"高",MEDIUM:"中",LOW:"低"}[variant.confidenceLabel ?? ""] ?? variant.confidenceLabel) : variant.confidence ?? undefined} />
           </div>
 
+          </section>
+          <section hidden={section !== 'annotation'} >
           {/* 涉及基因 (仅 Segment) */}
           {!isExon && (variant as CNVSegment).genes.length > 0 && (
             <>
               <SectionTitle icon={Database} title="涉及基因" />
-              <div className="bg-canvas-subtle rounded-lg p-3">
+              <div className="space-y-0">
                 <div className="flex flex-wrap gap-2">
                   {(variant as CNVSegment).genes.map((gene) => (
                     <a
@@ -222,7 +232,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
 
           {/* 基因组位置链接 */}
           <SectionTitle icon={MapPin} title="外部资源" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             {externalReference ? (
               <>
                 <InfoItem
@@ -248,9 +258,11 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             )}
           </div>
 
+          </section>
+          <section hidden={section !== 'assessment'} >
           {/* 置顶状态 */}
           <SectionTitle icon={FileText} title="置顶状态" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="space-y-0">
             <InfoItem
               label="置顶状态"
               value={variant.pinned ? (
@@ -275,10 +287,11 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
               </>
             )}
           </div>
+          </section>
         </div>
 
         {/* 底部操作栏 */}
-        <div className="border-t border-border p-4 bg-canvas-subtle">
+        <div className="border-t border-border p-3">
           <button
             onClick={onClose}
             className="w-full px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
@@ -286,7 +299,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             关闭
           </button>
         </div>
-      </div>
+      </WorkspaceInspector>
 
       {isExon && taskId && <CNVExonPlot variant={variant} taskId={taskId} isOpen={plotOpen} onClose={() => setPlotOpen(false)} />}
       {/* CNV 图弹窗 */}

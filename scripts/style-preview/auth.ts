@@ -1,0 +1,1 @@
+export const useAuth = () => ({ user: { id: 'preview', name: '设计预览', email: 'preview@example.invalid', systemRole: 'user' }, currentOrg: { id: 'preview-org', name: '示例实验室' }, isPlatformAdmin: () => false, logout: async () => {}, organizations: [] });

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { TableViewControls, useTableView } from '@/components/shared/TableViewControls';
 import { DataTable, Tag, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
@@ -42,6 +43,7 @@ export function CNVExonTab({
   filterState: externalFilterState,
   onFilterChange 
 }: CNVExonTabProps) {
+  const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<CNVExon> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -83,9 +85,10 @@ export function CNVExonTab({
 
   // 点击行打开详情面板
   const handleRowClick = React.useCallback((variant: CNVExon) => {
-    setSelectedVariant(variant);
+    setAssessmentPanelOpen(false);
+    setSelectedVariant({ ...variant, assessment: assessmentCache[variant.id] ?? variant.assessment });
     setDetailPanelOpen(true);
-  }, []);
+  }, [assessmentCache]);
 
   // 关闭详情面板
   const handleCloseDetailPanel = React.useCallback(() => {
@@ -102,6 +105,7 @@ export function CNVExonTab({
     } else {
       initializeAssessment(variant);
     }
+    setDetailPanelOpen(false);
     setAssessmentPanelOpen(true);
     setAssessmentError(null);
   }, [assessmentCache, initializeAssessment, loadAssessment]);
@@ -371,8 +375,8 @@ export function CNVExonTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
-      <ParquetColumnFilterBar taskId={taskId} table="cnv-exon" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
+    <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
+      <ParquetColumnFilterBar taskId={taskId} table="cnv-exon" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-64">
@@ -408,13 +412,14 @@ export function CNVExonTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={result.data}
-            columns={filterableColumns(columns, result, filterState, setFilterState, 'cnv-exon')}
+            columns={filterableColumns(tableView.apply(columns), result, filterState, setFilterState, 'cnv-exon')}
             rowKey="id"
             striped
-            density="compact"
+            density={tableView.density}
             sortColumn={filterState.sortColumn}
             sortDirection={filterState.sortDirection}
             onSortChange={handleSortChange}
+            selectedRows={new Set(detailPanelOpen && selectedVariant ? [selectedVariant.id] : [])}
             onRowClick={handleRowClick}
           />
 

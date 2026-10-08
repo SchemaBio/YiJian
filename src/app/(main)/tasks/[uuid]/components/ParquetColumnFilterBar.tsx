@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Download, X } from 'lucide-react';
+import { Download, X, ListFilter, Bookmark } from 'lucide-react';
+import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import type { TableFilterState } from '../types';
 import { exportEffectiveTable } from '../result-api';
 import { api } from '@/lib/api';
@@ -31,7 +32,9 @@ export function ParquetColumnFilterBar({
   columnTypes,
   state,
   onChange,
+  viewControls,
 }: {
+  viewControls?: React.ReactNode;
   taskId?: string;
   table?: Parameters<typeof exportEffectiveTable>[1];
   columns: string[];
@@ -114,10 +117,10 @@ export function ParquetColumnFilterBar({
   const availableOps = OPS.filter(([key]) => !NUMERIC_OPS.has(key) || fieldType === 'number');
 
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-3 text-xs">
+    <div className="yj-filter-tools mb-2 flex flex-wrap items-center gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        {taskId && table && <button type="button" disabled={exporting} onClick={() => void exportTable()} className="ml-auto inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border-default px-3 text-sm"><Download className="h-3.5 w-3.5" />{exporting ? '导出中' : '导出筛选结果 CSV'}</button>}
-        <details><summary className="cursor-pointer text-xs text-fg-muted">更多注释列筛选</summary><div className="mt-2 flex flex-wrap items-center gap-2">
+        {taskId && table && <button type="button" disabled={exporting} onClick={() => void exportTable()} className="yj-tool-button order-3"><Download className="h-3.5 w-3.5" />{exporting ? '导出中' : '导出 CSV'}</button>}
+        <ToolbarPopover label="添加筛选" icon={<ListFilter size={14} />}><div className="grid gap-3">
         <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {columns.map(item => <option key={item} value={item}>{label(item)}</option>)}
         </select>
@@ -127,11 +130,11 @@ export function ParquetColumnFilterBar({
         {!isPresence && <input aria-label="筛选值" value={value} onChange={event => setValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') addFilter(); }} placeholder={operator === 'in' ? '逗号分隔多个值' : operator === 'between' ? '最小值,最大值' : '输入匹配值'} className="h-8 min-w-[150px] rounded-md border border-border-default bg-canvas-default px-2 text-sm" />}
         <button type="button" onClick={addFilter} disabled={!column || (!isPresence && !value.trim()) || (operator === 'between' && value.split(',').length !== 2)} className="h-8 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis disabled:opacity-50">应用</button>
         {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
-        </div></details>
+        </div></ToolbarPopover>
       </div>
       {viewsURL&&<div className="flex flex-wrap items-center gap-2 text-xs">
 
-        <details><summary className="cursor-pointer text-fg-muted">保存与加载筛选</summary><div className="flex flex-wrap items-center gap-2">
+        <ToolbarPopover label="筛选视图" icon={<Bookmark size={14} />}><div className="grid gap-3">
         <button type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
         <select aria-label="加载个人筛选方案" value={selectedView} className="h-8 max-w-[180px] rounded border border-border-default bg-canvas-default px-2" onChange={event=>setSelectedView(event.target.value)}>
           <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
@@ -139,15 +142,16 @@ export function ParquetColumnFilterBar({
         <button type="button" disabled={!selectedView} onClick={applyView} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">应用方案</button>
         <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="方案名称" className="h-8 w-32 rounded border border-border-default bg-canvas-default px-2" />
         <button type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">{viewSaving?'保存中':'保存方案'}</button>
-        </div></details>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
+        </div></ToolbarPopover>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
       </div>}
+      {viewControls}
       {exportError && <p role="alert" className="mt-2 text-sm text-red-600">{exportError}</p>}
       {filters.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2" aria-live="polite">
+        <div className="basis-full flex flex-wrap gap-2" aria-live="polite">
           {filters.map(filter => {
             const op = OPS.find(([key]) => key === filter.operator)?.[1] ?? filter.operator;
             const shown = Array.isArray(filter.value) ? filter.value.join(' / ') : filter.value;
-            return <span key={filter.column} className="inline-flex items-center gap-1 rounded-full border border-accent-subtle bg-accent-subtle/40 px-2.5 py-1 text-xs text-fg-default">
+            return <span key={filter.column} className="inline-flex items-center gap-1 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs text-fg-default">
               {label(filter.column)} {op}{shown ? ` ${shown}` : ''}
               <button type="button" aria-label={`移除${label(filter.column)}筛选`} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset"><X className="h-3 w-3" /></button>
             </span>;
