@@ -50,7 +50,7 @@ export default function PipelineConfigPage() {
   const activeCount = pipelines.filter(item => item.status === 'active').length;
 
   return (
-    <PageContent className="yj-page-shell">
+    <PageContent className="yj-page-shell space-y-4">
       <div className="yj-page-header">
         <div>
           <h2 className="yj-page-title">流程配置</h2>
@@ -58,6 +58,7 @@ export default function PipelineConfigPage() {
         </div>
         <Button
           variant="secondary"
+          className="yj-tool-button"
           leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
           onClick={() => void loadPipelines()}
           disabled={loading}
@@ -73,26 +74,26 @@ export default function PipelineConfigPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="yj-panel p-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">流程总数</div>
-          <div className="mt-2 text-2xl font-semibold text-fg-default">{pipelines.length}</div>
+          <div className="mt-2 text-2xl font-semibold text-fg-default">{loading || error ? '—' : pipelines.length}</div>
         </div>
-        <div className="yj-panel p-4">
+        <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">启用流程</div>
-          <div className="mt-2 text-2xl font-semibold text-success-fg">{activeCount}</div>
+          <div className="mt-2 text-2xl font-semibold text-success-fg">{loading || error ? '—' : activeCount}</div>
         </div>
-        <div className="yj-panel p-4">
+        <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">参考基因组</div>
-          <div className="mt-2 text-sm text-fg-default">{references.join(' / ') || '-'}</div>
+          <div className="mt-2 break-words text-sm text-fg-default">{loading || error ? '—' : references.join(' / ') || '—'}</div>
         </div>
-        <div className="yj-panel p-4">
+        <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">BED 引用</div>
-          <div className="mt-2 text-2xl font-semibold text-fg-default">{bedFiles.length}</div>
+          <div className="mt-2 text-2xl font-semibold text-fg-default">{loading || error ? '—' : bedFiles.length}</div>
         </div>
       </div>
 
-      <div className="yj-panel yj-form-card-wide space-y-6">
+      <div className="yj-panel p-5 space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
@@ -123,7 +124,7 @@ export default function PipelineConfigPage() {
 
             {selected && (
               <section className="space-y-4">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold text-fg-default">{selected.name}</h3>
                   <Tag variant={selected.status === 'active' ? 'success' : 'neutral'}>
                     {selected.status === 'active' ? '启用' : '停用'}
@@ -135,9 +136,9 @@ export default function PipelineConfigPage() {
                   <Info label="版本" value={selected.version || '-'} />
                   <Info label="参考基因组" value={selected.referenceGenome || '-'} />
                   <Info label="BED 文件" value={selected.bedFile || '-'} mono />
-                  <Info label="CNV baseline" value={selected.cnvBaseline || '未配置'} mono />
-                  <Info label="创建时间" value={selected.createdAt || '-'} />
-                  <Info label="更新时间" value={selected.updatedAt || '-'} />
+                  <Info label="CNV 基线" value={selected.cnvBaseline || '未配置'} mono />
+                  <Info label="创建时间" value={formatTime(selected.createdAt)} />
+                  <Info label="更新时间" value={formatTime(selected.updatedAt)} />
                 </div>
                 {selected.description && (
                   <div>
@@ -154,7 +155,7 @@ export default function PipelineConfigPage() {
                 已配置资源引用
               </h3>
               <ResourceList title="BED 文件" values={bedFiles} />
-              <ResourceList title="CNV baseline" values={cnvBaselines} emptyText="未配置 CNV baseline" />
+              <ResourceList title="CNV 基线" values={cnvBaselines} emptyText="未配置 CNV 基线" />
             </section>
 
           </>
@@ -166,7 +167,7 @@ export default function PipelineConfigPage() {
 
 function Info({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="rounded-lg bg-canvas-subtle p-3">
+    <div className="min-w-0 border-b border-[var(--yj-border-subtle)] pb-3">
       <div className="text-xs text-fg-muted">{label}</div>
       <div className={`mt-1 text-sm text-fg-default break-all ${mono ? 'font-mono' : ''}`}>{value}</div>
     </div>
@@ -180,7 +181,7 @@ function ResourceList({ title, values, emptyText = '暂无引用' }: { title: st
       {values.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {values.map(value => (
-            <span key={value} className="px-2 py-1 rounded bg-canvas-subtle text-xs font-mono text-fg-default">
+            <span key={value} className="max-w-full break-all px-2 py-1 rounded bg-canvas-subtle text-xs font-mono text-fg-default">
               {value}
             </span>
           ))}
@@ -190,4 +191,10 @@ function ResourceList({ title, values, emptyText = '暂无引用' }: { title: st
       )}
     </div>
   );
+}
+
+function formatTime(value: string): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
 }

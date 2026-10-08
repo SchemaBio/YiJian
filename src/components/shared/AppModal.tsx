@@ -93,7 +93,7 @@ export function AppModal({
       closeOnOverlayClick={closeOnOverlayClick}
       closeOnEscape={closeOnEscape}
       className={cn(
-        '!fixed !bottom-auto !left-1/2 !right-auto !top-1/2 !m-0 !max-h-[calc(100vh-2rem)] !-translate-x-1/2 !-translate-y-1/2 rounded-md border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]',
+        '!fixed !bottom-auto !left-1/2 !right-auto !top-1/2 !m-0 !max-h-[calc(100vh-2rem)] max-sm:!max-w-[calc(100vw-2rem)] !-translate-x-1/2 !-translate-y-1/2 rounded-md border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]',
         className
       )}
     >
@@ -212,7 +212,7 @@ export function ConfirmDialog({
       <div className="space-y-3">
         <p className="text-sm text-fg-default">{message}</p>
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {error}
           </div>
         )}

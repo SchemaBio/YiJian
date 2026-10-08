@@ -12,17 +12,13 @@ import {
   Select,
   DataTable,
   Tag,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   FormItem,
   TextArea,
   type Column,
 } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Server, Braces } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces } from 'lucide-react';
 import { api } from '@/lib/api';
-import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
+import { AppModal, EmptyState } from '@/components/shared';
 import { ReportEndpointExamples } from './ReportEndpointExamples';
 
 type TemplateStatus = 'active' | 'inactive';
@@ -198,14 +194,14 @@ function ReportTemplatesPageContent() {
   const validateName = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError('请输入模板名称');
+      setNameError('请输入服务名称');
       return false;
     }
     const exists = templates.some(
       (t) => t.name.toLowerCase() === trimmed.toLowerCase() && t.id !== editingId
     );
     if (exists) {
-      setNameError('模板名称已存在');
+      setNameError('服务名称已存在');
       return false;
     }
     setNameError(null);
@@ -329,37 +325,38 @@ function ReportTemplatesPageContent() {
   };
 
   const columns: Column<ReportTemplate>[] = [
- {id:'contract',header:'报告协议',width:150,align:'center',accessor:row=><div><Tag variant={row.contractVersion==='report-snapshot-v2'?'info':'warning'}>{row.contractVersion==='report-snapshot-v2'?'回报快照 v2':'旧版契约'}</Tag>{row.scope==='personal'&&row.canMaintain&&<button type="button" className="mt-1 block w-full text-xs text-accent-fg" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</button>}</div>},
+
     {
       id: 'name',
       header: '服务名称',
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-2">
           <FileText className="w-4 h-4 text-fg-muted" />
-          <span className="font-medium font-mono text-fg-default">{row.name}</span>
+          <span className="font-medium text-fg-default">{row.name}</span>
         </div>
       ),
-      width: 200,
+      width: 180,
       align: 'center',
     },
+ {id:'contract',header:'报告协议',width:140,align:'center',accessor:row=><div><Tag variant={row.contractVersion==='report-snapshot-v2'?'info':'warning'}>{row.contractVersion==='report-snapshot-v2'?'回报快照 v2':'旧版契约'}</Tag>{row.scope==='personal'&&row.canMaintain&&<button type="button" className="mt-1 block w-full text-xs text-accent-fg" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</button>}</div>},
     {
       id: 'description',
       header: '描述',
       accessor: (row) => (
         <span className="text-fg-muted text-sm">{row.description || '-'}</span>
       ),
-      width: 250,
+      width: 180,
       align: 'center',
     },
     {
       id: 'apiEndpoint',
-      header: 'FastAPI 端点',
+      header: '服务地址',
       accessor: (row) => (
         <HoverHint content={row.apiEndpoint}><span className="text-sm text-fg-muted font-mono truncate block max-w-[250px]" >
           {row.apiEndpoint || '-'}
         </span></HoverHint>
       ),
-      width: 260,
+      width: 180,
       align: 'center',
     },
     {
@@ -370,7 +367,7 @@ function ReportTemplatesPageContent() {
           {row.hasApiKey ? '已配置' : '未配置'}
         </Tag>
       ),
-      width: 120,
+      width: 90,
       align: 'center',
     },
     {
@@ -380,14 +377,14 @@ function ReportTemplatesPageContent() {
         const config = statusConfig[row.status];
         return <Tag variant={config.variant}>{config.label}</Tag>;
       },
-      width: 80,
+      width: 70,
       align: 'center',
     },
     {
       id: 'updatedAt',
       header: '更新时间',
-      accessor: 'updatedAt',
-      width: 160,
+      accessor: (row) => { const date = new Date(row.updatedAt); return !row.updatedAt ? '—' : Number.isNaN(date.getTime()) ? row.updatedAt : date.toLocaleString('zh-CN', { hour12: false }); },
+      width: 140,
       align: 'center',
     },
     {
@@ -396,14 +393,14 @@ function ReportTemplatesPageContent() {
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-1">
           <HoverHint content="编辑"><button
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
+            className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
             disabled={!row.canMaintain} onClick={() => handleEdit(row)}
           >
             <Pencil className="w-4 h-4" />
           </button></HoverHint>
           <HoverHint content="删除"><button
-            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 
             onClick={() => handleDelete(row)}
             disabled={!row.canMaintain || row.status === 'active'}
@@ -413,8 +410,8 @@ function ReportTemplatesPageContent() {
           <HoverHint content={row.status === 'active' ? '停用' : '启用'}><button
             className={`p-1.5 rounded transition-colors ${
               row.status === 'active'
-                ? 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-orange-600'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-green-600'
+                ? 'hover:bg-canvas-subtle text-fg-muted hover:text-warning-fg'
+                : 'hover:bg-canvas-subtle text-fg-muted hover:text-success-fg'
             }`}
 
             disabled={!row.canMaintain} onClick={() => handleToggleStatus(row)}
@@ -423,7 +420,7 @@ function ReportTemplatesPageContent() {
           </button></HoverHint>
         </div>
       ),
-      width: 130,
+      width: 100,
       align: 'center' as const,
     },
   ];
@@ -443,7 +440,7 @@ function ReportTemplatesPageContent() {
       </div>
 
       <div className="yj-toolbar-panel">
-        <div className="w-64">
+        <div className="w-full sm:w-64">
           <Input
             placeholder="搜索报告服务..."
             value={searchQuery}
@@ -457,7 +454,7 @@ function ReportTemplatesPageContent() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
           {error}
         </div>
       )}
@@ -468,23 +465,23 @@ function ReportTemplatesPageContent() {
           加载报告服务...
         </div>
       ) : filteredTemplates.length > 0 ? (
-        <DataTable
+        <div className="[&_table]:min-w-[1080px]"><DataTable
           data={filteredTemplates.slice((page-1)*20,page*20)}
           columns={columns}
           rowKey="id"
           density="default"
           striped
-        />
+        /></div>
       ) : (
         <EmptyState
           className="yj-panel"
           icon={<FileText />}
           title="尚未配置报告服务"
-          description="添加一个带 Bearer Key 认证的 FastAPI 端点，即可在任务报告页调用。"
+          description="添加一个带 Bearer Key 认证的 服务地址，即可在任务报告页调用。"
         />
       )}
 
-      <ResourcePager page={page} total={filteredTemplates.length} onChange={setPage} />
+      {filteredTemplates.length > 0 && <ResourcePager page={page} total={filteredTemplates.length} onChange={setPage} />}
       {/* 新建/编辑弹窗 */}
       <AppModal
         open={isModalOpen}
@@ -507,21 +504,17 @@ function ReportTemplatesPageContent() {
           </>
         }
       >
-          <div className="space-y-6">
+          <div className="space-y-5">
+            {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
             <section>
-              <ModalSectionHeading
-                icon={<FileText className="h-4 w-4" />}
-                title="服务信息"
-                description="为你的报告生成端点设置名称和用途说明"
-              />
               <div className="space-y-4">
             <FormItem
               label="服务名称"
               required
-              hint="唯一标识符，建议使用英文和连字符"
               error={nameError || undefined}
             >
               <Input
+                aria-label="服务名称"
                 value={formData.name}
                 onChange={(e) => {
                   setFormData((prev) => ({ ...prev, name: e.target.value }));
@@ -535,6 +528,7 @@ function ReportTemplatesPageContent() {
 
             <FormItem label="描述">
               <TextArea
+                aria-label="描述"
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="输入报告服务用途说明"
@@ -546,16 +540,13 @@ function ReportTemplatesPageContent() {
             </section>
 
             <section className="border-t border-[var(--yj-border-subtle)] pt-5">
-              <ModalSectionHeading
-                icon={<Server className="h-4 w-4" />}
-                title="服务连接"
-                description="配置报告服务地址及访问凭据"
-              />
+              <h3 className="mb-3 text-sm font-medium text-fg-default">服务连接</h3>
               <div className="space-y-4">
 
-            <FormItem label="FastAPI 生成端点" required hint="平台将从服务端向此 HTTPS 地址发起 POST 请求">
-              <div className="flex gap-2">
+            <FormItem label="服务地址" required hint="平台将从服务端向此 HTTPS 地址发起 POST 请求">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
+                  aria-label="服务地址"
                   value={formData.apiEndpoint}
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, apiEndpoint: e.target.value }));
@@ -564,7 +555,7 @@ function ReportTemplatesPageContent() {
                   }}
                   placeholder="https://api.example.com/reports/generate"
                   leftElement={<Link className="w-4 h-4" />}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                 />
                 <Button
                   type="button"
@@ -573,7 +564,7 @@ function ReportTemplatesPageContent() {
                   onClick={handleTestApi}
                   disabled={testingApi || !formData.apiEndpoint || (!editingId && !formData.apiKey.trim())}
                   leftIcon={testingApi ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                  className="min-w-[116px] shrink-0 whitespace-nowrap"
+                  className="yj-tool-button min-w-[116px] shrink-0 whitespace-nowrap"
                 >
                   {testingApi ? '测试中...' : '测试连接'}
                 </Button>
@@ -602,6 +593,7 @@ function ReportTemplatesPageContent() {
             >
               <Input
                 type="password"
+                aria-label="认证 Key"
                 value={formData.apiKey}
                 onChange={(e) => setFormData((prev) => ({ ...prev, apiKey: e.target.value }))}
                 placeholder={editingId ? '留空以保留现有 Key' : '输入报告服务认证 Key'}
@@ -613,7 +605,7 @@ function ReportTemplatesPageContent() {
             </section>
 
             <div className="rounded-md border border-border-default bg-canvas-subtle p-3 text-xs text-fg-muted">
-              <p className="mb-2 flex items-center gap-1.5 font-medium text-fg-default"><Braces className="h-3.5 w-3.5" />FastAPI 请求约定</p>
+              <p className="mb-2 flex items-center gap-1.5 font-medium text-fg-default"><Braces className="h-3.5 w-3.5" />接口约定</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>请求方法：POST；Content-Type：application/json</li>
                 <li>认证方式：Authorization: Bearer &lt;你的 Key&gt;</li>
@@ -627,9 +619,14 @@ function ReportTemplatesPageContent() {
       </AppModal>
 
       {/* 删除确认弹窗 */}
-      <Modal open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} size="small">
-        <ModalHeader>删除确认</ModalHeader>
-        <ModalBody>
+      <AppModal open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} size="small" title="删除确认" footer={<>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            取消
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            确认删除
+          </Button>
+         </>}>
           <div className="flex flex-col items-center text-center py-4">
             <div className="w-12 h-12 rounded-full bg-danger-subtle flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6 text-danger-fg" />
@@ -642,16 +639,7 @@ function ReportTemplatesPageContent() {
             )}
             <p className="text-xs text-fg-muted mt-3">此操作不可撤销</p>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
-            取消
-          </Button>
-          <Button variant="danger" onClick={confirmDelete}>
-            确认删除
-          </Button>
-        </ModalFooter>
-      </Modal>
+         </AppModal>
     </PageContent>
   );
 }

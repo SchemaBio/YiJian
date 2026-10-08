@@ -1,9 +1,10 @@
 'use client';
+import { AppModal, EmptyState } from '@/components/shared';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button, Input, Select, FormItem, Modal, ModalHeader, ModalBody, ModalFooter, DataTable, Tag } from '@schema/ui-kit';
+import { Button, Input, Select, FormItem, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { CheckCircle2, Loader2, Pencil, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
 import type { SystemRole, User } from '@/types/user';
@@ -132,7 +133,7 @@ export function PermissionsManagement() {
       setPendingUsers((prev) => prev.filter((item) => item.id !== user.id));
       await loadUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${decision} user`);
+      setError(err instanceof Error ? err.message : decision === 'approve' ? '审批用户失败' : '拒绝用户失败');
     } finally {
       setModeratingUserId(null);
     }
@@ -161,7 +162,7 @@ export function PermissionsManagement() {
     {
       id: 'approvalStatus',
       header: '审批状态',
-      accessor: (row) => row.approvalStatus ?? '-',
+      accessor: (row) => row.approvalStatus === 'approved' ? '已通过' : row.approvalStatus === 'pending' ? '待审批' : row.approvalStatus === 'rejected' ? '未通过' : '—',
       width: 100,
       align: 'center',
     },
@@ -178,14 +179,14 @@ export function PermissionsManagement() {
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1">
           <HoverHint content="编辑"><button
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
+            className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
             onClick={() => openEditModal(row)}
           >
             <Pencil className="w-4 h-4" />
           </button></HoverHint>
           <HoverHint content="删除"><button
-            className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors"
+            className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors"
 
             onClick={() => setUserToDelete(row)}
           >
@@ -200,20 +201,7 @@ export function PermissionsManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="yj-panel overflow-hidden">
-        <div className="yj-panel-header"><h3 className="yj-section-title">系统角色</h3></div>
-        <div className="grid grid-cols-1 divide-y divide-[var(--yj-border-subtle)] md:grid-cols-2 md:divide-x md:divide-y-0">
-          {SYSTEM_ROLES.map((role) => (
-            <div key={role.id} className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-4 h-4 text-accent-fg" />
-                <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
-              </div>
-              <p className="text-xs text-fg-muted">{role.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+
 
       {pendingUsers.length > 0 && (
         <div className="yj-panel p-4">
@@ -222,32 +210,32 @@ export function PermissionsManagement() {
               <h3 className="text-sm font-medium text-fg-default">待审批注册</h3>
               <p className="mt-1 text-xs text-fg-muted">审核并管理新建的子用户账号。</p>
             </div>
-            <Tag variant="warning">{pendingUsers.length} pending</Tag>
+            <Tag variant="warning">{pendingUsers.length} 待审批</Tag>
           </div>
           <div className="divide-y divide-border-default">
             {pendingUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between gap-4 py-3">
+              <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-fg-default">{user.name || user.email}</div>
                   <div className="truncate text-xs text-fg-muted">
-                    {user.email} · org {user.orgId || '-'} · {formatTime(user.createdAt)}
+                    {user.email} · 机构 {user.orgId || '-'} · {formatTime(user.createdAt)}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button
                     variant="secondary"
+                    leftIcon={<XCircle className="h-4 w-4" />}
                     onClick={() => void handleModerateUser(user, 'reject')}
                     disabled={moderatingUserId === user.id}
                   >
-                    <XCircle className="h-4 w-4" />
                     拒绝
                   </Button>
                   <Button
                     variant="primary"
+                    leftIcon={<CheckCircle2 className="h-4 w-4" />}
                     onClick={() => void handleModerateUser(user, 'approve')}
                     disabled={moderatingUserId === user.id}
                   >
-                    <CheckCircle2 className="h-4 w-4" />
                     通过
                   </Button>
                 </div>
@@ -258,7 +246,7 @@ export function PermissionsManagement() {
       )}
 
       <div className="yj-toolbar-panel">
-        <div className="w-72">
+        <div className="w-full sm:w-72">
           <Input
             placeholder="搜索姓名、邮箱或机构 ID..."
             value={searchQuery}
@@ -266,8 +254,7 @@ export function PermissionsManagement() {
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="secondary" onClick={() => void loadUsers()} disabled={isLoading}>
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+        <Button variant="secondary" className="yj-tool-button" leftIcon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />} onClick={() => void loadUsers()} disabled={isLoading}>
           刷新
         </Button>
       </div>
@@ -283,19 +270,43 @@ export function PermissionsManagement() {
           <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
           <p className="text-fg-muted">正在加载用户列表...</p>
         </div>
+      ) : users.length === 0 ? (
+        <EmptyState className="yj-panel" icon={<Users />} title={searchQuery.trim() ? '没有匹配的用户' : '暂无用户'} description={searchQuery.trim() ? '调整搜索条件后重试。' : undefined} />
       ) : (
-        <DataTable data={users} columns={columns} rowKey="id" density="default" striped />
+        <div className="[&_table]:min-w-[1110px]"><DataTable data={users} columns={columns} rowKey="id" density="default" striped /></div>
       )}
 
-      <Modal open={Boolean(editingUser)} onOpenChange={(open) => !open && setEditingUser(null)} size="medium">
-        <ModalHeader>编辑用户</ModalHeader>
-        <ModalBody>
+      <div className="yj-panel overflow-hidden">
+        <div className="yj-panel-header"><h3 className="yj-section-title">系统角色</h3></div>
+        <div className="grid grid-cols-1 divide-y divide-[var(--yj-border-subtle)] md:grid-cols-2 md:divide-x md:divide-y-0">
+          {SYSTEM_ROLES.map((role) => (
+            <div key={role.id} className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="w-4 h-4 text-accent-fg" />
+                <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
+              </div>
+              <p className="text-xs text-fg-muted">{role.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AppModal open={Boolean(editingUser)} onOpenChange={(open) => !open && setEditingUser(null)} size="medium" title="编辑用户" footer={<>
+          <Button variant="secondary" onClick={() => setEditingUser(null)} disabled={isSaving}>
+            取消
+          </Button>
+          <Button variant="primary" onClick={handleSaveUser} disabled={isSaving}>
+            {isSaving ? '保存中...' : '保存'}
+          </Button>
+         </>}>
           <div className="space-y-4">
+            {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
             <FormItem label="邮箱">
-              <Input value={editingUser?.email ?? ''} disabled />
+              <div className="break-all text-sm text-fg-default">{editingUser?.email ?? '—'}</div>
             </FormItem>
             <FormItem label="姓名" required>
               <Input
+                aria-label="姓名"
                 value={userForm.name}
                 onChange={(event) => setUserForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="请输入姓名"
@@ -325,20 +336,17 @@ export function PermissionsManagement() {
               />
             </FormItem>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setEditingUser(null)} disabled={isSaving}>
+         </AppModal>
+
+      <AppModal open={Boolean(userToDelete)} onOpenChange={(open) => !open && setUserToDelete(null)} size="small" title="确认删除" footer={<>
+          <Button variant="secondary" onClick={() => setUserToDelete(null)} disabled={isSaving}>
             取消
           </Button>
-          <Button variant="primary" onClick={handleSaveUser} disabled={isSaving}>
-            {isSaving ? '保存中...' : '保存'}
+          <Button variant="danger" onClick={handleDeleteUser} disabled={isSaving}>
+            {isSaving ? '删除中...' : '删除'}
           </Button>
-        </ModalFooter>
-      </Modal>
-
-      <Modal open={Boolean(userToDelete)} onOpenChange={(open) => !open && setUserToDelete(null)} size="small">
-        <ModalHeader>确认删除</ModalHeader>
-        <ModalBody>
+         </>}>
+          {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
           <div className="flex flex-col items-center text-center py-4">
             <div className="w-12 h-12 rounded-full bg-danger-subtle flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-danger-fg" />
@@ -351,16 +359,7 @@ export function PermissionsManagement() {
             )}
             <p className="text-xs text-fg-muted mt-3">删除后该账号将无法登录，此操作不可撤销。</p>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setUserToDelete(null)} disabled={isSaving}>
-            取消
-          </Button>
-          <Button variant="danger" onClick={handleDeleteUser} disabled={isSaving}>
-            {isSaving ? '删除中...' : '删除'}
-          </Button>
-        </ModalFooter>
-      </Modal>
+         </AppModal>
     </div>
   );
 }

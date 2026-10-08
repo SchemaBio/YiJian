@@ -5,7 +5,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 import * as React from 'react';
 import Link from 'next/link';
 import { PageContent } from '@/components/layout';
-import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
+import { AppModal, EmptyState } from '@/components/shared';
 import { Button, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
 import { AlertTriangle, Coins, Database, ExternalLink, Loader2, Plus, Search } from 'lucide-react';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
@@ -169,7 +169,7 @@ export default function BaselinePage() {
         <span>CNV 基线由系统内置基线结合所选样本进行校正生成。该结果仅供分析参考，准确度尚未经充分验证，请结合其他检测方法和临床证据综合判断。</span>
       </div>
       <div className="yj-toolbar-panel">
-        <div className="w-72"><Input placeholder="搜索名称、基因组或 BED..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
+        <div className="w-full sm:w-72"><Input placeholder="搜索名称、基因组或 BED..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
         <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
       </div>
       {error && <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
@@ -177,8 +177,7 @@ export default function BaselinePage() {
 
       <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}>{submitting ? '正在投递...' : '启动校正流程'}</Button></>}>
         <div className="space-y-5">
-          <ModalSectionHeading icon={<Database className="h-4 w-4" />} title="CNV 基线校正流程" description="系统将内置基线与所选正常样本合并校正，不会从零建立基线。" />
-          <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">CNV 基线由系统内置基线结合所选样本进行校正生成。结果仅供参考，准确度尚未经充分验证。</div>
+          <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
           {formError && <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormItem label="基线名称" required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>
@@ -188,7 +187,7 @@ export default function BaselinePage() {
           <FormItem label="R2 数据" required hint={`已选择 ${read1IDs.length} 个 R1 / ${read2IDs.length} 个 R2`}><AssetMultiSelect label="R2 数据" value={read2IDs} onChange={setRead2IDs} onOpenChange={setRead2Open} options={read2Options} disabled={submitting} /></FormItem>
           {(read1IDs.length > 0 || read2IDs.length > 0) && <div className="overflow-x-auto rounded-md border border-border-default"><table className="w-full min-w-[460px] text-left text-xs"><caption className="border-b border-border-default bg-canvas-subtle px-3 py-2 text-left">提交配对预览 · 按选择顺序对应，请确认每行属于同一样本</caption><thead><tr><th className="p-2">组</th><th className="p-2">R1</th><th className="p-2">R2</th></tr></thead><tbody>{Array.from({ length: Math.max(read1IDs.length, read2IDs.length) }, (_, index) => <tr key={index} className="border-t border-border-default"><td className="p-2">{index + 1}</td><td className="max-w-48 break-all p-2">{assets.find(asset => asset.id === read1IDs[index])?.file_name || '未选择'}</td><td className="max-w-48 break-all p-2">{assets.find(asset => asset.id === read2IDs[index])?.file_name || '未选择'}</td></tr>)}</tbody></table></div>}
           <FormItem label="BED 文件" required hint={`仅显示 ${genome} 的可用 BED 文件`}><Select searchable value={bedID} onChange={(value) => setBedID(Array.isArray(value) ? value[0] : value)} options={bedOptions} placeholder={bedOptions.length ? '选择 BED 文件' : `暂无 ${genome} BED 文件`} disabled={bedOptions.length === 0} /></FormItem>
-          {isSaaS && <div className="flex items-center justify-between gap-4 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">{estimatedCredits === null ? '预计积分暂不可用' : `预计消耗 ${estimatedCredits} 积分`}</div><div className="mt-0.5 text-xs text-fg-muted">按 R1/R2 总大小向上取整计费。{creditRate === null ? '最终金额以服务端计费配置为准。' : `每 GiB ${creditRate} 积分，不足 1 GiB 按 1 GiB 计。`}</div></div></div><div className="shrink-0 text-xs text-fg-muted">{(selectedInputBytes / (1024 ** 3)).toFixed(2)} GiB</div></div>}
+          {isSaaS && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">{estimatedCredits === null ? '预计积分暂不可用' : `预计消耗 ${estimatedCredits} 积分`}</div><div className="mt-0.5 text-xs text-fg-muted">按 R1/R2 总大小向上取整计费。{creditRate === null ? '最终金额以服务端计费配置为准。' : `每 GiB ${creditRate} 积分，不足 1 GiB 按 1 GiB 计。`}</div></div></div><div className="shrink-0 text-xs text-fg-muted">{(selectedInputBytes / (1024 ** 3)).toFixed(2)} GiB</div></div>}
         </div>
       </AppModal>
     </PageContent>

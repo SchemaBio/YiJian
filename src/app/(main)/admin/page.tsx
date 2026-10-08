@@ -1,10 +1,11 @@
 ﻿'use client';
 
 import * as React from 'react';
+import { AppModal } from '@/components/shared';
 import { PageContent } from '@/components/layout';
 import { Button, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { AlertTriangle, BarChart3, Building2, CreditCard, Loader2, Pencil, Plus, RefreshCw, Users, X } from 'lucide-react';
+import { AlertTriangle, BarChart3, Building2, CreditCard, Loader2, Pencil, Plus, RefreshCw, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { hashPassword } from '@/lib/crypto';
 import {
@@ -79,6 +80,7 @@ function Field({
       <input
         className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
         type={type}
+        autoComplete={type === 'password' ? 'new-password' : 'off'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
@@ -109,6 +111,7 @@ const emptyBillingConfig: AdminBillingConfig = {
 
 export default function AdminPage() {
   const { isLoading: authLoading, isPlatformAdmin } = useAuth();
+  const [provisionOpen, setProvisionOpen] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats>(emptyStats);
   const [alerts, setAlerts] = React.useState<BalanceAlert[]>([]);
   const [organizations, setOrganizations] = React.useState<AdminOrganization[]>([]);
@@ -239,6 +242,7 @@ export default function AdminPage() {
         max_concurrent_tasks: maxConcurrentTasks,
         ...(provisionForm.description.trim() ? { description: provisionForm.description.trim() } : {}),
       });
+      setProvisionOpen(false);
       setActionMessage(`已开通机构 ${result.organization.name}，管理员账号 ${result.account.email}`);
       setProvisionForm({
         name: '',
@@ -306,7 +310,7 @@ export default function AdminPage() {
     const orgId = rechargeForm.orgId.trim();
     const amount = Number(rechargeForm.amount);
     if (!orgId || !Number.isInteger(amount) || amount <= 0) {
-      setError('请选择机构并输入大于 0 的整数充值点数');
+      setError('请选择机构并输入大于 0 的整数充值积分');
       return;
     }
 
@@ -335,7 +339,7 @@ export default function AdminPage() {
     const creditRateMultiplier = Number(configForm.creditRateMultiplier);
     const minBalance = Number(configForm.minBalance);
     if (!Number.isInteger(creditsPerMinute) || creditsPerMinute <= 0 || !Number.isFinite(creditRateMultiplier) || creditRateMultiplier <= 0 || !Number.isInteger(minBalance)) {
-      setError('请填写有效的计费配置：每分钟点数为正整数，倍率为正数，最低余额为整数');
+      setError('请填写有效的计费配置：每分钟积分为正整数，倍率为正数，最低余额为整数');
       return;
     }
 
@@ -474,13 +478,13 @@ export default function AdminPage() {
   const taskColumns: Column<AdminStats['recent_tasks'][number]>[] = [
     { id: 'name', header: '任务', accessor: 'name', width: 240, align: 'center' },
     { id: 'org_name', header: '机构', accessor: 'org_name', width: 180, align: 'center' },
-    { id: 'status', header: '状态', accessor: (row) => <Tag variant="info">{row.status}</Tag>, width: 100, align: 'center' },
+    { id: 'status', header: '状态', accessor: (row) => <Tag variant={row.status === 'completed' ? 'success' : row.status === 'failed' ? 'danger' : row.status === 'running' ? 'info' : 'neutral'}>{({completed:'已完成',failed:'失败',running:'运行中',cancelled:'已取消',pending:'等待',queued:'排队中'} as Record<string,string>)[row.status] ?? row.status}</Tag>, width: 100, align: 'center' },
     { id: 'created_at', header: '创建时间', accessor: (row) => formatTime(row.created_at), width: 180, align: 'center' },
   ];
 
   if (authLoading || isLoading) {
     return (
-      <PageContent className="yj-page-shell">
+      <PageContent className="yj-page-shell space-y-4">
         <div className="yj-empty-state">
           <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
           <p className="text-fg-muted">正在加载管理后台...</p>
@@ -491,7 +495,7 @@ export default function AdminPage() {
 
   if (!isPlatformAdmin()) {
     return (
-      <PageContent className="yj-page-shell">
+      <PageContent className="yj-page-shell space-y-4">
         <div className="yj-empty-state">
           <p className="text-fg-muted">您没有权限访问平台管理后台。</p>
         </div>
@@ -500,18 +504,18 @@ export default function AdminPage() {
   }
 
   return (
-    <PageContent className="yj-page-shell">
+    <PageContent className="yj-page-shell space-y-4">
       <div className="yj-page-header">
         <div>
           <h2 className="yj-page-title">平台管理后台</h2>
           <p className="yj-page-subtitle">
-            管理 SaaS 机构、并发额度、Credit 策略与运行风险。
+            管理机构、任务运行及积分策略。
           </p>
         </div>
-        <Button variant="secondary" onClick={() => void loadData()}>
-          <RefreshCw className="w-4 h-4" />
-          刷新
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" className="yj-tool-button" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={() => void loadData()}>刷新</Button>
+          <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => { setError(null); setProvisionOpen(true); }}>开通机构</Button>
+        </div>
       </div>
 
       {error && (
@@ -520,11 +524,11 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="机构总数" value={stats.organizations.total} icon={<Users className="w-6 h-6" />} />
-        <StatCard title="运行中任务" value={stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
-        <StatCard title="今日消耗点数" value={stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
-        <StatCard title="低余额机构" value={stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard title="机构总数" value={error ? '—' : stats.organizations.total} icon={<Users className="w-6 h-6" />} />
+        <StatCard title="运行中任务" value={error ? '—' : stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
+        <StatCard title="今日消耗积分" value={error ? '—' : stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
+        <StatCard title="低余额机构" value={error ? '—' : stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
       </div>
 
       {actionMessage && (
@@ -533,81 +537,45 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <form className="yj-panel p-4 space-y-3" onSubmit={submitProvisionOrg}>
-          <div>
-            <h3 className="text-base font-medium text-fg-default flex items-center gap-2">
-              <Plus className="w-4 h-4 text-accent-fg" />
-              开通机构与管理员账号
-            </h3>
-            <p className="text-xs text-fg-muted mt-1">同时创建机构与首个管理员账号。</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Field label="机构名称" value={provisionForm.name} onChange={(value) => setProvisionForm((prev) => ({ ...prev, name: value }))} required />
-            <Field label="Slug" value={provisionForm.slug} onChange={(value) => setProvisionForm((prev) => ({ ...prev, slug: value }))} required />
-            <Field label="并发上限" type="number" value={provisionForm.maxConcurrentTasks} onChange={(value) => setProvisionForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} required />
-            <Field label="管理员姓名" value={provisionForm.adminName} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminName: value }))} required />
-            <Field label="管理员邮箱" type="email" value={provisionForm.adminEmail} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminEmail: value }))} required />
-            <Field label="初始密码" type="password" value={provisionForm.adminPassword} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminPassword: value }))} required />
-          </div>
-          <label className="block text-xs text-fg-muted">
-            描述
-            <textarea
-              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
-              value={provisionForm.description}
-              onChange={(e) => setProvisionForm((prev) => ({ ...prev, description: e.target.value }))}
-              rows={2}
-            />
-          </label>
-          <Button type="submit" variant="primary" disabled={isSavingBilling}>开通机构</Button>
-        </form>
-
-        <form className="yj-panel p-4 space-y-3" onSubmit={submitOrgUpdate}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-medium text-fg-default">编辑机构配置</h3>
-              <p className="text-xs text-fg-muted mt-1">从机构列表选择需要调整的机构。</p>
-            </div>
-            {editingOrg && (
-              <button type="button" className="rounded p-1 text-fg-muted hover:bg-canvas-subtle" onClick={() => setEditingOrg(null)}>
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          {!editingOrg ? (
-            <p className="text-sm text-fg-muted">尚未选择机构。</p>
-          ) : (
-            <>
-              <div className="text-xs text-fg-muted">当前机构 ID：<span className="font-mono">{editingOrg.id}</span></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="机构名称" value={orgForm.name} onChange={(value) => setOrgForm((prev) => ({ ...prev, name: value }))} required />
-                <Field label="并发上限" type="number" value={orgForm.maxConcurrentTasks} onChange={(value) => setOrgForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} />
-                <Field label="余额阈值" type="number" value={orgForm.balanceAlertThreshold} onChange={(value) => setOrgForm((prev) => ({ ...prev, balanceAlertThreshold: value }))} />
-                <Field label="存储配额 GB" type="number" value={orgForm.storageQuotaGb} onChange={(value) => setOrgForm((prev) => ({ ...prev, storageQuotaGb: value }))} />
-              </div>
-              <label className="block text-xs text-fg-muted">
-                描述
-                <textarea
-                  className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
-                  value={orgForm.description}
-                  onChange={(e) => setOrgForm((prev) => ({ ...prev, description: e.target.value }))}
-                  rows={2}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm text-fg-default">
-                <input
-                  type="checkbox"
-                  checked={orgForm.isActive}
-                  onChange={(e) => setOrgForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-                />
-                机构启用
-              </label>
-              <Button type="submit" variant="secondary" disabled={isSavingBilling}>保存机构配置</Button>
-            </>
-          )}
-        </form>
+      <div className="yj-panel p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 className="w-4 h-4 text-accent-fg" />
+          <h3 className="text-base font-medium text-fg-default">机构列表</h3>
+        </div>
+        {organizations.length === 0 ? (
+          <p className="text-sm text-fg-muted">暂无机构数据</p>
+        ) : (
+          <div className="[&_table]:min-w-[910px]"><DataTable data={organizations} columns={orgColumns} rowKey="id" density="default" striped /></div>
+        )}
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="yj-panel p-4">
+          <h3 className="text-base font-medium text-fg-default mb-3">余额预警</h3>
+          {alerts.length === 0 ? (
+            <p className="text-sm text-fg-muted">暂无低余额机构</p>
+          ) : (
+            <div className="[&_table]:min-w-[450px]"><DataTable data={alerts} columns={alertColumns} rowKey="org_id" density="default" striped /></div>
+          )}
+        </div>
+        <div className="yj-panel p-4">
+          <h3 className="text-base font-medium text-fg-default mb-3">高消耗机构</h3>
+          {stats.top_orgs.length === 0 ? (
+            <p className="text-sm text-fg-muted">暂无机构消耗数据</p>
+          ) : (
+            <div className="[&_table]:min-w-[450px]"><DataTable data={stats.top_orgs} columns={topOrgColumns} rowKey="org_id" density="default" striped /></div>
+          )}
+        </div>
+      </div>
+
+      <div className="yj-panel p-4">
+        <h3 className="text-base font-medium text-fg-default mb-3">最近任务</h3>
+        {stats.recent_tasks.length === 0 ? (
+          <p className="text-sm text-fg-muted">暂无最近任务</p>
+        ) : (
+          <div className="[&_table]:min-w-[700px]"><DataTable data={stats.recent_tasks} columns={taskColumns} rowKey="id" density="default" striped /></div>
+        )}
+      </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <form className="yj-panel p-4 space-y-3" onSubmit={submitRecharge}>
           <div>
@@ -628,7 +596,7 @@ export default function AdminPage() {
             </select>
           </label>
           <label className="block text-xs text-fg-muted">
-            充值点数
+            充值积分
             <input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
@@ -657,7 +625,7 @@ export default function AdminPage() {
             <p className="text-xs text-fg-muted mt-1">当前：{billingConfig.credits_per_minute} 点/分钟，倍率 {billingConfig.credit_rate_multiplier}，最低余额 {billingConfig.min_balance}</p>
           </div>
           <label className="block text-xs text-fg-muted">
-            每分钟点数
+            每分钟积分
             <input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
@@ -694,7 +662,7 @@ export default function AdminPage() {
         <form className="yj-panel p-4 space-y-3" onSubmit={submitOrgPolicy}>
           <div>
             <h3 className="text-base font-medium text-fg-default">机构计费覆盖</h3>
-            <p className="text-xs text-fg-muted mt-1">留空会调用 reset 字段清除覆盖值，恢复继承全局配置。</p>
+            <p className="text-xs text-fg-muted mt-1">留空并保存后，将恢复使用全局配置。</p>
           </div>
           <label className="block text-xs text-fg-muted">
             机构
@@ -718,7 +686,7 @@ export default function AdminPage() {
             </p>
           )}
           <label className="block text-xs text-fg-muted">
-            覆盖每分钟点数
+            覆盖每分钟积分
             <input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
@@ -756,45 +724,60 @@ export default function AdminPage() {
         </form>
       </div>
 
-      <div className="yj-panel p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 className="w-4 h-4 text-accent-fg" />
-          <h3 className="text-base font-medium text-fg-default">机构列表</h3>
-        </div>
-        {organizations.length === 0 ? (
-          <p className="text-sm text-fg-muted">暂无机构数据</p>
-        ) : (
-          <DataTable data={organizations} columns={orgColumns} rowKey="id" density="default" striped />
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="yj-panel p-4">
-          <h3 className="text-base font-medium text-fg-default mb-3">余额预警</h3>
-          {alerts.length === 0 ? (
-            <p className="text-sm text-fg-muted">暂无低余额机构</p>
-          ) : (
-            <DataTable data={alerts} columns={alertColumns} rowKey="org_id" density="default" striped />
-          )}
-        </div>
-        <div className="yj-panel p-4">
-          <h3 className="text-base font-medium text-fg-default mb-3">高消耗机构</h3>
-          {stats.top_orgs.length === 0 ? (
-            <p className="text-sm text-fg-muted">暂无机构消耗数据</p>
-          ) : (
-            <DataTable data={stats.top_orgs} columns={topOrgColumns} rowKey="org_id" density="default" striped />
-          )}
-        </div>
-      </div>
+      <AppModal open={provisionOpen} onOpenChange={(open) => { if (!isSavingBilling) setProvisionOpen(open); }} title="开通机构与管理员账号" size="large" footer={<><Button variant="secondary" onClick={() => setProvisionOpen(false)} disabled={isSavingBilling}>取消</Button><Button form="admin-provision" type="submit" variant="primary" disabled={isSavingBilling}>{isSavingBilling ? '开通中...' : '开通机构'}</Button></>}>
+        <form id="admin-provision" className="space-y-4" onSubmit={submitProvisionOrg}>
+          {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
 
-      <div className="yj-panel p-4">
-        <h3 className="text-base font-medium text-fg-default mb-3">最近任务</h3>
-        {stats.recent_tasks.length === 0 ? (
-          <p className="text-sm text-fg-muted">暂无最近任务</p>
-        ) : (
-          <DataTable data={stats.recent_tasks} columns={taskColumns} rowKey="id" density="default" striped />
-        )}
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="机构名称" value={provisionForm.name} onChange={(value) => setProvisionForm((prev) => ({ ...prev, name: value }))} required />
+            <Field label="Slug" value={provisionForm.slug} onChange={(value) => setProvisionForm((prev) => ({ ...prev, slug: value }))} required />
+            <Field label="并发上限" type="number" value={provisionForm.maxConcurrentTasks} onChange={(value) => setProvisionForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} required />
+            <Field label="管理员姓名" value={provisionForm.adminName} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminName: value }))} required />
+            <Field label="管理员邮箱" type="email" value={provisionForm.adminEmail} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminEmail: value }))} required />
+            <Field label="初始密码" type="password" value={provisionForm.adminPassword} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminPassword: value }))} required />
+          </div>
+          <label className="block text-xs text-fg-muted">
+            描述
+            <textarea
+              className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+              value={provisionForm.description}
+              onChange={(e) => setProvisionForm((prev) => ({ ...prev, description: e.target.value }))}
+              rows={2}
+            />
+          </label>
+
+                </form>
+      </AppModal>
+      <AppModal open={Boolean(editingOrg)} onOpenChange={(open) => { if (!open && !isSavingBilling) setEditingOrg(null); }} title="编辑机构配置" size="large" footer={<><Button variant="secondary" onClick={() => setEditingOrg(null)} disabled={isSavingBilling}>取消</Button><Button form="admin-edit-org" type="submit" variant="primary" disabled={isSavingBilling}>{isSavingBilling ? '保存中...' : '保存机构配置'}</Button></>}>
+        <form id="admin-edit-org" className="space-y-4" onSubmit={submitOrgUpdate}>
+          {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
+              <div className="text-xs text-fg-muted">当前机构 ID：<span className="font-mono break-all">{editingOrg?.id}</span></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="机构名称" value={orgForm.name} onChange={(value) => setOrgForm((prev) => ({ ...prev, name: value }))} required />
+                <Field label="并发上限" type="number" value={orgForm.maxConcurrentTasks} onChange={(value) => setOrgForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} />
+                <Field label="余额阈值" type="number" value={orgForm.balanceAlertThreshold} onChange={(value) => setOrgForm((prev) => ({ ...prev, balanceAlertThreshold: value }))} />
+                <Field label="存储配额 GB" type="number" value={orgForm.storageQuotaGb} onChange={(value) => setOrgForm((prev) => ({ ...prev, storageQuotaGb: value }))} />
+              </div>
+              <label className="block text-xs text-fg-muted">
+                描述
+                <textarea
+                  className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
+                  value={orgForm.description}
+                  onChange={(e) => setOrgForm((prev) => ({ ...prev, description: e.target.value }))}
+                  rows={2}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-fg-default">
+                <input
+                  type="checkbox"
+                  checked={orgForm.isActive}
+                  onChange={(e) => setOrgForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+                />
+                机构启用
+              </label>
+        </form>
+      </AppModal>
     </PageContent>
   );
 }

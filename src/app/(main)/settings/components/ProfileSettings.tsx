@@ -91,22 +91,19 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
     }
   };
   return (
-    <div className="grid max-w-5xl grid-cols-1 gap-5 xl:grid-cols-2">
-      <section className="yj-panel p-5 xl:col-span-2">
+    <div className="grid max-w-5xl grid-cols-1 gap-4 lg:grid-cols-2">
+      <section className="yj-panel p-5 lg:col-span-2">
         <div className="mb-5 flex items-center gap-2">
           <UserRound className="h-5 w-5 text-accent-fg" />
           <div>
             <h3 className="text-base font-medium text-fg-default">账号信息</h3>
-            <p className="mt-1 text-xs text-fg-muted">维护登录名称和当前账号状态。</p>
           </div>
         </div>
         <div className="grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
           <FormItem label="姓名">
-            <Input value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
+            <Input aria-label="姓名" value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
           </FormItem>
-          <FormItem label="邮箱">
-            <Input type="email" value={user.email} disabled />
-          </FormItem>
+          <ReadOnlyField label="邮箱">{user.email}</ReadOnlyField>
           <FormItem label="系统角色">
             <div className="h-10 flex items-center">
               <Tag variant={user.systemRole === 'PLATFORM_ADMIN' ? 'warning' : 'info'}>{roleLabel(user.systemRole)}</Tag>
@@ -117,12 +114,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
               <Tag variant={user.isActive ? 'success' : 'neutral'}>{user.isActive ? '启用' : '停用'}</Tag>
             </div>
           </FormItem>
-          <FormItem label="注册审批">
-            <Input value={user.approvalStatus ?? '-'} disabled />
-          </FormItem>
-          <FormItem label="创建时间">
-            <Input value={formatTime(user.createdAt)} disabled />
-          </FormItem>
+          <ReadOnlyField label="注册审批">{user.approvalStatus === 'approved' ? '已通过' : user.approvalStatus === 'pending' ? '待审批' : user.approvalStatus === 'rejected' ? '未通过' : '—'}</ReadOnlyField>
+          <ReadOnlyField label="创建时间">{formatTime(user.createdAt)}</ReadOnlyField>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--yj-border-subtle)] pt-4">
           <Button
@@ -144,16 +137,11 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <Building2 className="h-5 w-5 text-accent-fg" />
           <div>
             <h3 className="text-base font-medium text-fg-default">当前机构</h3>
-            <p className="mt-1 text-xs text-fg-muted">当前会话所属的组织信息。</p>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4">
-          <FormItem label="机构名称">
-            <Input value={currentOrg?.name ?? '-'} disabled />
-          </FormItem>
-          <FormItem label="机构 UUID">
-            <Input value={currentOrg?.id ?? '-'} disabled />
-          </FormItem>
+          <ReadOnlyField label="机构名称">{currentOrg?.name ?? '—'}</ReadOnlyField>
+          <ReadOnlyField label="机构编号" mono>{currentOrg?.id ?? '—'}</ReadOnlyField>
         </div>
       </section>
 
@@ -162,7 +150,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <Bot className="h-5 w-5 text-accent-fg" />
           <div>
             <h3 className="text-base font-medium text-fg-default">页面助手</h3>
-            <p className="mt-1 text-xs text-fg-muted">默认关闭。开启后助手会读取当前页面内容并代理到平台 LLM，请勿在含患者信息的页面启用。</p>
+            <p className="mt-1 text-xs text-fg-muted">开启后将读取当前页面内容并发送至平台 AI 服务。请勿在含患者信息的页面启用。</p>
           </div>
         </div>
         <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-default">
@@ -185,13 +173,13 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
         </div>
         <div className="grid max-w-md grid-cols-1 gap-3">
           <FormItem label="当前密码">
-            <Input type="password" value={oldPassword} onChange={(event) => setOldPassword(event.target.value)} disabled={isChangingPassword} autoComplete="current-password" />
+            <Input aria-label="当前密码" type="password" value={oldPassword} onChange={(event) => setOldPassword(event.target.value)} disabled={isChangingPassword} autoComplete="current-password" />
           </FormItem>
           <FormItem label="新密码">
-            <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
+            <Input aria-label="新密码" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
           </FormItem>
           <FormItem label="确认新密码">
-            <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
+            <Input aria-label="确认新密码" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
           </FormItem>
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => void handleChangePassword()} disabled={isChangingPassword}>
@@ -203,7 +191,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
         </div>
       </section>
 
-      <section className="rounded-md border border-danger-muted bg-danger-subtle p-5 xl:col-span-2">
+      <section className="yj-panel p-5 lg:col-span-2">
         <div className="mb-4 flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger-fg" />
           <div>
@@ -216,4 +204,11 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
 
     </div>
   );
+}
+
+function ReadOnlyField({ label, children, mono = false }: { label: string; children: React.ReactNode; mono?: boolean }) {
+  return <div className="min-w-0">
+    <div className="mb-2 text-sm text-fg-muted">{label}</div>
+    <div className={`min-h-10 flex items-center break-all text-sm text-fg-default ${mono ? 'font-mono text-xs' : ''}`}>{children}</div>
+  </div>;
 }
