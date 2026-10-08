@@ -19,6 +19,8 @@ const root = process.cwd();
       if (source.endsWith('/src/components/providers/AIProvider')) return path.join(preview, 'ai.ts');
       if (source.endsWith('/src/lib/parquet-browser')) return path.join(preview, 'parquet.ts');
       if (source === '@/lib/api' || source === './api' && importer?.includes('/src/lib/')) return path.join(preview, 'api.ts');
+      if ((source === './history-client' || source.endsWith('/src/app/(main)/history/history-client')) && importer?.includes('/history/HistoryWorkspace')) return path.join(preview, 'history.ts');
+      if (source === '@/lib/assessment/client' || source.endsWith('/src/lib/assessment/client') && !importer?.includes('/style-preview/assessment')) return path.join(preview, 'assessment.ts');
       if (source === '@/lib/tasks') return path.join(preview, 'tasks.ts');
       if (source === '@/components/providers/AuthProvider') return path.join(preview, 'auth.ts');
       if (source === '@/components/providers/AIProvider') return path.join(preview, 'ai.ts');

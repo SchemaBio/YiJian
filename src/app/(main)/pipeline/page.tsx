@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 import {useAuth} from '@/components/providers/AuthProvider';
 
 import * as React from 'react';
@@ -245,12 +247,12 @@ function PipelineListPageContent() {
   const filtered = pipelines.filter((item) => `${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()));
   const columns: Column<Pipeline>[] = [
     { id: 'name', header: '流程名称', accessor: (row) => <div className="text-left"><div className="font-medium text-fg-default">{row.name}</div>{row.isBuiltin && <div className="mt-0.5 text-xs text-fg-muted">系统内置</div>}</div>, width: 210, align: 'left' },
-    { id: 'base', header: '基础流程', accessor: (row) => <Tag variant="info">{row.basePipeline === 'wes_family' ? 'WES家系分析' : 'WES单样本分析'}</Tag>, width: 150, align: 'center' },
+    { id: 'base', header: '基础流程', accessor: (row) => <Tag variant="neutral">{row.basePipeline === 'wes_family' ? 'WES家系分析' : 'WES单样本分析'}</Tag>, width: 150, align: 'center' },
     { id: 'genome', header: '参考基因组', accessor: (row) => row.referenceGenome, width: 110, align: 'center' },
-    { id: 'bed', header: 'BED 文件', accessor: (row) => <span className="block truncate" title={row.resourceError||row.bedFile}>{row.bedFile}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{row.resourceError}</span>}</span>, width: 210, align: 'left' },
-    { id: 'cnv', header: 'CNV 基线', accessor: (row) => <span className="block truncate" title={row.cnvBaseline}>{row.cnvBaseline}</span>, width: 210, align: 'left' },
+    { id: 'bed', header: 'BED 文件', accessor: (row) => <HoverHint content={row.resourceError||row.bedFile}><span className="block truncate" >{row.bedFile}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{row.resourceError}</span>}</span></HoverHint>, width: 210, align: 'left' },
+    { id: 'cnv', header: 'CNV 基线', accessor: (row) => <HoverHint content={row.cnvBaseline}><span className="block truncate" >{row.cnvBaseline}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'status', header: '状态', accessor: (row) => <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>{row.status === 'active' ? '启用' : '停用'}</Tag>, width: 90, align: 'center' },
-    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <div className="flex justify-center gap-1"><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle hover:text-accent-fg" title="编辑" onClick={() => setEditing(row)}><Pencil className="h-4 w-4" /></button><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle" title={row.status === 'active' ? '停用' : '启用'} onClick={() => void toggle(row)}>{row.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button><button className="rounded p-1.5 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></div>, width: 110, align: 'center' },
+    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <div className="flex justify-center gap-1"><HoverHint content="编辑"><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle hover:text-accent-fg"  onClick={() => setEditing(row)}><Pencil className="h-4 w-4" /></button></HoverHint><HoverHint content={row.status === 'active' ? '停用' : '启用'}><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"  onClick={() => void toggle(row)}>{row.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button></HoverHint><HoverHint content="删除"><button className="rounded p-1.5 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></HoverHint></div>, width: 110, align: 'center' },
   ];
 
   return <PageContent className="yj-page-shell">

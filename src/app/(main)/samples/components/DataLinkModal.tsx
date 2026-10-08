@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button } from '@schema/ui-kit';
@@ -58,7 +60,7 @@ function AssetSelect({
           <div className="flex min-w-0 items-center gap-2">
             <File className="h-4 w-4 shrink-0 text-accent-fg" />
             <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-fg-default" title={selected.file_name}>{selected.file_name}</p>
+              <HoverHint content={selected.file_name}><p className="truncate text-xs font-medium text-fg-default" >{selected.file_name}</p></HoverHint>
               <p className="mt-0.5 text-[11px] text-fg-muted">{formatBytes(selected.file_size)} · UUID {selected.id.slice(0, 8)}</p>
             </div>
           </div>

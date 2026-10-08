@@ -31,7 +31,7 @@
 .yj-inspector-content { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; }
 .yj-inspector-content > .bg-canvas-subtle { background: transparent; padding: 0; border-radius: 0; }
 .yj-inspector-summary { padding: 12px 16px; border-bottom: 1px solid var(--yj-border-subtle); font-size: 12px; color: var(--yj-text-muted); overflow-wrap: anywhere; }
-.yj-assessment-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 0; border-bottom: 1px solid var(--yj-border-subtle); font-size: 12px; }
+.yj-assessment-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; font-size: 12px; }
 .yj-assessment-status .yj-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent-fg); }
 .yj-assessment-status[data-state='error'] .yj-status-dot { background: var(--color-danger-fg); }
 .yj-assessment-status[data-state='loading'] .yj-status-dot { background: var(--color-attention-fg, #bf8700); }
@@ -51,7 +51,7 @@
 .yj-task-state-label[data-tone='warning'] > span { background: var(--color-attention-fg); }
 .yj-task-state-label[data-tone='info'] > span { background: var(--color-accent-fg); }
 .yj-interpretation-panel[data-density='compact'] .variant-results-table td { padding-top: 6px; padding-bottom: 6px; font-size: 13px; white-space: nowrap; }
-.yj-interpretation-panel[data-density='compact'] .variant-results-table td > [title]:not(.yj-clinvar-badge) { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yj-interpretation-panel[data-density='compact'] .variant-results-table td > [data-hover-hint]:not(.yj-clinvar-badge) { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 1440px) {
   .yj-has-inspector { padding-right: 436px; }
   .yj-has-inspector > .yj-inspector { position: absolute; width: 420px; z-index: 10; box-shadow: none; }
@@ -78,3 +78,48 @@
 .yj-gene-links { display: inline-flex; flex-wrap: wrap; gap: 2px 6px; max-width: 100%; }
 .yj-gene-links a { color: var(--color-accent-fg); font-weight: 600; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
 .yj-gene-links a:hover { text-decoration-color: currentColor; }
+
+.yj-transaction-tag { display: inline-flex; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: 500; color: var(--yj-text-muted); background: var(--yj-panel-subtle); }
+.yj-transaction-tag[data-type='recharge'] { color: #167447; background: #e8f5ed; }
+.yj-transaction-tag[data-type='pre_deduction'] { color: #916000; background: #fff4d6; }
+.yj-transaction-tag[data-type='deduction'] { color: #a33143; background: #fdecef; }
+.yj-transaction-tag[data-type='refund'] { color: #087983; background: #e5f5f7; }
+.yj-transaction-tag[data-type='failure_refund'] { color: #4f63ad; background: #edf0fc; }
+.yj-transaction-tag[data-type='adjust'] { color: #7951a6; background: #f3ebfa; }
+.yj-transaction-tag[data-type='download'] { color: #a75520; background: #fff0e5; }
+[data-theme='dark'] .yj-transaction-tag[data-type] { background: color-mix(in srgb, currentColor 12%, var(--yj-panel-bg)); }
+[data-theme='dark'] .yj-transaction-tag[data-type='recharge'] { color: #75d69d; }
+[data-theme='dark'] .yj-transaction-tag[data-type='pre_deduction'] { color: #edc46a; }
+[data-theme='dark'] .yj-transaction-tag[data-type='deduction'] { color: #f292a3; }
+[data-theme='dark'] .yj-transaction-tag[data-type='refund'] { color: #66cad6; }
+[data-theme='dark'] .yj-transaction-tag[data-type='failure_refund'] { color: #9eaff6; }
+[data-theme='dark'] .yj-transaction-tag[data-type='adjust'] { color: #c7a0ee; }
+[data-theme='dark'] .yj-transaction-tag[data-type='download'] { color: #f0ad7b; }
+
+.yj-overview-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; padding: 8px 0 20px; border-bottom: 1px solid var(--yj-border-subtle); }
+.yj-overview-metrics > div { display: flex; flex-direction: column; gap: 6px; }
+.yj-overview-metrics span { color: var(--yj-text-muted); font-size: 12px; }
+.yj-overview-metrics strong { font-size: 24px; font-weight: 600; color: var(--yj-text-strong); font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .yj-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+
+.yj-tool-popover-wide { width: min(720px, calc(100vw - 24px)); }
+.yj-hover-hint { position: fixed; z-index: 90; max-width: min(360px, calc(100vw - 16px)); padding: 8px 12px; border: 1px solid var(--color-border-default); border-radius: 8px; background: #fff; color: var(--color-fg-default); box-shadow: 0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1); font-size: 14px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; pointer-events: none; }
+.yj-hover-hint-arrow { position: absolute; top: 100%; left: calc(50% - 6px); fill: #fff; }
+.yj-hover-hint-arrow-top { top: auto; bottom: 100%; transform: rotate(180deg); }
+[data-theme='dark'] .yj-hover-hint { background: #161b22; }
+[data-theme='dark'] .yj-hover-hint-arrow { fill: #161b22; }
+
+.yj-history-classification { display: inline-flex; max-width: 100%; padding: 3px 8px; border: 1px solid var(--yj-border-subtle); border-radius: 5px; color: var(--yj-text-muted); background: var(--yj-panel-subtle); font-size: 12px; overflow-wrap: anywhere; }
+.yj-history-classification[data-classification='Pathogenic'] { color: #a33143; background: #fdecef; }
+.yj-history-classification[data-classification='Likely_Pathogenic'] { color: #a75520; background: #fff0e5; }
+.yj-history-classification[data-classification='VUS'] { color: #916000; background: #fff4d6; }
+.yj-history-classification[data-classification='Likely_Benign'] { color: #087983; background: #e5f5f7; }
+.yj-history-classification[data-classification='Benign'] { color: #167447; background: #e8f5ed; }
+.yj-history-classification[data-classification='mixed'] { color: #7951a6; background: #f3ebfa; }
+[data-theme='dark'] .yj-history-classification[data-classification] { background: color-mix(in srgb, currentColor 12%, var(--yj-panel-bg)); }
+[data-theme='dark'] .yj-history-classification[data-classification='Pathogenic'] { color: #f292a3; }
+[data-theme='dark'] .yj-history-classification[data-classification='Likely_Pathogenic'] { color: #f0ad7b; }
+[data-theme='dark'] .yj-history-classification[data-classification='VUS'] { color: #edc46a; }
+[data-theme='dark'] .yj-history-classification[data-classification='Likely_Benign'] { color: #66cad6; }
+[data-theme='dark'] .yj-history-classification[data-classification='Benign'] { color: #75d69d; }
+[data-theme='dark'] .yj-history-classification[data-classification='mixed'] { color: #c7a0ee; }

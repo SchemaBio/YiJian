@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Check, ChevronDown } from 'lucide-react';
@@ -30,9 +32,9 @@ export function AssetMultiSelect({ label, options, value, onChange, onOpenChange
   const selected = value.map(id => options.find(option => option.value === id)?.label || id);
   const filtered = options.filter(option => option.label.toLowerCase().includes(search.trim().toLowerCase()));
   return <div ref={root} className="relative" onBlur={event => { if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-    <button ref={trigger} type="button" aria-label={`选择${label}`} aria-expanded={open} aria-controls={listID} disabled={disabled} onClick={() => { setOpen(!open); setSearch(''); }} title={selected.join('\n')} className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-default px-3 py-2 text-left text-sm disabled:opacity-50">
+    <HoverHint content={selected.join('\n')}><button ref={trigger} type="button" aria-label={`选择${label}`} aria-expanded={open} aria-controls={listID} disabled={disabled} onClick={() => { setOpen(!open); setSearch(''); }}  className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-default px-3 py-2 text-left text-sm disabled:opacity-50">
       <span className="min-w-0 truncate">{selected.length ? `已选择 ${selected.length} 个文件 · ${selected.join('、')}` : `选择一个或多个 ${label} 文件`}</span><ChevronDown size={15} className="shrink-0" />
-    </button>
+    </button></HoverHint>
     {open && <div id={listID} className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border-default shadow-lg" style={{ backgroundColor: 'var(--yj-panel-bg, #fff)' }}>
       <div className="border-b border-border-default p-2"><input autoFocus aria-label={`搜索${label}文件`} value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索文件名或编号" className="h-8 w-full rounded border border-border-default bg-canvas-subtle px-2 text-sm" /></div>
       <div className="max-h-56 overflow-y-auto p-1" role="group" aria-label={`${label}可选文件`}>

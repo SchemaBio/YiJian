@@ -19,7 +19,7 @@ export function PageContent({ children, className = '', padded = true }: PageCon
     <div
       className={`
         flex-1 overflow-auto
-        ${padded ? 'p-6 xl:p-8' : ''}
+        ${padded ? 'p-4 md:p-6' : ''}
         ${className}
       `}
     >

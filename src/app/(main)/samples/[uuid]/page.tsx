@@ -59,7 +59,7 @@ export default function SampleDetailPage() {
 
   if (notFound) {
     return (
-      <PageContent>
+      <PageContent className="yj-page-shell">
         <div className="flex flex-col items-center justify-center py-16">
           <h2 className="text-2xl font-semibold text-fg-default mb-2">404</h2>
           <p className="text-fg-muted mb-4">未找到该样本</p>
@@ -76,7 +76,7 @@ export default function SampleDetailPage() {
 
   if (loading) {
     return (
-      <PageContent>
+      <PageContent className="yj-page-shell">
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
         </div>
@@ -174,7 +174,7 @@ export default function SampleDetailPage() {
   };
 
   return (
-    <PageContent>
+    <PageContent className="yj-page-shell">
       {/* 样本信息头部 */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-4">
@@ -185,16 +185,14 @@ export default function SampleDetailPage() {
 
         <div className="flex items-center justify-between pb-3 border-b border-border-default">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-fg-default">{sample.internalId}</h2>
+            <h2 className="yj-page-title">{sample.internalId}</h2>
             <span className={`text-sm ${genderInfo.color}`}>{genderInfo.label}</span>
             <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? '已匹配' : '未匹配'}</Tag>
           </div>
-          <div className="text-xs text-fg-muted">
-            Octopus matched_pair is the source of truth for R1/R2 sequencing data.
-          </div>
+
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-fg-muted mt-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-muted mt-2">
           <span>样本编号: <span className="font-mono">{uuid}</span></span>
           <span>样本类型: {sample.sampleType}</span>
           <span>匹配数据: {sample.matchedPair ? '已匹配' : '无'}</span>

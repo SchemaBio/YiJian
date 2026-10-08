@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 import {ResourcePager} from '@/components/shared/ResourcePager';
 
 import * as React from 'react';
@@ -147,11 +149,11 @@ function BedFilesPageContent() {
   const columns: Column<DataAsset>[] = [
     {
       id: 'fileName', header: '文件名', width: 280, align: 'left',
-      accessor: (row) => <span className="block truncate font-medium text-fg-default" title={row.file_name}>{row.file_name}{row.is_builtin && <Tag className="ml-2" variant="success">内置</Tag>}</span>,
+      accessor: (row) => <HoverHint content={row.file_name}><span className="block truncate font-medium text-fg-default" >{row.file_name}{row.is_builtin && <Tag className="ml-2" variant="neutral">内置</Tag>}</span></HoverHint>,
     },
     {
       id: 'referenceGenome', header: '参考基因组', width: 130, align: 'center',
-      accessor: (row) => <Tag variant="info">{row.reference_genome || '-'}</Tag>,
+      accessor: (row) => <Tag variant="neutral">{row.reference_genome || '-'}</Tag>,
     },
     { id: 'size', header: '文件大小', width: 110, align: 'right', accessor: (row) => row.is_builtin ? '-' : formatBytes(row.file_size) },
     {
@@ -163,7 +165,7 @@ function BedFilesPageContent() {
       accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:'可用',invalid:'内容无效',unavailable:'校验暂不可用',validating:'校验中',pending:'待校验'}[row.validation_status??'pending']) : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
     },
     { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
-    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <div className="flex items-center gap-1">{row.status==='completed'&&row.validation_status!=='valid'&&<button type="button" className="whitespace-nowrap text-xs text-accent-fg" title={row.validation_code} onClick={async()=>{try{await validateBEDAsset(row.id);await loadData()}catch(e){setError(e instanceof Error?e.message:'校验失败')}}}>重新校验</button>}<button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></div> },
+    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <div className="flex items-center gap-1">{row.status==='completed'&&row.validation_status!=='valid'&&<HoverHint content={row.validation_code}><button type="button" className="whitespace-nowrap text-xs text-accent-fg"  onClick={async()=>{try{await validateBEDAsset(row.id);await loadData()}catch(e){setError(e instanceof Error?e.message:'校验失败')}}}>重新校验</button></HoverHint>}<HoverHint content="删除"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></HoverHint></div> },
   ];
 
   return (

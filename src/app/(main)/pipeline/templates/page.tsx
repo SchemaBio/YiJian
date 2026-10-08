@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 import {ResourcePager} from '@/components/shared/ResourcePager';
 import {useAuth} from '@/components/providers/AuthProvider';
 
@@ -353,9 +355,9 @@ function ReportTemplatesPageContent() {
       id: 'apiEndpoint',
       header: 'FastAPI 端点',
       accessor: (row) => (
-        <span className="text-sm text-fg-muted font-mono truncate block max-w-[250px]" title={row.apiEndpoint}>
+        <HoverHint content={row.apiEndpoint}><span className="text-sm text-fg-muted font-mono truncate block max-w-[250px]" >
           {row.apiEndpoint || '-'}
-        </span>
+        </span></HoverHint>
       ),
       width: 260,
       align: 'center',
@@ -393,32 +395,32 @@ function ReportTemplatesPageContent() {
       header: '操作',
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-1">
-          <button
+          <HoverHint content="编辑"><button
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
-            title="编辑"
+
             disabled={!row.canMaintain} onClick={() => handleEdit(row)}
           >
             <Pencil className="w-4 h-4" />
-          </button>
-          <button
+          </button></HoverHint>
+          <HoverHint content="删除"><button
             className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="删除"
+
             onClick={() => handleDelete(row)}
             disabled={!row.canMaintain || row.status === 'active'}
           >
             <Trash2 className="w-4 h-4" />
-          </button>
-          <button
+          </button></HoverHint>
+          <HoverHint content={row.status === 'active' ? '停用' : '启用'}><button
             className={`p-1.5 rounded transition-colors ${
               row.status === 'active'
                 ? 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-orange-600'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-green-600'
             }`}
-            title={row.status === 'active' ? '停用' : '启用'}
+
             disabled={!row.canMaintain} onClick={() => handleToggleStatus(row)}
           >
             {row.status === 'active' ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-          </button>
+          </button></HoverHint>
         </div>
       ),
       width: 130,
@@ -436,7 +438,7 @@ function ReportTemplatesPageContent() {
       <div className="yj-page-header">
         <div>
           <h2 className="yj-page-title">报告服务</h2>
-          <p className="yj-page-subtitle">配置你自己的 FastAPI 报告端点，并使用任务结果 UUID 生成报告。</p>
+          <p className="yj-page-subtitle">配置报告服务，使用任务结果生成报告。</p>
         </div>
       </div>
 

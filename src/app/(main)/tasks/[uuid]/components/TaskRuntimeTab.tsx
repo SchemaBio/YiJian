@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button, Tag } from '@schema/ui-kit';
@@ -327,7 +329,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
               <Tag variant={executionPhase === 'terminating' || executionPhase === 'diagnostic_hold' ? 'warning' : executionPhase === 'terminal' ? 'neutral' : executionPhase === 'running' || executionPhase === 'archiving' ? 'info' : 'warning'}>
                 {executionPhaseLabel ?? executionPhase}
               </Tag>
-              {progress?.attempt_id && <span className="font-mono text-xs text-fg-muted" title={progress.attempt_id}>attempt: {progress.attempt_id.slice(0, 8)}…</span>}
+              {progress?.attempt_id && <HoverHint content={progress.attempt_id}><span className="font-mono text-xs text-fg-muted" >attempt: {progress.attempt_id.slice(0, 8)}…</span></HoverHint>}
             </div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
               {progress?.phase_updated_at && <span>更新时间：{formatTime(progress.phase_updated_at)}</span>}

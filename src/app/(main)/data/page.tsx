@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button, Checkbox, DataTable, Input, type Column } from '@schema/ui-kit';
@@ -401,21 +403,21 @@ export default function DataCenterPage() {
       accessor: (asset) => (
         <div className="inline-flex items-center justify-center gap-1">
           {config?.download_allowed && (
-            <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="下载" aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}>
+            <HoverHint content="下载"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}>
               <Download className="h-4 w-4" />
-            </button>
+            </button></HoverHint>
           )}
           {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && (
-            <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40" title="重新上传" aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}>
+            <HoverHint content="重新上传"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}>
               <Upload className="h-4 w-4" />
-            </button>
+            </button></HoverHint>
           )}
-          <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg" title="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}>
+          <HoverHint content="编辑内部编号"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg"  aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}>
             <Pencil className="h-4 w-4" />
-          </button>
-          <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg" title="删除" aria-label="删除" onClick={() => setDeleting(asset)}>
+          </button></HoverHint>
+          <HoverHint content="删除"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label="删除" onClick={() => setDeleting(asset)}>
             <Trash2 className="h-4 w-4" />
-          </button>
+          </button></HoverHint>
         </div>
       ),
       width: 120,
@@ -448,7 +450,7 @@ export default function DataCenterPage() {
       </div>
 
       {config?.temporary && (
-        <div className="mb-4 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3">
+        <div className="mb-4 flex items-start gap-3 rounded-md border border-border-default bg-canvas-default px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" />
           <div>
             <p className="text-sm font-medium text-fg-default">数据仅保留 {config.retention_days} 天</p>
@@ -484,9 +486,9 @@ export default function DataCenterPage() {
             <div className="w-full max-w-[420px]">
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文件名、内部编号或 UUID" leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
             </div>
-            <button type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default" title="刷新" aria-label="刷新" onClick={() => void load(search)}>
+            <HoverHint content="刷新"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label="刷新" onClick={() => void load(search)}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            </button></HoverHint>
           </div>
           <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? '正在取消…' : uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
         </div>

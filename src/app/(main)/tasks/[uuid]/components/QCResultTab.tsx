@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import type { QCMetric, ResultContext } from '../types';
 import { CopyTableButton } from './CopyTableButton';
@@ -94,11 +96,11 @@ export function SampleFamilyTable({ context }: { context: ResultContext }) {
       <h3 id="overview-family-heading" className="text-sm font-semibold text-fg-default">样本与性别核对</h3>
       {members.length > 0 && <CopyTableButton rows={rows} label="复制" />}
     </header>
-    {members.length === 0 ? <p className="p-3 text-xs text-fg-muted">未提供成员信息。</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-center text-xs">
+    {members.length === 0 ? <p className="p-3 text-xs text-fg-muted">未提供成员信息。</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
       <thead className="bg-canvas-subtle text-fg-muted"><tr>{rows[0].map(label => <th key={label} scope="col" className="whitespace-nowrap px-2 py-1.5 font-medium">{label}</th>)}</tr></thead>
       <tbody>{rows.slice(1).map((row, index) => {
         const qc = context.qc.find(item => item.memberId === members[index].id);
-        return <tr key={members[index].id} className="border-t border-border-default">{row.map((value, column) => <td key={column} title={column === 3 && qc?.sryCutoff !== undefined ? `SRY reads > ${qc.sryCutoff} 判为男性，否则判为女性` : undefined} className={`px-2 py-1.5 ${column === 1 ? 'max-w-[160px] break-all' : 'whitespace-nowrap'} ${column === 5 && qc?.genderComparison === 'mismatch' ? 'bg-warning-subtle font-medium text-warning-fg' : 'text-fg-default'}`}>{value}</td>)}</tr>;
+        return <tr key={members[index].id} className="border-t border-border-default">{row.map((value, column) => <HoverHint content={column === 3 && qc?.sryCutoff !== undefined ? `SRY reads > ${qc.sryCutoff} 判为男性，否则判为女性` : undefined} key={column}><td key={column}  className={`px-2 py-1.5 ${column === 1 ? 'max-w-[160px] break-all' : 'whitespace-nowrap'} ${column === 5 && qc?.genderComparison === 'mismatch' ? 'bg-warning-subtle font-medium text-warning-fg' : 'text-fg-default'}`}>{value}</td></HoverHint>)}</tr>;
       })}</tbody>
     </table></div>}
     <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">数据性别来自本次 SRY 检测，仅用于样本核对；缺少数据时不推断性别。</p>
@@ -117,22 +119,22 @@ export function QCAndFamilyTables({ context }: { context: ResultContext }) {
       <h3 id="overview-qc-heading" className="text-sm font-semibold text-fg-default">质控统计</h3>
       {members.length > 0 && context.qc.length > 0 && <CopyTableButton rows={rows} label="复制质控" />}
     </header>
-    {members.length === 0 || context.qc.length === 0 ? <p className="p-3 text-xs text-fg-muted">该执行尚未提供成员质控数据。</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-center text-xs">
+    {members.length === 0 || context.qc.length === 0 ? <p className="p-3 text-xs text-fg-muted">该执行尚未提供成员质控数据。</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
       <thead className="bg-canvas-subtle text-fg-muted"><tr>
-        <th scope="col" className="px-3 py-0.5 font-medium">指标</th>
-        {members.map(member => <th key={member.id} scope="col" title={member.sampleId || member.id} className="min-w-[105px] px-2 py-0.5 font-medium">{memberRoleLabel(member.role)}</th>)}
+        <th scope="col" className="px-3 py-1.5 font-medium">指标</th>
+        {members.map(member => <HoverHint content={member.sampleId || member.id} key={member.id}><th key={member.id} scope="col"  className="min-w-[105px] px-2 py-1.5 font-medium">{memberRoleLabel(member.role)}</th></HoverHint>)}
       </tr></thead>
       <tbody>{METRICS.map(definition => <tr key={definition.key} className="border-t border-border-default hover:bg-canvas-subtle/50">
-        <th scope="row" title={definition.prompt ? `复核提示：${definition.prompt}` : undefined} className="whitespace-nowrap px-3 py-0.5 font-normal text-fg-default">{definition.label}</th>
+        <HoverHint content={definition.prompt ? `复核提示：${definition.prompt}` : undefined}><th scope="row"  className="whitespace-nowrap px-3 py-1.5 font-normal text-fg-default">{definition.label}</th></HoverHint>
         {members.map(member => {
           const metric = metricFor(member.id, definition.key);
           const attention = needsAttention(metric, definition);
-          return <td key={member.id} title={`来源：${metric?.source || '未提供'}${definition.prompt ? `；复核提示：${definition.prompt}` : ''}`} className={`whitespace-nowrap px-2 py-0.5 tabular-nums ${attention ? 'bg-warning-subtle text-warning-fg' : 'text-fg-default'}`}>
+          return <HoverHint content={`来源：${metric?.source || '未提供'}${definition.prompt ? `；复核提示：${definition.prompt}` : ''}`} key={member.id}><td key={member.id}  className={`whitespace-nowrap px-2 py-1.5 tabular-nums ${attention ? 'bg-warning-subtle text-warning-fg' : 'text-fg-default'}`}>
             <span className="font-medium">{formatMetric(metric, definition)}</span>
-          </td>;
+          </td></HoverHint>;
         })}
       </tr>)}</tbody>
     </table></div>}
-    <p className="border-t border-border-default px-3 py-0.5 text-[11px] text-fg-muted">悬停查看来源及复核提示；提示不作为报告放行结论。</p>
+    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">悬停查看来源及复核提示；提示不作为报告放行结论。</p>
   </section>;
 }

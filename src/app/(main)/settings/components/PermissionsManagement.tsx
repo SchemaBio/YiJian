@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button, Input, Select, FormItem, Modal, ModalHeader, ModalBody, ModalFooter, DataTable, Tag } from '@schema/ui-kit';
@@ -175,20 +177,20 @@ export function PermissionsManagement() {
       header: '操作',
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1">
-          <button
+          <HoverHint content="编辑"><button
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
-            title="编辑"
+
             onClick={() => openEditModal(row)}
           >
             <Pencil className="w-4 h-4" />
-          </button>
-          <button
+          </button></HoverHint>
+          <HoverHint content="删除"><button
             className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors"
-            title="删除"
+
             onClick={() => setUserToDelete(row)}
           >
             <Trash2 className="w-4 h-4" />
-          </button>
+          </button></HoverHint>
         </div>
       ),
       width: 90,

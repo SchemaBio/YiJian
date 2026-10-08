@@ -57,7 +57,7 @@ export function UUIDCell({ uuid, truncateLength = 8 }: UUIDCellProps) {
 
   if (isTruncated) {
     return (
-      <Tooltip content={uuid} placement="top" variant="default">
+      <Tooltip content={uuid} placement="top" variant="nav">
         {content}
       </Tooltip>
     );

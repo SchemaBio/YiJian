@@ -1,7 +1,9 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
-import * as Popover from '@radix-ui/react-popover';
+import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import { Tag } from '@schema/ui-kit';
 import { User, Calendar, FlaskConical, HeartPulse, Users } from 'lucide-react';
 import type { SampleDetail } from '@/app/(main)/samples/types';
@@ -26,7 +28,7 @@ function InfoSection({
         {icon}
         <span className="text-xs">{title}</span>
       </div>
-      <div className="flex-1 text-sm text-fg-default">{children}</div>
+      <div className="min-w-0 flex-1 text-sm text-fg-default">{children}</div>
     </div>
   );
 }
@@ -45,9 +47,9 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
   const isMatched = sample.matchedPair !== null;
 
   return (
-    <div className="bg-canvas-subtle rounded-lg p-4 mb-4">
+    <div className="space-y-4">
       {/* 第一行：基本信息 */}
-      <div className="flex items-center gap-4 mb-3 pb-3 border-b border-border-default">
+      <div className="flex flex-wrap items-center gap-4 mb-3 pb-3 border-b border-border-default">
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-fg-muted" />
           <span className="font-medium text-fg-default">{sample.internalId}</span>
@@ -126,7 +128,7 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
       )}
 
       {/* 第三行：临床诊断 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <InfoSection icon={<HeartPulse className="w-3.5 h-3.5" />} title="临床诊断">
           <div className="space-y-1">
             <InfoItem label="主要诊断" value={sample.clinicalDiagnosis?.mainDiagnosis} />
@@ -145,14 +147,14 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
                 <span className="text-xs text-fg-muted min-w-[60px] pt-0.5">HPO</span>
                 <div className="flex flex-wrap gap-1">
                   {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
-                    <Tag
+                    <HoverHint content={hpo.name} key={i}><Tag
                       key={i}
                       variant="info"
                       className="font-mono"
-                      title={hpo.name}
+
                     >
                       {hpo.id}
-                    </Tag>
+                    </Tag></HoverHint>
                   ))}
                 </div>
               </div>
@@ -162,10 +164,7 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
 
         <InfoSection icon={<Users className="w-3.5 h-3.5" />} title="家族史">
           <div className="space-y-1">
-            <InfoItem
-              label="家族史"
-              value={sample.familyHistory?.hasHistory ? '有' : '无'}
-            />
+            <span>{sample.familyHistory?.hasHistory ? '有' : '无'}</span>
             {sample.familyHistory?.hasHistory && sample.familyHistory.affectedMembers && (
               <div className="flex flex-wrap gap-1">
                 {sample.familyHistory.affectedMembers.map((member, i) => (
@@ -188,9 +187,7 @@ export function SampleSummaryCard({sample}: SampleSummaryCardProps) {
   <span className="shrink-0 font-semibold text-fg-default">{sample.internalId}</span>
   <span className={`shrink-0 ${gender.color}`}>{gender.label}{sample.age !== undefined ? ` · ${sample.age}岁` : ''}</span>
   <span className="hidden shrink-0 text-fg-muted sm:inline">{sample.sampleType}</span>
-  <span className="min-w-0 flex-1 truncate text-fg-muted" title={sample.clinicalDiagnosis?.mainDiagnosis}>诊断：{sample.clinicalDiagnosis?.mainDiagnosis || '未提供'}</span>
-  <Popover.Root><Popover.Trigger asChild><button type="button" className="shrink-0 whitespace-nowrap text-accent-fg hover:underline">样本详情</button></Popover.Trigger>
-   <Popover.Portal><Popover.Content side="bottom" align="end" sideOffset={8} className="z-[70] max-h-[70dvh] w-[min(720px,calc(100vw-24px))] overflow-auto rounded-lg border border-border-default bg-canvas-default p-3 shadow-xl" aria-label="样本详细信息"><SampleDetails sample={sample}/><Popover.Close className="rounded border border-border-default px-3 py-1 text-xs">关闭</Popover.Close></Popover.Content></Popover.Portal>
-  </Popover.Root>
+  <HoverHint content={sample.clinicalDiagnosis?.mainDiagnosis}><span className="min-w-0 flex-1 truncate text-fg-muted" >诊断：{sample.clinicalDiagnosis?.mainDiagnosis || '未提供'}</span></HoverHint>
+  <ToolbarPopover label="样本详情" wide><SampleDetails sample={sample}/></ToolbarPopover>
  </div>;
 }

@@ -81,6 +81,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = React.useState<AnalysisTask[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [updatedAt, setUpdatedAt] = React.useState<string>('');
 
   const loadDashboard = React.useCallback(async () => {
     setLoading(true);
@@ -112,6 +113,7 @@ export default function DashboardPage() {
       failures.push('运行指标');
     }
     setError(failures.length > 0 ? `${failures.join('、')}暂时不可用` : '');
+    setUpdatedAt(new Date().toISOString());
     setLoading(false);
   }, []);
 
@@ -126,22 +128,22 @@ export default function DashboardPage() {
       value: 'text-[var(--yj-text-strong)]',
     },
     warning: {
-      card: 'bg-warning-subtle border-warning-muted',
+      card: 'bg-[var(--yj-panel-bg)] border-[var(--yj-border-subtle)]',
       text: 'text-warning-fg',
       value: 'text-warning-fg',
     },
     info: {
-      card: 'bg-[var(--color-variant-indel-subtle)] border-[var(--color-variant-indel)]',
+      card: 'bg-[var(--yj-panel-bg)] border-[var(--yj-border-subtle)]',
       text: 'text-[var(--color-variant-indel)]',
       value: 'text-[var(--color-variant-indel)]',
     },
     success: {
-      card: 'bg-success-subtle border-success-muted',
+      card: 'bg-[var(--yj-panel-bg)] border-[var(--yj-border-subtle)]',
       text: 'text-success-fg',
       value: 'text-success-fg',
     },
     danger: {
-      card: 'bg-danger-subtle border-danger-muted',
+      card: 'bg-[var(--yj-panel-bg)] border-[var(--yj-border-subtle)]',
       text: 'text-danger-fg',
       value: 'text-danger-fg',
     },
@@ -161,7 +163,7 @@ export default function DashboardPage() {
         <div>
           <h2 className="yj-page-title">工作台</h2>
           <p className="yj-page-subtitle">
-            {user?.name?.trim() || user?.email || '当前用户'} · <RealtimeClock />
+            {user?.name?.trim() || user?.email || '当前用户'}{updatedAt && ` · 更新于 ${formatDateTime(updatedAt)}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -198,18 +200,19 @@ export default function DashboardPage() {
               <span className={`text-sm ${toneClasses.text}`}>{title}</span>
               <Icon className={`h-4 w-4 ${toneClasses.text}`} />
             </div>
-            <div className={`mt-4 text-2xl font-semibold ${toneClasses.value}`}>{loading ? '--' : value}</div>
+            <div className={`mt-4 text-2xl font-semibold ${toneClasses.value}`}>{loading || error.includes('统计概览') ? '—' : value}</div>
             <div className={`mt-1 truncate text-xs ${toneClasses.text}`}>{hint}</div>
           </Link>
           );
         })}
       </div>
 
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
       <section className="yj-panel overflow-hidden">
           <div className="yj-panel-header">
             <div>
               <h3 className="yj-section-title">最近任务</h3>
-              <p className="mt-1 text-xs text-fg-muted">按创建时间展示最近 6 个分析任务</p>
+
             </div>
             <Link href="/tasks" className="flex items-center gap-1 text-sm text-accent-fg hover:underline">
               查看全部 <ArrowRight className="h-3.5 w-3.5" />
@@ -221,7 +224,7 @@ export default function DashboardPage() {
                 <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_96px_150px] items-center gap-4 px-4 py-3">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg-default">{task.internalId || task.sampleId || task.id}</div>
-                    <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''}</div>
+                    <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt)}</div>
                   </div>
                   <Tag
                     variant={statusVariant(task.status)}
@@ -250,19 +253,17 @@ export default function DashboardPage() {
             />
           )}
       </section>
+      <aside className="yj-panel overflow-hidden" aria-labelledby="dashboard-attention-title">
+        <div className="yj-panel-header"><h3 id="dashboard-attention-title" className="yj-section-title">待处理事项</h3></div>
+        <dl className="divide-y divide-border-default px-4 text-sm">
+          <div className="flex items-center justify-between py-3"><dt>待解读任务</dt><dd className="font-semibold tabular-nums">{loading || error.includes('运行指标') ? '—' : taskStats.status_distribution.pending_interpretation ?? 0}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>等待测序数据</dt><dd className="font-semibold tabular-nums">{loading || error.includes('统计概览') ? '—' : stats.waitingDataTasks}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>近 24 小时失败</dt><dd className="font-semibold tabular-nums text-danger-fg">{loading || error.includes('运行指标') ? '—' : taskStats.failed_last_24h}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>近 7 天导入失败</dt><dd className="font-semibold tabular-nums text-warning-fg">{loading || error.includes('运行指标') ? '—' : taskStats.result_import_failed_last_7d}</dd></div>
+        </dl>
+        <div className="flex flex-wrap gap-2 border-t border-border-default p-4"><Link className="yj-tool-button" href="/tasks">管理任务</Link><Link className="yj-tool-button" href="/data">匹配数据</Link></div>
+      </aside>
+      </div>
     </PageContent>
   );
-}
-
-function RealtimeClock() {
-  const [now, setNow] = React.useState<Date | null>(null);
-
-  React.useEffect(() => {
-    const update = () => setNow(new Date());
-    update();
-    const timer = window.setInterval(update, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  return <span suppressHydrationWarning>{now ? formatDateTime(now.toISOString()) : '--'}</span>;
 }

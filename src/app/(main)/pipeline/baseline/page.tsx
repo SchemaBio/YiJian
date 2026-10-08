@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -152,9 +154,9 @@ export default function BaselinePage() {
     { id: 'reference', header: '参考基因组', accessor: (row) => <Tag variant="info">{row.reference_genome}</Tag>, width: 120, align: 'center' },
     { id: 'data', header: '数据组', accessor: (row) => row.is_builtin ? '-' : `${row.read_pairs.length} 对 R1/R2`, width: 110, align: 'center' },
     ...(isSaaS ? [{ id: 'credits', header: '积分', accessor: (row: CNVBaseline) => row.is_builtin ? '-' : `${row.credits_charged || row.credit_cost} 积分`, width: 90, align: 'center' as const }] : []),
-    { id: 'bed', header: 'BED 文件', accessor: (row) => <span className="block truncate" title={row.bed.file_name}>{row.bed.file_name}</span>, width: 220, align: 'left' },
+    { id: 'bed', header: 'BED 文件', accessor: (row) => <HoverHint content={row.bed.file_name}><span className="block truncate" >{row.bed.file_name}</span></HoverHint>, width: 220, align: 'left' },
     { id: 'status', header: '状态', accessor: (row) => row.is_builtin ? <Tag variant="success">内置可用</Tag> : row.start_error ? <Tag variant="danger">投递异常</Tag> : <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
-    { id: 'output', header: '基线输出', accessor: (row) => <span className="block max-w-[300px] truncate font-mono text-xs" title={row.start_error || row.output_path || row.error}>{row.is_builtin ? '系统内置资源' : row.start_error || row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span>, width: 300, align: 'left' },
+    { id: 'output', header: '基线输出', accessor: (row) => <HoverHint content={row.start_error || row.output_path || row.error}><span className="block max-w-[300px] truncate font-mono text-xs" >{row.is_builtin ? '系统内置资源' : row.start_error || row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span></HoverHint>, width: 300, align: 'left' },
     { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
     { id: 'task', header: '任务', accessor: (row) => row.is_builtin ? '-' : <Link href={`/tasks/${encodeURIComponent(row.task_id)}`} className="inline-flex items-center gap-1 text-accent-fg hover:underline">查看<ExternalLink className="h-3.5 w-3.5" /></Link>, width: 90, align: 'center' },
   ];

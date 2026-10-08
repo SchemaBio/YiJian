@@ -18,7 +18,7 @@ interface HoverTextProps {
 /** Truncated text with the same styled hover card used for UUIDs. */
 export function HoverText({ value, className = '' }: HoverTextProps) {
   return (
-    <Tooltip content={value} placement="top" variant="default">
+    <Tooltip content={value} placement="top" variant="nav">
       <span className={`block truncate ${className}`}>{value}</span>
     </Tooltip>
   );
@@ -46,7 +46,7 @@ export function IdCell({ id, truncateLength = 8 }: IdCellProps) {
   };
 
   return (
-    <Tooltip content={copyStatus === 'copied' ? '已复制任务编号' : copyStatus === 'failed' ? '复制失败，请检查剪贴板权限' : id} placement="top" variant="default">
+    <Tooltip content={copyStatus === 'copied' ? '已复制任务编号' : copyStatus === 'failed' ? '复制失败，请检查剪贴板权限' : id} placement="top" variant="nav">
       <button
         type="button"
         aria-label={copyStatus === 'copied' ? '已复制编号' : copyStatus === 'failed' ? '复制失败' : '复制编号'}

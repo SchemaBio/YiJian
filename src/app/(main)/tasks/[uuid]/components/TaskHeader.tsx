@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Tag, Button } from '@schema/ui-kit';
@@ -75,11 +77,11 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
     : executionPhaseLabels[task.executionPhase ?? ''];
 
   if (compact) return <div className="mb-2 flex min-w-0 items-center gap-3">
-    <button onClick={onBack} aria-label="返回任务列表" title="返回任务列表" className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button>
-    <h1 title={task.name} className="min-w-0 truncate text-base font-semibold text-fg-default">{task.name}</h1>
+    <HoverHint content="返回任务列表"><button onClick={onBack} aria-label="返回任务列表"  className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button></HoverHint>
+    <HoverHint content={task.name}><h1  className="min-w-0 truncate text-base font-semibold text-fg-default">{task.name}</h1></HoverHint>
     <Tag variant={statusInfo.variant}>{statusInfo.label}</Tag>
     <span className="hidden text-xs text-fg-muted md:inline">{task.pipeline} · {task.pipelineVersion}</span>
-    <span className="ml-auto shrink-0 text-xs text-fg-muted" title={task.id}>任务 {task.id.substring(0,8)}</span>
+    <HoverHint content={task.id}><span className="ml-auto shrink-0 text-xs text-fg-muted" >任务 {task.id.substring(0,8)}</span></HoverHint>
     <TaskCostDetail taskId={task.id}/>
   </div>;
 
@@ -101,7 +103,7 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
             <h1 className="text-xl font-semibold text-fg-default">{task.name}</h1>
             <Tag variant={statusInfo.variant}>{statusInfo.label}</Tag>
           </div>
-          
+
           {/* 任务信息 */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-fg-muted">
             <div className="flex items-center gap-1">
@@ -115,12 +117,12 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
               <span>{task.pipeline}</span>
               <span className="text-fg-subtle">{task.pipelineVersion}</span>
             </div>
-            
+
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
               <span>创建于 {task.createdAt}</span>
             </div>
-            
+
             <div className="flex items-center gap-1">
               <User className="w-3.5 h-3.5" />
               <span>{task.createdBy}</span>
@@ -140,7 +142,7 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
                 <Server className="h-3.5 w-3.5 text-fg-muted" />
                 执行阶段：{executionPhaseLabel ?? task.executionPhase}
               </span>
-              {task.attemptId && <span className="font-mono text-fg-muted" title={task.attemptId}>attempt: {task.attemptId.slice(0, 8)}…</span>}
+              {task.attemptId && <HoverHint content={task.attemptId}><span className="font-mono text-fg-muted" >attempt: {task.attemptId.slice(0, 8)}…</span></HoverHint>}
               {task.phaseUpdatedAt && <span className="inline-flex items-center gap-1 text-fg-muted"><Clock3 className="h-3.5 w-3.5" />{new Date(task.phaseUpdatedAt).toLocaleString('zh-CN', { hour12: false })}</span>}
               {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">最近心跳：{new Date(task.bootstrapLastHeartbeatAt).toLocaleString('zh-CN', { hour12: false })}</span>}
               {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {new Date(task.dispatchNextRetryAt).toLocaleString('zh-CN', { hour12: false })}</span>}
@@ -154,9 +156,9 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
         {/* 任务ID */}
         <div className="text-right">
           <span className="text-xs text-fg-muted">任务ID</span>
-          <div className="font-mono text-xs text-fg-subtle" title={task.id}>
+          <HoverHint content={task.id}><div className="font-mono text-xs text-fg-subtle" >
             {task.id.substring(0, 8)}...
-          </div>
+          </div></HoverHint>
           <div className="mt-3">
             <TaskCostDetail taskId={task.id} />
           </div>

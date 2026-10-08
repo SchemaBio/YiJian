@@ -11,7 +11,7 @@ export const getSNVIndels = async (_task: string, state: any) => {
 };
 export const getGeneLists = async () => [];
 export const getResultRowAdjustmentHistory = async () => [];
-export const getResultContext = async (taskUuid: string) => ({ taskUuid, executionAttemptId: 'preview-attempt', importStatus: 'success', state: 'ready', version: 'preview-v1', reference: { declaredId: 'hg38', available: true }, members: [], types: { 'snv-indel': { total: 55393 }, 'cnv-segment': { total: 64732 }, 'cnv-exon': { total: 18414 } }, qc: [], permissions: { canReview: true, canReport: true } });
+export const getResultContext = async (taskUuid: string) => ({ taskUuid, executionAttemptId: 'preview-attempt', importStatus: 'success', state: 'ready', version: 'preview-v1', reference: { declaredId: 'hg38', available: true }, members: [], types: { 'snv-indel': { total: 55393, reported: 4 }, 'cnv-segment': { total: 64732, reported: 1 }, 'cnv-exon': { total: 18414, reported: 0 } }, qc: [], permissions: { canReview: true, canReport: true } });
 export const pinVariant = async () => {};
 export const reportVariant = async () => {};
 export const saveResultRowAdjustment = async (_task: string, _table: string, id: string, version: number, adjustments: any) => { const row = rows.find(row => row.id === id); if (row) Object.assign(row, adjustments, { acmgClassification: adjustments.acmgOverride || row.acmgClassification }); return { adjustment: { version: version + 1, adjustments } }; };

@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 import {ResourcePager} from '@/components/shared/ResourcePager';
 import {useAuth} from '@/components/providers/AuthProvider';
 
@@ -334,7 +336,7 @@ function GeneListPageContent() {
                   onClick={() => toggleExpand(list.id)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <button className="p-0.5 text-fg-muted">
+                    <button type="button" aria-label={`${isExpanded ? '收起' : '展开'}${list.name}`} aria-expanded={isExpanded} className="p-0.5 text-fg-muted">
                       {isExpanded ? (
                         <ChevronDown className="w-4 h-4" />
                       ) : (
@@ -344,30 +346,30 @@ function GeneListPageContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-fg-default">{list.name}</span>
-                        <Tag variant="info">{list.disease}</Tag>
+                        {list.disease && list.disease !== list.name && <Tag variant="neutral">{list.disease}</Tag>}
                         <span className="text-xs text-fg-muted">{list.genes.length} 个基因</span>
                       </div>
-                      <p className="text-xs text-fg-muted truncate">{list.description}</p>
+                      {list.description && <p className="text-xs text-fg-muted truncate">{list.description}</p>}
                     </div>
                     <div className="text-xs text-fg-muted shrink-0">
-                      <span>更新: {list.updatedAt}</span>
+                      <span>更新：{Number.isNaN(Date.parse(list.updatedAt)) ? list.updatedAt : new Date(list.updatedAt).toLocaleString('zh-CN', {hour12:false})}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 ml-4 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
-                      title="编辑"
+                    <HoverHint content="编辑"><button
+                      className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
+
                       disabled={!list.canMaintain} onClick={() => handleOpenEditModal(list)}
                     >
                       <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                      title="删除"
+                    </button></HoverHint>
+                    <HoverHint content="删除"><button
+                      className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors"
+
                       disabled={!list.canMaintain} onClick={() => setDeleteTarget(list)}
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button></HoverHint>
                   </div>
                 </div>
 

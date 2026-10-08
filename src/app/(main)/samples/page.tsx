@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button, Input, DataTable, Tooltip } from '@schema/ui-kit';
@@ -96,7 +98,7 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
             </div>
           ))}
         </div>
-      }
+      } variant="nav"
     >
       <div className="flex flex-wrap gap-1">
         {visibleTerms.map((term) => (
@@ -159,7 +161,7 @@ function MatchedCell({ sample }: { sample: Sample }) {
         <p>{status.detail}</p>
         {sample.matchedPair && <><p><span className="text-gray-400">R1:</span> {sample.matchedPair.r1Path}</p><p><span className="text-gray-400">R2:</span> {sample.matchedPair.r2Path}</p></>}
       </div>
-    }>
+    } variant="nav">
       <div className="inline-flex flex-col items-center gap-1">
         <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium ${status.className}`}>
           {status.icon}
@@ -363,7 +365,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       id: 'batch',
       header: '批次',
       accessor: (row) => row.batch
-        ? <span className="block truncate font-mono text-xs text-fg-default" title={row.batch}>{row.batch}</span>
+        ? <HoverHint content={row.batch}><span className="block truncate font-mono text-xs text-fg-default" >{row.batch}</span></HoverHint>
         : <span className="text-xs text-fg-muted">未分配</span>,
       width: 132,
       minWidth: 120,
@@ -373,9 +375,9 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       id: 'clinicalDiagnosis',
       header: '临床诊断',
       accessor: (row) => (
-        <span className={`block max-w-[240px] truncate text-sm ${row.clinicalDiagnosis ? 'text-fg-default' : 'text-fg-muted'}`} title={row.clinicalDiagnosis}>
+        <HoverHint content={row.clinicalDiagnosis}><span className={`block max-w-[240px] truncate text-sm ${row.clinicalDiagnosis ? 'text-fg-default' : 'text-fg-muted'}`} >
           {row.clinicalDiagnosis || '未录入'}
-        </span>
+        </span></HoverHint>
       ),
       width: 210,
       minWidth: 190,
@@ -425,30 +427,30 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       header: '操作',
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>
-          <button
+          <HoverHint content={row.matchedPair ? '更新数据关联' : '手动关联数据'}><button
             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-700"
             onClick={() => setLinkingSample(row)}
             aria-label="关联测序数据"
-            title={row.matchedPair ? '更新数据关联' : '手动关联数据'}
+
           >
             <Link2 className="h-4 w-4" />
-          </button>
-          <button
+          </button></HoverHint>
+          <HoverHint content="编辑"><button
             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
             onClick={() => setEditingSample(row)}
             aria-label="编辑"
-            title="编辑"
+
           >
             <Pencil className="h-4 w-4" />
-          </button>
-          <button
+          </button></HoverHint>
+          <HoverHint content="删除"><button
             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
             onClick={() => setDeleteTargets([row])}
             aria-label="删除"
-            title="删除"
+
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </button></HoverHint>
         </div>
       ),
       width: 108,

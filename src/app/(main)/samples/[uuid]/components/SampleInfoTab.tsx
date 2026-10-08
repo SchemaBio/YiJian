@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -128,9 +130,9 @@ export function SampleInfoTab({ sample }: SampleInfoTabProps) {
                   <span className="text-xs text-fg-muted">HPO术语</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
-                      <Tag key={i} variant="info" className="font-mono" title={hpo.name}>
+                      <HoverHint content={hpo.name} key={i}><Tag key={i} variant="info" className="font-mono" >
                         {hpo.id}
-                      </Tag>
+                      </Tag></HoverHint>
                     ))}
                   </div>
                 </div>

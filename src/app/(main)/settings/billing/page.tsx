@@ -4,9 +4,9 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { Button, DataTable, Tag } from '@schema/ui-kit';
+import { Button, DataTable } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Clock3, Coins, CreditCard, Gauge, LifeBuoy, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Clock3, Coins, CreditCard, Gauge, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import {
   billingReferenceTaskId,
   getBillingBalance,
@@ -25,24 +25,6 @@ function formatTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('zh-CN', { hour12: false });
-}
-
-function transactionVariant(type: string): 'success' | 'warning' | 'info' | 'neutral' {
-  switch (type) {
-    case 'recharge':
-    case 'refund':
-    case 'failure_refund':
-      return 'success';
-    case 'pre_deduction':
-      return 'info';
-    case 'deduction':
-    case 'download':
-      return 'warning';
-    case 'adjust':
-      return 'info';
-    default:
-      return 'neutral';
-  }
 }
 
 function transactionLabel(type: string): string {
@@ -123,7 +105,7 @@ export default function BillingSettingsPage() {
     {
       id: 'type',
       header: '类型',
-      accessor: (row) => <Tag variant={transactionVariant(row.type)}>{transactionLabel(row.type)}</Tag>,
+      accessor: (row) => <span className="yj-transaction-tag" data-type={row.type}>{transactionLabel(row.type)}</span>,
       width: 110,
       align: 'center',
     },
@@ -172,7 +154,8 @@ export default function BillingSettingsPage() {
             查看组织积分余额、任务费率与收支记录。
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <SupportDialog trigger="button" context="billing" />
           <Button
             variant="secondary"
             className="min-w-[88px] justify-center"
@@ -199,18 +182,7 @@ export default function BillingSettingsPage() {
           </div>
         )}
 
-        <section className="yj-panel flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between" aria-label="积分退款与技术支持">
-          <div className="flex min-w-0 gap-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-subtle text-accent-fg">
-              <LifeBuoy className="h-4 w-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-fg-default">积分退款与技术支持</h3>
-              <p className="mt-1 text-xs leading-5 text-fg-muted">如需申请积分退款、核对扣费或获取其他技术支持，请查看支持邮箱并通过邮件联系我们。</p>
-            </div>
-          </div>
-          <SupportDialog trigger="button" context="billing" />
-        </section>
+
 
         <section aria-label="费用概览" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricTile label="当前积分" value={formatCredits(balance?.balance)} icon={<Coins className="h-4 w-4" />} tone="success" />
@@ -219,6 +191,46 @@ export default function BillingSettingsPage() {
           <MetricTile label="下载单价" value={config?.download_credits == null ? '--' : `${formatCredits(config.download_credits)} 积分 / 次`} icon={<CreditCard className="h-4 w-4" />} />
         </section>
 
+
+
+        <section className="yj-panel overflow-hidden" aria-labelledby="billing-details-title">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--yj-border-subtle)] px-5 py-4">
+            <div>
+              <h3 id="billing-details-title" className="text-base font-medium text-fg-default">积分明细</h3>
+              <p className="mt-1 text-xs text-fg-muted">任务预扣、结算、退款与充值流水</p>
+            </div>
+            <span className="shrink-0 text-xs text-fg-muted">共 {total} 条</span>
+          </div>
+          <div className="min-w-0 overflow-x-auto">
+            {isLoading && transactions.length === 0 ? (
+              <div className="yj-empty-state py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-accent-fg" />
+                <p className="text-fg-muted">正在加载交易记录...</p>
+              </div>
+            ) : transactions.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-fg-muted">暂无交易记录</p>
+            ) : (
+              <DataTable data={transactions} columns={columns} rowKey="id" density="default" striped />
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
+            <Button
+              variant="secondary"
+              disabled={page <= 1 || isLoading}
+              onClick={() => void loadData(page - 1)}
+            >
+              上一页
+            </Button>
+            <span className="px-1 text-sm text-fg-muted">第 {page} / {totalPages} 页</span>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages || isLoading}
+              onClick={() => void loadData(page + 1)}
+            >
+              下一页
+            </Button>
+          </div>
+        </section>
         <section className="yj-panel px-5 py-5" aria-labelledby="billing-rules-title">
           <div className="mb-5 flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-accent-fg" />
@@ -257,45 +269,6 @@ export default function BillingSettingsPage() {
               <p>CNV 基线任务按输入数据量计费，当前单价为 {formatCredits(config?.cnv_baseline_credits_per_gib)} 积分 / GiB。</p>
               <p className="text-xs text-fg-muted">预扣不是最终扣费，差额会在任务终态结算；账单明细会显示预扣、扣费、退款和下载流水。</p>
             </div>
-          </div>
-        </section>
-
-        <section className="yj-panel overflow-hidden" aria-labelledby="billing-details-title">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--yj-border-subtle)] px-5 py-4">
-            <div>
-              <h3 id="billing-details-title" className="text-base font-medium text-fg-default">积分明细</h3>
-              <p className="mt-1 text-xs text-fg-muted">任务预扣、结算、退款与充值流水</p>
-            </div>
-            <span className="shrink-0 text-xs text-fg-muted">共 {total} 条</span>
-          </div>
-          <div className="min-w-0 overflow-x-auto">
-            {isLoading && transactions.length === 0 ? (
-              <div className="yj-empty-state py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-accent-fg" />
-                <p className="text-fg-muted">正在加载交易记录...</p>
-              </div>
-            ) : transactions.length === 0 ? (
-              <p className="px-5 py-10 text-center text-sm text-fg-muted">暂无交易记录</p>
-            ) : (
-              <DataTable data={transactions} columns={columns} rowKey="id" density="default" striped />
-            )}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
-            <Button
-              variant="secondary"
-              disabled={page <= 1 || isLoading}
-              onClick={() => void loadData(page - 1)}
-            >
-              上一页
-            </Button>
-            <span className="px-1 text-sm text-fg-muted">第 {page} / {totalPages} 页</span>
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages || isLoading}
-              onClick={() => void loadData(page + 1)}
-            >
-              下一页
-            </Button>
           </div>
         </section>
       </div>

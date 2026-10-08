@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { X, Settings, Trash2, AlertCircle } from 'lucide-react';
@@ -141,14 +143,14 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
           <span className="text-xs text-fg-muted">
             输入自然语言指令控制页面
           </span>
-          <button
+          <HoverHint content="清空历史"><button
             onClick={handleClearHistory}
             className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors"
-            title="清空历史"
+
           >
             <Trash2 className="w-3 h-3" />
             清空
-          </button>
+          </button></HoverHint>
         </div>
       )}
     </div>

@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button } from '@schema/ui-kit';
@@ -69,7 +71,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         </div>
       </div>
 
-      {sample.matchedPair && <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border-default bg-border-default md:grid-cols-2"><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read1</p><p className="mt-1 truncate text-sm font-medium text-fg-default" title={fileName(sample.matchedPair.r1Path)}>{fileName(sample.matchedPair.r1Path)}</p></div><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read2</p><p className="mt-1 truncate text-sm font-medium text-fg-default" title={fileName(sample.matchedPair.r2Path)}>{fileName(sample.matchedPair.r2Path)}</p></div></div>}
+      {sample.matchedPair && <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border-default bg-border-default md:grid-cols-2"><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read1</p><HoverHint content={fileName(sample.matchedPair.r1Path)}><p className="mt-1 truncate text-sm font-medium text-fg-default" >{fileName(sample.matchedPair.r1Path)}</p></HoverHint></div><div className="bg-canvas-default p-4"><p className="text-xs text-fg-muted">Read2</p><HoverHint content={fileName(sample.matchedPair.r2Path)}><p className="mt-1 truncate text-sm font-medium text-fg-default" >{fileName(sample.matchedPair.r2Path)}</p></HoverHint></div></div>}
       {error && <div className="rounded-md border border-danger-muted bg-danger-subtle p-3 text-sm text-danger-fg">{error}</div>}
 
       <AppModal

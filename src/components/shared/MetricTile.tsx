@@ -14,14 +14,14 @@ interface MetricTileProps {
 export function MetricTile({ label, value, icon, tone = 'neutral', capacityFill }: MetricTileProps) {
   const toneClass = {
     neutral: 'bg-[var(--yj-panel-subtle)] text-fg-muted',
-    success: 'bg-[var(--yj-sage-subtle)] text-green-700',
-    warning: 'bg-orange-50 text-orange-700',
-    info: 'bg-blue-50 text-blue-700',
+    success: 'bg-success-subtle text-success-fg',
+    warning: 'bg-warning-subtle text-warning-fg',
+    info: 'bg-accent-subtle text-accent-fg',
   }[tone];
   const capacityFillClass = capacityFill ? {
-    safe: 'bg-emerald-100/70',
-    warning: 'bg-amber-100/70',
-    danger: 'bg-red-100/70',
+    safe: 'bg-success-emphasis',
+    warning: 'bg-warning-emphasis',
+    danger: 'bg-danger-emphasis',
   }[capacityFill.tone] : '';
   const capacityPercent = capacityFill
     ? Math.min(100, Math.max(0, capacityFill.percent))
@@ -32,7 +32,7 @@ export function MetricTile({ label, value, icon, tone = 'neutral', capacityFill 
       {capacityFill && (
         <div
           aria-hidden="true"
-          className={`absolute inset-y-0 left-0 transition-[width,background-color] duration-500 ${capacityFillClass}`}
+          className={`absolute bottom-0 left-0 h-1 ${capacityFillClass}`}
           style={{ width: `${capacityPercent}%` }}
         />
       )}

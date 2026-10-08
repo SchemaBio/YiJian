@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Button } from '@schema/ui-kit';
@@ -45,15 +47,15 @@ export function SupportDialog({ trigger = 'icon', context = 'general' }: Support
 
   return <>
     {trigger === 'icon' ? (
-      <button
+      <HoverHint content="帮助与支持"><button
         type="button"
         onClick={openDialog}
         className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
         aria-label="帮助与支持"
-        title="帮助与支持"
+
       >
         <LifeBuoy className="h-5 w-5" />
-      </button>
+      </button></HoverHint>
     ) : (
       <Button
         variant="secondary"

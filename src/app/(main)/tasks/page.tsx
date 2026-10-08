@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -266,27 +268,27 @@ function TaskActionsCell({
           </button>
         )}
 
-        <button
+        <HoverHint content="查看详情"><button
           type="button"
           onClick={() => onDetails(task)}
           aria-label={`查看任务 ${task.internalId || task.id} 详情`}
-          title="查看详情"
+
           className="task-detail-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-border-default bg-canvas-default px-2 text-xs font-medium text-fg-default transition-colors hover:bg-canvas-subtle whitespace-nowrap"
         >
           <Eye className="h-3.5 w-3.5 shrink-0" />
           <span className="task-detail-label">查看详情</span>
-        </button>
+        </button></HoverHint>
 
         <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
           <PopoverPrimitive.Trigger asChild>
-            <button
+            <HoverHint content="更多操作"><button
               type="button"
               className="task-more-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
               aria-label="更多任务操作"
-              title="更多操作"
+
             >
               <MoreHorizontal className="h-4 w-4" />
-            </button>
+            </button></HoverHint>
           </PopoverPrimitive.Trigger>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
@@ -298,11 +300,11 @@ function TaskActionsCell({
               className="z-50 w-44 overflow-hidden rounded-lg border border-border-default bg-canvas-default p-1.5 shadow-[0_10px_30px_rgba(17,24,39,0.14)] outline-none"
             >
               <div role="menu" aria-label="任务操作">
-                <button
+                <HoverHint content={canEdit ? '编辑任务' : '请先停止运行中的任务'}><button
                   type="button"
                   role="menuitem"
                   disabled={!canEdit}
-                  title={canEdit ? '编辑任务' : '请先停止运行中的任务'}
+
                   onClick={() => {
                     setShowMoreMenu(false);
                     onEdit(task);
@@ -311,12 +313,12 @@ function TaskActionsCell({
                 >
                   <Pencil className="h-4 w-4 text-fg-muted" />
                   编辑任务
-                </button>
-                <button
+                </button></HoverHint>
+                <HoverHint content="删除任务"><button
                   type="button"
                   role="menuitem"
                   disabled={!canDelete}
-                  title="删除任务"
+
                   onClick={() => {
                     setShowMoreMenu(false);
                     setShowDeleteConfirm(true);
@@ -325,7 +327,7 @@ function TaskActionsCell({
                 >
                   <Trash2 className="h-4 w-4" />
                   删除任务
-                </button>
+                </button></HoverHint>
                 {!canEdit && (
                   <p className="mx-2 mt-1 border-t border-border-muted pt-2 pb-1 text-[11px] leading-4 text-fg-muted">
                     请先停止任务再进行修改
@@ -528,7 +530,7 @@ export default function AnalysisPage() {
     {
       id: 'taskId',
       header: '任务',
-      accessor: (row) => <div className="min-w-0 text-left"><button type="button" onClick={() => handleOpenDetails(row)} title={row.name || row.pipeline} className="block max-w-[220px] truncate text-sm font-medium text-fg-default hover:text-accent-fg">{row.name || row.pipeline || '分析任务'}</button><div className="mt-1 text-xs text-fg-muted"><IdCell id={row.id} /></div></div>,
+      accessor: (row) => <div className="min-w-0 text-left"><HoverHint content={row.name || row.pipeline}><button type="button" onClick={() => handleOpenDetails(row)}  className="block max-w-[220px] truncate text-sm font-medium text-fg-default hover:text-accent-fg">{row.name || row.pipeline || '分析任务'}</button></HoverHint><div className="mt-1 text-xs text-fg-muted"><IdCell id={row.id} /></div></div>,
       width: 240,
       align: 'left',
     },
@@ -575,7 +577,7 @@ export default function AnalysisPage() {
               ? '未创建计算节点'
               : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <div title={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><span className="yj-task-state-label" data-tone={config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div>;
+        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className="yj-task-state-label" data-tone={config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
       },
       width: 90,
       align: 'center',
@@ -713,11 +715,11 @@ export default function AnalysisPage() {
 
             {tasks !== null && (
               <>
-                <div className="yj-task-metrics" aria-label="最近任务状态概览" title="汇总最近一批任务，最多 100 个；完整状态筛选可通过工具栏选择。">
+                <HoverHint content="汇总最近一批任务，最多 100 个；完整状态筛选可通过工具栏选择。"><div className="yj-task-metrics" aria-label="最近任务状态概览" >
                   {([{ label: '最近任务', value: 'all' }, { label: '运行中', value: 'running' }, { label: '待解读', value: 'pending_interpretation' }, { label: '已完成', value: 'completed' }, { label: '失败', value: 'failed' }] as const).map(item => <button type="button" key={item.label} aria-pressed={statusFilter === item.value} onClick={() => setStatusFilter(item.value)}>
                     <strong>{(recentCounts[item.value] ?? 0).toLocaleString()}</strong>{item.label}
                   </button>)}
-                </div>
+                </div></HoverHint>
                 <div className="yj-task-toolbar">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="w-64">

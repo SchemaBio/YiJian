@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { Bot, Loader2 } from 'lucide-react';
@@ -20,7 +22,7 @@ export function AssistantButton() {
 
   return (
     <>
-      <button
+      <HoverHint content={isConfigured ? 'AI 助手' : '请先配置 AI 服务'}><button
         onClick={handleClick}
         className={`
           ${positionStyle}
@@ -31,14 +33,14 @@ export function AssistantButton() {
           cursor-pointer focus:outline-none
         `}
         aria-label="AI 助手"
-        title={isConfigured ? 'AI 助手' : '请先配置 AI 服务'}
+
       >
         {isExecuting ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : (
           <Bot className="h-5 w-5" />
         )}
-      </button>
+      </button></HoverHint>
 
       {isOpen && (
         <AssistantDialog onClose={handleClose} isMobile={isMobile} />

@@ -277,9 +277,8 @@ export default function AnalysisDetailPage() {
       </div>
       <div className="min-h-0 flex-1 flex flex-col overflow-hidden px-3 pb-3 md:px-4 md:pb-4">
 
-      <AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />
       {/* 标签面板和内容 */}
-		<div className="flex-1 min-h-0"><ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange}>
+		<div className="flex-1 min-h-0"><ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange} tools={<AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />}>
 			{isVariantTab ? (
 				<div className="yj-result-workspace">
 					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />

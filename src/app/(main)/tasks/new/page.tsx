@@ -176,16 +176,6 @@ export default function NewAnalysisPage() {
       </aside>}
 
       <div className="yj-panel yj-form-card space-y-6">
-        <div className="yj-info-panel">
-          <div className="flex items-center gap-2 mb-2">
-            <Info className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm font-medium text-fg-default">任务编号</span>
-          </div>
-          <p className="text-xs text-fg-muted">
-            任务创建成功后自动分配 UUID。
-          </p>
-        </div>
-
         {loadError && (
           <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {loadError}
@@ -234,7 +224,7 @@ export default function NewAnalysisPage() {
             placeholder="选择已存在的父母-先证者家系"
             searchable
           />
-          <div className="mt-2 text-xs text-fg-muted">系统将读取先证者及其父母关联的 R1/R2，并自动生成 PED 文件；完整性会由后端再次校验。</div>
+          <div className="mt-2 text-xs text-fg-muted">系统将读取先证者及其父母关联的 R1/R2，并自动生成 PED 文件。</div>
         </FormItem>}
 
         <FormItem label="分析流程" required>
@@ -281,7 +271,7 @@ export default function NewAnalysisPage() {
                   {estimateStatus === 'loading'
                     ? '正在计算预计预扣；最终按实际运行分钟结算'
                     : estimateStatus === 'ready'
-                      ? `按后端预计 ${estimatedMinutes} 分钟计算；最终按实际运行分钟结算`
+                      ? `预计 ${estimatedMinutes} 分钟计算；最终按实际运行分钟结算`
                       : estimateStatus === 'fallback'
                         ? '暂按基础预估 60 分钟计算；最终按实际运行分钟结算'
                         : '选择输入和流程后计算预计预扣'}

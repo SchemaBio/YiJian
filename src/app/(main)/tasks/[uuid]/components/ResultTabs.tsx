@@ -8,9 +8,10 @@ interface ResultTabsProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
   children: React.ReactNode;
+  tools?: React.ReactNode;
 }
 
-export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps) {
+export function ResultTabs({ activeTab, onTabChange, children, tools }: ResultTabsProps) {
   const tabRefs = React.useRef<Map<TabType, HTMLButtonElement>>(new Map());
 	const isVariantTab = VARIANT_TAB_CONFIGS.some(tab => tab.id === activeTab);
 	const primaryActiveTab: TabType = isVariantTab ? 'snv-indel' : activeTab;
@@ -50,7 +51,7 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
   return (
     <div className="h-full min-h-0 flex flex-col">
       {/* 标签页导航 */}
-      <div className="shrink-0 border-b border-border-default mb-0 bg-canvas-default">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-3 border-b border-border-default bg-canvas-default">
         <nav
 			className="flex gap-1 overflow-x-auto whitespace-nowrap"
           role="tablist"
@@ -85,6 +86,7 @@ export function ResultTabs({ activeTab, onTabChange, children }: ResultTabsProps
             );
           })}
         </nav>
+        {tools}
       </div>
 
       {/* 标签页内容 */}

@@ -136,7 +136,7 @@ export default function AboutPage() {
   const categoryOrder = ['核心框架', '样式与UI', '生物信息学', '工具库', '开发工具'];
 
   return (
-    <PageContent>
+    <PageContent className="yj-page-shell">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -149,7 +149,7 @@ export default function AboutPage() {
               className="object-contain"
             />
           </div>
-          <h1 className="text-2xl font-semibold text-fg-default mb-2">开源软件声明</h1>
+          <h1 className="yj-page-title mb-2">开源软件声明</h1>
           <p className="text-fg-muted">本项目使用的开源软件及其许可证信息</p>
         </div>
 

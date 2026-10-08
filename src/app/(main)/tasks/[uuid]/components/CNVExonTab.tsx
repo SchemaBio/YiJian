@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import { GeneLinks } from './GeneLinks';
 
@@ -39,11 +41,11 @@ function cnvTypeVariant(type: CNVExon['type']): 'danger' | 'info' | 'neutral' {
   return 'neutral';
 }
 
-export function CNVExonTab({ 
-  taskId, 
+export function CNVExonTab({
+  taskId,
   referenceId,
   filterState: externalFilterState,
-  onFilterChange 
+  onFilterChange
 }: CNVExonTabProps) {
   const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
@@ -68,12 +70,12 @@ export function CNVExonTab({
   // 评估面板状态
   const [assessmentVariant, setAssessmentVariant] = React.useState<CNVExon | null>(null);
   const [assessmentPanelOpen, setAssessmentPanelOpen] = React.useState(false);
-  
+
   // 评估状态管理
-  const { 
-    assessment, 
-    updateCriteria, 
-    resetAssessment, 
+  const {
+    assessment,
+    updateCriteria,
+    resetAssessment,
     saveAssessment,
     loadAssessment,
     initializeAssessment,
@@ -311,7 +313,7 @@ export function CNVExonTab({
     {
       id: 'iscnCandidate',
       header: 'ISCN 候选',
-      accessor: row => <span className="block whitespace-normal break-words font-mono text-xs" title="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based">{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span>,
+      accessor: row => <HoverHint content="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based"><span className="block whitespace-normal break-words font-mono text-xs" >{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span></HoverHint>,
       width: 300,
     },
     {
@@ -336,11 +338,11 @@ export function CNVExonTab({
         }
         const cachedAssessment = getAssessmentForCNV(row.id);
         if (!cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenAssessmentPanel(row); }} className="text-xs text-accent-fg hover:underline">待评估 · 计算器</button>;
-        if(cachedAssessment.assessmentState==='insufficient_evidence')return <button type="button" onClick={event=>{event.stopPropagation();handleOpenAssessmentPanel(row);}} className="text-xs text-fg-muted hover:underline" title={cachedAssessment.autoEvidenceNotes?.join('；')}>证据不足 · 计算器</button>;
+        if(cachedAssessment.assessmentState==='insufficient_evidence')return <HoverHint content={cachedAssessment.autoEvidenceNotes?.join('；')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenAssessmentPanel(row);}} className="text-xs text-fg-muted hover:underline" >证据不足 · 计算器</button></HoverHint>;
         const classification = cachedAssessment.classification;
         const score = cachedAssessment?.totalScore ?? 0;
         const isUserModified = cachedAssessment?.isUserModified ?? false;
-        
+
         return (
           <CNVPathogenicityTag
             cnvType={row.type}

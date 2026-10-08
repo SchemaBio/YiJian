@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import * as React from 'react';
 import { tasksApi } from '@/lib/tasks';
@@ -246,7 +248,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
                 执行阶段
                 <Tag variant={executionInfo.variant} className="text-xs">{executionInfo.label}</Tag>
               </span>
-              {task.attemptId && <span className="font-mono text-fg-muted" title={task.attemptId}>attempt: {task.attemptId.slice(0, 8)}…</span>}
+              {task.attemptId && <HoverHint content={task.attemptId}><span className="font-mono text-fg-muted" >attempt: {task.attemptId.slice(0, 8)}…</span></HoverHint>}
               {task.phaseUpdatedAt && (
                 <span className="inline-flex items-center gap-1 text-fg-muted">
                   <Clock3 className="h-3.5 w-3.5" />更新时间 {formatExecutionTime(task.phaseUpdatedAt)}
@@ -287,9 +289,9 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
                 <span className="text-fg-muted shrink-0">HPO:</span>
                 <div className="flex flex-wrap gap-1">
                   {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
-                    <Tag key={i} variant="info" className="text-xs font-mono" title={hpo.name}>
+                    <HoverHint content={hpo.name} key={i}><Tag key={i} variant="info" className="text-xs font-mono" >
                       {hpo.id}
-                    </Tag>
+                    </Tag></HoverHint>
                   ))}
                 </div>
               </div>

@@ -1,4 +1,6 @@
 'use client';
+import { HoverHint } from '@/components/shared/HoverHint';
+
 
 import { GeneLinks } from './GeneLinks';
 
@@ -25,11 +27,11 @@ interface SNVIndelTabProps {
   onFilterChange?: (state: TableFilterState) => void;
 }
 
-export function SNVIndelTab({ 
+export function SNVIndelTab({
   taskId,
   referenceGenome,
   filterState: externalFilterState,
-  onFilterChange 
+  onFilterChange
 }: SNVIndelTabProps) {
   const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
@@ -47,7 +49,7 @@ export function SNVIndelTab({
     window.addEventListener('yijian:result-overlays-synced',sync);
     return()=>window.removeEventListener('yijian:result-overlays-synced',sync);
   },[taskId]);
-  
+
   // IGV 查看器状态
   const [igvState, setIgvState] = React.useState<{
     isOpen: boolean;
@@ -182,10 +184,10 @@ export function SNVIndelTab({
 
   // 处理基因列表筛选
   const handleGeneListFilter = React.useCallback((geneListId: string) => {
-    setFilterState({ 
-      ...filterState, 
+    setFilterState({
+      ...filterState,
       geneListId: geneListId || undefined,geneListRevision:geneLists.find(x=>x.id===geneListId)?.revision,
-      page: 1 
+      page: 1
     });
   }, [filterState, setFilterState,geneLists]);
 
@@ -356,8 +358,8 @@ export function SNVIndelTab({
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
           return config
-          ? <span title={row.acmgAssessmentSource === 'manual_override' ? '人工覆写分类' : row.acmgAssessmentSource === 'manual_evidence' ? '根据已保存的 ACMG 证据计算' : `自动初评${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag></span>
-          : <span title={row.automaticAcmg?.pending?.join('；') || '当前数据没有足够的自动评估证据'}><Tag variant="neutral" className="w-20 justify-center">证据不足</Tag></span>;
+          ? <HoverHint content={row.acmgAssessmentSource === 'manual_override' ? '人工覆写分类' : row.acmgAssessmentSource === 'manual_evidence' ? '根据已保存的 ACMG 证据计算' : `自动初评${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span ><Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag></span></HoverHint>
+          : <HoverHint content={row.automaticAcmg?.pending?.join('；') || '当前数据没有足够的自动评估证据'}><span ><Tag variant="neutral" className="w-20 justify-center">证据不足</Tag></span></HoverHint>;
       },
       width: 100,
       align: 'center',
@@ -423,7 +425,7 @@ export function SNVIndelTab({
             </select>
           </div>
 
-          <button className="shrink-0 whitespace-nowrap text-xs text-accent-fg" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</button>
+          <button className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</button>
 
           {/* ACMG筛选 */}
           <select
