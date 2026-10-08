@@ -8,7 +8,7 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
  React.useEffect(()=>{setStatus(assessmentStatus(taskId));const update=(event:Event)=>{const value=(event as CustomEvent<AssessmentStatus>).detail;if(value.taskId===taskId)setStatus(value);};window.addEventListener('yijian:assessment-status',update);return()=>window.removeEventListener('yijian:assessment-status',update);},[taskId]);
  if(!status)return null;
  return <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-border-subtle bg-canvas-subtle px-3 py-1.5 text-xs" role="status">
- <span>{status.state==='loading'?`浏览器全量初评中 · 已处理 ${status.processed.toLocaleString()} 条`:status.state==='ready'?`初评完成 · 自动置顶 ${status.pinned??0} 条`:'初评失败'}</span>
+ <span>{status.state==='loading'?`${status.phase==='context'?'正在加载初评证据':status.phase==='finalize'?'正在汇总全量候选':status.phase==='transfer'?'正在整理初评结果':'浏览器全量初评中'} · 已处理 ${status.processed.toLocaleString()} 条`:status.state==='ready'?`初评完成 · 自动置顶 ${status.pinned??0} 条`:'初评失败'}</span>
  {status.state==='loading'&&<button type="button" className="whitespace-nowrap text-blue-600 underline" onClick={()=>cancelAssessment(taskId)}>取消本地初评</button>}
  {status.state==='ready'&&table&&<span>当前类型自动建议 {status.pinnedByTable?.[table]??0} 条</span>}
  {status.state==='ready'&&<span className="text-text-muted" title={status.version}>germline-browser-assessment-v1</span>}

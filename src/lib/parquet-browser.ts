@@ -2,6 +2,7 @@
 import { api, ApiError } from './api';
 import {assessTask, clearAssessments, invalidateAssessment, reassessTask} from './assessment/client';
 import type {AssessmentContext, AssessmentRow, ResultTable} from './assessment/types';
+import {streamAssessmentRows} from './assessment/stream';
 import {iscnCandidateSQL} from '@/app/(main)/tasks/[uuid]/utils/cnv-nomenclature';
 import { awaitWorkerStartup, configureBrowserRuntime } from './parquet-runtime';
 import { buildLocalSelection, effectiveField, fieldType, ident, literal, OVERLAY_FIELDS, type LocalQuery } from './parquet-browser-sql';
@@ -48,6 +49,7 @@ export interface BrowserPage {
 const sessions = new Map<string, {
     engine: BrowserTable;
     promise: Promise<BrowserTable>;
+    ready: boolean;
 }>();
 const contexts = new Map<string, string>();
 const activeTables = new Map<string, number>();
@@ -226,7 +228,8 @@ class BrowserTable {
     private async readAssessmentRows(context:AssessmentContext,table:ResultTable,consume:(rows:AssessmentRow[])=>Promise<void>,signal:AbortSignal) {
         const combined=AbortSignal.any([signal,this.lifecycle.signal]);
         if(context.attemptId!==this.info.dataset.executionAttemptId)throw new Error('评估执行批次不匹配');
-        let relation='source',temporary=false;
+        let relation='source',temporary=false,assessmentFile:string|undefined;
+        try {
         if(table!==this.table){
             const info=await api.get<DatasetInfo>(`/v1/tasks/${encodeURIComponent(this.task)}/results/tables/${table}/browser`,{signal:combined});
             if(info.dataset.executionAttemptId!==context.attemptId)throw new Error('评估执行批次发生变化');
@@ -235,20 +238,24 @@ class BrowserTable {
             const buffer=await response.arrayBuffer();if(buffer.byteLength>128*1024*1024)throw new Error('评估文件超过限额');
             const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer)),b=>b.toString(16).padStart(2,'0')).join('');
             if(hash!==info.dataset.objectSha256)throw new Error('评估数据内容校验失败');
-            await this.db.registerFileBuffer('assessment.parquet',new Uint8Array(buffer));
+            // DuckDB retains external file/page metadata after dropFile(). A
+            // reused path can read the previous dataset's compressed pages.
+            assessmentFile=`assessment-${table}-${info.dataset.objectSha256}.parquet`;
+            await this.db.registerFileBuffer(assessmentFile,new Uint8Array(buffer));
             const seed=info.dataset.id+'/'+info.dataset.objectSha256+'/';
-            await this.conn.query(`CREATE TEMP TABLE assessment_source AS SELECT *,sha256(${literal(seed)}||CAST(file_row_number AS VARCHAR)) AS __row_id FROM read_parquet('assessment.parquet',file_row_number=true)`);
+            await this.conn.query(`CREATE TEMP TABLE assessment_source AS SELECT *,sha256(${literal(seed)}||CAST(file_row_number AS VARCHAR)) AS __row_id FROM read_parquet(${literal(assessmentFile)},file_row_number=true)`);
             relation='assessment_source';temporary=true;
             const count=Number((await this.rows('SELECT count(*) AS n FROM assessment_source'))[0].n);
             if(count!==info.dataset.rows || (info.dataset.expectedRows!==undefined&&count!==info.dataset.expectedRows))throw new Error('评估数据行数校验失败');
         }
-        try {
-            for(let offset=0;;offset+=1000){
-                const batch=await this.rows(`SELECT * FROM ${relation} ORDER BY file_row_number LIMIT 1000 OFFSET ${offset}`,combined);
-                if(!batch.length)break;
-                await consume(batch.map(values=>({id:String(values.__row_id),table,values})));
-            }
-        } finally {if(temporary){await this.conn.query('DROP TABLE assessment_source');await this.db.dropFile('assessment.parquet');}}
+            // One Arrow stream with backpressure replaces repeated full-table
+            // sorts/OFFSET scans. Ordinal hashes already fix each row's identity.
+            const columns=(await this.rows(`DESCRIBE ${relation}`,combined)).map(row=>String(row.column_name));
+            await streamAssessmentRows(this.conn,relation,columns,table,consume,combined);
+        } finally {
+            try {if(temporary)await this.conn.query('DROP TABLE assessment_source');}
+            finally {if(assessmentFile)await this.db.dropFile(assessmentFile);}
+        }
     }
     private serialize<T>(fn: () => Promise<T>): Promise<T> {
         const result = this.queue.then(() => { if (this.disposed)
@@ -419,15 +426,18 @@ async function session(task: string, table: string) {
         for (const [old, r] of sessions) {
             if (sessions.size < 2)
                 break;
-            if (!activeTables.has(old)) {
+            // An opening table may own the task-wide assessment stream. A tab
+            // switch must not terminate that worker while other tables await it.
+            if (r.ready && !activeTables.has(old)) {
                 sessions.delete(old);
                 void r.engine.close().catch(() => undefined);
             }
         }
         const engine = new BrowserTable(task, table), promise = engine.open();
-        record = { engine, promise };
+        record = { engine, promise, ready:false };
         sessions.set(key, record);
         const owned = record;
+        void promise.then(()=>{owned.ready=true;},()=>undefined);
         promise.catch(() => { if (sessions.get(key) === owned)
             sessions.delete(key); });
     }
