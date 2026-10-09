@@ -84,7 +84,7 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
     </div>
     <span className="hidden text-xs text-fg-muted md:inline">{task.pipeline} · {task.pipelineVersion}</span>
     <HoverHint content={task.id}><span className="shrink-0 text-xs text-fg-muted sm:ml-auto" >任务 {task.id.substring(0,8)}</span></HoverHint>
-    <TaskCostDetail taskId={task.id} compact/>
+    <TaskCostDetail taskId={task.id} status={task.status} compact/>
   </div>;
 
   return (
@@ -162,7 +162,7 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
             {task.id.substring(0, 8)}...
           </div></HoverHint>
           <div className="mt-3">
-            <TaskCostDetail taskId={task.id} />
+            <TaskCostDetail taskId={task.id} status={task.status} />
           </div>
         </div>
       </div>

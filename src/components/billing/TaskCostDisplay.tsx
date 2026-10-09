@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Coins, Loader2 } from 'lucide-react';
-import { getTaskBilling, type TaskBillingSummary } from '@/lib/billing';
+import { BILLING_UPDATED_EVENT, getTaskBilling, type TaskBillingSummary } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 interface TaskCostValueProps {
@@ -30,7 +30,7 @@ export function TaskCostValue({ summary, loading = false }: TaskCostValueProps) 
   );
 }
 
-export function TaskCostDetail({ taskId, compact = false }: { taskId: string; compact?: boolean }) {
+export function TaskCostDetail({ taskId, compact = false, status }: { taskId: string; compact?: boolean; status?: string }) {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [summary, setSummary] = React.useState<TaskBillingSummary | null>(null);
   const [loading, setLoading] = React.useState(isSaaS);
@@ -38,18 +38,27 @@ export function TaskCostDetail({ taskId, compact = false }: { taskId: string; co
   React.useEffect(() => {
     if (!isSaaS || !taskId) return;
     let cancelled = false;
-    getTaskBilling(taskId)
+    let request = 0;
+    const refresh = () => {
+      const currentRequest = ++request;
+      return getTaskBilling(taskId)
       .then((nextSummary) => {
-        if (!cancelled) setSummary(nextSummary);
+        if (!cancelled && currentRequest === request) setSummary(nextSummary);
       })
       .catch(() => undefined)
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && currentRequest === request) setLoading(false);
       });
+    };
+    void refresh();
+    window.addEventListener(BILLING_UPDATED_EVENT, refresh);
+    const interval = window.setInterval(refresh, 30000);
     return () => {
       cancelled = true;
+      window.removeEventListener(BILLING_UPDATED_EVENT, refresh);
+      window.clearInterval(interval);
     };
-  }, [isSaaS, taskId]);
+  }, [isSaaS, taskId, status]);
 
   if (!isSaaS) return null;
 

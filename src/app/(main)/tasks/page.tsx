@@ -531,7 +531,18 @@ export default function AnalysisPage() {
     {
       id: 'taskId',
       header: '任务',
-      accessor: (row) => <div className="min-w-0 text-left"><HoverHint content={row.name || row.pipeline}><button type="button" onClick={() => handleOpenDetails(row)}  className="block max-w-[220px] truncate text-sm font-medium text-fg-default hover:text-accent-fg">{row.name || row.pipeline || '分析任务'}</button></HoverHint><div className="mt-1 text-xs text-fg-muted"><IdCell id={row.id} /></div></div>,
+      accessor: (row) => (
+        <div className="min-w-0 text-left">
+          <IdCell id={row.id} />
+          <div className="mt-1">
+            <HoverHint content={row.name || row.pipeline}>
+              <button type="button" onClick={() => handleOpenDetails(row)} className="block max-w-[220px] truncate text-xs text-fg-muted hover:text-accent-fg">
+                {row.name || row.pipeline || '分析任务'}
+              </button>
+            </HoverHint>
+          </div>
+        </div>
+      ),
       width: 240,
       align: 'left',
     },
@@ -540,8 +551,8 @@ export default function AnalysisPage() {
       header: '样本编号',
       accessor: (row) => (
         <div className="flex flex-col items-center gap-0.5">
+          <span className="text-sm font-medium text-fg-default">{row.internalId || '-'}</span>
           <IdCell id={row.sampleId} />
-          <span className="text-xs text-fg-muted">{row.internalId}</span>
         </div>
       ),
       width: 140,

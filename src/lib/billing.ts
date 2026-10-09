@@ -23,6 +23,7 @@ export interface BillingTransaction {
   type: BillingTransactionType;
   reference_id?: string;
   description?: string;
+  billing_basis?: string;
   created_by: number;
   created_at: string;
 }
@@ -85,13 +86,28 @@ export function summarizeTaskBilling(
 
   for (const transaction of taskTransactions) {
     if (transaction.type === 'pre_deduction' && transaction.amount < 0) {
-      preDeducted += -transaction.amount;
       deducted += -transaction.amount;
     } else if (transaction.type === 'deduction' && transaction.amount < 0) {
       deducted += -transaction.amount;
     } else if ((transaction.type === 'refund' || transaction.type === 'failure_refund') && transaction.amount > 0) {
       refunded += transaction.amount;
     }
+  }
+
+  // Reservations belong to an execution attempt. Historical refunded
+  // attempts still contribute to the ledger totals, but are no longer held.
+  const latest = taskTransactions.filter((row) => row.type === 'pre_deduction').sort((a, b) => (
+    b.created_at.localeCompare(a.created_at) || b.id - a.id
+  ))[0];
+  const current = taskTransactions.filter((row) => row.reference_id === latest?.reference_id);
+  const settled = current.some((row) => (
+    row.type === 'failure_refund' || row.type === 'refund'
+    || row.type === 'settlement' || row.billing_basis === 'task_settlement'
+  ));
+  if (!settled) {
+    preDeducted = current.reduce((sum, row) => (
+      row.type === 'pre_deduction' && row.amount < 0 ? sum - row.amount : sum
+    ), 0);
   }
 
   return {

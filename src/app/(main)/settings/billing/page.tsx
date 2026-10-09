@@ -121,11 +121,11 @@ export default function BillingSettingsPage() {
       id: 'reference_id',
       header: '关联任务',
       accessor: (row) => row.reference_id ? (
-        <Link href={`/tasks/${encodeURIComponent(billingReferenceTaskId(row.reference_id))}`} className="font-mono text-xs text-accent-fg hover:underline">
-          {billingReferenceTaskId(row.reference_id).slice(0, 8)}...
+        <Link href={`/tasks/${encodeURIComponent(billingReferenceTaskId(row.reference_id))}`} className="whitespace-nowrap font-mono text-xs text-accent-fg hover:underline">
+          {billingReferenceTaskId(row.reference_id)}
         </Link>
       ) : '-',
-      width: 150,
+      width: 300,
       align: 'center',
     },
     { id: 'description', header: '说明', accessor: (row) => row.description || '-', width: 260, align: 'center' },
