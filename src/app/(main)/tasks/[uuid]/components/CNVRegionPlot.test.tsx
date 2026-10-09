@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { act, render } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { CNVRegionPlot } from './CNVRegionPlot';
+import { getCNVSegments } from '../result-api';
 import type { CNVSegment } from '../types';
 
 vi.mock('@schema/ui-kit', () => ({ useTheme: () => ({ resolvedTheme: 'light' }) }));
@@ -34,4 +35,16 @@ it('draws and observes the canvas when the modal mounts after data has loaded', 
   expect(observe).toHaveBeenCalledWith(view.container.querySelector('canvas')?.parentElement);
   view.rerender(<CNVRegionPlot {...props} isOpen={false} />);
   expect(disconnect).toHaveBeenCalled();
+});
+
+it('distinguishes an empty window from a failed query and supports retry', async () => {
+  vi.mocked(getCNVSegments).mockRejectedValueOnce(new Error('区域读取失败')).mockResolvedValueOnce({ data: [], total: 0, version: 'fixture', page: 1, pageSize: 200 });
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  render(<CNVRegionPlot taskId="task" variant={segment} isOpen onClose={vi.fn()} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('区域读取失败');
+  expect(screen.queryByText('当前窗口没有可绘制的 Region 或 CNR 信号')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '重试' }));
+  await screen.findByText('当前窗口没有可绘制的 Region 或 CNR 信号');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(document.querySelector('canvas')).toBeNull();
 });

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import AdminPage from './page';
-import { provisionOrganization, updateAdminOrganization } from '@/lib/admin';
+import { provisionOrganization, updateAdminOrganization, getAdminStats } from '@/lib/admin';
 
 const fixtures = vi.hoisted(() => ({
   org: { id: 'org-1', name: '示例机构', slug: 'demo', max_concurrent_tasks: 5, balance_alert_threshold: 100, storage_quota_bytes: 0, is_active: true },
@@ -52,4 +52,20 @@ it('submits the modal provisioning form and closes it only after success', async
   fireEvent.click(submit);
   await waitFor(() => expect(provisionOrganization).toHaveBeenCalledWith(expect.objectContaining({ name: '示例机构', admin_password: 'synthetic-hash' })));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+
+it('does not show empty organizations or zero rates after a failed read and retains data on failed refresh', async () => {
+  vi.mocked(getAdminStats).mockRejectedValueOnce(new Error('统计读取失败'));
+  render(<AdminPage />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('统计读取失败');
+  expect(screen.queryByText('暂无机构数据')).not.toBeInTheDocument();
+  expect(screen.queryByText(/当前：0/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存全局配置' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+  await screen.findByRole('button', { name: '编辑' });
+  expect(screen.getByRole('button', { name: '保存全局配置' })).toBeInTheDocument();
+  vi.mocked(getAdminStats).mockRejectedValueOnce(new Error('刷新读取失败'));
+  fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('刷新读取失败');
+  expect(screen.getByRole('button', { name: '编辑' })).toBeInTheDocument();
 });

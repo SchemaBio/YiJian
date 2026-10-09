@@ -152,6 +152,7 @@ export default function AdminPage() {
     minBalance: '',
   });
   const [isLoading, setIsLoading] = React.useState(true);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
   const [isSavingBilling, setIsSavingBilling] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
@@ -170,6 +171,7 @@ export default function AdminPage() {
       setAlerts(nextAlerts);
       setOrganizations(nextOrganizations);
       setBillingConfig(nextBillingConfig);
+      setHasLoaded(true);
       setConfigForm({
         creditsPerMinute: String(nextBillingConfig.credits_per_minute),
         creditRateMultiplier: String(nextBillingConfig.credit_rate_multiplier),
@@ -181,10 +183,6 @@ export default function AdminPage() {
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载管理后台数据失败');
-      setStats(emptyStats);
-      setAlerts([]);
-      setOrganizations([]);
-      setBillingConfig(emptyBillingConfig);
     } finally {
       setIsLoading(false);
     }
@@ -525,10 +523,10 @@ export default function AdminPage() {
       )}
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="机构总数" value={error ? '—' : stats.organizations.total} icon={<Users className="w-6 h-6" />} />
-        <StatCard title="运行中任务" value={error ? '—' : stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
-        <StatCard title="今日消耗积分" value={error ? '—' : stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
-        <StatCard title="低余额机构" value={error ? '—' : stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
+        <StatCard title="机构总数" value={!hasLoaded ? '—' : stats.organizations.total} icon={<Users className="w-6 h-6" />} />
+        <StatCard title="运行中任务" value={!hasLoaded ? '—' : stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
+        <StatCard title="今日消耗积分" value={!hasLoaded ? '—' : stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
+        <StatCard title="低余额机构" value={!hasLoaded ? '—' : stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
       </div>
 
       {actionMessage && (
@@ -537,6 +535,7 @@ export default function AdminPage() {
         </div>
       )}
 
+      {hasLoaded && <>
       <div className="yj-panel p-4">
         <div className="flex items-center gap-2 mb-3">
           <Building2 className="w-4 h-4 text-accent-fg" />
@@ -724,6 +723,7 @@ export default function AdminPage() {
         </form>
       </div>
 
+      </>}
 
       <AppModal open={provisionOpen} onOpenChange={(open) => { if (!isSavingBilling) setProvisionOpen(open); }} title="开通机构与管理员账号" size="large" footer={<><Button variant="secondary" onClick={() => setProvisionOpen(false)} disabled={isSavingBilling}>取消</Button><Button form="admin-provision" type="submit" variant="primary" disabled={isSavingBilling}>{isSavingBilling ? '开通中...' : '开通机构'}</Button></>}>
         <form id="admin-provision" className="space-y-4" onSubmit={submitProvisionOrg}>

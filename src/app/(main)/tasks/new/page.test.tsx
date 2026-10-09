@@ -2,6 +2,7 @@ import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import NewAnalysisPage from './page';
+import { samplesApi } from '@/lib/task-resources';
 import { listPedigrees, getPedigree } from '@/lib/pedigrees';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -43,4 +44,26 @@ it('loads family details only for a family workflow and reuses them when switchi
   await screen.findByRole('option', { name: 'FAM-1（家系不完整）' });
   expect(listPedigrees).toHaveBeenCalledTimes(1);
   expect(getPedigree).toHaveBeenCalledTimes(1);
+});
+
+it('provides a retry after task resources fail to load', async () => {
+  vi.mocked(samplesApi.list).mockRejectedValueOnce(new Error('样本选项读取失败'));
+  render(<NewAnalysisPage />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('样本选项读取失败');
+  fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('combobox', { name: '选择分析流程' })).toHaveValue('single'));
+});
+
+it('retries family reads without losing the selected workflow', async () => {
+  vi.mocked(listPedigrees).mockRejectedValueOnce(new Error('家系读取失败'));
+  render(<NewAnalysisPage />);
+  const pipeline = await screen.findByRole('combobox', { name: '选择分析流程' });
+  await waitFor(() => expect(pipeline).toHaveValue('single'));
+  fireEvent.change(pipeline, { target: { value: 'trio' } });
+  expect(await screen.findByRole('alert')).toHaveTextContent('家系读取失败');
+  fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
+  await screen.findByRole('option', { name: 'FAM-1（家系不完整）' });
+  expect(pipeline).toHaveValue('trio');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });

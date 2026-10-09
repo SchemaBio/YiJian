@@ -6,6 +6,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Semantic muted borders follow the active theme without JavaScript. */
+:root, [data-theme] {
+  --color-danger-muted: color-mix(in srgb, var(--color-danger-fg) 28%, transparent);
+  --color-warning-muted: color-mix(in srgb, var(--color-warning-fg) 28%, transparent);
+  --color-success-muted: color-mix(in srgb, var(--color-success-fg) 28%, transparent);
+}
+
 /* 贻鉴品牌色 - 青绿色，象征生命与传承 */
 :root {
   --color-accent-fg: #1a7f37;

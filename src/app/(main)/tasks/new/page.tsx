@@ -26,6 +26,9 @@ export default function NewAnalysisPage() {
   const [pedigrees, setPedigrees] = React.useState<Pedigree[]>([]);
   const pedigreeCache = React.useRef<Pedigree[] | null>(null);
   const [loadError, setLoadError] = React.useState('');
+  const [familyError, setFamilyError] = React.useState('');
+  const [optionsRetry, setOptionsRetry] = React.useState(0);
+  const [optionsLoading, setOptionsLoading] = React.useState(true);
   const [selectedSample, setSelectedSample] = React.useState('');
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
   const [selectedPedigree, setSelectedPedigree] = React.useState('');
@@ -48,6 +51,7 @@ export default function NewAnalysisPage() {
     let cancelled = false;
 
     async function loadOptions() {
+      setOptionsLoading(true);
       try {
         const [sampleOptions, pipelineOptions] = await Promise.all([
           samplesApi.list({ page: 1, page_size: 100 }),
@@ -62,6 +66,8 @@ export default function NewAnalysisPage() {
         if (!cancelled) {
           setLoadError(err instanceof Error ? err.message : '加载任务选项失败');
         }
+      } finally {
+        if (!cancelled) setOptionsLoading(false);
       }
     }
 
@@ -69,11 +75,12 @@ export default function NewAnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [optionsRetry]);
 
   React.useEffect(() => {
     if (!isTrio || pedigreeCache.current !== null) return;
     let cancelled = false;
+    setFamilyError('');
     listPedigrees()
       .then(items => Promise.all(items.map(item => getPedigree(item.id))))
       .then(items => {
@@ -83,10 +90,10 @@ export default function NewAnalysisPage() {
         setPedigrees(details);
       })
       .catch(err => {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : '加载家系选项失败');
+        if (!cancelled) setFamilyError(err instanceof Error ? err.message : '加载家系选项失败');
       });
     return () => { cancelled = true; };
-  }, [isTrio]);
+  }, [isTrio, optionsRetry]);
 
   React.useEffect(() => {
     if (!isSaaS) return;
@@ -192,14 +199,15 @@ export default function NewAnalysisPage() {
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="yj-panel min-w-0 space-y-5 p-5">
-        {loadError && (
-          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
-            {loadError}
+        {(loadError || (isTrio && familyError)) && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+            <span>{loadError || familyError}</span>
+            <Button variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>重试读取</Button>
           </div>
         )}
 
         {formError && (
-          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+          <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             {formError}
           </div>
         )}
@@ -231,7 +239,7 @@ export default function NewAnalysisPage() {
             placeholder="选择已存在的父母-先证者家系"
             searchable
           />
-          <div className="mt-2 text-xs text-fg-muted">系统将读取先证者及其父母关联的 R1/R2，并自动生成 PED 文件。</div>
+          <div className="mt-2 text-xs text-fg-muted">家系需关联先证者及父母三人的测序数据。</div>
         </FormItem>}
 
         <FormItem label="分析流程" required>

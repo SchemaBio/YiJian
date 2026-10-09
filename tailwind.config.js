@@ -8,7 +8,13 @@ module.exports = {
     './node_modules/@schema/ui-kit/dist/**/*.{js,ts}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        danger: { muted: 'var(--color-danger-muted)' },
+        warning: { muted: 'var(--color-warning-muted)' },
+        success: { muted: 'var(--color-success-muted)' },
+      },
+    },
   },
   plugins: [],
 };

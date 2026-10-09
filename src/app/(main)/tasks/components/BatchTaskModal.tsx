@@ -194,12 +194,12 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
         {fileName && (
           <div className="flex items-center gap-2 text-xs text-fg-muted">
             <FileSpreadsheet className="h-4 w-4" />
-            当前文件：<span className="font-medium text-fg-default">{fileName}</span>
+            当前文件：<span className="min-w-0 break-all font-medium text-fg-default">{fileName}</span>
           </div>
         )}
 
         {error && (
-          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>
+          <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>
         )}
 
         {preview && !result && (
@@ -224,7 +224,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
             </div>
 
             {isSaaS && (
-              <div className={`flex items-center justify-between gap-4 rounded-md border px-4 py-3 ${insufficientCredits ? 'border-danger-muted bg-danger-subtle' : 'border-border-default bg-canvas-subtle'}`}>
+              <div className={`flex flex-wrap items-center justify-between gap-4 rounded-md border px-4 py-3 ${insufficientCredits ? 'border-danger-muted bg-danger-subtle' : 'border-border-default bg-canvas-subtle'}`}>
                 <div className="flex items-center gap-2">
                   <Coins className="h-4 w-4 text-accent-fg" />
                   <div>
@@ -293,10 +293,10 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
             </div>
             <div className="max-h-72 overflow-auto rounded-md border border-border-default">
               {result.results.map((item) => (
-                <div key={`${item.row_number}-${item.status}`} className="flex items-start justify-between gap-4 border-b border-border-muted px-3 py-2 text-sm last:border-b-0">
+                <div key={`${item.row_number}-${item.status}`} className="flex flex-wrap items-start justify-between gap-4 border-b border-border-muted px-3 py-2 text-sm last:border-b-0">
                   <div>
                     <span className="font-medium text-fg-default">Excel 第 {item.row_number || '--'} 行</span>
-                    {item.task?.id && <span className="ml-2 font-mono text-xs text-fg-muted">{item.task.id}</span>}
+                    {item.task?.id && <span className="ml-2 break-all font-mono text-xs text-fg-muted">{item.task.id}</span>}
                     {item.error && <div className="mt-1 text-xs text-danger-fg">{item.error}</div>}
                   </div>
                   <span className={item.status === 'created' ? 'text-success-fg' : item.status === 'failed' ? 'text-danger-fg' : 'text-warning-fg'}>

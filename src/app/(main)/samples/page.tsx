@@ -16,7 +16,7 @@ import {
   Plus,
   Search,
   Trash2,
-  Upload,
+  RefreshCw,
   XCircle,
 } from 'lucide-react';
 import { NewSampleModal, EditSampleModal, DataLinkModal } from './components';
@@ -180,6 +180,9 @@ export default function SamplesPage() {
   const [deleteTargets, setDeleteTargets] = React.useState<Sample[]>([]);
   const [samples, setSamples] = React.useState<Sample[]>([]);
   const [samplesError, setSamplesError] = React.useState('');
+  const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [readFailed, setReadFailed] = React.useState(false);
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set());
 
   const matchedCount = React.useMemo(
@@ -194,6 +197,7 @@ export default function SamplesPage() {
 
 
   const loadSamples = React.useCallback(async () => {
+    setLoading(true);
     try {
       const loadedSamples = uniqueSamplesById(await listSamples({ page: '1', page_size: '100' }));
       const loadedIds = new Set(loadedSamples.map((sample) => sample.id));
@@ -203,8 +207,13 @@ export default function SamplesPage() {
         return retainedIds.length === previous.size ? previous : new Set(retainedIds);
       });
       setSamplesError('');
+      setHasLoaded(true);
+      setReadFailed(false);
     } catch (err) {
-      setSamplesError(err instanceof Error ? err.message : 'Failed to load samples');
+      setReadFailed(true);
+      setSamplesError(err instanceof Error ? err.message : '样本读取失败');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -472,21 +481,21 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             管理样本登记、临床信息和测序数据匹配状态
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:w-auto sm:grid-cols-3">
           <MetricTile
             label="样本总数"
-            value={samples.length}
+            value={hasLoaded ? samples.length : '—'}
             icon={<Database className="h-4 w-4" />}
           />
           <MetricTile
             label="已匹配"
-            value={matchedCount}
+            value={hasLoaded ? matchedCount : '—'}
             icon={<FileCheck className="h-4 w-4" />}
             tone="success"
           />
           <MetricTile
             label="待匹配"
-            value={unmatchedCount}
+            value={hasLoaded ? unmatchedCount : '—'}
             icon={<AlertCircle className="h-4 w-4" />}
             tone="warning"
           />
@@ -506,7 +515,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
               />
             </div>
             <span className="text-sm text-fg-muted">
-              当前显示 {filteredSamples.length} / {samples.length} 条
+              {hasLoaded ? `当前显示 ${filteredSamples.length} / ${samples.length} 条` : '—'}
             </span>
             {selectedRows.size > 0 && (
               <span className="whitespace-nowrap rounded-md bg-[var(--yj-sage-subtle)] px-2 py-1 text-xs font-medium text-green-700">
@@ -530,9 +539,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             >
               下载模板
             </Button>
-            <Button variant="secondary" leftIcon={<Upload className="h-4 w-4" />}>
-              批量导入
-            </Button>
+            <HoverHint content="刷新"><Button variant="secondary" aria-label="刷新" disabled={loading} onClick={() => void loadSamples()} leftIcon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}>刷新</Button></HoverHint>
             <Button
               variant="primary"
               leftIcon={<Plus className="h-4 w-4" />}
@@ -545,11 +552,12 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
 
         <div className="p-4">
           {samplesError && (
-            <div className="mb-3 rounded-md border border-danger-emphasis bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-              {samplesError}
+            <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+              <span>{samplesError}</span>
+              {readFailed && <Button variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>重试读取</Button>}
             </div>
           )}
-          {filteredSamples.length > 0 ? (
+          {!hasLoaded && loading ? <div className="yj-empty-state text-sm text-fg-muted">正在读取样本</div> : readFailed && samples.length === 0 ? null : filteredSamples.length > 0 ? (
             <DataTable
               data={filteredSamples}
               columns={columns}
@@ -567,8 +575,8 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             <div className="yj-empty-state">
               <div>
                 <span className="yj-empty-state-icon"><Database className="h-5 w-5" /></span>
-                <p className="text-sm font-medium text-fg-default">暂无样本</p>
-                <p className="mt-1 text-xs text-fg-muted">调整筛选条件或新建样本。</p>
+                <p className="text-sm font-medium text-fg-default">{searchQuery.trim() ? '没有匹配的样本' : '暂无样本'}</p>
+                <p className="mt-1 text-xs text-fg-muted">{searchQuery.trim() ? '调整搜索条件。' : '新建样本以登记临床信息和关联测序数据。'}</p>
               </div>
             </div>
           )}

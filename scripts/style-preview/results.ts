@@ -1,4 +1,5 @@
 export * from '../../src/app/(main)/tasks/[uuid]/result-api';
+let regionReadFailure = new URLSearchParams(location.search).get('previewFailure') === 'region';
 const genes = ['BRCA1', 'SCN1A', 'COL1A1', 'CFTR', 'DMD', 'FBN1', 'GBA1', 'ATP7B'];
 const rows = Array.from({ length: 55393 }, (_, i) => ({ id: `demo-snv-${i}`, gene: genes[i % genes.length], chromosome: String(i % 22 + 1), position: 100000 + i * 37, ref: 'A', alt: 'G', variantType: 'SNV', zygosity: 'Heterozygous', transcript: `NM_${String(1000 + i % 50).padStart(6, '0')}`, hgvsc: `c.${i % 600 + 1}A>G`, hgvsp: `p.(Lys${i % 200 + 1}Arg)`, consequence: 'missense_variant', acmgClassification: i % 6 === 0 ? 'Likely_Pathogenic' : 'VUS', acmgCriteria: i % 6 === 0 ? ['PM2', 'PP3'] : [], gnomadAF: 0.0001, clinvarSignificance: i === 0 ? 'Pathogenic/Likely_pathogenic' : 'Uncertain_significance', pinned: i < 3, reported: false, interpretation: '', alleleFrequency: 0.48, depth: 132, annotationValues: { Gene: genes[i % genes.length], Position: String(100000 + i * 37), VAF: '0.48', Depth: '132', GnomAD_AF: '0.0001', ClinVar_Sig: i === 0 ? 'Pathogenic/Likely_pathogenic' : 'Uncertain_significance', GenCC_disease_title: '示例疾病关联 A；示例疾病关联 B', GenCC_moi_title: '常染色体显性', GenCC_moi_curie: 'HP:0000006', GenCC_disease_original_curie: '示例疾病标识 A；示例疾病标识 B' }, automaticAcmg: { score: i % 6 === 0 ? 6 : 2, classification: i % 6 === 0 ? 'Likely_Pathogenic' : 'VUS', criteria: [{ code: 'PM2', strength: 'supporting', source: 'gnomAD' }], pending: ['缺少家系证据'], profile: 'acmg-snv-points-v2' } }));
 const columns = ['Gene', 'Chromosome', 'Position', 'VAF', 'Depth', 'GnomAD_AF', 'ClinVar_Sig'];
@@ -26,7 +27,12 @@ function cnvPage(total: number, state: any) {
   }
   return { data: filtered.slice((state.page - 1) * state.pageSize, state.page * state.pageSize), total: filtered.length, page: state.page, pageSize: state.pageSize, version: 'preview-v1', columns: ['Chromosome', 'Start', 'End', 'Copy_Ratio'], columnTypes: { Copy_Ratio: 'number' } };
 }
-export const getCNVSegments = async (_task: string, state: any) => { const page = cnvPage(64732, state); return { ...page, data: page.data.map(({ gene, transcript, exon, ratio, ...segment }) => segment) }; };
+export const getCNVSegments = async (_task: string, state: any) => {
+  if (state.columnFilters?.some((filter: any) => filter.column === 'Start') && new URLSearchParams(location.search).get('previewFailure') === 'region') {
+    if (regionReadFailure) { regionReadFailure = false; throw new Error('合成预览：区域查询失败'); }
+    return { data: [], total: 0, page: state.page, pageSize: state.pageSize, version: 'preview-v1' };
+  }
+  const page = cnvPage(64732, state); return { ...page, data: page.data.map(({ gene, transcript, exon, ratio, ...segment }) => segment) }; };
 export const getCNVExons = async (_task: string, state: any) => cnvPage(18414, state);
 
 export const saveCNVAssessment = async (_task: string, _type: string, id: string, assessment: any, version = 0) => { const saved = { ...assessment, cnvId: id, isUserModified: true, updatedAt: new Date().toISOString(), adjustmentVersion: version + 1 }; const row = cnvs.find(row => row.id === id); if (row) Object.assign(row, { assessment: saved }); return saved; };

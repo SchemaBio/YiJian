@@ -70,6 +70,8 @@ export default function DataCenterPage() {
   const [search, setSearch] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [loadFailed, setLoadFailed] = React.useState(false);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [cancelUploadConfirmOpen, setCancelUploadConfirmOpen] = React.useState(false);
   const [recoveryChecking, setRecoveryChecking] = React.useState(false);
@@ -106,6 +108,7 @@ export default function DataCenterPage() {
   const load = React.useCallback(async (query = '') => {
     const requestId = ++loadRequestRef.current;
     setLoading(true);
+    setLoadFailed(false);
     setError('');
     try {
       const [assetResult, configResult, statsResult] = await Promise.all([
@@ -119,8 +122,10 @@ export default function DataCenterPage() {
       setAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed'));
       setConfig(configResult);
       setStorageStats(statsResult);
+      setHasLoaded(true);
     } catch (err) {
       if (requestId !== loadRequestRef.current) return;
+      setLoadFailed(true);
       setError(err instanceof Error ? err.message : '加载数据资产失败');
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
@@ -435,11 +440,11 @@ export default function DataCenterPage() {
           <p className="mt-2 text-sm text-fg-muted">管理组织内可用于样本匹配和分析的测序数据</p>
         </div>
         <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:w-auto sm:grid-cols-3">
-          <MetricTile label="数据资产" value={assets.length} icon={<Database className="h-4 w-4" />} />
-          <MetricTile label="可用文件" value={readyCount} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
+          <MetricTile label="数据资产" value={hasLoaded ? assets.length : '—'} icon={<Database className="h-4 w-4" />} />
+          <MetricTile label="可用文件" value={hasLoaded ? readyCount : '—'} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
           <MetricTile
             label="占用空间 / 总容量"
-            value={`${formatBytes(totalBytes)} / ${storageQuotaLabel}`}
+            value={hasLoaded ? `${formatBytes(totalBytes)} / ${storageQuotaLabel}` : '—'}
             icon={<HardDrive className="h-4 w-4" />}
             tone="info"
             capacityFill={storageUsagePercent !== null && storageUsageTone
@@ -461,7 +466,7 @@ export default function DataCenterPage() {
         </div>
       )}
 
-      {error && <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
+      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>重试读取</Button>}</div>}
 
       {activeUpload?.status === 'needs_file' && !recoveryChecking && (
         <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
@@ -495,7 +500,7 @@ export default function DataCenterPage() {
 
         {loading ? (
           <div className="flex h-48 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />正在加载数据资产</div>
-        ) : assets.length > 0 ? (
+        ) : loadFailed && assets.length === 0 ? null : assets.length > 0 ? (
           <DataTable
             data={assets}
             columns={columns}
@@ -504,7 +509,7 @@ export default function DataCenterPage() {
             className="yj-data-table right-pinned-actions-table data-center-table"
           />
         ) : (
-          <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">暂无数据资产</p></div>
+          <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? '没有匹配的数据资产' : '暂无数据资产'}</p></div>
         )}
       </div>
       <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />

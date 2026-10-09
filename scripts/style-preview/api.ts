@@ -5,12 +5,17 @@ const views: any[] = [];
 let reportReadFails = false;
 export const previewReportFailure = () => { reportReadFails = true; };
 const pageReadFailures = new Set<string>();
-export const previewPageFailure = (scope: 'dashboard' | 'billing' | 'pedigree') => { pageReadFailures.add(scope); };
+const initialFailure = new URLSearchParams(location.search).get('previewFailure');
+if (initialFailure) pageReadFailures.add(initialFailure);
+export const previewPageFailure = (scope: 'dashboard' | 'billing' | 'pedigree' | 'data') => { pageReadFailures.add(scope); };
 const transactions = ['recharge','pre_deduction','deduction','refund','failure_refund','adjust','download'].map((type,i)=>({id:i+1,type,org_id:'preview',amount:[1000,-75,-20,55,75,10,-1][i],balance_after:1000,description:'合成账单 · 仅用于界面预览',created_by:1,created_at:'2026-10-08T09:00:00Z'}));
 export const api = {
   get: async (url: string, options?: any) => {
-    for(const [scope,suffix] of [['dashboard','/dashboard/stats'],['billing','/billing/transactions']]) {
-      if(url.endsWith(suffix) && pageReadFailures.delete(scope)) throw new Error('合成预览：页面数据读取失败');
+    for(const [scope,suffix] of [['dashboard','/dashboard/stats'],['billing','/billing/transactions'],['task-options','/v1/pipelines'],['report-history','/report-generations'],['templates','/v1/report-templates'],['recharge','/billing/config'],['permissions','/v1/users'],['admin','/v1/admin/stats'],['samples','/v1/samples'],['gene-list','/v1/gene-lists']]) {
+      if(url.endsWith(suffix) && pageReadFailures.has(scope)) {
+        pageReadFailures.delete(scope);
+        throw new Error('合成预览：页面数据读取失败');
+      }
     }
     if(url.endsWith('/v1/gene-lists')) return [{id:'synthetic-genes',name:'合成遗传病候选基因',disease_category:'合成疾病分类',description:'仅用于界面检查',genes:['BRCA1','SCN1A','COL1A1'],category:'important',scope:'personal',can_maintain:true,revision:1,created_at:'2026-10-08T09:00:00Z',updated_at:'2026-10-08T09:00:00Z'}];
     if(url.endsWith('/v1/data/config')) return {provider:'s3',retention_days:7,temporary:true,download_allowed:false,max_file_size_bytes:100_000_000_000};
@@ -28,7 +33,7 @@ export const api = {
     if(url.endsWith('/v1/users')) return {items:[{id:'preview-user',name:'示例用户',email:'user@example.invalid',org_id:'preview-org',system_role:'ORG_USER',approval_status:'approved',is_active:true,created_at:'2026-10-08T09:00:00Z'}],total:1,total_pages:1};
     if(url.endsWith('/v1/admin/orgs')) return [{id:'preview-org',name:'示例实验室',slug:'preview-lab',max_concurrent_tasks:5,balance_alert_threshold:100,storage_quota_bytes:30*1024**3,is_active:true}];
     if(url.endsWith('/v1/admin/stats')) return {organizations:{total:1,active:1,suspended:0},tasks:{running:1,completed:3,failed:1,today_created:3,today_finished:2},credits:{total_consumed_today:42,total_consumed_month:120,total_recharged_today:0,total_recharged_month:1000,orgs_low_balance:0},top_orgs:[{org_id:'preview-org',org_name:'示例实验室',balance:1000,task_count:5,credits_used_today:42}],recent_tasks:['completed','running','failed','cancelled'].map((status,i)=>({id:'preview-task-'+i,name:'合成分析任务 '+(i+1),org_name:'示例实验室',status,created_at:'2026-10-08T09:00:00Z'}))};
-    if(url.endsWith('/v1/data/assets')) { const items=['read1','read2','bed'].filter(type=>!options?.params?.read_type||type===options.params.read_type).map((read_type)=>({id:'preview-asset-'+read_type,file_name:'合成样本_'+read_type+(read_type==='bed'?'.bed':'.fastq.gz'),read_type,reference_genome:'GRCh38',status:'completed',validation_status:'valid',file_size:read_type==='bed'?1000000:1024**3,provider:'s3',source:'upload',expires_at:read_type==='bed'?undefined:'2026-10-15T09:00:00Z',created_at:'2026-10-08T09:00:00Z',updated_at:'2026-10-08T09:00:00Z'})); return {items,total:items.length,page:1,page_size:100,total_pages:1}; }
+    if(url.endsWith('/v1/data/assets')) { if(pageReadFailures.delete('data')) throw new Error('合成预览：数据读取失败'); const items=['read1','read2','bed'].filter(type=>!options?.params?.read_type||type===options.params.read_type).map((read_type)=>({id:'preview-asset-'+read_type,file_name:'合成样本_'+read_type+(read_type==='bed'?'.bed':'.fastq.gz'),read_type,reference_genome:'GRCh38',status:'completed',validation_status:'valid',file_size:read_type==='bed'?1000000:1024**3,provider:'s3',source:'upload',expires_at:read_type==='bed'?undefined:'2026-10-15T09:00:00Z',created_at:'2026-10-08T09:00:00Z',updated_at:'2026-10-08T09:00:00Z'})); return {items,total:items.length,page:1,page_size:100,total_pages:1}; }
     if(url.endsWith('/v1/pipelines')) return {items:[{id:'preview-pipeline',name:'合成 WES 流程',base_type:'wes_single',version:'v2.1',reference_genome:'hg38',bed_file:'合成 WES BED（hg38）',cnv_baseline:'合成 WES CNV 基线（hg38）',status:'active',created_at:'2026-10-08T09:00:00Z'}],total:1};
     if(url.endsWith('/views')) return views;
     if(url.endsWith('/dashboard/stats')) return {totalSamples:12,pendingTasks:8,waitingDataTasks:4,runningTasks:4,completedTasks:8,failedTasks:4};

@@ -178,7 +178,7 @@ export default function BaselinePage() {
       <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}>{submitting ? '正在投递...' : '启动校正流程'}</Button></>}>
         <div className="space-y-5">
           <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
-          {formError && <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
+          {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormItem label="基线名称" required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>
             <FormItem label="参考基因组" required><Select value={genome} onChange={(value) => { setGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome); setBedID(''); }} options={genomeOptions} /></FormItem>
