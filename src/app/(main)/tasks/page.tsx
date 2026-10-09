@@ -1,4 +1,5 @@
 'use client';
+import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByInterpretation, runningStatusClass, type TaskDisplayStatus } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -22,22 +23,15 @@ import { formatLocalDateTime } from '@/lib/utils';
 const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度', NODE_FIRST_REPORT_TIMEOUT: '节点首报超时', NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟', NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟', NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败', NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流', NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常', NODE_DNS_FAILED: '节点无法解析状态服务域名', NODE_TLS_FAILED: '节点 TLS 连接失败', BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖', REFERENCE_DATABASE_FAILED: '参考数据库准备失败', INPUT_DOWNLOAD_FAILED: '输入文件下载失败', AGENT_START_FAILED: 'Sepiida Agent 启动失败' };
 const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', diagnostic_hold: '诊断日志保留中', running: '计算中', archiving: '归档中', terminating: '节点释放中', release_failed: '节点释放重试中', terminal: '本次执行已结束' };
 
-const statusConfig: Record<AnalysisTask['status'], { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
-  waiting_for_data: { label: '等待数据', variant: 'warning' },
-  queued: { label: '排队中', variant: 'neutral' },
-  running: { label: '运行中', variant: 'info' },
-  completed: { label: '已完成', variant: 'success' },
-  failed: { label: '失败', variant: 'danger' },
-  cancelled: { label: '已取消', variant: 'neutral' },
-  pending_interpretation: { label: '待解读', variant: 'warning' },
-};
+const statusConfig = taskStatusConfig;
 
 const statusFilterOptions = [
   { value: 'all', label: '全部状态' },
   { value: 'queued', label: '排队中' },
   { value: 'running', label: '运行中' },
   { value: 'pending_interpretation', label: '待解读' },
-  { value: 'completed', label: '已完成' },
+  { value: 'completed', label: '分析完成' },
+  { value: 'interpretation_completed', label: '解读完成' },
   { value: 'failed', label: '失败' },
 ];
 
@@ -51,6 +45,7 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.pipeline === candidate.pipeline
       && task.pipelineVersion === candidate.pipelineVersion
       && task.status === candidate.status
+      && task.interpretationCompletedAt === candidate.interpretationCompletedAt
       && task.vmStatus === candidate.vmStatus
       && task.executionPhase === candidate.executionPhase
       && task.executionReasonCode === candidate.executionReasonCode
@@ -65,6 +60,7 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.dispatchRetryCount === candidate.dispatchRetryCount
       && task.progress === candidate.progress
       && task.createdAt === candidate.createdAt
+      && task.retryStartedAt === candidate.retryStartedAt
       && task.createdBy === candidate.createdBy
       && task.completedAt === candidate.completedAt
       && task.remark === candidate.remark;
@@ -102,8 +98,8 @@ function StatusFilterDropdown({
     if (value === 'all') {
       return <span className="text-sm text-fg-default">全部状态</span>;
     }
-    const config = statusConfig[value as AnalysisTask['status']];
-    return <Tag variant={config.variant} className="w-14 justify-center">{config.label}</Tag>;
+    const config = statusConfig[value as TaskDisplayStatus];
+    return <Tag variant={config.variant} className={`justify-center ${value === 'running' ? runningStatusClass : ''}`}>{config.label}</Tag>;
   };
 
   return (
@@ -134,7 +130,7 @@ function StatusFilterDropdown({
 
           {/* 各状态选项 */}
           {statusFilterOptions.filter(opt => opt.value !== 'all').map((option) => {
-            const config = statusConfig[option.value as AnalysisTask['status']];
+            const config = statusConfig[option.value as TaskDisplayStatus];
             const isSelected = value === option.value;
             return (
               <button
@@ -147,7 +143,7 @@ function StatusFilterDropdown({
                   setIsOpen(false);
                 }}
               >
-                <Tag variant={config.variant} className="w-14 justify-center">{config.label}</Tag>
+                <Tag variant={config.variant} className={`justify-center ${option.value === 'running' ? runningStatusClass : ''}`}>{config.label}</Tag>
               </button>
             );
           })}
@@ -188,6 +184,7 @@ function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
+    if (task.interpretationCompletedAt) return { label: '完成', icon: BookOpen, onClick: () => onView(task), className: 'border-border-default bg-canvas-subtle text-fg-muted hover:bg-canvas-inset' };
     if (task.executionPhase === 'terminating') return null;
     if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
       return {
@@ -247,8 +244,8 @@ function TaskActionsCell({
       && task.executionPhase !== 'idle'
       && task.executionPhase !== 'terminal'
   );
-  const canEdit = task.status !== 'running' && !executionInFlight;
-  const canDelete = true;
+  const canEdit = !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
+  const canDelete = !task.interpretationCompletedAt;
 
   return (
     <>
@@ -301,7 +298,7 @@ function TaskActionsCell({
               className="z-50 w-44 overflow-hidden rounded-lg border border-border-default bg-canvas-default p-1.5 shadow-[0_10px_30px_rgba(17,24,39,0.14)] outline-none"
             >
               <div role="menu" aria-label="任务操作">
-                <HoverHint content={canEdit ? '编辑任务' : '请先停止运行中的任务'}><button
+                <HoverHint content={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'}><button
                   type="button"
                   role="menuitem"
                   disabled={!canEdit}
@@ -331,7 +328,7 @@ function TaskActionsCell({
                 </button></HoverHint>
                 {!canEdit && (
                   <p className="mx-2 mt-1 border-t border-border-muted pt-2 pb-1 text-[11px] leading-4 text-fg-muted">
-                    请先停止任务再进行修改
+                    {task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止任务再进行修改'}
                   </p>
                 )}
               </div>
@@ -375,7 +372,7 @@ export default function AnalysisPage() {
     const data = await tasksApi.list(params);
     if (statusFilter === 'all') {
       const counts: Record<string, number> = { all: data.items.length };
-      for (const task of data.items) counts[task.status] = (counts[task.status] ?? 0) + 1;
+      for (const task of data.items) counts[taskDisplayStatus(task)] = (counts[taskDisplayStatus(task)] ?? 0) + 1;
       setRecentCounts(counts);
     }
     return data.items;
@@ -511,7 +508,7 @@ export default function AnalysisPage() {
     let result = tasks ?? [];
     // 先按状态筛选
     if (statusFilter !== 'all') {
-      result = result.filter(t => t.status === statusFilter);
+      result = result.filter(t => taskDisplayStatus(t) === statusFilter);
     }
     // 再按搜索词筛选
     if (searchQuery) {
@@ -524,7 +521,7 @@ export default function AnalysisPage() {
           t.internalId.toLowerCase().includes(query)
       );
     }
-    return result;
+    return sortTasksByInterpretation(result);
   }, [searchQuery, statusFilter, tasks]);
 
   const columns: Column<AnalysisTask>[] = [
@@ -574,7 +571,7 @@ export default function AnalysisPage() {
       id: 'status',
       header: '状态',
       accessor: (row) => {
-        const config = statusConfig[row.status];
+        const config = statusConfig[taskDisplayStatus(row)];
         const terminalStatus = ['completed', 'failed', 'cancelled'].includes(row.status);
         const phaseLabel = row.executionPhase ? executionLabels[row.executionPhase] : undefined;
         const cleanupPhase = terminalStatus && ['terminating', 'release_failed'].includes(row.executionPhase ?? '');
@@ -589,7 +586,7 @@ export default function AnalysisPage() {
               ? '未创建计算节点'
               : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className="yj-task-state-label" data-tone={config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
+        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className="yj-task-state-label" data-tone={row.status === 'running' ? 'running' : config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
       },
       width: 90,
       align: 'center',
@@ -630,7 +627,7 @@ export default function AnalysisPage() {
     {
       id: 'createdAt',
       header: '创建时间',
-      accessor: (row) => <span className="whitespace-nowrap tabular-nums">{formatLocalDateTime(row.createdAt)}</span>,
+      accessor: (row) => <span className="whitespace-nowrap tabular-nums">{formatLocalDateTime(taskDisplayCreatedAt(row))}</span>,
       width: 170,
       align: 'center',
     },

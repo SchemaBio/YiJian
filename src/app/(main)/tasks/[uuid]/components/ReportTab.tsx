@@ -1,4 +1,5 @@
 'use client';
+import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
 import { Button, Select, FormItem, Tag } from '@schema/ui-kit';
@@ -17,6 +18,7 @@ interface ReportTabProps {
 }
 
 export function ReportTab({ taskId }: ReportTabProps) {
+  const readOnly = useInterpretationReadOnly();
   const requestIds=React.useRef<Record<string,string>>({});
  const [generations,setGenerations]=React.useState<Array<{id:string;state:string;createdAt:string;errorCode:string;contractVersion:string}>>([]);
  const [generationError, setGenerationError] = React.useState('');
@@ -138,7 +140,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
             variant="primary"
             leftIcon={generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             onClick={handleGenerate}
-            disabled={loading || !selectedTemplate || generating || templates.length === 0}
+            disabled={readOnly || loading || !selectedTemplate || generating || templates.length === 0}
           >
             {generating ? '生成中...' : '生成并下载'}
           </Button>

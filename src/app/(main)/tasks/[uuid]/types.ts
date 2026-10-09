@@ -35,6 +35,9 @@ export interface AnalysisTaskDetail {
   dispatchRetryCount?: number;
   createdAt: string;             // 创建时间
   createdBy: string;             // 创建者
+  retryStartedAt?: string;
+  interpretationCompletedAt?: string;
+  interpretationCompletedBy?: string;
   completedAt?: string;          // 完成时间
 }
 

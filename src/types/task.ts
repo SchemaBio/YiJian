@@ -30,6 +30,9 @@ export interface AnalysisTask {
   progress: number;
   createdAt: string;
   createdBy: string;
+  retryStartedAt?: string;
+  interpretationCompletedAt?: string;
+  interpretationCompletedBy?: string;
   completedAt?: string;
   remark?: string;
 }
@@ -56,6 +59,9 @@ export interface AnalysisTaskDetail {
   dispatchRetryCount?: number;
   createdAt: string;
   createdBy: string;
+  retryStartedAt?: string;
+  interpretationCompletedAt?: string;
+  interpretationCompletedBy?: string;
   completedAt?: string;
 }
 

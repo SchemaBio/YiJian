@@ -1,10 +1,12 @@
 'use client';
+import { useInterpretationReadOnly } from './InterpretationLock';
 import * as React from 'react';
 import {assessmentStatus,cancelAssessment,type AssessmentStatus} from '@/lib/assessment/client';
 import {reevaluateBrowserResults,retryBrowserAssessment} from '@/lib/parquet-browser';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import { Info } from 'lucide-react';
 export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}){
+ const readOnly = useInterpretationReadOnly();
  const [status,setStatus]=React.useState<AssessmentStatus|undefined>(()=>assessmentStatus(taskId));
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
  React.useEffect(()=>{setStatus(assessmentStatus(taskId));const update=(event:Event)=>{const value=(event as CustomEvent<AssessmentStatus>).detail;if(value.taskId===taskId)setStatus(value);};window.addEventListener('yijian:assessment-status',update);return()=>window.removeEventListener('yijian:assessment-status',update);},[taskId]);
@@ -21,7 +23,7 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
  </ToolbarPopover>
  {status.state==='loading'&&<button type="button" className="yj-tool-button" onClick={()=>cancelAssessment(taskId)}>取消初评</button>}
  {(status.state==='error'||status.state==='cancelled')&&<button type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await retryBrowserAssessment(taskId);}catch(e){setError(e instanceof Error?e.message:'重试失败');}finally{setBusy(false);}}}>{busy?'准备中…':'重试本地初评'}</button>}
- {status.reassessmentAvailable&&<button type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error?e.message:'重新评估失败');}finally{setBusy(false);}}}>{busy?'准备中…':'证据版本已更新，重新评估'}</button>}
+ {!readOnly&&status.reassessmentAvailable&&<button type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error?e.message:'重新评估失败');}finally{setBusy(false);}}}>{busy?'准备中…':'证据版本已更新，重新评估'}</button>}
  {(status.error||error)&&<span className="text-danger-fg">{error||status.error}</span>}
  </div>;
 }

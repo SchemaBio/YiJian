@@ -1,28 +1,21 @@
 'use client';
+import { taskDisplayCreatedAt, taskDisplayStatus, taskStatusConfig, runningStatusClass } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
 import { Tag, Button } from '@schema/ui-kit';
 import { ArrowLeft, Clock, Clock3, Server, User } from 'lucide-react';
-import type { AnalysisTaskDetail, AnalysisStatus } from '../types';
+import type { AnalysisTaskDetail } from '../types';
 import { TaskCostDetail } from '@/components/billing';
 
 interface TaskHeaderProps {
   task: AnalysisTaskDetail;
   onBack: () => void;
   compact?: boolean;
+  completionControl?: React.ReactNode;
 }
 
-const statusConfig: Record<AnalysisStatus, { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
-  waiting_for_data: { label: '等待数据', variant: 'warning' },
-  queued: { label: '排队中', variant: 'neutral' },
-  running: { label: '运行中', variant: 'info' },
-  completed: { label: '已完成', variant: 'success' },
-  failed: { label: '失败', variant: 'danger' },
-  cancelled: { label: '已取消', variant: 'neutral' },
-  pending_interpretation: { label: '待解读', variant: 'warning' },
-};
 
 const executionPhaseLabels: Record<string, string> = {
   waiting_quota: '等待组织名额',
@@ -65,8 +58,8 @@ const executionReasonLabels: Record<string, string> = {
 };
 
 
-export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
-  const statusInfo = statusConfig[task.status];
+export function TaskHeader({ task, onBack, compact = false, completionControl }: TaskHeaderProps) {
+  const statusInfo = taskStatusConfig[taskDisplayStatus(task)];
   const taskVMStatus = task.vmStatus?.toUpperCase();
   const executionPhaseLabel = task.executionPhase === 'terminal'
     ? taskVMStatus === 'LAUNCH_FAILED'
@@ -80,11 +73,12 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
     <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
     <HoverHint content="返回任务列表"><button onClick={onBack} aria-label="返回任务列表"  className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button></HoverHint>
     <HoverHint content={task.name}><h1  className="min-w-0 flex-1 truncate text-base font-semibold text-fg-default">{task.name}</h1></HoverHint>
-    <Tag variant={statusInfo.variant}>{statusInfo.label}</Tag>
+    <Tag variant={statusInfo.variant} className={task.status === 'running' ? runningStatusClass : undefined}>{statusInfo.label}</Tag>
     </div>
     <span className="hidden text-xs text-fg-muted md:inline">{task.pipeline} · {task.pipelineVersion}</span>
     <HoverHint content={task.id}><span className="shrink-0 text-xs text-fg-muted sm:ml-auto" >任务 {task.id.substring(0,8)}</span></HoverHint>
     <TaskCostDetail taskId={task.id} status={task.status} compact/>
+    {completionControl}
   </div>;
 
   return (
@@ -103,7 +97,7 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-xl font-semibold text-fg-default">{task.name}</h1>
-            <Tag variant={statusInfo.variant}>{statusInfo.label}</Tag>
+            <Tag variant={statusInfo.variant} className={task.status === 'running' ? runningStatusClass : undefined}>{statusInfo.label}</Tag>
           </div>
 
           {/* 任务信息 */}
@@ -122,7 +116,7 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
 
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              <span>创建于 {task.createdAt}</span>
+              <span>创建于 {taskDisplayCreatedAt(task)}</span>
             </div>
 
             <div className="flex items-center gap-1">

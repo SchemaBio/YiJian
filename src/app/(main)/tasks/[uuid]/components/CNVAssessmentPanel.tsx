@@ -1,4 +1,5 @@
 'use client';
+import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
 import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
@@ -152,6 +153,7 @@ export function CNVAssessmentPanel({
   onReset,
   onCriteriaChange,
 }: CNVAssessmentPanelProps) {
+  const readOnly = useInterpretationReadOnly();
   if (!isOpen || !cnv || !assessment) return null;
   if (cnv.type === 'Normal' || cnv.type === 'Unknown') return null;
 
@@ -235,7 +237,7 @@ export function CNVAssessmentPanel({
         </div>
 
         {/* 内容区域 */}
-        <div className="yj-inspector-content">
+        <fieldset disabled={readOnly} className="yj-inspector-content min-w-0">
           <p className="mb-3 text-xs text-fg-muted">基于 ACMG/ClinGen 2020 标准；预勾选仅使用已提供证据，评分不是自动确诊。</p>
           {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
           {/* 分数汇总 */}
@@ -307,7 +309,7 @@ export function CNVAssessmentPanel({
               />
             </AssessmentSection>
           </div>
-        </div>
+        </fieldset>
 
         {/* 底部操作栏 */}
         <div className="border-t border-border p-4 bg-canvas-subtle">
@@ -315,7 +317,7 @@ export function CNVAssessmentPanel({
           <div className="flex gap-3">
             {onReset && (
               <button
-                disabled={saving}
+                disabled={readOnly || saving}
                 onClick={onReset}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
               >
@@ -325,7 +327,7 @@ export function CNVAssessmentPanel({
             )}
             {onSave && (
               <button
-                disabled={saving}
+                disabled={readOnly || saving}
                 onClick={() => onSave(assessment)}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-accent-emphasis text-white rounded-md hover:bg-accent-fg transition-colors"
               >

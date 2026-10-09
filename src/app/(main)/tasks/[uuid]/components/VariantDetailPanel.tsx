@@ -1,4 +1,5 @@
 'use client';
+import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
@@ -194,7 +195,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const [interpretationSaving, setInterpretationSaving] = React.useState(false);
   const [interpretationError, setInterpretationError] = React.useState('');
   const [adjustmentHistory, setAdjustmentHistory] = React.useState<ResultRowAdjustmentEvent[]>([]);
-  const canEditACMG = Boolean(onUpdateClassification);
+  const readOnly = useInterpretationReadOnly();
+  const canEditACMG = !readOnly && Boolean(onUpdateClassification);
+  React.useEffect(() => { if (readOnly) setIsEditingACMG(false); }, [readOnly]);
 
   // 当 variant 变化时重置编辑状态
   React.useEffect(() => {
@@ -297,16 +300,17 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           <SectionTitle icon={MessageSquare} title="人工解读" />
           <div className="space-y-0">
             <textarea
+              readOnly={readOnly}
               value={interpretation}
               onChange={(e) => setInterpretation(e.target.value)}
               placeholder="请输入您对该变异的解读分析..."
               className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
             />
             <div className="mt-2 space-y-2">
-              <input value={interpretationReason} onChange={event => setInterpretationReason(event.target.value)} placeholder="本次调整理由（保存时必填）" className="h-9 w-full rounded-md border border-border-default bg-canvas-default px-2 text-sm" />
+              <input readOnly={readOnly} value={interpretationReason} onChange={event => setInterpretationReason(event.target.value)} placeholder="本次调整理由（保存时必填）" className="h-9 w-full rounded-md border border-border-default bg-canvas-default px-2 text-sm" />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
-                <button type="button" disabled={interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
+                <button type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
               </div>
               {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
             </div>

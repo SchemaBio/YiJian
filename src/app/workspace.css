@@ -126,3 +126,6 @@
 
 /* Reserve space for the history search icon despite inherited input styles. */
 input.yj-history-search { padding-left: 2rem !important; }
+
+.yj-task-state-label[data-tone='running'] { color: #2563eb; }
+.yj-task-state-label[data-tone='running'] > span { background: currentColor; }

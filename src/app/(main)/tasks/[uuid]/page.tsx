@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { InterpretationReadOnlyContext } from './components/InterpretationLock';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { tasksApi } from '@/lib/tasks';
@@ -31,6 +32,10 @@ export default function AnalysisDetailPage() {
   const router = useRouter();
 
   const uuid = params.uuid as string;
+  const [completionSaving, setCompletionSaving] = React.useState(false);
+  const [completionError, setCompletionError] = React.useState('');
+  const completionRevisionRef = React.useRef(0);
+  const completionPendingRef = React.useRef(false);
   const [assessmentRevision,setAssessmentRevision]=React.useState(0);
  React.useEffect(()=>{const changed=(event:Event)=>{if((event as CustomEvent).detail?.taskId===uuid)setAssessmentRevision(x=>x+1);};window.addEventListener("yijian:assessment-reloaded",changed);return()=>window.removeEventListener("yijian:assessment-reloaded",changed);},[uuid]);
 
@@ -145,6 +150,31 @@ export default function AnalysisDetailPage() {
   const handleBack = React.useCallback(() => {
     router.push('/tasks');
   }, [router]);
+
+  const setInterpretationCompleted = async () => {
+    if (!task || completionSaving) return;
+    completionPendingRef.current = true;
+    completionRevisionRef.current += 1;
+    setCompletionSaving(true); setCompletionError('');
+    try {
+      const next = await tasksApi.setInterpretationCompleted(uuid, !task.interpretationCompletedAt, task.attemptId || uuid);
+      setTask(next);
+    } catch (cause) { setCompletionError(cause instanceof Error ? cause.message : '解读状态更新失败'); }
+    finally { completionPendingRef.current = false; setCompletionSaving(false); }
+  };
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => {
+      if (completionPendingRef.current) return;
+      const revision = completionRevisionRef.current;
+      void tasksApi.get(uuid).then(next => {
+        if (!controller.signal.aborted && !completionPendingRef.current && revision === completionRevisionRef.current) setTask(next);
+      }).catch(() => {});
+    };
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    return () => { controller.abort(); window.clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [uuid]);
 
   // 404页面
   if (notFound) {
@@ -267,10 +297,13 @@ export default function AnalysisDetailPage() {
 	const isVariantTab = ['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'].includes(activeTab);
 
   return (
+    <InterpretationReadOnlyContext.Provider value={!!task.interpretationCompletedAt || completionSaving}>
     <PageContent padded={false} className="h-full min-h-0 !overflow-hidden flex flex-col">
       <div className="shrink-0 border-b border-border-subtle bg-canvas-default px-3 pt-2 md:px-4">
       {/* 任务信息头部 */}
-      <TaskHeader task={task} onBack={handleBack} compact />
+      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <button type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{completionSaving ? '保存中…' : task.interpretationCompletedAt ? '取消解读完成' : '解读完成'}</button>} />
+      {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">解读已完成，当前为只读。取消解读完成后可继续编辑。</p>}
+      {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
 
       {/* 样本信息汇总卡片 */}
       {sample && <SampleSummaryCard sample={sample} />}
@@ -288,6 +321,7 @@ export default function AnalysisDetailPage() {
 		</ResultTabs></div>
       </div>
     </PageContent>
+    </InterpretationReadOnlyContext.Provider>
   );
 }
 

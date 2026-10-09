@@ -43,6 +43,9 @@ interface RawTask {
   created_at?: string;
   createdBy?: string;
   created_by?: string;
+  retryStartedAt?: string;
+  interpretationCompletedAt?: string;
+  interpretationCompletedBy?: string;
   completedAt?: string;
   completed_at?: string;
   remark?: string;
@@ -110,6 +113,9 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     progress: typeof raw.progress === 'number' && Number.isFinite(raw.progress) ? raw.progress : 0,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     createdBy: String(raw.createdBy ?? raw.created_by ?? ''),
+    retryStartedAt: raw.retryStartedAt,
+    interpretationCompletedAt: raw.interpretationCompletedAt,
+    interpretationCompletedBy: raw.interpretationCompletedBy,
     completedAt: raw.completedAt ?? raw.completed_at,
     remark: raw.remark,
   };
@@ -139,6 +145,9 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     createdBy: String(raw.createdBy ?? raw.created_by ?? ''),
+    retryStartedAt: raw.retryStartedAt,
+    interpretationCompletedAt: raw.interpretationCompletedAt,
+    interpretationCompletedBy: raw.interpretationCompletedBy,
     completedAt: raw.completedAt ?? raw.completed_at,
   };
 }
@@ -304,6 +313,10 @@ export const tasksApi = {
   async getSample(id: string): Promise<SampleDetail> {
     const sample = await api.get<unknown>(`/v1/tasks/${encodeURIComponent(id)}/sample`);
     return normalizeSampleDetail(sample);
+  },
+
+  async setInterpretationCompleted(id: string, completed: boolean, attemptId: string): Promise<AnalysisTaskDetail> {
+    return normalizeTaskDetail(await api.put(`/v1/tasks/${encodeURIComponent(id)}/interpretation-completion`, { completed, attemptId }));
   },
 
   /** Update a task */
