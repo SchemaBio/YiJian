@@ -43,13 +43,13 @@ export function UUIDCell({ uuid, truncateLength = 8 }: UUIDCellProps) {
       </span>
       <button
         onClick={handleCopy}
-        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 transition-all"
+        className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 rounded hover:bg-canvas-subtle transition-opacity"
         aria-label="复制完整UUID"
       >
         {copied ? (
-          <Check className="w-3.5 h-3.5 text-green-500" />
+          <Check className="w-3.5 h-3.5 text-success-fg" />
         ) : (
-          <Copy className="w-3.5 h-3.5 text-gray-400" />
+          <Copy className="w-3.5 h-3.5 text-fg-muted" />
         )}
       </button>
     </div>

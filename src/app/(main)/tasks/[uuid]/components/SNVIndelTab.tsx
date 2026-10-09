@@ -478,7 +478,7 @@ export function SNVIndelTab({
 
           {/* 分页 */}
           {totalPages > 1 && (
-            <div className="flex shrink-0 items-center justify-between mt-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
                 第 {filterState.page} / {totalPages} 页
               </div>
@@ -486,14 +486,14 @@ export function SNVIndelTab({
                 <button
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
-                  className="px-3 py-1 text-sm border border-border-default rounded hover:bg-canvas-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="yj-tool-button"
                 >
                   上一页
                 </button>
                 <button
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
-                  className="px-3 py-1 text-sm border border-border-default rounded hover:bg-canvas-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="yj-tool-button"
                 >
                   下一页
                 </button>

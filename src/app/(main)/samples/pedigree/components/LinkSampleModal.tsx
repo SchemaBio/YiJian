@@ -15,6 +15,7 @@ interface LinkSampleModalProps {
 }
 
 export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkSampleModalProps) {
+  const [retry, setRetry] = React.useState(0);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [samples, setSamples] = React.useState<Sample[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -23,16 +24,19 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
 
   React.useEffect(() => {
     if (!isOpen) return;
+    let active = true;
     setLoading(true);
     setSubmitError('');
     listSamples()
-      .then(setSamples)
+      .then(value => { if (active) setSamples(value); })
       .catch((err) => {
+        if (!active) return;
         setSamples([]);
-        setSubmitError(err instanceof Error ? err.message : 'Failed to load samples');
+        setSubmitError(err instanceof Error ? err.message : '样本列表读取失败');
       })
-      .finally(() => setLoading(false));
-  }, [isOpen]);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [isOpen, retry]);
 
   const filteredSamples = React.useMemo(() => {
     if (!searchQuery) return samples;
@@ -50,7 +54,7 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
       await onSelect(sampleId);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to link sample');
+      setSubmitError(err instanceof Error ? err.message : '样本关联失败');
     } finally {
       setSubmittingSampleId(null);
     }
@@ -70,6 +74,7 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
         {submitError && (
         <div className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
           {submitError}
+          {!loading && samples.length === 0 && <button type="button" className="yj-tool-button ml-2" onClick={() => setRetry(value => value + 1)}>重试</button>}
         </div>
       )}
       <section>
@@ -97,22 +102,24 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
             {filteredSamples.map((sample) => {
               const isMatched = sample.matchedPair !== null;
               return (
-                <div
+                <button
+                  type="button"
+                  disabled={Boolean(submittingSampleId)}
                   key={sample.id}
-                  className={`px-4 py-3 transition-colors ${submittingSampleId ? 'cursor-wait opacity-75' : 'hover:bg-canvas-subtle cursor-pointer'}`}
+                  className={`block w-full px-4 py-3 text-left transition-colors ${submittingSampleId ? 'cursor-wait opacity-75' : 'hover:bg-canvas-subtle cursor-pointer'}`}
                   onClick={() => handleSelect(sample.id)}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <span className="font-mono text-sm text-fg-default">{sample.id.substring(0, 8)}</span>
-                      <span className="text-fg-muted ml-2">{sample.internalId}</span>
+                      <span className="break-all text-sm font-medium text-fg-default">{sample.internalId}</span>
+                      <span className="ml-2 font-mono text-xs text-fg-muted">{sample.id.substring(0, 8)}</span>
                       <Tag variant={isMatched ? 'success' : 'warning'} className="ml-2">{isMatched ? '已匹配' : '未匹配'}</Tag>
                       {submittingSampleId === sample.id && <span className="ml-2 text-xs text-fg-muted">关联中...</span>}
                     </div>
                     <span className="text-sm text-fg-subtle">{sample.sampleType}</span>
                   </div>
                   <div className="text-xs text-fg-subtle mt-1">{sample.clinicalDiagnosis}</div>
-                </div>
+                </button>
               );
             })}
           </div>

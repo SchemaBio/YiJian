@@ -297,11 +297,12 @@ export function MEITab({
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <ParquetColumnFilterBar taskId={taskId} table="mei" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {/* 搜索框 */}
-          <div className="w-64">
+          <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
+              className="[&_input]:min-w-0 [&_input]:w-0"
               placeholder="搜索基因、位置..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -313,7 +314,7 @@ export function MEITab({
         </div>
 
         {/* 统计信息 */}
-        <div className="flex items-center gap-4 text-sm text-fg-muted">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-fg-muted">
           <span>共 {result?.total ?? 0} 条 MEI 变异</span>
         </div>
       </div>
@@ -348,7 +349,7 @@ export function MEITab({
 
           {/* 分页 */}
           {totalPages > 1 && (
-            <div className="flex shrink-0 items-center justify-between mt-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
                 第 {filterState.page} / {totalPages} 页
               </div>
@@ -356,14 +357,14 @@ export function MEITab({
                 <button
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
-                  className="px-3 py-1 text-sm border border-border-default rounded hover:bg-canvas-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="yj-tool-button"
                 >
                   上一页
                 </button>
                 <button
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
-                  className="px-3 py-1 text-sm border border-border-default rounded hover:bg-canvas-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="yj-tool-button"
                 >
                   下一页
                 </button>

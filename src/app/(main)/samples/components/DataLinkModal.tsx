@@ -186,7 +186,7 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
           </div>
         )}
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}</div>
         )}
         </section>
       </div>

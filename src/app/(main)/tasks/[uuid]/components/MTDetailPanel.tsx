@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { X, ExternalLink, FileText, Database, Dna } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { MitochondrialVariant, MitochondrialPathogenicity } from '../types';
@@ -39,16 +40,16 @@ function mitoTipURL(position: number): string {
 function InfoItem({ label, value, link }: { label: string; value?: React.ReactNode; link?: string }) {
   if (value === undefined || value === null || value === '' || value === '-') {
     return (
-      <div className="flex justify-between py-1.5 border-b border-border-subtle last:border-0">
-        <span className="text-fg-muted text-sm">{label}</span>
+      <div className="flex justify-between gap-4 py-2 border-b border-border-subtle last:border-0">
+        <span className="text-fg-muted text-sm shrink-0">{label}</span>
         <span className="text-fg-subtle text-sm">-</span>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-between py-1.5 border-b border-border-subtle last:border-0">
-      <span className="text-fg-muted text-sm">{label}</span>
+    <div className="flex justify-between gap-4 py-2 border-b border-border-subtle last:border-0">
+      <span className="text-fg-muted text-sm shrink-0">{label}</span>
       {link ? (
         <a
           href={link}
@@ -60,7 +61,7 @@ function InfoItem({ label, value, link }: { label: string; value?: React.ReactNo
           <ExternalLink className="w-3 h-3" />
         </a>
       ) : (
-        <span className="text-fg-default text-sm font-medium">{value}</span>
+        <span className="text-fg-default text-sm font-medium min-w-0 break-words text-right">{value}</span>
       )}
     </div>
   );
@@ -77,23 +78,17 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
 }
 
 export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailPanelProps) {
+  const [section, setSection] = React.useState<InspectorSection>('annotation');
+  React.useEffect(() => { setSection('annotation'); }, [variant?.id, isOpen]);
   if (!isOpen || !variant) return null;
 
   const pathogenicityConfig = PATHOGENICITY_CONFIG[variant.pathogenicity];
 
   return (
-    <>
-      {/* 背景遮罩 */}
-      <div 
-        className="hidden"
-        onClick={onClose}
-      />
-      
-      {/* 侧边面板 */}
-      <div className="fixed right-0 top-0 h-dvh w-[min(480px,100vw)] bg-white dark:bg-[#0d1117] border-l border-border shadow-xl z-50 flex flex-col">
+    <WorkspaceInspector label="线粒体变异详情" onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h3 className="text-base font-medium text-fg-default">线粒体变异详情</h3>
             <Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>
           </div>
@@ -106,11 +101,12 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           </button>
         </div>
 
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <InspectorTabs value={section} onChange={setSection} id="mt-inspector" />
+        <div id="mt-inspector-content" role="tabpanel" aria-labelledby={`mt-inspector-${section}`} className="yj-inspector-content">
+          {section === 'annotation' && <>
           {/* 基本信息 */}
           <SectionTitle icon={Dna} title="基本信息" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem label="基因" value={variant.gene} />
             <InfoItem
               label="位置" 
@@ -129,9 +125,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             )}
           </div>
 
+          </>}
+          {section === 'evidence' && <>
           {/* 异质性 */}
           <SectionTitle icon={FileText} title="异质性分析" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem label="异质性比例" value={`${(variant.heteroplasmy * 100).toFixed(1)}%`} />
             <InfoItem
               label="异质性水平" 
@@ -143,9 +141,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             />
           </div>
 
+          </>}
+          {section === 'assessment' && <>
           {/* 致病性评估 */}
           <SectionTitle icon={Database} title="致病性评估" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
               label="致病性" 
               value={<Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>} 
@@ -153,9 +153,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             <InfoItem label="关联疾病" value={variant.associatedDisease} />
           </div>
 
+          </>}
+          {section === 'annotation' && <>
           {/* 外部资源 */}
           <SectionTitle icon={ExternalLink} title="外部资源" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
               label="MITOMAP" 
               value="查看"
@@ -173,9 +175,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             />
           </div>
 
+          </>}
+          {section === 'assessment' && <>
           {/* 置顶状态 */}
           <SectionTitle icon={FileText} title="置顶状态" />
-          <div className="bg-canvas-subtle rounded-lg p-3">
+          <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
               label="置顶状态"
               value={variant.pinned ? (
@@ -200,26 +204,8 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
               </>
             )}
           </div>
+          </>}
         </div>
-
-        {/* 底部操作栏 */}
-        <div className="border-t border-border p-4 bg-canvas-subtle">
-          <div className="flex gap-2">
-            <button
-              onClick={() => onOpenIGV?.('chrM', variant.position)}
-              className="flex-1 px-4 py-2 text-sm bg-accent-emphasis text-fg-on-emphasis rounded-md hover:bg-accent-emphasis/90 transition-colors"
-            >
-              在 IGV 中查看
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
-            >
-              关闭
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+    </WorkspaceInspector>
   );
 }

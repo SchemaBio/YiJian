@@ -30,7 +30,7 @@ export function TaskCostValue({ summary, loading = false }: TaskCostValueProps) 
   );
 }
 
-export function TaskCostDetail({ taskId }: { taskId: string }) {
+export function TaskCostDetail({ taskId, compact = false }: { taskId: string; compact?: boolean }) {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [summary, setSummary] = React.useState<TaskBillingSummary | null>(null);
   const [loading, setLoading] = React.useState(isSaaS);
@@ -56,10 +56,10 @@ export function TaskCostDetail({ taskId }: { taskId: string }) {
   return (
     <Link
       href="/billing"
-      className="flex items-center gap-2 rounded-md border border-border-default px-3 py-2 hover:bg-canvas-subtle transition-colors"
+      className={`flex shrink-0 items-center gap-2 rounded-md border border-border-default px-3 ${compact ? 'py-1.5' : 'py-2'} hover:bg-canvas-subtle transition-colors`}
     >
       <Coins className="h-4 w-4 text-accent-fg" />
-      <div>
+      <div className={compact ? 'flex flex-wrap items-center gap-2' : undefined}>
         <div className="text-xs text-fg-muted">任务费用</div>
         {loading ? (
           <div className="text-sm text-fg-muted">加载中...</div>

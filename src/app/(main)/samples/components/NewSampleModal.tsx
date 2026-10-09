@@ -142,7 +142,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
           </div>
         )}
@@ -151,7 +151,6 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
           <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
             title="基本信息"
-            description="用于样本检索、分组和基础分析配置"
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -208,7 +207,6 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
           <ModalSectionHeading
             icon={<Stethoscope className="h-4 w-4" />}
             title="临床信息"
-            description="记录诊断摘要和可用于分析筛选的 HPO 表型"
           />
           <div className="space-y-4">
             <div>
@@ -227,14 +225,14 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                   {formData.hpoTerms.map((term) => (
                     <div
                       key={term.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm border border-blue-200"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-accent-subtle text-accent-fg rounded-md text-sm border border-accent-muted"
                     >
-                      <span className="font-mono text-xs text-blue-500">{term.id}</span>
+                      <span className="font-mono text-xs text-accent-fg">{term.id}</span>
                       <span>{term.name}</span>
                       <button
                         type="button"
                         onClick={() => removeHpoTerm(term.id)}
-                        className="ml-1 text-blue-400 hover:text-red-500"
+                        className="ml-1 text-accent-fg hover:text-danger-fg"
                         aria-label={`移除 ${term.name}`}
                       >
                         <X className="w-3.5 h-3.5" />
@@ -260,10 +258,10 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                       <button
                         key={term.id}
                         type="button"
-                        className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left hover:bg-canvas-subtle flex items-center gap-2"
                         onClick={() => addHpoTerm(term)}
                       >
-                        <span className="font-mono text-xs text-blue-500">{term.id}</span>
+                        <span className="font-mono text-xs text-accent-fg">{term.id}</span>
                         <span className="text-sm">{term.name}</span>
                       </button>
                     ))}
@@ -278,7 +276,6 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
           <ModalSectionHeading
             icon={<FileText className="h-4 w-4" />}
             title="备注"
-            description="补充记录送检或分析注意事项"
           />
           <TextArea
             value={formData.remark}

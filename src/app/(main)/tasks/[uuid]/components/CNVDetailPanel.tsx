@@ -152,8 +152,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           <section hidden={section !== 'assessment'} >
           <div className="mb-3 flex flex-wrap gap-2">
             {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 计算器</button>}
-            {isExon && taskId && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">外显子 CN 分布图</button>}
-            {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="rounded-md border border-border-default px-3 py-2 text-sm">区域信号图 · 设置窗口</button>}
+
           </div>
           </section>
           <section hidden={section !== 'annotation'} >
@@ -167,6 +166,10 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           <section hidden={section !== 'evidence'} >
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title="CNV 特征" />
+          <div className="mb-3 flex flex-wrap gap-2">
+            {isExon && taskId && <button type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">外显子 CN 分布图</button>}
+            {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">区域信号图 · 设置窗口</button>}
+          </div>
           <div className="space-y-0">
             <InfoItem
               label="类型" 

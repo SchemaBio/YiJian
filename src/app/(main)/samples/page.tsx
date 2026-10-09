@@ -88,23 +88,23 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
   const hiddenCount = hpoTerms.length - visibleTerms.length;
 
   return (
-    <Tooltip
+    <HoverHint
       content={
-        <div className="text-xs space-y-1">
+        <div className="text-sm space-y-1">
           {hpoTerms.map((term) => (
             <div key={term.id}>
-              <span className="text-blue-300 font-mono">{term.id}</span>
-              <span className="text-gray-300 ml-1">{term.name}</span>
+              <span className="text-accent-fg font-mono">{term.id}</span>
+              <span className="text-fg-default ml-1">{term.name}</span>
             </div>
           ))}
         </div>
-      } variant="nav"
+      }
     >
-      <div className="flex flex-wrap gap-1">
+      <div tabIndex={0} role="group" aria-label="HPO 表型详情" className="flex flex-wrap gap-1">
         {visibleTerms.map((term) => (
           <span
             key={term.id}
-            className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[11px] text-blue-700"
+            className="inline-flex items-center rounded-md border border-accent-muted bg-accent-subtle px-1.5 py-0.5 font-mono text-[11px] text-accent-fg"
           >
             {term.id}
           </span>
@@ -115,7 +115,7 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
           </span>
         )}
       </div>
-    </Tooltip>
+    </HoverHint>
   );
 }
 
@@ -124,25 +124,25 @@ function MatchedCell({ sample }: { sample: Sample }) {
     matched: {
       label: '已匹配',
       detail: sample.matchMode === 'manual' ? '已由用户手动选择 Read1/Read2，自动匹配不会覆盖。' : '系统已按样本内部编号自动匹配 Read1/Read2。',
-      className: 'border-green-200 bg-green-50 text-green-700',
+      className: 'border-success-muted bg-success-subtle text-success-fg',
       icon: <CheckCircle className="h-3.5 w-3.5" />,
     },
     partial: {
       label: '部分匹配',
       detail: '系统只找到 Read1 或 Read2，请补充另一端数据或手动关联。',
-      className: 'border-orange-200 bg-orange-50 text-orange-700',
+      className: 'border-warning-muted bg-warning-subtle text-warning-fg',
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
     conflict: {
       label: '匹配冲突',
       detail: '发现多个同名候选，系统不会自动选择，请手动关联。',
-      className: 'border-red-200 bg-red-50 text-red-700',
+      className: 'border-danger-muted bg-danger-subtle text-danger-fg',
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
     missing: {
       label: '文件缺失',
       detail: '已关联的数据已到期或无法访问，请重新上传并关联。',
-      className: 'border-red-200 bg-red-50 text-red-700',
+      className: 'border-danger-muted bg-danger-subtle text-danger-fg',
       icon: <XCircle className="h-3.5 w-3.5" />,
     },
     unmatched: {
@@ -150,25 +150,25 @@ function MatchedCell({ sample }: { sample: Sample }) {
       detail: sample.autoMatchEnabled
         ? '系统定时按文件名中的样本编号匹配 Read1/Read2，也可立即手动关联。'
         : '此样本未启用自动匹配，可手动关联数据。',
-      className: 'border-gray-200 bg-gray-50 text-gray-600',
+      className: 'border-border-default bg-canvas-subtle text-fg-muted',
       icon: <XCircle className="h-3.5 w-3.5" />,
     },
   }[sample.matchStatus];
 
   return (
-    <Tooltip content={
-      <div className="max-w-xs space-y-1 text-xs">
+    <HoverHint content={
+      <div className="max-w-xs space-y-1 text-sm">
         <p>{status.detail}</p>
-        {sample.matchedPair && <><p><span className="text-gray-400">R1:</span> {sample.matchedPair.r1Path}</p><p><span className="text-gray-400">R2:</span> {sample.matchedPair.r2Path}</p></>}
+        {sample.matchedPair && <><p><span className="text-fg-muted">R1:</span> {sample.matchedPair.r1Path}</p><p><span className="text-fg-muted">R2:</span> {sample.matchedPair.r2Path}</p></>}
       </div>
-    } variant="nav">
-      <div className="inline-flex flex-col items-center gap-1">
+    }>
+      <div tabIndex={0} role="group" aria-label="测序数据匹配详情" className="inline-flex flex-col items-center gap-1">
         <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium ${status.className}`}>
           {status.icon}
           {status.label}
         </span>
       </div>
-    </Tooltip>
+    </HoverHint>
   );
 }
 
@@ -428,7 +428,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>
           <HoverHint content={row.matchedPair ? '更新数据关联' : '手动关联数据'}><button
-            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-700"
+            className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-success-subtle hover:text-success-fg"
             onClick={() => setLinkingSample(row)}
             aria-label="关联测序数据"
 
@@ -436,7 +436,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             <Link2 className="h-4 w-4" />
           </button></HoverHint>
           <HoverHint content="编辑"><button
-            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-accent-subtle hover:text-accent-fg"
             onClick={() => setEditingSample(row)}
             aria-label="编辑"
 
@@ -444,7 +444,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             <Pencil className="h-4 w-4" />
           </button></HoverHint>
           <HoverHint content="删除"><button
-            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-danger-subtle hover:text-danger-fg"
             onClick={() => setDeleteTargets([row])}
             aria-label="删除"
 

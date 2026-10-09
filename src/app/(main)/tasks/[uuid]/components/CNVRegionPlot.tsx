@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { X } from 'lucide-react';
+import { AppModal } from '@/components/shared';
+import { useTheme } from '@schema/ui-kit';
 import { getCNVSegments } from '../result-api';
 import {loadCNR, normalizeContig as contig, type CNRBin} from '../utils/cnv-signal';
 import { DEFAULT_FILTER_STATE } from '../types';
@@ -11,6 +12,7 @@ import type { CNVSegment } from '../types';
 export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
   taskId: string; variant: CNVSegment; isOpen: boolean; onClose: () => void;
 }) {
+  const { resolvedTheme } = useTheme();
   const [cnr, setCNR] = React.useState<CNRBin[]>([]);
   const [cnrStatus, setCNRStatus] = React.useState('');
   const [flankKB, setFlankKB] = React.useState(100);
@@ -20,8 +22,8 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
   const [retry, setRetry] = React.useState(0);
   const [width, setWidth] = React.useState(800);
   const [hover, setHover] = React.useState<CNVSegment | null>(null);
-  const holder = React.useRef<HTMLDivElement>(null);
-  const canvas = React.useRef<HTMLCanvasElement>(null);
+  const [holder, setHolder] = React.useState<HTMLDivElement | null>(null);
+  const [canvas, setCanvas] = React.useState<HTMLCanvasElement | null>(null);
   const start = Math.max(0, variant.startPosition - flankKB * 1000);
   const end = variant.endPosition + flankKB * 1000;
   React.useEffect(() => {
@@ -65,10 +67,10 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
     return () => controller.abort();
   }, [taskId, variant.chromosome, variant.attemptId, start, end, isOpen, retry]);
   React.useEffect(() => {
-    if (!isOpen || !holder.current) return;
+    if (!isOpen || !holder) return;
     const observer = new ResizeObserver(entries => setWidth(Math.max(240, Math.floor(entries[0].contentRect.width))));
-    observer.observe(holder.current); return () => observer.disconnect();
-  }, [isOpen]);
+    observer.observe(holder); return () => observer.disconnect();
+  }, [isOpen, holder]);
   const valid = React.useMemo(() => rows.filter(row => row.log2Ratio !== null && Number.isFinite(row.log2Ratio)), [rows]);
   const bins = React.useMemo(()=>cnr.filter(bin=>contig(bin.chromosome)===contig(variant.chromosome)&&bin.start<end&&bin.end>start),[cnr,variant.chromosome,start,end]);
   const minimum = bins.reduce((value,bin)=>Math.min(value,bin.log2),Math.min(-1.5, ...valid.map(row => row.log2Ratio!)));
@@ -76,18 +78,20 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
   const x = (position: number) => 54 + (position - start) / Math.max(1, end-start) * (width - 74);
   const y = (ratio: number) => 20 + (maximum-ratio) / (maximum-minimum) * 210;
   React.useEffect(() => {
-    if (!isOpen || !canvas.current) return;
+    if (!isOpen || !canvas) return;
     const dpr = window.devicePixelRatio || 1;
-    const node = canvas.current; node.width = width*dpr; node.height = 270*dpr;
+    const node = canvas; node.width = width*dpr; node.height = 270*dpr;
     node.style.width = `${width}px`; node.style.height = '270px';
     const ctx = node.getContext('2d'); if (!ctx) return;
-    ctx.scale(dpr,dpr); ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,270);
-    ctx.fillStyle = '#fff5cc'; ctx.fillRect(x(variant.startPosition),20, Math.max(1,x(variant.endPosition)-x(variant.startPosition)),210);
+    const style=getComputedStyle(node);
+    const color=(token:string,fallback:string)=>style.getPropertyValue(token).trim()||fallback;
+    ctx.scale(dpr,dpr); ctx.fillStyle = color('--color-canvas-default','#ffffff'); ctx.fillRect(0,0,width,270);
+    ctx.fillStyle = color('--color-warning-subtle','#fff5cc'); ctx.fillRect(x(variant.startPosition),20, Math.max(1,x(variant.endPosition)-x(variant.startPosition)),210);
     ctx.font = '11px sans-serif';
     for (let i=0;i<=4;i++) {
       const value = minimum+(maximum-minimum)*i/4;
-      ctx.strokeStyle = '#e5e7eb'; ctx.beginPath(); ctx.moveTo(54,y(value)); ctx.lineTo(width-20,y(value)); ctx.stroke();
-      ctx.fillStyle='#57606a'; ctx.textAlign='right'; ctx.fillText(value.toFixed(2),48,y(value)+4);
+      ctx.strokeStyle = color('--color-border-default','#e5e7eb'); ctx.beginPath(); ctx.moveTo(54,y(value)); ctx.lineTo(width-20,y(value)); ctx.stroke();
+      ctx.fillStyle=color('--color-fg-muted','#57606a'); ctx.textAlign='right'; ctx.fillText(value.toFixed(2),48,y(value)+4);
       const position=start+(end-start)*i/4; ctx.textAlign='center'; ctx.fillText(`${(position/1e6).toFixed(3)} Mb`,x(position),251);
     }
     ctx.strokeStyle='#9ca3af'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(54,y(0)); ctx.lineTo(width-20,y(0)); ctx.stroke(); ctx.setLineDash([]);
@@ -101,20 +105,17 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
       ctx.beginPath(); ctx.moveTo(x(row.startPosition),y(row.log2Ratio!)); ctx.lineTo(x(row.endPosition),y(row.log2Ratio!)); ctx.stroke();
       ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.arc(x((row.startPosition+row.endPosition)/2),y(row.log2Ratio!),2.5,0,Math.PI*2);ctx.fill();
     }
-    ctx.restore(); ctx.fillStyle='#374151'; ctx.textAlign='left'; ctx.fillText('log2 ratio',4,12);
-  }, [isOpen,width,valid,bins,start,end,minimum,maximum,variant]);
+    ctx.restore(); ctx.fillStyle=color('--color-fg-default','#374151'); ctx.textAlign='left'; ctx.fillText('log2 ratio',4,12);
+  }, [isOpen,width,valid,bins,start,end,minimum,maximum,variant,resolvedTheme,canvas]);
   if (!isOpen) return null;
-  return <div role="dialog" aria-modal="true" aria-label="CNV Region 区域信号图" onKeyDown={e => {if(e.key==='Escape'){e.stopPropagation();onClose();}}} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 p-3">
-    <section className="w-[900px] max-w-full rounded-lg border border-border-default bg-canvas-default p-4 shadow-xl">
-      <header className="flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">{variant.chromosome} · CNV Region 信号图</h3><button type="button" autoFocus onClick={onClose} aria-label="关闭区域信号图"><X className="h-5 w-5" /></button></header>
+  return <AppModal open={isOpen} onOpenChange={open=>!open&&onClose()} title={`${variant.chromosome} · CNV Region 信号图`} size="large" className="!z-[80] !w-[min(900px,94vw)] !max-w-none">
       <div className="my-3 flex flex-wrap items-center gap-3 text-xs"><label className="flex items-center gap-2">选中区间两侧扩展<input aria-label="窗口两侧扩展 kb" type="number" min="0" max="100000" value={flankKB} onChange={e => {const v=Number(e.target.value);if(Number.isFinite(v)&&v>=0&&v<=100000)setFlankKB(v);}} className="w-24 rounded border border-border-default bg-canvas-default px-2 py-1" />kb</label><span>{start.toLocaleString()}–{end.toLocaleString()}（窗口 {(end-start).toLocaleString()} bp）</span></div>
       <p className="mb-2 text-xs text-fg-muted">来源：完整 Region Parquet 中与窗口相交的合并区间，横线表示区间 log2，圆点表示其中点。缺测处留空；虚线为 log2=0。显示窗口不改变检出时的 bin 大小。灰色散点为归档原始 CNR bin，不插值或填补缺测。</p>
       <p className="mb-2 text-xs text-fg-muted">{cnrStatus}；当前窗口 {bins.length.toLocaleString()} 个原始 bin。</p>
-      <div ref={holder}>{loading ? <p role="status" className="py-20 text-center text-sm">正在浏览器中查询区域数据…</p> : error ? <div role="alert" className="py-8 text-sm text-danger-fg">{error}<button className="ml-3 underline" onClick={()=>setRetry(v=>v+1)}>重试</button></div> : <canvas ref={canvas} aria-label={`${valid.length} 个有 log2 数值的 Region 区间；可在检出表中读取原始数值`} onMouseMove={event => {
+      <div ref={setHolder}>{loading ? <p role="status" className="py-20 text-center text-sm">正在浏览器中查询区域数据…</p> : error ? <div role="alert" className="py-8 text-sm text-danger-fg">{error}<button className="yj-tool-button ml-3" onClick={()=>setRetry(v=>v+1)}>重试</button></div> : <canvas ref={setCanvas} aria-label={`${valid.length} 个有 log2 数值的 Region 区间；可在检出表中读取原始数值`} onMouseMove={event => {
         const rect=event.currentTarget.getBoundingClientRect(); const coordinate=start+(event.clientX-rect.left-54)/(width-74)*(end-start);
         setHover(valid.find(row=>coordinate>=row.startPosition&&coordinate<=row.endPosition)??null);
       }} onMouseLeave={()=>setHover(null)} className="max-w-full" />}</div>
       <p className="mt-2 min-h-5 text-xs text-fg-muted">{hover ? `${hover.chromosome}:${hover.startPosition}–${hover.endPosition} · log2 ${hover.log2Ratio} · CN ${hover.copyNumber??'未提供'}` : `${valid.length}/${rows.length} 个合并区间提供 log2；蓝色缺失，红色扩增，灰色其他，浅黄色为选中区间。`}</p>
-    </section>
-  </div>;
+  </AppModal>;
 }

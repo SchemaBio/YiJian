@@ -76,13 +76,15 @@ export function TaskHeader({ task, onBack, compact = false }: TaskHeaderProps) {
         : executionPhaseLabels[task.executionPhase]
     : executionPhaseLabels[task.executionPhase ?? ''];
 
-  if (compact) return <div className="mb-2 flex min-w-0 items-center gap-3">
+  if (compact) return <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
+    <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
     <HoverHint content="返回任务列表"><button onClick={onBack} aria-label="返回任务列表"  className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button></HoverHint>
-    <HoverHint content={task.name}><h1  className="min-w-0 truncate text-base font-semibold text-fg-default">{task.name}</h1></HoverHint>
+    <HoverHint content={task.name}><h1  className="min-w-0 flex-1 truncate text-base font-semibold text-fg-default">{task.name}</h1></HoverHint>
     <Tag variant={statusInfo.variant}>{statusInfo.label}</Tag>
+    </div>
     <span className="hidden text-xs text-fg-muted md:inline">{task.pipeline} · {task.pipelineVersion}</span>
-    <HoverHint content={task.id}><span className="ml-auto shrink-0 text-xs text-fg-muted" >任务 {task.id.substring(0,8)}</span></HoverHint>
-    <TaskCostDetail taskId={task.id}/>
+    <HoverHint content={task.id}><span className="shrink-0 text-xs text-fg-muted sm:ml-auto" >任务 {task.id.substring(0,8)}</span></HoverHint>
+    <TaskCostDetail taskId={task.id} compact/>
   </div>;
 
   return (

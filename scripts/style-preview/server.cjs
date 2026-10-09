@@ -1,5 +1,6 @@
 const path = require('path');
 const root = process.cwd();
+require('./generate-evidence.cjs');
 (async () => {
   const viteModule = await import(require('url').pathToFileURL(require.resolve('vite', { paths: [path.dirname(require.resolve('vitest/package.json'))] })).href);
   const { createServer } = viteModule.default ?? viteModule;

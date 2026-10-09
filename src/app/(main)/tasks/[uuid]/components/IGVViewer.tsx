@@ -166,6 +166,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setLoadedSession(null);
     void getIGVSession(taskId, controller.signal)
       .then(value => {
         if (!controller.signal.aborted) setLoadedSession(value);
@@ -274,21 +275,22 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
   const unavailableTracks = session?.tracks.filter(track => !track.available && track.format !== 'cnr') ?? [];
   return (
-    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="large" className="!w-[min(1100px,94vw)] !max-w-none">
+    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="large" className="!z-[80] !w-[min(1100px,94vw)] !max-w-none">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded bg-canvas-subtle px-2 py-1 text-fg-default">{locus}</span>
         <span className="text-fg-muted">{session?.reference.id || '参考未知'}</span>
         <button
           type="button"
           onClick={() => setReloadToken(value => value + 1)}
-          className="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"
+          disabled={loading}
+          className="yj-tool-button ml-auto"
         >
           <RefreshCw className="h-4 w-4" /> 刷新证据
         </button>
       </div>
 
       {error && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-danger-emphasis bg-danger-subtle p-3 text-sm text-danger-fg">
+        <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-danger-emphasis bg-danger-subtle p-3 text-sm text-danger-fg">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -300,7 +302,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         </div>
       )}
 
-      <div className="relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default">
+      <div className={error && !loading && !browserRef.current ? 'hidden' : 'relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default'}>
         <div ref={containerRef} className="min-h-[260px] w-full min-w-[640px]" />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-canvas-default/80">
@@ -322,7 +324,7 @@ interface PositionLinkProps {
 export function PositionLink({ chromosome, position, label, onClick }: PositionLinkProps) {
   return (
     <Tooltip content="在当前任务的 IGV 证据中查看" placement="top" variant="nav">
-      <button onClick={() => onClick(chromosome, position)} className="text-left text-accent-fg hover:underline">
+      <button onClick={event => { event.stopPropagation(); onClick(chromosome, position); }} className="text-left text-accent-fg hover:underline">
         {label ?? `${chromosome}:${position}`}
       </button>
     </Tooltip>

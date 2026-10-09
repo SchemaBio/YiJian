@@ -55,7 +55,7 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
       <h2 id="result-overview-heading" className="sr-only">结果概览</h2>
       {(context.state!=='ready'||context.importStatus==='failed')&&<div className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2 ${state.tone}`}>
         <StateIcon className="h-5 w-5 shrink-0" />
-        <div><h3 className="font-semibold">{state.title}</h3><span className="sr-only">{state.detail}</span></div>
+        <div><h3 className="font-semibold">{state.title}</h3><p className="mt-0.5 text-sm">{state.detail}</p></div>
         <span className="ml-auto shrink-0 rounded bg-canvas-default/70 px-3 py-2 text-xs">{context.reference.declaredId || '参考未知'}</span>
       </div>}
 
