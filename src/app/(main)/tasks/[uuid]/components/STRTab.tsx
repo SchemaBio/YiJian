@@ -1,5 +1,7 @@
 'use client';
 
+import { IGVViewer, PositionLink } from './IGVViewer';
+import { parseSTRLocus } from './str-locus';
 import { GeneLinks } from './GeneLinks';
 
 import * as React from 'react';
@@ -33,6 +35,8 @@ export function STRTab({
   filterState: externalFilterState,
   onFilterChange 
 }: STRTabProps) {
+  const [igvState, setIGVState] = React.useState<{ chromosome: string; position: number; endPosition?: number } | null>(null);
+  React.useEffect(() => setIGVState(null), [taskId]);
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<STR> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -187,7 +191,10 @@ export function STRTab({
     {
       id: 'locus',
       header: '位点',
-      accessor: 'locus',
+      accessor: row => {
+        const coordinates = parseSTRLocus(row.locus);
+        return coordinates ? <PositionLink chromosome={coordinates.chromosome} position={coordinates.position} label={row.locus} onClick={() => setIGVState(coordinates)} /> : row.locus;
+      },
       width: 100,
       sortable: true,
     },
@@ -316,6 +323,7 @@ export function STRTab({
           {operationError}
         </div>
       )}
+      {igvState && <IGVViewer taskId={taskId} chromosome={igvState.chromosome} position={igvState.position} endPosition={igvState.endPosition} isOpen onClose={() => setIGVState(null)} />}
     </div>
   );
 }

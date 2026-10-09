@@ -5,7 +5,8 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
 import { AppModal } from '@/components/shared';
 import type { IGVSession, IGVTrackDescriptor, IGVTrackURL } from '../types';
-import { getIGVSession, getIGVTrackURLs } from '../result-api';
+import { getIGVSession, getIGVTrackURLs, getIGVSnapshot, saveIGVSnapshot, type IGVSnapshot } from '../result-api';
+import { igvSVGToPNG } from '@/lib/igv-snapshot';
 
 export interface IGVViewerProps {
   taskId: string;
@@ -97,13 +98,14 @@ class SignedTrackResolver {
 
 export function formatChromosome(chromosome: string): string {
   const normalized = chromosome.trim();
-  if (/^chr/i.test(normalized)) return normalized;
-  if (/^(MT|M)$/i.test(normalized)) return 'chrM';
-  return `chr${normalized}`;
+  const name = normalized.replace(/^chr/i, '').toUpperCase();
+  if (/^(MT|M)$/.test(name)) return 'chrM';
+  return `chr${name}`;
 }
 
 function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackResolver): IGVTrackConfig {
   return {
+    sync: true,
     type: track.type as IGVTrackConfig['type'],
     format: track.format as IGVTrackConfig['format'],
     name: track.name,
@@ -129,6 +131,7 @@ function staticGeneTrack(session: IGVSession): IGVTrackConfig | null {
   const reference = session.reference;
   if (!reference.geneTrackURL) return null;
   return {
+    sync: true,
     type: 'annotation',
     format: 'gff3',
     name: '基因注释',
@@ -146,6 +149,11 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
   const [error, setError] = React.useState<string | null>(null);
   const [trackErrors, setTrackErrors] = React.useState<string[]>([]);
   const [reloadToken, setReloadToken] = React.useState(0);
+  const [snapshotState, setSnapshotState] = React.useState<{ key: string; value: IGVSnapshot } | null>(null);
+  const [snapshotNotice, setSnapshotNotice] = React.useState('');
+  const [snapshotLoading, setSnapshotLoading] = React.useState(false);
+  const [tracksReady, setTracksReady] = React.useState(false);
+  const navigationQueue = React.useRef<Promise<void>>(Promise.resolve());
   const session = suppliedSession ?? loadedSession;
 
   const locus = React.useMemo(() => {
@@ -155,6 +163,26 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
   }, [chromosome, endPosition, flanking, position]);
   const locusRef = React.useRef(locus);
   locusRef.current = locus;
+
+  const snapshotKey = `${taskId}/${session?.executionAttemptId ?? ''}/${locus}/${reloadToken}`;
+  const snapshot = snapshotState?.key === snapshotKey ? snapshotState.value : null;
+  const liveBAM = !!session?.tracks.some(track => track.format === 'bam' && track.available);
+  const showSnapshot = !liveBAM && !!snapshot?.available;
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setSnapshotLoading(true);
+    setSnapshotNotice('');
+    void getIGVSnapshot(taskId, locus, controller.signal).then(value => {
+      if (!controller.signal.aborted) setSnapshotState({ key: snapshotKey, value });
+    }).catch(() => {
+      if (!controller.signal.aborted) setSnapshotNotice('截图查询失败，请刷新重试。');
+    }).finally(() => {
+      if (!controller.signal.aborted) setSnapshotLoading(false);
+    });
+    return () => controller.abort();
+  }, [isOpen, taskId, locus, snapshotKey]);
 
   React.useEffect(() => {
     setLoadedSession(null);
@@ -181,9 +209,17 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
   }, [isOpen, suppliedSession, taskId, reloadToken]);
 
   React.useEffect(() => {
+    setTracksReady(false);
     if (!isOpen || !session || !containerRef.current) return;
+    if (session.tracks.some(track => track.format === 'bam') && !liveBAM) {
+      setLoading(false);
+      setError(null);
+      setTrackErrors([]);
+      return;
+    }
     const reference = referenceConfiguration(session);
     if (!session.available || !reference) {
+      setLoading(false);
       setError(session.reason || '该执行没有可判读的参考序列或测序证据');
       return;
     }
@@ -241,7 +277,8 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
             return;
           }
           try {
-            await browser.loadTrack(configuration);
+            const loaded = await browser.loadTrack(configuration);
+            if (!loaded) failures.push(configuration.name || '未命名轨迹');
           } catch {
             failures.push(configuration.name || '未命名轨迹');
           }
@@ -252,6 +289,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         }
         if (!active) return;
         setTrackErrors(failures);
+        setTracksReady(failures.length === 0);
         setLoading(false);
       } catch (cause) {
         if (!active) return;
@@ -264,12 +302,47 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       active = false;
       void dispose();
     };
-  }, [isOpen, reloadToken, session, taskId]);
+  }, [isOpen, reloadToken, session, taskId, liveBAM]);
 
   React.useEffect(() => {
-    if (!isOpen || !browserRef.current) return;
-    void browserRef.current.search(locus).catch(() => setError('无法定位到该参考序列区间'));
-  }, [isOpen, locus]);
+    const browser = browserRef.current;
+    if (!isOpen || !browser || loading) return;
+    const controller = new AbortController();
+    // Serialize searches: an older navigation must not repaint a newer locus.
+    navigationQueue.current = navigationQueue.current.catch(() => {}).then(async () => {
+      if (controller.signal.aborted) return;
+      try {
+        await browser.search(locus);
+        if (controller.signal.aborted || browserRef.current !== browser) return;
+        if (!tracksReady || !liveBAM || !session || !snapshot || snapshot.available || snapshotLoading) return;
+        await browser.updateViews();
+        if (controller.signal.aborted || browserRef.current !== browser || locusRef.current !== locus) return;
+        // Large regions show a zoom-in placeholder instead of reads.
+        if (Math.abs((endPosition ?? position) - position) + 2 * flanking > 30000) return;
+        const visibleMessages = containerRef.current?.querySelectorAll<HTMLElement>('.igv-viewport-message, .igv-zoom-in-notice-container');
+        if (visibleMessages && [...visibleMessages].some(item => item.textContent && getComputedStyle(item).display !== 'none')) throw new Error('轨迹尚未成功绘制');
+        const displayedLocus = browser.currentLoci();
+        const expected = /^([^:]+):(\d+)-(\d+)$/.exec(locus);
+        const actual = typeof displayedLocus === 'string' ? /^([^:]+):([\d.]+)-([\d.]+)$/.exec(displayedLocus) : null;
+        // The user may pan during loading. Never label that image as the requested locus.
+        if (!actual || !expected || formatChromosome(actual[1]) !== expected[1] || Math.abs(Number(actual[2]) - Number(expected[2])) > 1 || Math.abs(Number(actual[3]) - Number(expected[3])) > 1) return;
+        const svg = browser.toSVG();
+        // The serialized image is immutable. Upload in the background so navigation
+        // and closing the modal do not interrupt a screenshot already captured.
+        void igvSVGToPNG(svg).then(image => saveIGVSnapshot(taskId, locus, session.version, image)).then(value => {
+          if (!controller.signal.aborted) {
+            setSnapshotState({ key: snapshotKey, value });
+            setSnapshotNotice('截图已保存，BAM 到期后仍可查看。');
+          }
+        }).catch(() => {
+          if (!controller.signal.aborted) setSnapshotNotice('截图保存失败，请刷新重试；实时 BAM 仍可查看。');
+        });
+      } catch {
+        if (!controller.signal.aborted) setSnapshotNotice('截图保存失败，请刷新重试；实时 BAM 仍可查看。');
+      }
+    });
+    return () => controller.abort();
+  }, [isOpen, locus, loading, tracksReady, liveBAM, snapshot, snapshotLoading, snapshotKey, taskId, session, endPosition, position, flanking]);
 
   if (!isOpen) return null;
 
@@ -289,20 +362,28 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         </button>
       </div>
 
-      {error && (
+      {error && !showSnapshot && (
         <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-danger-emphasis bg-danger-subtle p-3 text-sm text-danger-fg">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
-      {(trackErrors.length > 0 || unavailableTracks.length > 0) && (
+      {!showSnapshot && (trackErrors.length > 0 || unavailableTracks.length > 0) && (
         <div className="mb-3 rounded-lg border border-warning-emphasis bg-warning-subtle p-3 text-sm text-warning-fg">
           {trackErrors.length > 0 && <p>未加载的轨迹：{trackErrors.join('、')}。</p>}
           {unavailableTracks.map(track => <p key={track.id}>{track.name}：{track.reason || '不可用'}。</p>)}
         </div>
       )}
 
-      <div className={error && !loading && !browserRef.current ? 'hidden' : 'relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default'}>
+      {snapshotNotice && <p role="status" className="mb-3 text-sm text-fg-muted">{snapshotNotice}</p>}
+      {showSnapshot && (
+        <div className="space-y-3">
+          <p className="rounded-lg bg-warning-subtle p-3 text-sm text-warning-fg">这是 BAM 保留期间保存的截图，无法交互查看 reads。{snapshot?.createdAt && ` 保存于 ${new Date(snapshot.createdAt).toLocaleString('zh-CN')}`} · {snapshot?.reference}</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={snapshot?.url} alt={`IGV 历史截图 ${locus}`} className="h-auto w-full rounded-lg border border-border-default" onError={() => { setSnapshotState({ key: snapshotKey, value: { available: false } }); setSnapshotNotice('截图读取失败，请刷新重试。'); }} />
+        </div>
+      )}
+      <div className={showSnapshot || (!liveBAM && unavailableTracks.some(track => track.format === 'bam')) || (error && !loading && !browserRef.current) ? 'hidden' : 'relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default'}>
         <div ref={containerRef} className="min-h-[260px] w-full min-w-[640px]" />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-canvas-default/80">

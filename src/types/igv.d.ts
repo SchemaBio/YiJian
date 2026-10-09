@@ -1,7 +1,9 @@
 declare module 'igv' {
   export interface IGVBrowser {
     search(locus: string): Promise<void>;
-    loadTrack(config: TrackConfig): Promise<void>;
+    loadTrack(config: TrackConfig): Promise<unknown>;
+    updateViews(): Promise<void>;
+    currentLoci(): string | string[];
     removeTrackByName(name: string): void;
     toSVG(): string;
     dispose(): void;
