@@ -13,7 +13,7 @@ import {
   retryDataAsset, updateDataAsset, type DataAsset, type DataCenterConfig,
   type UploadStorageStats,
 } from '@/lib/data-assets';
-import { AppModal, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/components/shared';
+import { AppModal, FilePicker, HoverText, IdCell, MetricTile, ModalSectionHeading } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { useUpload } from '@/components/providers/UploadProvider';
@@ -538,8 +538,8 @@ export default function DataCenterPage() {
               <p className="mt-1.5 text-xs text-fg-muted">自动匹配将优先使用此编号；未填写时才根据 FASTQ 文件名匹配。</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploadBusy} onChange={(event) => setRead1(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
-              <label className="block"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><input type="file" accept=".fastq,.fq,.fastq.gz,.fq.gz" disabled={uploadBusy} onChange={(event) => setRead2(event.target.files?.[0] ?? null)} className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium" /></label>
+              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><FilePicker label="Read1 文件" accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read1} disabled={uploadBusy} onChange={setRead1} /></div>
+              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label="Read2 文件" accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={uploadBusy} onChange={setRead2} /></div>
             </div>
           </section>
           {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? '正在取消上传' : '上传进度'} description={canceling ? '正在终止传输并清理对象存储，请稍候。' : '请保持页面打开，文件完成后会自动登记到数据中心。'} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? '取消中' : '正在上传'}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}

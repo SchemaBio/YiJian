@@ -299,7 +299,7 @@ function GeneListPageContent() {
       </div>
 
       <div className="yj-toolbar-panel">
-        <div className="w-64">
+        <div className="w-full sm:w-64">
           <Input
             placeholder="搜索基因列表..."
             value={searchQuery}
@@ -331,11 +331,11 @@ function GeneListPageContent() {
               <div key={list.id}>
                 {/* 主行 */}
                 <div
-                  className="yj-list-row px-4 py-3 flex items-center justify-between cursor-pointer"
+                  className="yj-list-row grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center"
                   onClick={() => toggleExpand(list.id)}
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <button type="button" aria-label={`${isExpanded ? '收起' : '展开'}${list.name}`} aria-expanded={isExpanded} className="p-0.5 text-fg-muted">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <button type="button" aria-label={`${isExpanded ? '收起' : '展开'}${list.name}`} aria-expanded={isExpanded} className="mt-0.5 shrink-0 p-0.5 text-fg-muted">
                       {isExpanded ? (
                         <ChevronDown className="w-4 h-4" />
                       ) : (
@@ -343,18 +343,19 @@ function GeneListPageContent() {
                       )}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-fg-default">{list.name}</span>
-                        {list.disease && list.disease !== list.name && <Tag variant="neutral">{list.disease}</Tag>}
-                        <span className="text-xs text-fg-muted">{list.genes.length} 个基因</span>
+                      <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="min-w-0 break-words text-sm font-medium leading-5 text-fg-default">{list.name}</span>
+                        {list.disease && list.disease !== list.name && <Tag variant="neutral" className="max-w-full whitespace-normal break-all">{list.disease}</Tag>}
+                        <span className="shrink-0 whitespace-nowrap text-xs text-fg-muted">{list.genes.length} 个基因</span>
                       </div>
                       {list.description && <p className="text-xs text-fg-muted truncate">{list.description}</p>}
                     </div>
-                    <div className="text-xs text-fg-muted shrink-0">
-                      <span>更新：{Number.isNaN(Date.parse(list.updatedAt)) ? list.updatedAt : new Date(list.updatedAt).toLocaleString('zh-CN', {hour12:false})}</span>
-                    </div>
                   </div>
-                  <div className="flex items-center gap-1 ml-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="col-start-1 row-start-2 min-w-0 break-words pl-7 text-xs text-fg-muted md:col-start-2 md:row-start-1 md:pl-0">
+                    更新：{Number.isNaN(Date.parse(list.updatedAt)) ? list.updatedAt : new Date(list.updatedAt).toLocaleString('zh-CN', {hour12:false})}
+                  </div>
+                  <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 md:col-start-3" onClick={(e) => e.stopPropagation()}>
+                    {list.scope==='personal'&&list.canMaintain&&<Button size="small" variant="secondary" onClick={async()=>{try{await publishGeneList(list);await refreshGeneLists();}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</Button>}
                     <HoverHint content="编辑"><button
                       className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
@@ -372,7 +373,6 @@ function GeneListPageContent() {
                   </div>
                 </div>
 
-                {list.scope==='personal'&&list.canMaintain&&<div className="px-4 pb-2"><Button size="small" variant="secondary" onClick={async()=>{try{await publishGeneList(list);await refreshGeneLists();}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</Button></div>}
  {/* 展开的基因列表 */}
                 {isExpanded && (
                   <div className="px-4 py-3 bg-canvas-subtle border-t border-border">
@@ -402,8 +402,8 @@ function GeneListPageContent() {
           <EmptyState
             className="min-h-[220px]"
             icon={<ListTree />}
-            title="暂无基因列表"
-            description="调整搜索条件，或添加一个新的基因列表。"
+            title={searchQuery.trim() ? "未找到匹配的基因列表" : "暂无基因列表"}
+            description={searchQuery.trim() ? "调整搜索条件后重试。" : "添加基因列表后可用于位点筛选。"}
           />
         )}
       </div>

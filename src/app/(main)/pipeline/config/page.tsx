@@ -21,6 +21,7 @@ export default function PipelineConfigPage() {
   const [pipelines, setPipelines] = React.useState<Pipeline[]>([]);
   const [selectedId, setSelectedId] = React.useState('');
   const [loading, setLoading] = React.useState(true);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
   const [error, setError] = React.useState('');
 
   const loadPipelines = React.useCallback(async () => {
@@ -29,10 +30,9 @@ export default function PipelineConfigPage() {
     try {
       const data = await listPipelines({ page: 1, pageSize: 100 });
       setPipelines(data);
+      setHasLoaded(true);
       setSelectedId(current => current && data.some(item => item.id === current) ? current : data[0]?.id ?? '');
     } catch (err) {
-      setPipelines([]);
-      setSelectedId('');
       setError(err instanceof Error ? err.message : '加载流程配置失败');
     } finally {
       setLoading(false);
@@ -68,37 +68,37 @@ export default function PipelineConfigPage() {
       </div>
 
       {error && (
-        <div role="alert" className="yj-panel border border-danger-muted bg-danger-subtle px-4 py-3 text-danger-fg flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
-          <span className="text-sm">{error}</span>
+        <div role="alert" className="yj-panel border border-danger-muted bg-danger-subtle px-4 py-3 text-danger-fg flex items-start gap-2">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="min-w-0 break-words text-sm">{error}</span>
         </div>
       )}
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">流程总数</div>
-          <div className="mt-2 text-2xl font-semibold text-fg-default">{loading || error ? '—' : pipelines.length}</div>
+          <div className="mt-2 text-2xl font-semibold text-fg-default">{!hasLoaded ? '—' : pipelines.length}</div>
         </div>
         <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">启用流程</div>
-          <div className="mt-2 text-2xl font-semibold text-success-fg">{loading || error ? '—' : activeCount}</div>
+          <div className="mt-2 text-2xl font-semibold text-success-fg">{!hasLoaded ? '—' : activeCount}</div>
         </div>
         <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">参考基因组</div>
-          <div className="mt-2 break-words text-sm text-fg-default">{loading || error ? '—' : references.join(' / ') || '—'}</div>
+          <div className="mt-2 break-words text-sm text-fg-default">{!hasLoaded ? '—' : references.join(' / ') || '—'}</div>
         </div>
         <div className="yj-panel min-w-0 p-4">
           <div className="text-xs text-fg-muted">BED 引用</div>
-          <div className="mt-2 text-2xl font-semibold text-fg-default">{loading || error ? '—' : bedFiles.length}</div>
+          <div className="mt-2 text-2xl font-semibold text-fg-default">{!hasLoaded ? '—' : bedFiles.length}</div>
         </div>
       </div>
 
-      <div className="yj-panel p-5 space-y-6">
-        {loading ? (
+      {(!error || hasLoaded) && <div className="yj-panel p-5 space-y-6">
+        {loading && !hasLoaded ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
           </div>
-        ) : error ? null : pipelines.length === 0 ? (
+        ) : pipelines.length === 0 ? (
           <EmptyState
             className="min-h-[220px]"
             icon={<Settings />}
@@ -130,13 +130,13 @@ export default function PipelineConfigPage() {
                     {selected.status === 'active' ? '启用' : '停用'}
                   </Tag>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                   <Info label="流程 ID" value={selected.id} mono />
                   <Info label="基础流程" value={BASE_TYPE_LABEL[selected.baseType] ?? selected.baseType} />
                   <Info label="版本" value={selected.version || '-'} />
                   <Info label="参考基因组" value={selected.referenceGenome || '-'} />
-                  <Info label="BED 文件" value={selected.bedFile || '-'} mono />
-                  <Info label="CNV 基线" value={selected.cnvBaseline || '未配置'} mono />
+                  <Info label="BED 文件" value={selected.bedFile || '-'} />
+                  <Info label="CNV 基线" value={selected.cnvBaseline || '未配置'} />
                   <Info label="创建时间" value={formatTime(selected.createdAt)} />
                   <Info label="更新时间" value={formatTime(selected.updatedAt)} />
                 </div>
@@ -160,7 +160,7 @@ export default function PipelineConfigPage() {
 
           </>
         )}
-      </div>
+      </div>}
     </PageContent>
   );
 }

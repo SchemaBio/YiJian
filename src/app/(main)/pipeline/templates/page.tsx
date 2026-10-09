@@ -16,7 +16,7 @@ import {
   TextArea,
   type Column,
 } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces, Share2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AppModal, EmptyState } from '@/components/shared';
 import { ReportEndpointExamples } from './ReportEndpointExamples';
@@ -338,7 +338,7 @@ function ReportTemplatesPageContent() {
       width: 180,
       align: 'center',
     },
- {id:'contract',header:'报告协议',width:140,align:'center',accessor:row=><div><Tag variant={row.contractVersion==='report-snapshot-v2'?'info':'warning'}>{row.contractVersion==='report-snapshot-v2'?'回报快照 v2':'旧版契约'}</Tag>{row.scope==='personal'&&row.canMaintain&&<button type="button" className="mt-1 block w-full text-xs text-accent-fg" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</button>}</div>},
+ {id:'contract',header:'报告协议',width:140,align:'center',accessor:row=><div><Tag variant={row.contractVersion==='report-snapshot-v2'?'info':'warning'}>{row.contractVersion==='report-snapshot-v2'?'回报快照 v2':'旧版契约'}</Tag></div>},
     {
       id: 'description',
       header: '描述',
@@ -392,6 +392,7 @@ function ReportTemplatesPageContent() {
       header: '操作',
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-1">
+          {row.scope==='personal'&&row.canMaintain&&<HoverHint content="共享到当前组织"><button type="button" className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}><Share2 className="w-4 h-4" /></button></HoverHint>}
           <HoverHint content="编辑"><button
             className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
@@ -420,7 +421,7 @@ function ReportTemplatesPageContent() {
           </button></HoverHint>
         </div>
       ),
-      width: 100,
+      width: 132,
       align: 'center' as const,
     },
   ];

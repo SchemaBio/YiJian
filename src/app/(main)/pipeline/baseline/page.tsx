@@ -69,7 +69,7 @@ export default function BaselinePage() {
     const generation = ++loadGeneration.current;
     assetController.current?.abort();
     const controller = new AbortController(); assetController.current = controller;
-    setLoading(true); setError(''); setCreditRate(null);
+    setLoading(true); setError('');
     try {
       const dataPromise = (async () => {
         const all: DataAsset[] = []; let page = 1;
@@ -95,6 +95,7 @@ export default function BaselinePage() {
     return () => { ++loadGeneration.current; assetController.current?.abort(); };
   }, [loadData]);
   React.useEffect(() => {
+    setCreditRate(null);
     if (!isSaaS) return;
     let disposed = false;
     void getBillingConfig().then(config => { if (!disposed) setCreditRate(config.cnv_baseline_credits_per_gib ?? null); }).catch(() => {});
@@ -170,10 +171,10 @@ export default function BaselinePage() {
       </div>
       <div className="yj-toolbar-panel">
         <div className="w-full sm:w-72"><Input placeholder="搜索名称、基因组或 BED..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
-        <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
+        <Button variant="primary" className="shrink-0 whitespace-nowrap" leftIcon={<Plus className="h-4 w-4" />} disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
       </div>
-      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void loadData()}>重试读取</button></div>}
-      {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped />}
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><button type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>重试读取</button></div>}
+      {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <div className="min-w-0 overflow-x-auto"><div className="min-w-[1420px]"><DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped /></div></div>}
 
       <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}>{submitting ? '正在投递...' : '启动校正流程'}</Button></>}>
         <div className="space-y-5">

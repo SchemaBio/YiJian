@@ -11,7 +11,7 @@ export const previewPageFailure = (scope: 'dashboard' | 'billing' | 'pedigree' |
 const transactions = ['recharge','pre_deduction','deduction','refund','failure_refund','adjust','download'].map((type,i)=>({id:i+1,type,org_id:'preview',amount:[1000,-75,-20,55,75,10,-1][i],balance_after:1000,description:'合成账单 · 仅用于界面预览',created_by:1,created_at:'2026-10-08T09:00:00Z'}));
 export const api = {
   get: async (url: string, options?: any) => {
-    for(const [scope,suffix] of [['dashboard','/dashboard/stats'],['billing','/billing/transactions'],['task-options','/v1/pipelines'],['report-history','/report-generations'],['templates','/v1/report-templates'],['recharge','/billing/config'],['permissions','/v1/users'],['admin','/v1/admin/stats'],['samples','/v1/samples'],['gene-list','/v1/gene-lists']]) {
+    for(const [scope,suffix] of [['dashboard','/dashboard/stats'],['billing','/billing/transactions'],['task-options','/v1/pipelines'],['config','/v1/pipelines'],['baseline','/v1/cnv-baselines'],['report-history','/report-generations'],['templates','/v1/report-templates'],['recharge','/billing/config'],['permissions','/v1/users'],['admin','/v1/admin/stats'],['samples','/v1/samples'],['gene-list','/v1/gene-lists']]) {
       if(url.endsWith(suffix) && pageReadFailures.has(scope)) {
         pageReadFailures.delete(scope);
         throw new Error('合成预览：页面数据读取失败');

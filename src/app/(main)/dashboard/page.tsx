@@ -61,7 +61,7 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 
 function statusVariant(status: TaskStatus): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
   if (status === 'completed') return 'success';
-  if (status === 'failed' || status === 'cancelled') return 'danger';
+  if (status === 'failed') return 'danger';
   if (status === 'running') return 'info';
   if (status === 'queued' || status === 'waiting_for_data') return 'warning';
   return 'neutral';
@@ -237,10 +237,16 @@ export default function DashboardPage() {
                     {STATUS_LABEL[task.status] ?? task.status}
                   </Tag>
                   <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
-                    <span className="w-8 text-right text-xs font-medium tabular-nums text-fg-default">{task.progress ?? 0}%</span>
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas-inset sm:w-[92px] sm:flex-none">
-                      <div className="h-full rounded-full bg-accent-emphasis" style={{ width: `${Math.min(100, Math.max(0, task.progress ?? 0))}%` }} />
-                    </div>
+                    {task.status === 'running' && (
+                      typeof task.progress === 'number' && Number.isFinite(task.progress) ? (
+                        <>
+                          <span className="w-8 text-right text-xs font-medium tabular-nums text-fg-default">{Math.min(100, Math.max(0, task.progress))}%</span>
+                          <div role="progressbar" aria-label="任务运行进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.max(0, task.progress))} className="h-1.5 w-[92px] overflow-hidden rounded-full bg-canvas-inset">
+                            <div className="h-full rounded-full bg-accent-emphasis" style={{ width: `${Math.min(100, Math.max(0, task.progress))}%` }} />
+                          </div>
+                        </>
+                      ) : <span className="text-xs text-fg-muted">进度暂不可用</span>
+                    )}
                   </div>
                 </Link>
               ))}

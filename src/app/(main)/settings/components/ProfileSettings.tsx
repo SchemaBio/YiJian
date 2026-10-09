@@ -99,7 +99,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             <h3 className="text-base font-medium text-fg-default">账号信息</h3>
           </div>
         </div>
-        <div className="grid max-w-3xl grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 lg:grid-cols-3">
           <FormItem label="姓名" className="col-span-2 md:col-span-1">
             <Input aria-label="姓名" value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
           </FormItem>
@@ -139,7 +139,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             <h3 className="text-base font-medium text-fg-default">当前机构</h3>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <ReadOnlyField label="机构名称">{currentOrg?.name ?? '—'}</ReadOnlyField>
           <ReadOnlyField label="机构编号" mono>{currentOrg?.id ?? '—'}</ReadOnlyField>
         </div>

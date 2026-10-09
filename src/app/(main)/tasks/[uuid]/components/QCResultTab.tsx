@@ -55,7 +55,7 @@ function formatMetric(metric: QCMetric | undefined, definition: MetricDefinition
     const scale = percentageScale(metric);
     return scale === null ? '单位未确认' : `${(metric.value * scale).toFixed(2)}%`;
   }
-  if (definition.unit === 'reads') return String(metric.value);
+  if (definition.unit === 'reads') return metric.value.toLocaleString('en-US', { maximumFractionDigits: 20 });
   if (definition.unit === 'bp') return `${metric.value.toFixed(0)} bp`;
   return `${metric.value.toFixed(2)}×`;
 }
@@ -135,6 +135,6 @@ export function QCAndFamilyTables({ context }: { context: ResultContext }) {
         })}
       </tr>)}</tbody>
     </table></div>}
-    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">悬停查看来源及复核提示；提示不作为报告放行结论。</p>
+    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">质控复核提示不作为报告放行结论。</p>
   </section>;
 }

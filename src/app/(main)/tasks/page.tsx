@@ -590,17 +590,17 @@ export default function AnalysisPage() {
         const terminalStatus = ['completed', 'failed', 'cancelled'].includes(row.status);
         const preparing = !terminalStatus && ['bootstrapping', 'diagnostic_hold'].includes(row.executionPhase ?? '') && row.progress === 0;
         if (preparing) return <span className="text-xs text-fg-muted">准备中</span>;
+        if (row.status !== 'running' || !Number.isFinite(row.progress)) return <span className="text-xs text-fg-muted">—</span>;
+        const progress = Math.min(100, Math.max(0, row.progress));
         return (
         <div className="flex items-center justify-center gap-2">
           <div className="flex-1 h-2 bg-canvas-inset rounded-full overflow-hidden max-w-[60px]">
             <div
-              className={`h-full rounded-full transition-all ${
-                row.status === 'failed' ? 'bg-danger-emphasis' : 'bg-accent-emphasis'
-              }`}
-              style={{ width: `${row.progress}%` }}
+              className="h-full rounded-full bg-accent-emphasis"
+              style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="text-xs text-fg-muted w-8">{row.progress}%</span>
+          <span className="text-xs text-fg-muted w-8">{progress}%</span>
         </div>
         );
       },

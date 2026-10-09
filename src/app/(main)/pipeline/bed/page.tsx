@@ -5,7 +5,7 @@ import {ResourcePager} from '@/components/shared/ResourcePager';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { AppModal, EmptyState, ModalSectionHeading } from '@/components/shared';
+import { AppModal, EmptyState, FilePicker, ModalSectionHeading } from '@/components/shared';
 import { Button, Checkbox, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
 import { AlertTriangle, FileText, HardDrive, Loader2, Search, Trash2, Upload } from 'lucide-react';
 import { deleteDataAsset, getDataCenterConfig, getUploadStorageStats, listAllBEDAssets, validateBEDAsset, uploadBEDFile, type DataAsset, type DataCenterConfig, type UploadStorageStats } from '@/lib/data-assets';
@@ -178,10 +178,10 @@ function BedFilesPageContent() {
       </div>
 
       <div className="yj-toolbar-panel">
-        <div className="w-72">
+        <div className="w-full sm:w-72">
           <Input placeholder="搜索文件名或 UUID..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} />
         </div>
-        <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>上传 BED 文件</Button>
+        <Button variant="primary" className="shrink-0 whitespace-nowrap" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>上传 BED 文件</Button>
       </div>
 
       {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>重试读取</button></div>}
@@ -192,7 +192,7 @@ function BedFilesPageContent() {
       ) : error && items.length === 0 ? null : filteredFiles.length === 0 ? (
         <EmptyState className="yj-panel" icon={<FileText />} title={searchQuery.trim() ? "未找到匹配 BED 文件" : "暂无 BED 文件"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "上传 BED 文件后即可在分析流程和 CNV 基线任务中选择。"} />
       ) : (
-        <DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped />
+        <div className="min-w-0 overflow-x-auto"><div className="min-w-[1040px]"><DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped /></div></div>
       )}
 
       <ResourcePager page={page} total={filteredFiles.length} onChange={setPage} />
@@ -205,17 +205,17 @@ function BedFilesPageContent() {
       >
         <div className="space-y-5">
           <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title="文件信息" description="文件仅适用于所选参考基因组。" />
-          {uploadError && <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{uploadError}</div>}
+          {uploadError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{uploadError}</div>}
           <FormItem label="参考基因组" required>
             <Select value={referenceGenome} onChange={(value) => setReferenceGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome)} options={genomeOptions} />
           </FormItem>
           <FormItem label="BED 文件" required hint="支持 .bed 和 .bed.gz，文件大小不超过 20MB">
-            <input
-              type="file"
+            <FilePicker
+              label="BED 文件"
               accept=".bed,.bed.gz,application/gzip"
+              file={file}
               disabled={uploading}
-              onChange={(event) => { setFile(event.target.files?.[0] ?? null); setUploadError(''); }}
-              className="block w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm text-fg-default file:mr-3 file:rounded file:border-0 file:bg-canvas-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium"
+              onChange={selected => { setFile(selected); setUploadError(''); }}
             />
           </FormItem>
           {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>允许系统长期保存此 BED 文件。我已知晓系统不提供 BED 文件下载；如不再使用，可在 BED 文件管理中手动删除。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已阅读并同意" /></div>}

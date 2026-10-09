@@ -425,12 +425,12 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 <AnnotationField label="疾病标识" value={annotation('GenCC_disease_original_curie')} />
               </dl>
             </section>
-            <section aria-labelledby="variant-ids-heading">
+            {(variant.rsId || annotation('HGNC_ID') || annotation('Cytoband')) && <section aria-labelledby="variant-ids-heading">
               <h4 id="variant-ids-heading" className="yj-annotation-heading">变异标识</h4>
-              <InfoItem label="dbSNP" value={variant.rsId} />
-              <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />
-              <InfoItem label="染色体带区" value={annotation('Cytoband')} />
-            </section>
+              {variant.rsId && <InfoItem label="dbSNP" value={variant.rsId} />}
+              {annotation('HGNC_ID') && <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />}
+              {annotation('Cytoband') && <InfoItem label="染色体带区" value={annotation('Cytoband')} />}
+            </section>}
             <section aria-labelledby="variant-links-heading">
               <h4 id="variant-links-heading" className="yj-annotation-heading">数据库与判读资源</h4>
               <VariantResourceLinks variant={variant} referenceGenome={referenceGenome} />

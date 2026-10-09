@@ -33,6 +33,8 @@ const pathLabelMap: Record<string, string> = {
   analysis: '分析中心',
   reports: '报告中心',
   history: '历史检出',
+  tasks: '任务中心',
+  admin: '平台管理',
   settings: '系统设置',
   about: '关于',
   privacy: '隐私协议',
@@ -53,6 +55,7 @@ const pathLabelMap: Record<string, string> = {
   database: '数据库管理',
   baseline: '基线管理',
   templates: '报告服务',
+  config: '流程配置',
   // 分析中心子页面
   running: '进行中',
   pending: '待解读',
@@ -75,6 +78,7 @@ const defaultSubPageMap: Record<string, string> = {
   '/data': '数据列表',
   '/pipeline': '流程列表',
   '/analysis': '任务列表',
+  '/tasks': '任务列表',
   '/reports': '报告列表',
   '/billing': '费用概览',
   '/settings': '个人设置',
@@ -94,7 +98,12 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     currentPath += `/${segment}`;
     // Find label from navigation config or path label map
     const navItem = mainNavItems.find(item => item.href === `/${segment}`);
-    const label = navItem?.label || pathLabelMap[segment] || segment;
+    const detailLabel = currentPath.startsWith('/tasks/') && segment !== 'new'
+      ? '任务解读'
+      : currentPath.startsWith('/samples/') && !pathLabelMap[segment]
+        ? '样本详情'
+        : undefined;
+    const label = detailLabel || navItem?.label || pathLabelMap[segment] || segment;
     items.push({ label, href: currentPath });
   }
 

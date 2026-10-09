@@ -6,7 +6,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 import * as React from 'react';
 import { Button, Input, Select, FormItem, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { CheckCircle2, Loader2, Pencil, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, Pencil, RefreshCw, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
 import type { SystemRole, User } from '@/types/user';
 import { approveUser, deleteUser, listPendingUsers, listUsers, rejectUser, updateUser } from '@/lib/users';
 
@@ -254,7 +254,7 @@ export function PermissionsManagement() {
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="secondary" className="yj-tool-button" leftIcon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />} onClick={() => void loadUsers()} disabled={isLoading}>
+        <Button variant="secondary" className="yj-tool-button" leftIcon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} onClick={() => void loadUsers()} disabled={isLoading}>
           刷新
         </Button>
       </div>

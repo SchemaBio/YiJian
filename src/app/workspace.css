@@ -123,3 +123,6 @@
 [data-theme='dark'] .yj-history-classification[data-classification='Likely_Benign'] { color: #66cad6; }
 [data-theme='dark'] .yj-history-classification[data-classification='Benign'] { color: #75d69d; }
 [data-theme='dark'] .yj-history-classification[data-classification='mixed'] { color: #c7a0ee; }
+
+/* Reserve space for the history search icon despite inherited input styles. */
+input.yj-history-search { padding-left: 2rem !important; }

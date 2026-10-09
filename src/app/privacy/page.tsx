@@ -23,21 +23,19 @@ export default function PrivacyPage() {
           返回
         </Link>
 
-        {/* Header */}
-        <div className="yj-panel mb-6 p-5 sm:p-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--yj-border-subtle)] bg-[var(--yj-sage-subtle)]">
-            <Shield className="h-7 w-7 text-success-fg" />
+        <header className="yj-panel mb-6 flex items-start gap-4 p-6">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--yj-border-subtle)] bg-[var(--yj-sage-subtle)]">
+            <Shield className="h-6 w-6 text-success-fg" />
           </div>
-          <h1 className="mb-2 text-2xl sm:text-[30px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">用户服务协议与隐私政策</h1>
-          <p className="text-sm text-[var(--yj-text-muted)]">贻鉴遗传病胚系突变分析平台</p>
-        </div>
-
-        {/* 生效日期 */}
-        <div className="yj-info-panel mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-muted">
-          <span>发布日期：2026年6月26日</span>
-          <span className="text-border">|</span>
-          <span>生效日期：2026年6月26日</span>
-        </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold leading-tight text-[var(--yj-text-strong)]">用户服务协议与隐私政策</h1>
+            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">贻鉴遗传病胚系突变分析平台</p>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-fg-muted">
+              <span>发布日期：2026年6月26日</span>
+              <span>生效日期：2026年6月26日</span>
+            </div>
+          </div>
+        </header>
 
         {/* 重要声明 */}
         <div className="yj-public-alert mb-6 rounded-[var(--yj-radius-panel)] p-4">

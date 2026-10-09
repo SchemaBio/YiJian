@@ -23,7 +23,7 @@ export default function HomePage() {
   // 显示加载状态
   return (
     <div className="yj-modern yj-public-shell flex items-center justify-center">
-      <div className="yj-public-spinner" />
+      <div className="yj-public-spinner" role="status" aria-label="正在加载" />
     </div>
   );
 }

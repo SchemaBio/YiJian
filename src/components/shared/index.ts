@@ -2,6 +2,7 @@ export { AppModal, ConfirmDialog, ModalSectionHeading } from './AppModal';
 export type { AppModalProps } from './AppModal';
 export { MetricTile } from './MetricTile';
 export { EmptyState } from './EmptyState';
+export { FilePicker } from './FilePicker';
 
 export { IdCell, HoverText } from './IdCell';
 
