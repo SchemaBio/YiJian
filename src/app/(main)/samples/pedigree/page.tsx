@@ -155,9 +155,9 @@ export default function PedigreePage() {
 
     // 否则处理打开家系
     if (pedigreeId && pedigreeId !== processedPedigreeId.current) {
-      processedPedigreeId.current = pedigreeId;
       const pedigree = pedigrees.find(p => p.id === pedigreeId);
       if (pedigree) {
+        processedPedigreeId.current = pedigreeId;
         handleOpenTabById(pedigreeId, pedigree.internalId);
       }
     }
@@ -820,14 +820,14 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
               </div>
             </div>
             {error && (
-              <div className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-                {error}
+              <div role="alert" className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+                {error}<button type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>重试读取</button>
               </div>
             )}
             {listLoading && (
               <div className="mb-3 text-sm text-fg-muted">加载家系列表...</div>
             )}
-            <div className="overflow-x-auto [&_table]:min-w-[990px]"><DataTable data={filteredPedigrees} columns={columns} rowKey="id" striped density="compact" /></div>
+            {!listLoading && !(error && pedigrees.length === 0) && <div className="overflow-x-auto [&_table]:min-w-[990px]"><DataTable data={filteredPedigrees} columns={columns} rowKey="id" striped density="compact" /></div>}
           </div>
         </div>
       )}
@@ -893,6 +893,8 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
               <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
               </div>
+            ) : error && !currentPedigree ? (
+              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <button type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>重试读取</button>}</div>
             ) : currentPedigree ? (
               <PedigreeTree
                 members={currentPedigree.members}

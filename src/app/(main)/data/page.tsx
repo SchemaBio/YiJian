@@ -434,7 +434,7 @@ export default function DataCenterPage() {
           <h2 className="yj-page-title">数据中心</h2>
           <p className="mt-2 text-sm text-fg-muted">管理组织内可用于样本匹配和分析的测序数据</p>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:w-auto sm:grid-cols-3">
           <MetricTile label="数据资产" value={assets.length} icon={<Database className="h-4 w-4" />} />
           <MetricTile label="可用文件" value={readyCount} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
           <MetricTile

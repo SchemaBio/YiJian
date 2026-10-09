@@ -505,21 +505,21 @@ export default function AdminPage() {
 
   return (
     <PageContent className="yj-page-shell space-y-4">
-      <div className="yj-page-header">
+      <div className="yj-page-header flex-col items-start gap-3 sm:flex-row sm:items-center">
         <div>
           <h2 className="yj-page-title">平台管理后台</h2>
           <p className="yj-page-subtitle">
             管理机构、任务运行及积分策略。
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button variant="secondary" className="yj-tool-button" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={() => void loadData()}>刷新</Button>
           <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => { setError(null); setProvisionOpen(true); }}>开通机构</Button>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+        <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
           {error}
         </div>
       )}

@@ -94,7 +94,7 @@ export default function LoginPage() {
               </div>
             )}
             {error && (
-              <div className="yj-public-alert rounded-xl p-3.5 text-sm">
+              <div role="alert" className="yj-public-alert rounded-xl p-3.5 text-sm">
                 {error}
               </div>
             )}
@@ -180,7 +180,7 @@ export default function LoginPage() {
           </p>
 
           <p className="mt-8 text-center text-xs text-[var(--yj-text-muted)] lg:hidden">
-            © 2024 SchemaBio. All rights reserved.
+            © 2024–{new Date().getFullYear()} SchemaBio. All rights reserved.
           </p>
         </div>
       </div>

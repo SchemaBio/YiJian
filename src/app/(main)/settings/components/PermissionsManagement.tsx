@@ -260,7 +260,7 @@ export function PermissionsManagement() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+        <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
           {error}
         </div>
       )}
@@ -270,7 +270,7 @@ export function PermissionsManagement() {
           <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
           <p className="text-fg-muted">正在加载用户列表...</p>
         </div>
-      ) : users.length === 0 ? (
+      ) : error && users.length === 0 ? null : users.length === 0 ? (
         <EmptyState className="yj-panel" icon={<Users />} title={searchQuery.trim() ? '没有匹配的用户' : '暂无用户'} description={searchQuery.trim() ? '调整搜索条件后重试。' : undefined} />
       ) : (
         <div className="[&_table]:min-w-[1110px]"><DataTable data={users} columns={columns} rowKey="id" density="default" striped /></div>

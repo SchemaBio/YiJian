@@ -21,22 +21,29 @@ export default function RechargePage() {
   const [amount, setAmount] = React.useState(500);
   const [copied, setCopied] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [loadError, setLoadError] = React.useState('');
+  const [retry, setRetry] = React.useState(0);
 
   React.useEffect(() => {
     if (!isSaaS) {
       router.replace('/dashboard');
       return;
     }
+    let active = true;
+    setLoadError('');
     Promise.all([getBillingBalance(), getBillingConfig()])
       .then(([nextBalance, nextConfig]) => {
+        if (!active) return;
         setBalance(nextBalance);
         setConfig(nextConfig);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : '加载充值信息失败'));
-  }, [isSaaS, router]);
+      .catch((err) => { if (active) setLoadError(err instanceof Error ? err.message : '加载充值信息失败'); });
+    return () => { active = false; };
+  }, [isSaaS, router, retry]);
 
-  const estimatedMinutes = config
-    ? Math.floor(amount / (config.credits_per_minute * config.credit_rate_multiplier))
+  const minuteRate = config ? config.credits_per_minute * config.credit_rate_multiplier : null;
+  const estimatedMinutes = minuteRate !== null && Number.isFinite(minuteRate) && minuteRate > 0
+    ? Math.floor(amount / minuteRate)
     : null;
   const exampleTaskCost = calculateEstimatedCredits(60, config);
 
@@ -76,8 +83,9 @@ export default function RechargePage() {
         </div>
       </div>
 
+      {loadError && <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<button type="button" className="yj-tool-button ml-3" onClick={() => setRetry(value => value + 1)}>重试读取</button></div>}
       {error && (
-        <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+        <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
           {error}
         </div>
       )}

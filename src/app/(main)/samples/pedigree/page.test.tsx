@@ -1,0 +1,20 @@
+import * as React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import PedigreePage from './page';
+import { getPedigree, listPedigrees } from '@/lib/pedigrees';
+const params = vi.hoisted(() => new URLSearchParams('id=family'));
+vi.mock('next/navigation', () => ({ useSearchParams: () => params }));
+vi.mock('@/lib/pedigrees', () => ({ getPedigree: vi.fn(), listPedigrees: vi.fn(), createPedigree: vi.fn(), createPedigreeMember: vi.fn(), deletePedigree: vi.fn(), deletePedigreeMember: vi.fn(), setPedigreeProband: vi.fn(), updatePedigree: vi.fn(), updatePedigreeMember: vi.fn() }));
+vi.mock('./components', () => ({ PedigreeTree: () => <div>家系树已恢复</div>, MemberDetailPanel: () => null, AddMemberModal: () => null, LinkSampleModal: () => null, NewPedigreeModal: () => null, EditPedigreeModal: () => null, ConfirmDialog: () => null, EditMemberModal: () => null, ContextMenu: () => null }));
+it('shows detail-load failure in the open family workspace and recovers on retry', async () => {
+  vi.mocked(listPedigrees).mockResolvedValue([{ id: 'family', internalId: 'FAMILY', sampleIds: [], sampleInternalIds: [], probandIndex: 0, createdAt: '', updatedAt: '' }]);
+  vi.mocked(getPedigree).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ id: 'family', internalId: 'FAMILY', probandId: '', members: [], createdAt: '', updatedAt: '' });
+  render(<PedigreePage />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('加载家系详情失败');
+  expect(screen.queryByText('选择一个家系查看详情')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
+  await screen.findByText('家系树已恢复');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(getPedigree).toHaveBeenCalledTimes(2);
+});

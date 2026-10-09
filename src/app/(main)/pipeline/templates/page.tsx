@@ -454,8 +454,8 @@ function ReportTemplatesPageContent() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {error}
+        <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+          {error}<button type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>重试读取</button>
         </div>
       )}
 
@@ -472,12 +472,12 @@ function ReportTemplatesPageContent() {
           density="default"
           striped
         /></div>
-      ) : (
+      ) : error ? null : (
         <EmptyState
           className="yj-panel"
           icon={<FileText />}
-          title="尚未配置报告服务"
-          description="添加一个带 Bearer Key 认证的 服务地址，即可在任务报告页调用。"
+          title={searchQuery.trim() ? "未找到匹配报告服务" : "尚未配置报告服务"}
+          description={searchQuery.trim() ? "调整搜索条件后重试。" : "添加带 Bearer Key 认证的服务地址后，可在任务报告页调用。"}
         />
       )}
 

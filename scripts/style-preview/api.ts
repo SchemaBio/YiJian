@@ -5,7 +5,7 @@ const views: any[] = [];
 let reportReadFails = false;
 export const previewReportFailure = () => { reportReadFails = true; };
 const pageReadFailures = new Set<string>();
-export const previewPageFailure = (scope: 'dashboard' | 'billing') => { pageReadFailures.add(scope); };
+export const previewPageFailure = (scope: 'dashboard' | 'billing' | 'pedigree') => { pageReadFailures.add(scope); };
 const transactions = ['recharge','pre_deduction','deduction','refund','failure_refund','adjust','download'].map((type,i)=>({id:i+1,type,org_id:'preview',amount:[1000,-75,-20,55,75,10,-1][i],balance_after:1000,description:'合成账单 · 仅用于界面预览',created_by:1,created_at:'2026-10-08T09:00:00Z'}));
 export const api = {
   get: async (url: string, options?: any) => {
@@ -22,7 +22,7 @@ export const api = {
     if(url.endsWith('/v1/samples')) return [sampleFixture];
     if(url.endsWith('/v1/samples/detail-preview')) return sampleFixture;
     if(url.endsWith('/v1/pedigrees')) return [pedigreeFixture];
-    if(url.endsWith('/v1/pedigrees/preview-family')) return pedigreeFixture;
+    if(url.endsWith('/v1/pedigrees/preview-family')) { if(pageReadFailures.delete('pedigree')) throw new Error('合成预览：家系详情读取失败'); return pedigreeFixture; }
     if(url.endsWith('/v1/report-templates')) return [{id:'preview-report',name:'合成遗传病报告',description:'用于界面检查的报告服务',apiEndpoint:'https://example.invalid/reports/generate',hasApiKey:true,isActive:true,canMaintain:true,revision:1,contractVersion:'report-snapshot-v2',updatedAt:'2026-10-08T09:00:00Z'}];
     if(url.endsWith('/v1/users/pending')) return [{id:'preview-pending',name:'待审批示例',email:'pending@example.invalid',org_id:'preview-org',system_role:'ORG_USER',approval_status:'pending',is_active:false,created_at:'2026-10-08T09:00:00Z'}];
     if(url.endsWith('/v1/users')) return {items:[{id:'preview-user',name:'示例用户',email:'user@example.invalid',org_id:'preview-org',system_role:'ORG_USER',approval_status:'approved',is_active:true,created_at:'2026-10-08T09:00:00Z'}],total:1,total_pages:1};

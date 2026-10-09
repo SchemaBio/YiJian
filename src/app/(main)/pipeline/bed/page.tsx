@@ -184,13 +184,13 @@ function BedFilesPageContent() {
         <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>上传 BED 文件</Button>
       </div>
 
-      {error && <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
+      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>重试读取</button></div>}
 
       {references.length>0&&<div className="rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm">此 BED 正在被以下资源使用：<ul className="mt-2 space-y-1">{references.map(r=><li key={`${r.kind}:${r.id}`}><a className="text-accent-fg underline" href={r.kind==='task'?`/tasks/${r.id}`:r.kind==='baseline'?'/pipeline/baseline':'/pipeline'}>{r.name||r.id}</a></li>)}</ul></div>}
       {isLoading ? (
         <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 BED 文件...</p></div>
-      ) : filteredFiles.length === 0 ? (
-        <EmptyState className="yj-panel" icon={<FileText />} title="暂无 BED 文件" description="上传 BED 文件后即可在分析流程和 CNV 基线任务中选择。" />
+      ) : error && items.length === 0 ? null : filteredFiles.length === 0 ? (
+        <EmptyState className="yj-panel" icon={<FileText />} title={searchQuery.trim() ? "未找到匹配 BED 文件" : "暂无 BED 文件"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "上传 BED 文件后即可在分析流程和 CNV 基线任务中选择。"} />
       ) : (
         <DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped />
       )}

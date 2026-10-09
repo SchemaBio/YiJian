@@ -313,8 +313,8 @@ function GeneListPageContent() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+        <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
+          {error}<button type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshGeneLists()}>重试读取</button>
         </div>
       )}
 
@@ -398,7 +398,7 @@ function GeneListPageContent() {
           })}
         </div>
 
-        {!loading && filteredLists.length === 0 && (
+        {!loading && !error && filteredLists.length === 0 && (
           <EmptyState
             className="min-h-[220px]"
             icon={<ListTree />}

@@ -1,0 +1,21 @@
+import * as React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import RechargePage from './page';
+import { getBillingBalance, getBillingConfig } from '@/lib/billing';
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: { email: 'preview@example.invalid' }, currentOrg: { id: 'org', name: 'preview' } }) }));
+vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => 'squid' }));
+vi.mock('@/lib/billing', () => ({ getBillingBalance: vi.fn(), getBillingConfig: vi.fn(), calculateEstimatedCredits: vi.fn(() => null) }));
+it('recovers failed recharge information without displaying infinite runtime', async () => {
+  vi.mocked(getBillingBalance).mockRejectedValueOnce(new Error('余额读取失败')).mockResolvedValueOnce({ balance: 100, org_id: "org" });
+  vi.mocked(getBillingConfig).mockResolvedValue({ credits_per_minute: 0, credit_rate_multiplier: 1 } as Awaited<ReturnType<typeof getBillingConfig>>);
+  render(<RechargePage />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('余额读取失败');
+  fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
+  await screen.findByText('100 积分', { selector: 'p' });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
+  expect(getBillingBalance).toHaveBeenCalledTimes(2);
+});

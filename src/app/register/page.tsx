@@ -101,7 +101,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="yj-public-alert rounded-[var(--yj-radius-panel)] p-3.5 text-sm">
+            <div role="alert" className="yj-public-alert rounded-[var(--yj-radius-panel)] p-3.5 text-sm">
               {error}
             </div>
           )}

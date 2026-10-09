@@ -68,7 +68,7 @@ export default function PipelineConfigPage() {
       </div>
 
       {error && (
-        <div className="yj-panel border border-danger-muted bg-danger-subtle text-danger-fg flex items-center gap-2">
+        <div role="alert" className="yj-panel border border-danger-muted bg-danger-subtle px-4 py-3 text-danger-fg flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
           <span className="text-sm">{error}</span>
         </div>
@@ -98,7 +98,7 @@ export default function PipelineConfigPage() {
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-emphasis" />
           </div>
-        ) : pipelines.length === 0 ? (
+        ) : error ? null : pipelines.length === 0 ? (
           <EmptyState
             className="min-h-[220px]"
             icon={<Settings />}
@@ -149,14 +149,14 @@ export default function PipelineConfigPage() {
               </section>
             )}
 
-            <section className="space-y-3">
+            {pipelines.length > 1 && <section className="space-y-3">
               <h3 className="text-sm font-medium text-fg-default pb-2 border-b border-border flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 已配置资源引用
               </h3>
               <ResourceList title="BED 文件" values={bedFiles} />
               <ResourceList title="CNV 基线" values={cnvBaselines} emptyText="未配置 CNV 基线" />
-            </section>
+            </section>}
 
           </>
         )}

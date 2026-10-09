@@ -19,7 +19,17 @@ interface ReportTabProps {
 export function ReportTab({ taskId }: ReportTabProps) {
   const requestIds=React.useRef<Record<string,string>>({});
  const [generations,setGenerations]=React.useState<Array<{id:string;state:string;createdAt:string;errorCode:string;contractVersion:string}>>([]);
- React.useEffect(()=>{let alive=true;reportsApi.listGenerations(taskId).then(rows=>{if(alive)setGenerations(rows)}).catch(()=>{});return()=>{alive=false;requestIds.current={}}},[taskId]);
+ const [generationError, setGenerationError] = React.useState('');
+ const [generationRetry, setGenerationRetry] = React.useState(0);
+ React.useEffect(() => { requestIds.current = {}; setGenerations([]); }, [taskId]);
+ React.useEffect(() => {
+   let alive = true;
+   setGenerationError('');
+   reportsApi.listGenerations(taskId)
+     .then(rows => { if (alive) setGenerations(rows); })
+     .catch(() => { if (alive) setGenerationError('报告生成记录读取失败'); });
+   return () => { alive = false; };
+ }, [taskId, generationRetry]);
  const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [templateError, setTemplateError] = React.useState('');
@@ -86,7 +96,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
  setGenerationStage('calling');
       const requestId=requestIds.current[template.id]??crypto.randomUUID();requestIds.current[template.id]=requestId;
  const download = await reportsApi.generateTaskReport(taskId, template,requestId);
- delete requestIds.current[template.id];setGenerations(await reportsApi.listGenerations(taskId));
+ delete requestIds.current[template.id];
       setGenerationStage('downloading');
       saveDownload(download);
       setLastDownloadedFile(download.filename);
@@ -95,7 +105,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
       setErrorMessage(error instanceof Error ? error.message : `报告 "${template.name}" 生成失败，请稍后重试。`);
       setErrorModalOpen(true);
     } finally {
-      reportsApi.listGenerations(taskId).then(setGenerations).catch(()=>{});
+      setGenerationRetry(value => value + 1);
  setGenerating(false);
       setGenerationStage('idle');
     }
@@ -104,6 +114,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
+      {generationError && <div role="alert" className="yj-panel flex flex-wrap items-center gap-3 px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><button type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>重试读取记录</button></div>}
  {generations.length>0&&<div className="yj-panel p-4"><h4 className="mb-3 text-sm font-medium">报告生成记录</h4><div className="overflow-x-auto"><table className="w-full min-w-[440px] text-left text-sm"><thead className="text-xs text-fg-muted"><tr><th className="pb-2 font-medium">时间</th><th className="pb-2 font-medium">报告方式</th><th className="pb-2 font-medium">状态</th></tr></thead><tbody>{generations.map(g=><tr key={g.id} className="border-t border-border-subtle"><td className="py-3 pr-3 whitespace-nowrap">{new Date(g.createdAt).toLocaleString('zh-CN', {hour12:false})}</td><td className="pr-3">{g.contractVersion==='report-snapshot-v2'?'回报快照':g.contractVersion==='legacy-v1'?'原始结果包':g.contractVersion}</td><td><Tag variant={g.state==='ready'?'success':g.state==='failed'?'danger':g.state==='generating'?'info':'neutral'}>{({ready:'已生成',generating:'生成中',failed:'失败',unknown:'远端结果待核对',pending:'等待生成'} as Record<string,string>)[g.state]??g.state}</Tag>{g.errorCode&&<span className="ml-2 text-xs text-danger-fg">{g.errorCode}</span>}</td></tr>)}</tbody></table></div></div>}
 
       <div className="rounded-xl border border-border-default bg-canvas-default p-5">

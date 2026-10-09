@@ -99,8 +99,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             <h3 className="text-base font-medium text-fg-default">账号信息</h3>
           </div>
         </div>
-        <div className="grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
-          <FormItem label="姓名">
+        <div className="grid max-w-3xl grid-cols-2 gap-4">
+          <FormItem label="姓名" className="col-span-2 md:col-span-1">
             <Input aria-label="姓名" value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
           </FormItem>
           <ReadOnlyField label="邮箱">{user.email}</ReadOnlyField>
@@ -127,8 +127,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           >
             保存资料
           </Button>
-          {message && <span className="text-sm text-success-fg">{message}</span>}
-          {error && <span className="text-sm text-danger-fg">{error}</span>}
+          {message && <span role="status" className="text-sm text-success-fg">{message}</span>}
+          {error && <span role="alert" className="text-sm text-danger-fg">{error}</span>}
         </div>
       </section>
 
@@ -185,8 +185,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             <Button variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => void handleChangePassword()} disabled={isChangingPassword}>
               {isChangingPassword ? '更新中...' : '修改密码'}
             </Button>
-            {passwordMessage && <span className="text-sm text-success-fg">{passwordMessage}</span>}
-            {passwordError && <span className="text-sm text-danger-fg">{passwordError}</span>}
+            {passwordMessage && <span role="status" className="text-sm text-success-fg">{passwordMessage}</span>}
+            {passwordError && <span role="alert" className="text-sm text-danger-fg">{passwordError}</span>}
           </div>
         </div>
       </section>

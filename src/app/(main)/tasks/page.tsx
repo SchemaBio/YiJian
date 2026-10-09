@@ -110,6 +110,7 @@ function StatusFilterDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         className="flex items-center gap-2 px-3 py-1.5 border border-border-default rounded bg-canvas-default hover:bg-canvas-inset transition-colors"
       >
         {getCurrentDisplay()}
@@ -117,11 +118,11 @@ function StatusFilterDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 py-1 min-w-[120px]">
+        <div className="absolute left-0 top-full mt-1 bg-canvas-default border border-border-default rounded-md shadow-lg z-30 py-1 min-w-[120px]">
           {/* 全部状态选项 */}
           <button
-            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${
-              value === 'all' ? 'bg-gray-100' : ''
+            className={`w-full px-3 py-2 text-left text-sm hover:bg-canvas-subtle flex items-center gap-2 ${
+              value === 'all' ? 'bg-canvas-inset' : ''
             }`}
             onClick={() => {
               onChange('all');
@@ -138,8 +139,8 @@ function StatusFilterDropdown({
             return (
               <button
                 key={option.value}
-                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 ${
-                  isSelected ? 'bg-gray-100' : ''
+                className={`w-full px-3 py-2 text-left hover:bg-canvas-subtle flex items-center gap-2 ${
+                  isSelected ? 'bg-canvas-inset' : ''
                 }`}
                 onClick={() => {
                   onChange(option.value);

@@ -184,7 +184,7 @@ export default function BillingSettingsPage() {
 
 
 
-        <section aria-label="费用概览" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section aria-label="费用概览" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <MetricTile label="当前积分" value={formatCredits(balance?.balance)} icon={<Coins className="h-4 w-4" />} tone="success" />
           <MetricTile label="可运行时长" value={availableMinutes === null ? '--' : `${availableMinutes} 分钟`} icon={<Clock3 className="h-4 w-4" />} tone="info" />
           <MetricTile label="每分钟积分" value={formatCredits(creditsPerMinute)} icon={<Gauge className="h-4 w-4" />} />
@@ -210,7 +210,7 @@ export default function BillingSettingsPage() {
             ) : error ? <p className="px-5 py-10 text-center text-sm text-fg-muted">交易记录暂不可用</p> : transactions.length === 0 ? (
               <p className="px-5 py-10 text-center text-sm text-fg-muted">暂无交易记录</p>
             ) : (
-              <DataTable data={transactions} columns={columns} rowKey="id" density="default" striped />
+              <div className="min-w-[900px]"><DataTable data={transactions} columns={columns} rowKey="id" density="default" striped /></div>
             )}
           </div>
           {!error && totalPages > 1 && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
