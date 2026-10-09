@@ -103,7 +103,7 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
       });
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to update pedigree member');
+      setSubmitError(err instanceof Error ? err.message : '家系成员更新失败');
     } finally {
       setSubmitting(false);
     }
@@ -211,7 +211,7 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
             })}
           </div>
           {spouseCandidates.length > 0 && (
-            <Select value="" onChange={(value) => addSpouse(Array.isArray(value) ? value[0] : value)} options={spouseOptions} />
+            <Select value="" placeholder="选择配偶" onChange={(value) => addSpouse(Array.isArray(value) ? value[0] : value)} options={spouseOptions} />
           )}
         </div>
         <div className="space-y-2">

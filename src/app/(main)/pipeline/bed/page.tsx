@@ -204,7 +204,7 @@ function BedFilesPageContent() {
         footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>取消</Button><Button variant="primary" onClick={handleUpload} disabled={!file || uploading || storageQuotaReached || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}>{uploading ? `上传中 ${progress}%` : '开始上传'}</Button></>}
       >
         <div className="space-y-5">
-          <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title="文件信息" description="BED 文件最大 20MB，上传后仅用于所选参考基因组。" />
+          <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title="文件信息" description="文件仅适用于所选参考基因组。" />
           {uploadError && <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{uploadError}</div>}
           <FormItem label="参考基因组" required>
             <Select value={referenceGenome} onChange={(value) => setReferenceGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome)} options={genomeOptions} />

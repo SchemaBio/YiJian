@@ -78,7 +78,7 @@ function GeneListModal({
       await onSubmit(formData);
       handleClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to save gene list');
+      setSubmitError(err instanceof Error ? err.message : '基因列表保存失败');
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +117,7 @@ function GeneListModal({
     >
       <div className="space-y-6">
         {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
           </div>
         )}
@@ -125,22 +125,21 @@ function GeneListModal({
           <ModalSectionHeading
             icon={<BookOpen className="h-4 w-4" />}
             title="列表信息"
-            description="设置基因列表的名称、关联疾病和用途"
           />
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-fg-muted">列表名称 *</label>
-                <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病 Panel" />
+                <Input aria-label="列表名称" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="如：心血管疾病 Panel" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-fg-muted">关联疾病（选填）</label>
-                <Input value={formData.disease} onChange={(e) => handleChange('disease', e.target.value)} placeholder="如：遗传性心肌病" />
+                <Input aria-label="关联疾病" value={formData.disease} onChange={(e) => handleChange('disease', e.target.value)} placeholder="如：遗传性心肌病" />
               </div>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-fg-muted">描述</label>
-              <Input value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="列表用途说明" />
+              <Input aria-label="描述" value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="列表用途说明" />
             </div>
           </div>
         </section>
@@ -148,7 +147,6 @@ function GeneListModal({
           <ModalSectionHeading
             icon={<Dna className="h-4 w-4" />}
             title="基因内容"
-            description="粘贴或输入标准基因符号，系统会自动识别分隔符"
           />
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -156,6 +154,7 @@ function GeneListModal({
             {geneCount > 0 && <span className="text-xs text-fg-muted">已识别 {geneCount} 个基因</span>}
           </div>
           <textarea
+            aria-label="基因列表"
             value={formData.genes}
             onChange={(e) => handleChange('genes', e.target.value)}
             placeholder={"每行一个基因名，或用逗号/空格分隔\n例如：\nMYH7\nMYBPC3\nTNNT2"}

@@ -150,23 +150,23 @@ export default function DashboardPage() {
   } as const;
 
   const cards = [
-    { title: '样本总数', value: stats.totalSamples, hint: '已登记样本', icon: Users, href: '/samples', tone: 'neutral' },
-    { title: '待处理', value: stats.pendingTasks, hint: `${stats.waitingDataTasks} 个等待数据`, icon: FlaskConical, href: '/tasks', tone: 'warning' },
-    { title: '运行中', value: stats.runningTasks, hint: '正在执行', icon: Clock3, href: '/tasks', tone: 'info' },
-    { title: '已完成', value: stats.completedTasks, hint: '累计完成', icon: CheckCircle2, href: '/tasks', tone: 'success' },
-    { title: '失败任务', value: stats.failedTasks, hint: `${taskStats.failed_last_24h} 个发生于 24 小时内`, icon: XCircle, href: '/tasks', tone: 'danger' },
+    { title: '样本总数', value: stats.totalSamples, hint: '', icon: Users, href: '/samples', tone: 'neutral' },
+    { title: '待处理', value: stats.pendingTasks, hint: loading || error.includes('统计概览') ? '' : `${stats.waitingDataTasks} 个等待数据`, icon: FlaskConical, href: '/tasks', tone: 'warning' },
+    { title: '运行中', value: stats.runningTasks, hint: '', icon: Clock3, href: '/tasks', tone: 'info' },
+    { title: '已完成', value: stats.completedTasks, hint: '', icon: CheckCircle2, href: '/tasks', tone: 'success' },
+    { title: '失败任务', value: stats.failedTasks, hint: loading || error.includes('运行指标') ? '' : `${taskStats.failed_last_24h} 个发生于 24 小时内`, icon: XCircle, href: '/tasks', tone: 'danger' },
   ] as const;
 
   return (
     <PageContent className="yj-page-shell">
-      <div className="yj-page-header">
+      <div className="yj-page-header flex-col items-start gap-3 sm:flex-row sm:items-center">
         <div>
           <h2 className="yj-page-title">工作台</h2>
           <p className="yj-page-subtitle">
             {user?.name?.trim() || user?.email || '当前用户'}{updatedAt && ` · 更新于 ${formatDateTime(updatedAt)}`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <Button
             variant="secondary"
             leftIcon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
@@ -185,9 +185,9 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
+        <div role="alert" className="mb-4 flex items-center gap-2 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}，其余数据仍可继续使用。</span>
+          <span>{error}，请刷新重试。</span>
         </div>
       )}
 
@@ -201,7 +201,7 @@ export default function DashboardPage() {
               <Icon className={`h-4 w-4 ${toneClasses.text}`} />
             </div>
             <div className={`mt-4 text-2xl font-semibold ${toneClasses.value}`}>{loading || error.includes('统计概览') ? '—' : value}</div>
-            <div className={`mt-1 truncate text-xs ${toneClasses.text}`}>{hint}</div>
+            <div className={`mt-1 min-h-4 truncate text-xs ${toneClasses.text}`}>{hint}</div>
           </Link>
           );
         })}
@@ -221,7 +221,7 @@ export default function DashboardPage() {
           {tasks.length > 0 ? (
             <div>
               {tasks.map((task) => (
-                <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_96px_150px] items-center gap-4 px-4 py-3">
+                <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_96px_150px] sm:gap-4">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg-default">{task.internalId || task.sampleId || task.id}</div>
                     <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt)}</div>
@@ -236,16 +236,16 @@ export default function DashboardPage() {
                   >
                     {STATUS_LABEL[task.status] ?? task.status}
                   </Tag>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                     <span className="w-8 text-right text-xs font-medium tabular-nums text-fg-default">{task.progress ?? 0}%</span>
-                    <div className="h-1.5 w-[92px] overflow-hidden rounded-full bg-canvas-inset">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas-inset sm:w-[92px] sm:flex-none">
                       <div className="h-full rounded-full bg-accent-emphasis" style={{ width: `${Math.min(100, Math.max(0, task.progress ?? 0))}%` }} />
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
-          ) : (
+          ) : loading ? <p role="status" className="p-8 text-center text-sm text-fg-muted">加载最近任务…</p> : error.includes('最近任务') ? <p className="p-8 text-center text-sm text-fg-muted">最近任务暂不可用</p> : (
             <EmptyState
               icon={<Database />}
               title="暂无任务"

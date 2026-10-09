@@ -146,7 +146,7 @@ function PipelineFields({ form, setForm, beds, baselines }: {
 
   return <div className="space-y-6">
     <section>
-      <ModalSectionHeading icon={<Workflow className="h-4 w-4" />} title="流程信息" description="以系统内置 WES 流程为基础建立组织自己的流程" />
+      <ModalSectionHeading icon={<Workflow className="h-4 w-4" />} title="流程信息" />
       <div className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs font-medium text-fg-muted">基础流程 *</label>
@@ -199,12 +199,14 @@ function PipelineListPageContent() {
   const [beds, setBeds] = React.useState<DataAsset[]>([]);
   const [baselines, setBaselines] = React.useState<CNVBaseline[]>([]);
   const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(true);
   const [creating, setCreating] = React.useState(false);
   const [editing, setEditing] = React.useState<Pipeline | null>(null);
   const [deleting, setDeleting] = React.useState<Pipeline | null>(null);
 
   const load = React.useCallback(async () => {
  loadController.current?.abort();const controller=new AbortController();loadController.current=controller;
+ setLoading(true); setError('');
  try {
       const [pipelineResponse, bedResponse, baselineResponse] = await Promise.all([
         readResourcePages<unknown>('/v1/pipelines',{},controller.signal),
@@ -214,6 +216,7 @@ function PipelineListPageContent() {
  setPipelines(unwrapList(pipelineResponse).map(normalizePipeline).filter((item) => item.id));
       setBeds(bedResponse); setBaselines(baselineResponse); setError('');
     } catch (err) { if(!controller.signal.aborted)setError(err instanceof Error ? err.message : '加载流程与分析资源失败'); }
+    finally { if(!controller.signal.aborted)setLoading(false); }
   }, []);
   React.useEffect(() => { void load();return()=>loadController.current?.abort(); }, [load]);
 
@@ -258,8 +261,8 @@ function PipelineListPageContent() {
   return <PageContent className="yj-page-shell">
     <div className="yj-page-header"><h2 className="yj-page-title">流程列表</h2></div>
     <div className="yj-toolbar-panel"><div className="w-64"><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索流程..." leftElement={<Search className="h-4 w-4" />} /></div><Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>新建流程</Button></div>
-    {error && <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
-    {filtered.length ? <DataTable data={filtered.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped /> : <EmptyState className="yj-panel" icon={<Workflow />} title="暂无分析流程" description="可基于内置 WES 流程建立组织自己的分析流程。" />}
+    {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button ml-3" onClick={()=>void load()}>重试</button></div>}
+    {loading ? <div role="status" className="yj-panel flex items-center justify-center gap-2 py-12 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载流程…</div> : filtered.length ? <DataTable data={filtered.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped /> : !error && <EmptyState className="yj-panel" icon={<Workflow />} title={search.trim()?'未找到匹配流程':'暂无分析流程'} description={search.trim()?'调整搜索条件后重试。':'可基于内置 WES 流程建立组织自己的分析流程。'} />}
     <ResourcePager page={page} total={filtered.length} onChange={setPage}/><PipelineModal open={creating} title="新建分析流程" initial={EMPTY_FORM} beds={beds} baselines={baselines} onClose={() => setCreating(false)} onSubmit={create} />
     <PipelineModal open={editing !== null} title="编辑分析流程" initial={initialEdit} beds={beds} baselines={baselines} onClose={() => setEditing(null)} onSubmit={update} />
     <ConfirmDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)} title="确认删除" message={`确定要删除流程「${deleting?.name ?? ''}」吗？此操作不可撤销。`} variant="danger" onConfirm={remove} />

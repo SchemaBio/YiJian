@@ -93,7 +93,7 @@ export function AppModal({
       closeOnOverlayClick={closeOnOverlayClick}
       closeOnEscape={closeOnEscape}
       className={cn(
-        '!fixed !bottom-auto !left-1/2 !right-auto !top-1/2 !m-0 !max-h-[calc(100vh-2rem)] max-sm:!max-w-[calc(100vw-2rem)] !-translate-x-1/2 !-translate-y-1/2 rounded-md border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]',
+        'yj-app-modal !fixed !bottom-auto !left-1/2 !right-auto !top-1/2 !m-0 !max-h-[calc(100vh-2rem)] max-sm:!max-w-[calc(100vw-2rem)] !-translate-x-1/2 !-translate-y-1/2 rounded-md border border-[var(--yj-border-subtle)] shadow-[var(--yj-shadow-raised)]',
         className
       )}
     >
@@ -104,7 +104,7 @@ export function AppModal({
         {children}
       </ModalBody>
       {footer && (
-        <ModalFooter>
+        <ModalFooter className="flex-wrap [&_button]:shrink-0 [&_button]:whitespace-nowrap">
           {footer}
         </ModalFooter>
       )}

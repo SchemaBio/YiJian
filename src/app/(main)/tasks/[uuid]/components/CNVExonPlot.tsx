@@ -10,19 +10,20 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
   const [signals,setSignals]=React.useState<Map<string,ExonSignal[]>>(new Map());
   const [transcript,setTranscript]=React.useState('');
   const [status,setStatus]=React.useState('');
+  const [loadFailed,setLoadFailed]=React.useState(false);
   const [loading,setLoading]=React.useState(false);
   const [retry,setRetry]=React.useState(0);
   const [copied,setCopied]=React.useState('');
   const [hover,setHover]=React.useState<ExonSignal|null>(null);
   React.useEffect(()=>{
     if(!isOpen)return;
-    const controller=new AbortController();setSignals(new Map());setLoading(true);setStatus('');setHover(null);setCopied('');
+    const controller=new AbortController();setSignals(new Map());setLoading(true);setStatus('');setLoadFailed(false);setHover(null);setCopied('');
     void loadCNR(taskId,variant.attemptId,controller.signal).then(bins=>{
       if(controller.signal.aborted)return;
       const grouped=exonSignals(bins,variant.gene,variant.chromosome);setSignals(grouped);
       setTranscript(grouped.has(variant.transcript)?variant.transcript:grouped.keys().next().value??'');
       if(!grouped.size)setStatus('CNR 中没有此基因的完整转录本和外显子注释，无法绘制逐外显子 CN；基因汇总记录不能替代外显子信号。');
-    }).catch(error=>{if(!controller.signal.aborted)setStatus(error instanceof Error?error.message:'外显子信号读取失败');})
+    }).catch(error=>{if(!controller.signal.aborted){setLoadFailed(true);setStatus(error instanceof Error?error.message:'外显子信号读取失败');}})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return ()=>controller.abort();
   },[taskId,variant.attemptId,variant.gene,variant.chromosome,variant.transcript,isOpen,retry]);
@@ -36,7 +37,7 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
   return <AppModal open={isOpen} onOpenChange={open=>!open&&onClose()} title={`${variant.gene} · 外显子 CN 分布`} size="large" className="!z-[80] !w-[min(960px,94vw)] !max-w-none">
       <div className="min-h-0">
 
-        {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role="status" className="rounded border border-border-default p-4 text-sm">{status}<button onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</button></div>:<>
+        {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<button onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</button></div>:<>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><label className="flex items-center gap-2 text-sm">转录本<select value={transcript} onChange={e=>{setTranscript(e.target.value);setHover(null);}} className="rounded border border-border-default bg-canvas-default px-2 py-1">{[...signals.keys()].map(id=><option key={id}>{id}</option>)}</select></label><button onClick={copy} className="yj-tool-button"><Copy className="h-3 w-3"/>{copied||'复制图表数据'}</button></div>
           {transcript!==variant.transcript&&<p className="mb-2 text-xs text-fg-muted">报告转录本 {variant.transcript} 没有对应信号；当前显示所选转录本 {transcript}，未合并其他转录本。</p>}
           <div className="overflow-x-auto rounded border border-border-default bg-canvas-subtle">

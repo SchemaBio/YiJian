@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from '@schema/ui-kit';
+import { Button } from '@schema/ui-kit';
+import { AppModal } from '@/components/shared';
 import { Download, FileArchive, Loader2, HardDrive, Coins, Clock3, Copy, AlertTriangle } from 'lucide-react';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { api } from '@/lib/api';
@@ -147,10 +148,10 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
       <div className="mt-3 flex flex-wrap items-center gap-2">{issued.kind === 'zip' ? <Button size="small" variant="primary" className="whitespace-nowrap" loading={busy} leftIcon={<Download className="h-4 w-4"/>} onClick={()=>void retryZIP()}>下载 ZIP / 重试（不重复扣费）</Button> : <><a href={issued.url} download={issued.filename} rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-sm text-fg-on-emphasis"><Download className="h-4 w-4"/>开始下载 / 续传</a><Button size="small" variant="secondary" className="whitespace-nowrap" leftIcon={<Copy className="h-3.5 w-3.5"/>} onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError('复制失败，请允许浏览器访问剪贴板'));}}>{copied?'已复制链接':'复制下载链接'}</Button></>}<span className="text-xs text-fg-muted">使用此链接不重复扣费。</span></div>
     </div>}
     {!!active.length&&<details className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">已有下载申请 · 取回已付费链接不重复扣费</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?'取回已付费链接':'继续原申请'}</Button></div>)}</div></details>}
-    <Modal open={!!quote} onOpenChange={open=>{if(!open&&!busy)setQuote(null);}}>
-      <ModalHeader>{quote?.charged_at?'取回已有下载链接':'确认下载费用'}</ModalHeader>
-      <ModalBody><div className="space-y-4 text-sm"><p className="break-all font-medium">{quote?.filename}</p><div className="flex items-center justify-between rounded-lg bg-canvas-subtle p-4"><span>{quote&&gb(quote.size_bytes)}</span><strong className="text-xl text-accent-fg">{quote?.charged_at?'不重复扣费':`${quote?.credits} 积分`}</strong></div>{quote?.kind==='bam'&&<p className="text-xs text-fg-muted">实际大小 {quote.size_bytes.toLocaleString('zh-CN')} 字节；每 GB 1 积分，向上取整。</p>}<p className="text-xs leading-5 text-fg-muted">{quote?.charged_at?'原申请已支付，取回保留原到期时间。':'确认后才扣费并签发链接；取消不扣费。'}链接绑定当前公网 IP，3 小时内可续传，同一申请不重复扣费。</p>{error&&<p role="alert" className="text-danger-fg">{error}。重试本次申请不会重复扣费。</p>}</div></ModalBody>
-      <ModalFooter><Button variant="secondary" disabled={busy} onClick={()=>setQuote(null)}>取消</Button><Button variant="primary" className="whitespace-nowrap" loading={busy} onClick={()=>void confirm()}>{quote?.charged_at?'取回下载链接':quote?.kind==='bam'?`支付 ${quote?.credits} 积分并获取链接`:'支付 1 积分并下载 ZIP'}</Button></ModalFooter>
-    </Modal>
+    <AppModal open={!!quote} onOpenChange={open=>{if(!open&&!busy)setQuote(null);}} title={quote?.charged_at?'取回已有下载链接':'确认下载费用'} size="small" closeOnEscape={!busy} closeOnOverlayClick={!busy}
+      footer={<><Button variant="secondary" disabled={busy} onClick={()=>setQuote(null)}>取消</Button><Button variant="primary" className="whitespace-nowrap" loading={busy} onClick={()=>void confirm()}>{quote?.charged_at?'取回下载链接':quote?.kind==='bam'?`支付 ${quote?.credits} 积分并获取链接`:'支付 1 积分并下载 ZIP'}</Button></>}
+    >
+      <div className="space-y-4 text-sm"><p className="break-all font-medium">{quote?.filename}</p><div className="flex items-center justify-between rounded-lg bg-canvas-subtle p-4"><span>{quote&&gb(quote.size_bytes)}</span><strong className="text-xl text-accent-fg">{quote?.charged_at?'不重复扣费':`${quote?.credits} 积分`}</strong></div>{quote?.kind==='bam'&&<p className="text-xs text-fg-muted">实际大小 {quote.size_bytes.toLocaleString('zh-CN')} 字节；每 GB 1 积分，向上取整。</p>}<p className="text-xs leading-5 text-fg-muted">{quote?.charged_at?'原申请已支付，取回保留原到期时间。':'确认后才扣费并签发链接；取消不扣费。'}链接绑定当前公网 IP，3 小时内可续传，同一申请不重复扣费。</p>{error&&<p role="alert" className="text-danger-fg">{error}。重试本次申请不会重复扣费。</p>}</div>
+    </AppModal>
   </section>;
 }

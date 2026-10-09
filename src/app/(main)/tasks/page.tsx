@@ -280,16 +280,16 @@ function TaskActionsCell({
         </button></HoverHint>
 
         <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
-          <PopoverPrimitive.Trigger asChild>
-            <HoverHint content="更多操作"><button
+          <HoverHint content="更多操作"><PopoverPrimitive.Trigger asChild>
+            <button
               type="button"
               className="task-more-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
               aria-label="更多任务操作"
 
             >
               <MoreHorizontal className="h-4 w-4" />
-            </button></HoverHint>
-          </PopoverPrimitive.Trigger>
+            </button>
+          </PopoverPrimitive.Trigger></HoverHint>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
               side="bottom"
@@ -323,7 +323,7 @@ function TaskActionsCell({
                     setShowMoreMenu(false);
                     setShowDeleteConfirm(true);
                   }}
-                  className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-rose-700 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-40 disabled:hover:bg-transparent"
+                  className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-danger-fg transition-colors hover:bg-danger-subtle disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-40 disabled:hover:bg-transparent"
                 >
                   <Trash2 className="h-4 w-4" />
                   删除任务

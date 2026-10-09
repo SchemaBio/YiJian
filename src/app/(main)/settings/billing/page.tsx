@@ -177,7 +177,7 @@ export default function BillingSettingsPage() {
 
       <div className="space-y-6">
         {error && (
-          <div className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
+          <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             {error}
           </div>
         )}
@@ -199,7 +199,7 @@ export default function BillingSettingsPage() {
               <h3 id="billing-details-title" className="text-base font-medium text-fg-default">积分明细</h3>
               <p className="mt-1 text-xs text-fg-muted">任务预扣、结算、退款与充值流水</p>
             </div>
-            <span className="shrink-0 text-xs text-fg-muted">共 {total} 条</span>
+            <span className="shrink-0 text-xs text-fg-muted">共 {error || isLoading ? '—' : total} 条</span>
           </div>
           <div className="min-w-0 overflow-x-auto">
             {isLoading && transactions.length === 0 ? (
@@ -207,13 +207,13 @@ export default function BillingSettingsPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-accent-fg" />
                 <p className="text-fg-muted">正在加载交易记录...</p>
               </div>
-            ) : transactions.length === 0 ? (
+            ) : error ? <p className="px-5 py-10 text-center text-sm text-fg-muted">交易记录暂不可用</p> : transactions.length === 0 ? (
               <p className="px-5 py-10 text-center text-sm text-fg-muted">暂无交易记录</p>
             ) : (
               <DataTable data={transactions} columns={columns} rowKey="id" density="default" striped />
             )}
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
+          {!error && totalPages > 1 && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
             <Button
               variant="secondary"
               disabled={page <= 1 || isLoading}
@@ -229,7 +229,7 @@ export default function BillingSettingsPage() {
             >
               下一页
             </Button>
-          </div>
+          </div>}
         </section>
         <section className="yj-panel px-5 py-5" aria-labelledby="billing-rules-title">
           <div className="mb-5 flex items-center gap-2">

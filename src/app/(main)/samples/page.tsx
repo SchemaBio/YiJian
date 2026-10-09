@@ -3,7 +3,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button, Input, DataTable, Tooltip } from '@schema/ui-kit';
+import { Button, Input, DataTable } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import {
   AlertCircle,

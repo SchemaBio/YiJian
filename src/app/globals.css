@@ -765,6 +765,14 @@
   }
 }
 
+/* UI-kit 的弹性输入框应随表单列宽收缩，避免窄屏双列表单溢出。 */
+@layer utilities {
+  .yj-app-modal input.flex-1 {
+    min-width: 0;
+    width: 0;
+  }
+}
+
 @layer utilities {
   .yj-modern .bg-canvas,
   .yj-modern .bg-canvas-default {

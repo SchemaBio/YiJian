@@ -63,7 +63,7 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
       await onSubmit(task.id, formData);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to update task');
+      setSubmitError(err instanceof Error ? err.message : '任务更新失败');
     } finally {
       setSubmitting(false);
     }
@@ -86,13 +86,13 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {submitError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
           </div>
         )}
         <div>
           <label className="block text-xs text-fg-muted mb-1">样本编号</label>
-          <Input value={task.sampleId} disabled className="bg-gray-50 text-fg-muted" />
+          <Input value={task.sampleId} disabled className="bg-canvas-subtle text-fg-muted" />
         </div>
         <div>
           <label className="block text-xs text-fg-muted mb-1">内部编号 *</label>
@@ -106,6 +106,9 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
             className="w-full px-3 py-2 border border-border-default rounded-md text-fg-default bg-canvas-default focus:outline-none focus:ring-2 focus:ring-accent-emphasis"
             required
           >
+            {formData.pipeline && !pipelineOptions.includes(formData.pipeline) && (
+              <option value={formData.pipeline}>{formData.pipeline}</option>
+            )}
             {pipelineOptions.map((option) => (
               <option key={option} value={option}>{option}</option>
             ))}

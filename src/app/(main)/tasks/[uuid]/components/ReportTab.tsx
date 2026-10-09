@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Select, FormItem, Modal, ModalHeader, ModalBody, ModalFooter } from '@schema/ui-kit';
+import { Button, Select, FormItem, Tag } from '@schema/ui-kit';
+import { AppModal } from '@/components/shared';
 import {
-  AlertCircle,
   CheckCircle2,
   FileText,
   Loader2,
@@ -22,6 +22,8 @@ export function ReportTab({ taskId }: ReportTabProps) {
  React.useEffect(()=>{let alive=true;reportsApi.listGenerations(taskId).then(rows=>{if(alive)setGenerations(rows)}).catch(()=>{});return()=>{alive=false;requestIds.current={}}},[taskId]);
  const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [templateError, setTemplateError] = React.useState('');
+  const [templateRetry, setTemplateRetry] = React.useState(0);
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [generating, setGenerating] = React.useState(false);
   const [generationStage, setGenerationStage] = React.useState<'idle' | 'preparing' | 'calling' | 'downloading'>('idle');
@@ -34,14 +36,15 @@ export function ReportTab({ taskId }: ReportTabProps) {
 
     async function loadTemplates() {
       setLoading(true);
+      setTemplateError('');
       try {
         const tpls = await reportsApi.listTemplates();
         if (ignore) return;
         setTemplates(tpls);
       } catch (error) {
         if (ignore) return;
-        setErrorMessage(error instanceof Error ? error.message : '报告服务加载失败，请稍后重试。');
-        setErrorModalOpen(true);
+        setTemplates([]);
+        setTemplateError(error instanceof Error ? error.message : '报告服务加载失败，请稍后重试。');
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -51,7 +54,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [templateRetry]);
 
   const templateOptions = templates.map((template) => ({
     value: template.id,
@@ -101,7 +104,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
- {generations.length>0&&<div className="rounded-lg border border-border-default bg-canvas-default p-4"><h4 className="mb-2 text-sm font-medium">报告生成记录</h4><table className="w-full text-left text-xs"><thead><tr><th>时间</th><th>协议</th><th>状态</th></tr></thead><tbody>{generations.map(g=><tr key={g.id}><td className="py-2">{new Date(g.createdAt).toLocaleString()}</td><td>{g.contractVersion}</td><td>{({ready:'已生成',generating:'生成中',failed:'失败',unknown:'远端结果待核对',pending:'等待生成'} as Record<string,string>)[g.state]??g.state}{g.errorCode&&` · ${g.errorCode}`}</td></tr>)}</tbody></table></div>}
+ {generations.length>0&&<div className="yj-panel p-4"><h4 className="mb-3 text-sm font-medium">报告生成记录</h4><div className="overflow-x-auto"><table className="w-full min-w-[440px] text-left text-sm"><thead className="text-xs text-fg-muted"><tr><th className="pb-2 font-medium">时间</th><th className="pb-2 font-medium">报告方式</th><th className="pb-2 font-medium">状态</th></tr></thead><tbody>{generations.map(g=><tr key={g.id} className="border-t border-border-subtle"><td className="py-3 pr-3 whitespace-nowrap">{new Date(g.createdAt).toLocaleString('zh-CN', {hour12:false})}</td><td className="pr-3">{g.contractVersion==='report-snapshot-v2'?'回报快照':g.contractVersion==='legacy-v1'?'原始结果包':g.contractVersion}</td><td><Tag variant={g.state==='ready'?'success':g.state==='failed'?'danger':g.state==='generating'?'info':'neutral'}>{({ready:'已生成',generating:'生成中',failed:'失败',unknown:'远端结果待核对',pending:'等待生成'} as Record<string,string>)[g.state]??g.state}</Tag>{g.errorCode&&<span className="ml-2 text-xs text-danger-fg">{g.errorCode}</span>}</td></tr>)}</tbody></table></div></div>}
 
       <div className="rounded-xl border border-border-default bg-canvas-default p-5">
         <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
@@ -129,24 +132,18 @@ export function ReportTab({ taskId }: ReportTabProps) {
             {generating ? '生成中...' : '生成并下载'}
           </Button>
         </div>
+        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<button type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>重试</button></div>}
         {generating && (
           <div className="mt-4 rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-muted">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
               {generationStage === 'preparing' && '正在准备完整结果包（首次请求会生成并缓存 ZIP）...'}
-              {generationStage === 'calling' && '结果包已就绪，正在调用报告服务...'}
+              {generationStage === 'calling' && '正在生成报告...'}
               {generationStage === 'downloading' && '报告已生成，正在下载...'}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className={generationStage === 'preparing' ? 'font-medium text-accent-emphasis' : 'text-fg-muted'}>1. 准备结果包</span>
-              <span>→</span>
-              <span className={generationStage === 'calling' ? 'font-medium text-accent-emphasis' : 'text-fg-muted'}>2. 调用报告服务</span>
-              <span>→</span>
-              <span className={generationStage === 'downloading' ? 'font-medium text-accent-emphasis' : 'text-fg-muted'}>3. 下载报告</span>
             </div>
           </div>
         )}
-        {templates.length === 0 && (
+        {!loading && !templateError && templates.length === 0 && (
           <div className="mt-4 text-center py-6 text-sm text-fg-muted border border-border rounded-lg">暂无可用报告服务</div>
         )}
         {lastDownloadedFile && (
@@ -157,20 +154,9 @@ export function ReportTab({ taskId }: ReportTabProps) {
         )}
       </div>
 
-      <Modal open={errorModalOpen} onOpenChange={setErrorModalOpen}>
-        <ModalHeader>
-          <div className="flex items-center gap-2 text-danger-fg">
-            <AlertCircle className="w-5 h-5" />
-            操作失败
-          </div>
-        </ModalHeader>
-        <ModalBody>
-          <p className="text-sm text-fg-muted">{errorMessage}</p>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="primary" onClick={() => setErrorModalOpen(false)}>确定</Button>
-        </ModalFooter>
-      </Modal>
+      <AppModal open={errorModalOpen} onOpenChange={setErrorModalOpen} title="报告生成失败" size="small" footer={<Button variant="primary" onClick={() => setErrorModalOpen(false)}>确定</Button>}>
+        <p role="alert" className="break-words text-sm text-danger-fg">{errorMessage}</p>
+      </AppModal>
     </div>
   );
 }
