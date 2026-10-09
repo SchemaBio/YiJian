@@ -50,7 +50,7 @@ const executionReasonLabels: Record<string, string> = {
 	RELEASE_FAILED: '节点释放失败，需要管理员处理',
 	SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度',
 	INPUT_REFRESH: '输入文件地址暂时无法刷新',
-	NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报',
+	NODE_FIRST_REPORT_TIMEOUT: '节点首报超时',
 	NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟',
 	NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟',
 	NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败',
