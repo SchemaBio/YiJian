@@ -564,7 +564,7 @@ export interface IGVSnapshot {
 }
 
 export function getIGVSnapshot(taskId: string, locus: string, signal?: AbortSignal): Promise<IGVSnapshot> {
-  return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/snapshot?locus=${encodeURIComponent(locus)}`, { signal, cache: 'no-store' });
+  return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/snapshot`, { params: { locus }, signal, cache: 'no-store' });
 }
 
 export function saveIGVSnapshot(taskId: string, locus: string, version: string, image: Blob, signal?: AbortSignal): Promise<IGVSnapshot> {
