@@ -189,6 +189,7 @@ function ACMGPointsEditor({
 
 export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation,onSaveVersionedAssessment }: VariantDetailPanelProps) {
   const [section, setSection] = React.useState<InspectorSection>('annotation');
+  const [acmgTab, setAcmgTab] = React.useState<'acmg' | 'svcv4'>('acmg');
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
@@ -207,6 +208,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   // 当 variant 变化时重置编辑状态
   React.useEffect(() => {
     setSection('annotation');
+    setAcmgTab('acmg');
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
@@ -308,12 +310,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {!activeConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
         </div>
         {/* 内容区域 */}
-        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'acmg', 'svcv4', 'interpretation', 'history']} />
-        {(section==='acmg'||section==='svcv4')&&!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
-          <input aria-label="版本切换理由" placeholder="版本切换理由（必填）" className="w-full rounded border border-border-default bg-canvas-default p-2 text-sm" value={versionReason} onChange={e=>setVersionReason(e.target.value)} />
-          <button type="button" disabled={versionBusy||(variant.activeAcmgVersion??'legacy')===(section==='acmg'?'legacy':'svcv4')||(section==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(section==='acmg'?'legacy':'svcv4')} className="rounded border border-border-default px-3 py-1.5 text-sm disabled:opacity-50">{versionBusy?'切换中…':`采用${section==='acmg'?'现版':'SVC v4.0试行'}结果`}</button>
-          {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
-        </div>}
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'acmg', 'interpretation', 'history']} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
           <section hidden={section !== 'interpretation'} >
           {/* 人工解读 */}
@@ -336,56 +333,68 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </div>
 
           </section>
-          <section hidden={section !== 'svcv4'}>
-            <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} variant={variant} readOnly={readOnly} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
-          </section>
           <section hidden={section !== 'acmg'}>
-          {/* ACMG 分类 */}
-          <SectionTitle
-            icon={FileText}
-            title="ACMG 分类"
-            action={
-              canEditACMG && !isEditingACMG && (
-                <button
-                  onClick={() => setIsEditingACMG(true)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  编辑
-                </button>
-              )
-            }
-          />
-          <div className="space-y-0">
-            {isEditingACMG ? (
-              <ACMGPointsEditor
-                variant={variant}
-                onSave={handleSaveACMG}
-                onCancel={() => setIsEditingACMG(false)}
+            <InspectorTabs id="variant-acmg-calculator" value={acmgTab}
+              onChange={value => { if (value === 'acmg' || value === 'svcv4') setAcmgTab(value); }}
+              sections={['acmg', 'svcv4']} labels={{ acmg: '现版', svcv4: 'SVC v4.0版' }} ariaLabel="ACMG 计算器版本" />
+            <div id="variant-acmg-calculator-content" role="tabpanel" aria-labelledby={`variant-acmg-calculator-${acmgTab}`} className="pt-3">
+            {!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
+              <input aria-label="版本切换理由" placeholder="版本切换理由（必填）" className="w-full rounded border border-border-default bg-canvas-default p-2 text-sm" value={versionReason} onChange={e=>setVersionReason(e.target.value)} />
+              <button type="button" disabled={versionBusy||(variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4')||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')} className="rounded border border-border-default px-3 py-1.5 text-sm disabled:opacity-50">{versionBusy?'切换中…':`采用${acmgTab==='acmg'?'现版':'SVC v4.0试行'}结果`}</button>
+              {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
+            </div>}
+              <section hidden={acmgTab !== 'svcv4'}>
+                <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} variant={variant} readOnly={readOnly} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
+              </section>
+              <section hidden={acmgTab !== 'acmg'}>
+              {/* ACMG 分类 */}
+              <SectionTitle
+                icon={FileText}
+                title="ACMG 分类"
+                action={
+                  canEditACMG && !isEditingACMG && (
+                    <button
+                      onClick={() => setIsEditingACMG(true)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      编辑
+                    </button>
+                  )
+                }
               />
-            ) : (
-              <>
-                <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
-                <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? '快速初评 · ClinVar 参考' : variant.automaticAcmg?.classificationBasis === 'population_screening' ? '快速初评 · gnomAD 频率筛查' : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? '快速初评 · 冲突待复核' : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? '快速初评 · VUS 待复核' : '自动证据积分'} />
-                {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
-                <InfoItem label="自动证据积分" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
-                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
-                <InfoItem
-                  label="证据项"
-                  value={currentCriteria.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {currentCriteria.map((c) => (
-                        <span key={c} className="px-1.5 py-0.5 text-xs bg-canvas-inset rounded">
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  ) : undefined}
-                />
-              </>
-            )}
-          </div>
+              <div className="space-y-0">
+                {isEditingACMG ? (
+                  <ACMGPointsEditor
+                    variant={variant}
+                    onSave={handleSaveACMG}
+                    onCancel={() => setIsEditingACMG(false)}
+                  />
+                ) : (
+                  <>
+                    <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
+                    <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? '快速初评 · ClinVar 参考' : variant.automaticAcmg?.classificationBasis === 'population_screening' ? '快速初评 · gnomAD 频率筛查' : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? '快速初评 · 冲突待复核' : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? '快速初评 · VUS 待复核' : '自动证据积分'} />
+                    {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
+                    <InfoItem label="自动证据积分" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
+                    {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
+                    <InfoItem
+                      label="证据项"
+                      value={currentCriteria.length ? (
+                        <div className="flex flex-wrap gap-1">
+                          {currentCriteria.map((c) => (
+                            <span key={c} className="px-1.5 py-0.5 text-xs bg-canvas-inset rounded">
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      ) : undefined}
+                    />
+                  </>
+                )}
+              </div>
 
+              </section>
+            </div>
           </section>
           <section hidden={section !== 'evidence'} >
           {/* 测序质量 */}

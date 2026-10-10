@@ -38,13 +38,14 @@ export function WorkspaceInspector({ children, label, onClose }: {
 }
 
 export type InspectorSection = 'annotation' | 'evidence' | 'assessment' | 'history' | 'acmg' | 'svcv4' | 'interpretation';
-const LABELS: Record<InspectorSection, string> = { annotation: '注释', evidence: '证据', assessment: '评定', history: '变更记录',acmg:'ACMG评定（现版）',svcv4:'ACMG评定（SVC v4.0试行）',interpretation:'人工解读' };
+const LABELS: Record<InspectorSection, string> = { annotation: '注释', evidence: '证据', assessment: '评定', history: '变更记录', acmg: 'ACMG', svcv4: 'SVC v4.0版', interpretation: '人工解读' };
 const DEFAULT_SECTIONS: InspectorSection[] = ['annotation', 'evidence', 'assessment'];
 
-export function InspectorTabs({ value, onChange, id, sections = DEFAULT_SECTIONS }: {
+export function InspectorTabs({ value, onChange, id, sections = DEFAULT_SECTIONS, labels, ariaLabel = '详情内容' }: {
   value: InspectorSection; onChange: (value: InspectorSection) => void; id: string; sections?: InspectorSection[];
+  labels?: Partial<Record<InspectorSection, string>>; ariaLabel?: string;
 }) {
-  return <div className="yj-inspector-tabs" role="tablist" aria-label="详情内容">
+  return <div className="yj-inspector-tabs" role="tablist" aria-label={ariaLabel}>
     {sections.map((section, index) => <button key={section} type="button" role="tab"
       id={`${id}-${section}`} aria-controls={`${id}-content`} aria-selected={value === section}
       tabIndex={value === section ? 0 : -1} onClick={() => onChange(section)}
@@ -53,6 +54,6 @@ export function InspectorTabs({ value, onChange, id, sections = DEFAULT_SECTIONS
         if (next < 0) return;
         event.preventDefault(); onChange(sections[next]);
         (event.currentTarget.parentElement?.children[next] as HTMLElement)?.focus();
-      }}>{LABELS[section]}</button>)}
+      }}>{labels?.[section] ?? LABELS[section]}</button>)}
   </div>;
 }

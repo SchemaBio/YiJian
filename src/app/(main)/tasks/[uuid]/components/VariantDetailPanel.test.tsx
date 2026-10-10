@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { VariantDetailPanel } from './VariantDetailPanel';
 import type { SNVIndel } from '../types';
@@ -20,7 +20,7 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 describe('same-screen interpretation', () => {
   it('labels the quick result and its source without presenting it as ACMG points', async () => {
     render(<VariantDetailPanel taskId="task" variant={{...variant('A'),acmgClassification:'Benign',acmgAssessmentSource:'automatic',automaticAcmg:{profile:'fast',state:'evaluated',score:0,classification:'Benign',classificationBasis:'clinvar_reference',criteria:[],pending:[],screeningNotes:['ClinVar：Benign；专家组审核','gnomAD：总体 AF=0.2；常见']}}} isOpen onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole('tab', {name:'ACMG评定（现版）'}));
+    fireEvent.click(screen.getByRole('tab', {name:'ACMG'}));
     expect(await screen.findByText('快速初评 · ClinVar 参考')).toBeVisible();
     expect(screen.getByText('ClinVar：Benign；专家组审核')).toBeVisible();
     expect(screen.getByText('gnomAD：总体 AF=0.2；常见')).toBeVisible();
@@ -39,10 +39,17 @@ describe('same-screen interpretation', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const assessed = {...variant('A'), activeAcmgVersion:'legacy' as const, svcv4Assessment:{revision:'fixed',source:'https://example.org',authoritative:false,disease:'疾病',moi:'AD',confirmed:true,inputs:{},result:{state:'classified',classification:'VUS',score:0,vusSubclass:'VUS-low',warnings:[],breakdown:{},details:{}}}} as SNVIndel;
     render(<VariantDetailPanel taskId="task" variant={assessed} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
-    fireEvent.click(screen.getByRole('tab',{name:'ACMG评定（SVC v4.0试行）'}));
-    fireEvent.click(screen.getByRole('tab',{name:'ACMG评定（现版）'}));
+    expect(within(screen.getByRole('tablist', {name:'详情内容'})).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['注释', '证据', 'ACMG', '人工解读', '变更记录']);
+    expect(screen.queryByRole('tablist', {name:'ACMG 计算器版本'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
+    const currentTab = screen.getByRole('tab',{name:'现版'});
+    expect(currentTab).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(currentTab, {key:'ArrowRight'});
+    expect(screen.getByRole('tab',{name:'SVC v4.0版'})).toHaveFocus();
+    expect(screen.getByRole('tab',{name:'SVC v4.0版'})).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab',{name:'现版'}));
     expect(save).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('tab',{name:'ACMG评定（SVC v4.0试行）'}));
+    fireEvent.click(screen.getByRole('tab',{name:'SVC v4.0版'}));
     fireEvent.click(screen.getByRole('button',{name:'采用SVC v4.0试行结果'}));
     expect(screen.getByText('请填写版本切换理由')).toBeVisible();
     expect(save).not.toHaveBeenCalled();
