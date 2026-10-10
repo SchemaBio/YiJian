@@ -8,6 +8,7 @@ export interface ReportRow {
   attemptId: string; datasetId?: string; datasetVersion?: string; rowId?: string;
   groupKey: string; reference: string; identityKnown: boolean; fields: Record<string, string>;
   reported: boolean; classification: string; reportedClassification: string;
+  acmgVersion?: string; vusSubclass?: string; reportedAcmgVersion?: string; reportedVusSubclass?: string;
   firstReportedAt: string | null; lastReportedAt: string | null; reportedBy: string;
   updatedAt: string; adjustmentVersion: number;
   currentSource?: boolean;

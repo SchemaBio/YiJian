@@ -37,8 +37,8 @@ export function WorkspaceInspector({ children, label, onClose }: {
   </>;
 }
 
-export type InspectorSection = 'annotation' | 'evidence' | 'assessment' | 'history';
-const LABELS: Record<InspectorSection, string> = { annotation: '注释', evidence: '证据', assessment: '评定', history: '变更记录' };
+export type InspectorSection = 'annotation' | 'evidence' | 'assessment' | 'history' | 'acmg' | 'svcv4' | 'interpretation';
+const LABELS: Record<InspectorSection, string> = { annotation: '注释', evidence: '证据', assessment: '评定', history: '变更记录',acmg:'ACMG评定（现版）',svcv4:'ACMG评定（SVC v4.0试行）',interpretation:'人工解读' };
 const DEFAULT_SECTIONS: InspectorSection[] = ['annotation', 'evidence', 'assessment'];
 
 export function InspectorTabs({ value, onChange, id, sections = DEFAULT_SECTIONS }: {

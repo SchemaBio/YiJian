@@ -383,13 +383,22 @@ class BrowserTable {
             row.confidenceLabel = source.Col18;
         }
         Object.assign(row, overlay);
-        if (overlay.acmgOverride)
+        if(overlay.activeAcmgVersion==='svcv4') {
+            const svc=object(object(overlay.svcv4Assessment).result);
+            row.acmgClassification=svc.classification;
+            row.acmgScore=svc.score;
+            row.acmgVusSubclass=svc.vusSubclass;
+            row.acmgProfile='svcv4-draft-reference';
+        }
+        if (overlay.activeAcmgVersion==='svcv4')
+            row.acmgAssessmentSource = 'svcv4_reference';
+        else if (overlay.acmgOverride)
             row.acmgAssessmentSource = 'manual_override';
         else if ('acmgEvidence' in overlay)
             row.acmgAssessmentSource = 'manual_evidence';
         // Explicit false is an enduring user override, not a missing value.
-        const effectiveClass = overlay.acmgOverride || row.acmgClassification || object(overlay.cnvAssessment).classification;
-        const manualClassification=!!overlay.acmgOverride || 'acmgEvidence' in overlay || 'cnvAssessment' in overlay;
+        const effectiveClass = overlay.activeAcmgVersion==='svcv4' ? row.acmgClassification : overlay.acmgOverride || row.acmgClassification || object(overlay.cnvAssessment).classification;
+        const manualClassification=overlay.activeAcmgVersion==='svcv4' || !!overlay.acmgOverride || 'acmgEvidence' in overlay || 'cnvAssessment' in overlay;
         row.pinned = typeof overlay.pinned === 'boolean' ? overlay.pinned : manualClassification ? ['Pathogenic', 'Likely_Pathogenic'].includes(String(effectiveClass)) : auto.pinned===true;
         row.pinSource = typeof overlay.pinned === 'boolean' || manualClassification ? 'manual' : row.pinned ? 'automatic' : undefined;
         row.reviewStatus = { pinned: row.pinned, reviewed: row.reviewed, reported: row.reported };

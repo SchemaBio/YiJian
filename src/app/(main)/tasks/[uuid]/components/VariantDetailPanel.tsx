@@ -11,6 +11,8 @@ import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
 import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
+import { SVCv4AssessmentPanel } from './SVCv4AssessmentPanel';
+import type { SVCv4Assessment } from '@/lib/svcv4';
 
 interface VariantDetailPanelProps {
   taskId: string;
@@ -20,6 +22,7 @@ interface VariantDetailPanelProps {
   onClose: () => void;
   onUpdateClassification?: (variant: SNVIndel, evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onSaveInterpretation?: (variant: SNVIndel, interpretation: string, reason: string) => Promise<void>;
+  onSaveVersionedAssessment?: (variant:SNVIndel,adjustments:Record<string,unknown>,reason:string)=>Promise<void>;
 }
 
 // 信息项组件
@@ -184,14 +187,16 @@ function ACMGPointsEditor({
   </div>;
 }
 
-export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation }: VariantDetailPanelProps) {
+export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation,onSaveVersionedAssessment }: VariantDetailPanelProps) {
   const [section, setSection] = React.useState<InspectorSection>('annotation');
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
   const [interpretation, setInterpretation] = React.useState('');
-  const [interpretationReason, setInterpretationReason] = React.useState('');
+  const [versionReason,setVersionReason]=React.useState('');
+  const [versionBusy,setVersionBusy]=React.useState(false);
+  const [versionError,setVersionError]=React.useState('');
   const [interpretationSaving, setInterpretationSaving] = React.useState(false);
   const [interpretationError, setInterpretationError] = React.useState('');
   const [adjustmentHistory, setAdjustmentHistory] = React.useState<ResultRowAdjustmentEvent[]>([]);
@@ -206,7 +211,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     setLocalClassification(null);
     setLocalCriteria(null);
     setInterpretation(variant?.interpretation ?? '');
-    setInterpretationReason('');
+    setVersionReason('');setVersionError('');setVersionBusy(false);
     setInterpretationError('');
     setInterpretationSaving(false);
   }, [variant?.id]);
@@ -222,9 +227,23 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   if (!isOpen || !variant) return null;
 
-  const currentClassification = localClassification ?? variant.acmgClassification;
+  const currentClassification = localClassification ?? (variant.activeAcmgVersion==='svcv4'?variant.legacyAcmgClassification:variant.acmgClassification);
   const currentCriteria = localCriteria ?? variant.acmgCriteria ?? [];
   const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
+  const activeClassification=variant.activeAcmgVersion==='svcv4'?variant.svcv4Assessment?.result?.classification:currentClassification;
+  const activeConfig=activeClassification?ACMG_CONFIG[activeClassification]:undefined;
+  const saveVersioned=async(adjustments:Record<string,unknown>,reason:string)=>{
+    if(!onSaveVersionedAssessment)return;
+    await onSaveVersionedAssessment(variant,adjustments,reason);
+    if(selectedRef.current===variant.id) {
+      try{const history=await getResultRowAdjustmentHistory(taskId,'snv-indel',variant.id);if(selectedRef.current===variant.id)setAdjustmentHistory(history);}catch{/* Saved data remains successful if history refresh fails. */}
+    }
+  };
+  const selectVersion=async(version:'legacy'|'svcv4')=>{
+    if(!versionReason.trim()){setVersionError('请填写版本切换理由');return;}
+    setVersionBusy(true);setVersionError('');
+    try{await saveVersioned({activeAcmgVersion:version},versionReason.trim());if(selectedRef.current===variant.id)setVersionReason('');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error?e.message:'切换失败');}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
+  };
   
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
   const vaf = optionalAnnotationNumber(sourceAnnotation(variant, 'VAF'));
@@ -250,18 +269,13 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const handleSaveInterpretation = async () => {
     if (!variant || !onSaveInterpretation || interpretationSaving) return;
     if (interpretation === (variant.interpretation ?? '')) return;
-    if (!interpretationReason.trim()) {
-      setInterpretationError('请填写本次判读调整理由');
-      return;
-    }
     setInterpretationSaving(true);
     setInterpretationError('');
     try {
-      await onSaveInterpretation(variant, interpretation, interpretationReason.trim());
+      await onSaveInterpretation(variant, interpretation, '');
       if (selectedRef.current !== variant.id) return;
-      setInterpretationReason('');
-      const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
-      if (selectedRef.current === variant.id) setAdjustmentHistory(history);
+      try {const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
+      if (selectedRef.current === variant.id) setAdjustmentHistory(history);}catch{/* Saving succeeded even if history refresh is unavailable. */}
     } catch (cause) {
       if (selectedRef.current === variant.id) setInterpretationError(cause instanceof Error ? cause.message : '保存人工解读失败');
     } finally {
@@ -276,7 +290,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">变异详情</h3>
-            {acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : <Tag variant="neutral">ACMG 未评定</Tag>}
+            {activeConfig ? <Tag variant={activeConfig.variant}>{variant.activeAcmgVersion==='svcv4'&&variant.svcv4Assessment?.result?.vusSubclass?variant.svcv4Assessment.result.vusSubclass:activeConfig.label}</Tag> : <Tag variant="neutral">ACMG 未评定</Tag>}
           </div>
           <button
             onClick={onClose}
@@ -290,12 +304,18 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
         <div className="yj-inspector-summary">
           <strong className="text-fg-default">{variant.gene || '未提供基因'}</strong> · {variant.chromosome}:{variant.position}<br />
           {variant.ref} → {variant.alt} · 自动初评 {variant.automaticAcmg?.score ?? '—'} 分
-          {!acmgConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
+          <p className="mt-1 text-xs">当前采用：{variant.activeAcmgVersion==='svcv4'?'SVC v4.0（试行／非权威参考）':'ACMG 现版'}</p>
+          {!activeConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
         </div>
         {/* 内容区域 */}
-        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'assessment', 'history']} />
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'acmg', 'svcv4', 'interpretation', 'history']} />
+        {(section==='acmg'||section==='svcv4')&&!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
+          <input aria-label="版本切换理由" placeholder="版本切换理由（必填）" className="w-full rounded border border-border-default bg-canvas-default p-2 text-sm" value={versionReason} onChange={e=>setVersionReason(e.target.value)} />
+          <button type="button" disabled={versionBusy||(variant.activeAcmgVersion??'legacy')===(section==='acmg'?'legacy':'svcv4')||(section==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(section==='acmg'?'legacy':'svcv4')} className="rounded border border-border-default px-3 py-1.5 text-sm disabled:opacity-50">{versionBusy?'切换中…':`采用${section==='acmg'?'现版':'SVC v4.0试行'}结果`}</button>
+          {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
+        </div>}
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
-          <section hidden={section !== 'assessment'} >
+          <section hidden={section !== 'interpretation'} >
           {/* 人工解读 */}
           <SectionTitle icon={MessageSquare} title="人工解读" />
           <div className="space-y-0">
@@ -307,7 +327,6 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
             />
             <div className="mt-2 space-y-2">
-              <input readOnly={readOnly} value={interpretationReason} onChange={event => setInterpretationReason(event.target.value)} placeholder="本次调整理由（保存时必填）" className="h-9 w-full rounded-md border border-border-default bg-canvas-default px-2 text-sm" />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
                 <button type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
@@ -316,6 +335,11 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             </div>
           </div>
 
+          </section>
+          <section hidden={section !== 'svcv4'}>
+            <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} variant={variant} readOnly={readOnly} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
+          </section>
+          <section hidden={section !== 'acmg'}>
           {/* ACMG 分类 */}
           <SectionTitle
             icon={FileText}

@@ -204,7 +204,8 @@ export function SNVIndelTab({
       acmgEvidence: evidence,
       acmgOverride: override || undefined,
       acmgOverrideReason: overrideReason,
-      acmgClassification: reset ? variant.automaticAcmg?.classification : saved.adjustment.adjustments.acmgClassification as ACMGClassification | undefined,
+      legacyAcmgClassification: reset ? variant.automaticAcmg?.classification : saved.adjustment.adjustments.acmgClassification as ACMGClassification | undefined,
+      acmgClassification: variant.activeAcmgVersion==='svcv4' ? variant.svcv4Assessment?.result?.classification??undefined : reset ? variant.automaticAcmg?.classification : saved.adjustment.adjustments.acmgClassification as ACMGClassification | undefined,
       acmgState: String(saved.adjustment.adjustments.acmgState ?? ''),
       acmgAssessmentSource: reset ? 'automatic' : override ? 'manual_override' : 'manual_evidence',
       acmgCriteria: evidence.map(item => item.code),
@@ -218,6 +219,19 @@ export function SNVIndelTab({
     setReloadToken(value => value + 1);
     setSelectedVariant(current => current?.id !== variant.id ? current : { ...current, interpretation, adjustmentVersion: saved.adjustment.version });
   }, [taskId]);
+
+  const handleSaveVersionedAssessment=React.useCallback(async(variant:SNVIndel,adjustments:Record<string,unknown>,reason:string)=>{
+    const saved=await saveResultRowAdjustment(taskId,'snv-indel',variant.id,variant.adjustmentVersion??0,adjustments,reason);
+    if(scopeRef.current!==taskId)return;
+    const payload=saved.adjustment.adjustments;
+    const svc=payload.svcv4Assessment as SNVIndel['svcv4Assessment'];
+    const active=payload.activeAcmgVersion==='svcv4'?'svcv4':'legacy';
+    setReloadToken(value=>value+1);
+    setSelectedVariant(current=>current?.id!==variant.id?current:{...current,svcv4Assessment:svc,activeAcmgVersion:active,
+      legacyAcmgClassification: (payload.acmgOverride || ('acmgEvidence' in payload ? payload.acmgClassification : current.automaticAcmg?.classification)) as ACMGClassification | undefined,
+      acmgClassification:active==='svcv4'?svc?.result?.classification??undefined:(payload.acmgOverride || ('acmgEvidence' in payload ? payload.acmgClassification : current.automaticAcmg?.classification)) as ACMGClassification | undefined,
+      acmgVusSubclass:active==='svcv4'?svc?.result?.vusSubclass??undefined:undefined,adjustmentVersion:saved.adjustment.version});
+  },[taskId]);
 
   // 获取当前选中的基因列表信息
   const selectedGeneList = React.useMemo(() => {
@@ -358,7 +372,7 @@ export function SNVIndelTab({
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
           return config
-          ? <HoverHint content={row.acmgAssessmentSource === 'manual_override' ? '人工覆写分类' : row.acmgAssessmentSource === 'manual_evidence' ? '根据已保存的 ACMG 证据计算' : `自动初评${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span ><Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag></span></HoverHint>
+          ? <HoverHint content={row.activeAcmgVersion==='svcv4'?'SVC v4.0 草案／非权威参考评定':row.acmgAssessmentSource === 'manual_override' ? '人工覆写分类' : row.acmgAssessmentSource === 'manual_evidence' ? '根据已保存的 ACMG 证据计算' : `自动初评${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span className="inline-flex flex-col items-center gap-1"><Tag variant={config.variant} className="justify-center">{row.activeAcmgVersion==='svcv4'&&row.acmgVusSubclass?row.acmgVusSubclass:config.label}</Tag><span className="text-xs text-fg-muted">{row.activeAcmgVersion==='svcv4'?'v4.0 试行':'现版'}</span></span></HoverHint>
           : <HoverHint content={row.automaticAcmg?.pending?.join('；') || '当前数据没有足够的自动评估证据'}><span ><Tag variant="neutral" className="w-20 justify-center">证据不足</Tag></span></HoverHint>;
       },
       width: 100,
@@ -525,6 +539,7 @@ export function SNVIndelTab({
         onClose={handleCloseDetailPanel}
         onUpdateClassification={handleUpdateClassification}
         onSaveInterpretation={handleSaveInterpretation}
+        onSaveVersionedAssessment={handleSaveVersionedAssessment}
       />
     </div>
   );

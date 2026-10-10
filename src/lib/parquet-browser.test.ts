@@ -36,6 +36,20 @@ beforeEach(()=>{
  });
 });
 afterEach(async()=>{await clearBrowserResults();vi.clearAllMocks();vi.unstubAllGlobals();});
+it('projects the adopted draft without overwriting legacy evidence or the VUS filter category',async()=>{
+ const overlay={acmgOverride:'Pathogenic',acmgEvidence:[],activeAcmgVersion:'svcv4',svcv4Assessment:{revision:'fixed',confirmed:true,result:{classification:'VUS',vusSubclass:'VUS-high',score:4}}};
+ mocks.send.mockImplementation(async(sql:string)=>{
+  const rows=sql==='DESCRIBE source'?[{column_name:'Gene'}]:sql.startsWith('SELECT count')?[{n:2}]:[{Gene:'BRCA1',__row_id:'row-1',file_row_number:0,__version:3,__acmg:null,__adjustments:JSON.stringify(overlay)}];
+  return (async function*(){yield {toArray:()=>rows.map(row=>({toJSON:()=>row}))};})();
+ });
+ const pending=queryBrowserParquet('draft-task','snv-indel',{offset:0,limit:20});
+ await vi.waitFor(()=>expect(assessmentStatus('draft-task')?.state).toBe('loading'));
+ cancelAssessment('draft-task');
+ const page=await pending;
+ expect(page.items[0]).toMatchObject({activeAcmgVersion:'svcv4',acmgClassification:'VUS',acmgVusSubclass:'VUS-high',acmgScore:4,pinned:false,acmgOverride:'Pathogenic',acmgEvidence:[]});
+ const mapped=await getSNVIndels('draft-task',{searchQuery:'',filters:{},page:1,pageSize:20});
+ expect(mapped.data[0]).toMatchObject({acmgClassification:'VUS',legacyAcmgClassification:'Pathogenic',acmgVusSubclass:'VUS-high'});
+});
 it('keeps the loaded table queryable with saved interpretation after cancelling assessment',async()=>{
  const pending=queryBrowserParquet('task','snv-indel',{offset:0,limit:20});
  await vi.waitFor(()=>expect(assessmentStatus('task')?.state).toBe('loading'));

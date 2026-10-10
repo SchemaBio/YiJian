@@ -212,6 +212,10 @@ export interface AutomaticACMGAssessment {
 }
 
 export interface SNVIndel extends VariantReviewStatus {
+  activeAcmgVersion?: 'legacy' | 'svcv4';
+  svcv4Assessment?: import('@/lib/svcv4').SVCv4Assessment;
+  legacyAcmgClassification?: ACMGClassification;
+  acmgVusSubclass?: string;
   id: string;
   gene: string;                  // 基因名
   chromosome: string;            // 染色体
