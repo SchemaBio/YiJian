@@ -303,7 +303,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
         <div className="yj-inspector-summary">
           <strong className="text-fg-default">{variant.gene || '未提供基因'}</strong> · {variant.chromosome}:{variant.position}<br />
-          {variant.ref} → {variant.alt} · 自动初评 {variant.automaticAcmg?.score ?? '—'} 分
+          {variant.ref} → {variant.alt} · {variant.automaticAcmg?.classificationBasis && variant.automaticAcmg.classificationBasis !== 'acmg_evidence' ? '快速初评 · 待人工复核' : `自动初评 ${variant.automaticAcmg?.score ?? '—'} 分`}
           <p className="mt-1 text-xs">当前采用：{variant.activeAcmgVersion==='svcv4'?'SVC v4.0（试行／非权威参考）':'ACMG 现版'}</p>
           {!activeConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
         </div>
@@ -366,8 +366,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             ) : (
               <>
                 <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
-                <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : '自动初评'} />
-                <InfoItem label="自动初评分数" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
+                <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? '快速初评 · ClinVar 参考' : variant.automaticAcmg?.classificationBasis === 'population_screening' ? '快速初评 · gnomAD 频率筛查' : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? '快速初评 · 冲突待复核' : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? '快速初评 · VUS 待复核' : '自动证据积分'} />
+                {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
+                <InfoItem label="自动证据积分" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
                 {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
                 <InfoItem
                   label="证据项"

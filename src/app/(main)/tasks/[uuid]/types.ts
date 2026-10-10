@@ -203,6 +203,8 @@ export interface ACMGEvidenceEntry {
 }
 
 export interface AutomaticACMGAssessment {
+  classificationBasis?: import('@/lib/assessment/types').AutomaticAssessment['classificationBasis'];
+  screeningNotes?: string[];
   profile: string;
   state: string;
   score: number;

@@ -2,6 +2,7 @@ import { ASSESSMENT_PROFILE, type AssessmentContext, type AssessmentRow, type Au
 import { createDefaultGainAssessmentCriteria, createDefaultLossAssessmentCriteria } from '@/app/(main)/tasks/[uuid]/types';
 import { calculateLossTotal } from '@/app/(main)/tasks/[uuid]/utils/loss-calculator';
 import { calculateGainTotal } from '@/app/(main)/tasks/[uuid]/utils/gain-calculator';
+import { screenSNV } from './snv-screen';
 
 const pathogenic = (s?: string) => s === 'Pathogenic' || s === 'Likely_Pathogenic';
 const number = (v: unknown): number | undefined => v === undefined || v === null || String(v).trim() === '' || v === '.' || !Number.isFinite(Number(v)) ? undefined : Number(v);
@@ -140,7 +141,7 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
   const p0=ctx.proofs[row.id], p=p0?.reference===ctx.reference?p0:undefined;
   if (p?.interval) row={...row,values:{...row.values,__validatedInterval:p.interval}};
   result.gene=text(read(row.values,'Gene','MTGene','MT_Gene',...(row.table==='cnv-exon'?['Col5']:[]),'gene')).split(/[&,;]/)[0] || undefined;
-  if (row.table==='snv-indel') snv(row,p,result);
+  if (row.table==='snv-indel') { snv(row,p,result); screenSNV(row.values,result); }
   else if (row.table==='cnv-segment'||row.table==='cnv-exon') cnv(row,ctx,p,result);
   else if (quality(row,p) && p?.establishedDisease?.exactIdentity) result.classification=p.establishedDisease.classification;
   if (row.table==='str' && quality(row,p)) {

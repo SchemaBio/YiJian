@@ -18,6 +18,14 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it('labels the quick result and its source without presenting it as ACMG points', async () => {
+    render(<VariantDetailPanel taskId="task" variant={{...variant('A'),acmgClassification:'Benign',acmgAssessmentSource:'automatic',automaticAcmg:{profile:'fast',state:'evaluated',score:0,classification:'Benign',classificationBasis:'clinvar_reference',criteria:[],pending:[],screeningNotes:['ClinVar：Benign；专家组审核','gnomAD：总体 AF=0.2；常见']}}} isOpen onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', {name:'ACMG评定（现版）'}));
+    expect(await screen.findByText('快速初评 · ClinVar 参考')).toBeVisible();
+    expect(screen.getByText('ClinVar：Benign；专家组审核')).toBeVisible();
+    expect(screen.getByText('gnomAD：总体 AF=0.2；常见')).toBeVisible();
+    expect(screen.queryByText('证据不足，当前无法形成 ACMG 分类')).not.toBeInTheDocument();
+  });
   it('clears interpretation without a reason', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     render(<VariantDetailPanel taskId="task" variant={{...variant('A'), interpretation:'旧解读'}} isOpen onClose={vi.fn()} onSaveInterpretation={save} />);

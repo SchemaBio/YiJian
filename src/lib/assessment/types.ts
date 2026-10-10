@@ -1,4 +1,4 @@
-export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v1';
+export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v2-fast-snv';
 export type ResultTable = 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh';
 export type Classification = 'Pathogenic' | 'Likely_Pathogenic' | 'VUS' | 'Likely_Benign' | 'Benign';
 export interface Evidence { code: string; strength: 'supporting' | 'moderate' | 'strong' | 'very_strong' | 'standalone'; source: string; note: string; }
@@ -42,6 +42,8 @@ export interface AssessmentContext {
 }
 export interface AssessmentRow { id: string; table: ResultTable; values: Record<string, unknown>; }
 export interface AutomaticAssessment {
+  classificationBasis?: 'acmg_evidence' | 'clinvar_reference' | 'population_screening' | 'screening_vus' | 'screening_conflict';
+  screeningNotes?: string[];
   profile: string; contextVersion: string; state: 'evaluated' | 'insufficient_evidence';
   classification?: Classification; score: number; criteria: Evidence[]; pending: string[];
   pinned: boolean; pinReasons: string[]; phenotypeScore: number; diseaseId?: string;

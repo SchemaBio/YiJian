@@ -58,3 +58,18 @@ SNP Parquet 没有 GQ 和人群 AC/AN；必须通过受控 VCF 适配器核对�
 - [HPO 许可](https://human-phenotype-ontology.github.io/license.html)
 - [ClinGen 使用条款](https://www.clinicalgenome.org/docs/terms-of-use/)
 - [Mondo 资源及许可](https://github.com/monarch-initiative/mondo)
+
+
+## 2026-10-10：SNP/InDel 快速初评
+
+用户明确将初评定位为快速筛查，正式判断由之后的人工评价完成。此节取代上文 SNP/InDel 自动初评的保守阻断逻辑；CNV、家系及其他类型的既有规则不变。本次代码尚未部署。
+
+- 根因：Worker 的投影字段未包含 ClinVar 和 gnomAD；旧人群计分必须具备疾病特定阈值、AN 和东亚覆盖。已有 AF 无法进入计分，大量结果只显示证据不足。
+- 加入报告中已有的 ClinVar_Sig、ClinVar_RevStat、ClinVar_Star、GnomAD_AF 和 GnomAD_AF_EAS；仍使用一次流式投影、每批最多 1000 行，不增加逐位点网络查询。
+- ClinVar 明确结论作为数据库参考；组合 P/LP 取 LP，B/LB 取 LB。冲突注释或致病参考与高频冲突保留 VUS，提示人工核对。审核状态保持展示，不强求补齐资料后才筛查。
+- 缺少明确 ClinVar 结论时，使用总体/东亚可用 AF 的最大值：≥5% 快速初评良性，≥1% 且 <5% 可能良性，其余未形成明确倾向时保留 VUS。缺失值不当作 0，低频不直接推断致病。只有明确的 ACMG 积分证据可以进入正式条款，以上频率是筛查阈值，不等同 BA1/BS1/PM2。
+- 已有可用的 AlphaMissense 等正式证据仍独立计算。快速筛查结论、来源、频率与参考审核状态随自动结果一起展示，不伪造 PP5/BP6 或 ACMG 积分。人工证据、覆写和 SVC v4 采用状态优先级不变。
+- 初评版本更新为 `germline-browser-assessment-v2-fast-snv`，Octopus 的上下文版本同步更新，使已有任务能发现规则更新；人工已保存判读不会被替换。
+- 远端仅做只读覆盖统计：归档任务 73ac68fd… 有 55,393 个 SNP/InDel，53,717 个有总体 gnomAD AF，14,843 个有 ClinVar 注释；46,894 个总体 AF ≥5%。没有改动该任务的人工判读或归档文件。
+
+标准与参考：ClinVar 审核层级见 [NCBI](https://www.ncbi.nlm.nih.gov/clinvar/docs/review_status/)。正式 BA1 包含人群、AN 和例外前提，见 [ClinGen](https://www.clinicalgenome.org/docs/updated-recommendation-for-the-benign-stand-alone-acmg-amp-criterion/)；本次快速频率筛查不能替代这些标准。

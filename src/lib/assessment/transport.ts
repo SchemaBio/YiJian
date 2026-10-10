@@ -3,6 +3,8 @@
 export const ASSESSMENT_FIELDS = [
   'Gene','MTGene','MT_Gene','Col5','gene','Filter','FILTER','filter',
   'Transcript','AlphaMissense_AM','Type','Consequence','CNV_Type','Col4','type',
+  'GnomAD_AF','GnomAD_AF_EAS','gnomAD_AF','gnomAD_AF_EAS','gnomadAF','gnomadEasAF',
+  'ClinVar_Sig','ClinVar_CLNSIG','ClinVar_RevStat','ClinVar_Star','clinvarSignificance','clinvarReviewStatus',
   'Depth','depth','Repeat_Unit','RepeatUnit','repeatUnit',
   'Allele1_Repeats','Allele1','allele1Repeats','Allele2_Repeats','Allele2','allele2Repeats',
 ] as const;
