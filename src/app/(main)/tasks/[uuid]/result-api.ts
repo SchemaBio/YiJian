@@ -398,6 +398,7 @@ function mapSNV(row: BackendRow): SNVIndel {
 }
 
 function mapCNVSegment(row: BackendRow): CNVSegment {
+  const adjustments = row.adjustments && typeof row.adjustments === 'object' ? row.adjustments as Record<string, unknown> : {};
   const start = n(row.startPosition);
   const end = n(row.endPosition);
   return {
@@ -408,6 +409,7 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     chromosome: s(row.chromosome),
     startPosition: start,
     endPosition: end,
+    interpretation: s(adjustments.interpretation),
     length: Math.max(0, end - start),
     type: cnvType(row.type),
     copyNumber: nullableNumber(row.copyNumber ?? row.CN ?? row.Col8),

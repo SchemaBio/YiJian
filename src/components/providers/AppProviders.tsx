@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { ThemeProvider } from '@schema/ui-kit';
-import { AuthProvider } from './AuthProvider';
+import { AIAssistanceProvider } from './AIAssistanceProvider';
+import { AuthProvider, useAuth } from './AuthProvider';
 import { AIProvider } from './AIProvider';
 import { UploadProvider } from './UploadProvider';
 
@@ -22,10 +23,16 @@ export function AppProviders({ children }: AppProvidersProps) {
       <AuthProvider>
         <UploadProvider>
           <AIProvider>
-            {children}
+            <AssistanceScope>{children}</AssistanceScope>
           </AIProvider>
         </UploadProvider>
       </AuthProvider>
     </ThemeProvider>
   );
+}
+
+function AssistanceScope({ children }: { children: React.ReactNode }) {
+  const { user, currentOrg } = useAuth();
+  const scope = user ? `${user.id}:${currentOrg?.id ?? ''}` : 'anonymous';
+  return <AIAssistanceProvider key={scope} scope={scope}>{children}</AIAssistanceProvider>;
 }

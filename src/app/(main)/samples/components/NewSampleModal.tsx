@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Button, Input, Select, TextArea } from '@schema/ui-kit';
 import { FileText, Search, Stethoscope, UserRound, X } from 'lucide-react';
+import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { searchHpoTerms, useHpoTerms, type HpoTerm } from '@/lib/hpo-terms';
 import type { Gender, SampleType } from '../types';
@@ -209,15 +210,9 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
             title="临床信息"
           />
           <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">临床诊断</label>
-              <TextArea
-                value={formData.clinicalDiagnosis}
-                onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)}
-                placeholder="请输入临床诊断"
-                rows={2}
-              />
-            </div>
+            <AIDiagnosisField key={`new-${isOpen}`} value={formData.clinicalDiagnosis}
+              disabled={submitting} onChange={value => handleChange('clinicalDiagnosis', value)}
+              onTerms={terms => setFormData(previous => ({ ...previous, hpoTerms: [...previous.hpoTerms, ...terms.filter(term => !previous.hpoTerms.some(old => old.id === term.id))] }))} />
             <div>
               <label className="mb-1.5 block text-xs font-medium text-fg-muted">HPO 表型术语</label>
               {formData.hpoTerms.length > 0 && (

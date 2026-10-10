@@ -271,6 +271,7 @@ export interface SNVIndel extends VariantReviewStatus {
 export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 
 export interface CNVSegment extends VariantReviewStatus {
+  interpretation?: string;
   attemptId?: string;
   annotationValues?: Record<string, string>;
   iscnCandidate?: string;
@@ -290,6 +291,7 @@ export interface CNVSegment extends VariantReviewStatus {
 
 // ============ CNV变异(外显子级别) ============
 export interface CNVExon extends VariantReviewStatus {
+  interpretation?: string;
   attemptId?: string;
   confidenceLabel?: string;
   annotationValues?: Record<string, string>;

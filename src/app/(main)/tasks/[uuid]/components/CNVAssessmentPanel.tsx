@@ -2,6 +2,9 @@
 import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
+import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
+import type { AIAssistanceResult } from '@/lib/ai-assistance';
+import { aiVariantContext } from '../utils/ai-context';
 import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
 import { X, Calculator, Save, RotateCcw } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
@@ -28,6 +31,8 @@ import { Section4Panel } from './assessment/Section4Panel';
 import { Section5Panel } from './assessment/Section5Panel';
 
 interface CNVAssessmentPanelProps {
+  taskId?: string;
+  referenceId?: string;
   saving?: boolean;
   error?: string | null;
   /** CNV变异数据 */
@@ -143,6 +148,7 @@ function AssessmentSection({ title, score, children }: { title: string; score: n
  * CNV评估侧边栏主组件
  */
 export function CNVAssessmentPanel({
+  taskId, referenceId,
   cnv,
   saving = false,
   error,
@@ -154,6 +160,8 @@ export function CNVAssessmentPanel({
   onCriteriaChange,
 }: CNVAssessmentPanelProps) {
   const readOnly = useInterpretationReadOnly();
+  const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
+  React.useEffect(() => { setAIResult(undefined); }, [taskId, cnv?.id]);
   if (!isOpen || !cnv || !assessment) return null;
   if (cnv.type === 'Normal' || cnv.type === 'Unknown') return null;
 
@@ -240,6 +248,8 @@ export function CNVAssessmentPanel({
         <fieldset disabled={readOnly} className="yj-inspector-content min-w-0">
           <p className="mb-3 text-xs text-fg-muted">基于 ACMG/ClinGen 2020 标准；预勾选仅使用已提供证据，评分不是自动确诊。</p>
           {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">AI 辅助判决</span><AIAssistanceAction key={`${taskId}/${cnv.id}`} disabled={readOnly||saving||!taskId} input={{feature:isLoss?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(cnv),calculator:assessment}} onResult={setAIResult} /></div>
+          {aiResult && <div className="mb-4"><AIResultCard result={aiResult} /></div>}
           {/* 分数汇总 */}
           <ScoreSummaryCard
             classification={assessment.classification}

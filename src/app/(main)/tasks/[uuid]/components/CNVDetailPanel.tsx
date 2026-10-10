@@ -2,6 +2,11 @@
 
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
+import { useInterpretationReadOnly } from './InterpretationLock';
+import { ResultChangeHistory } from './ResultChangeHistory';
+import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
+import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
+import { aiVariantContext } from '../utils/ai-context';
 import { CNVRegionPlot } from './CNVRegionPlot';
 import { CNVExonPlot } from './CNVExonPlot';
 import { X, ExternalLink, FileText, Database, Dna, MapPin } from 'lucide-react';
@@ -17,6 +22,7 @@ interface CNVDetailPanelProps {
   allSegments?: CNVSegment[];  // 保留旧调用方兼容；区域图从完整本地数据集查询
   referenceId?: string;
   taskId?: string;
+  onSaveInterpretation?: (variant: CNVSegment | CNVExon, interpretation: string) => Promise<void>;
   onOpenAssessment?: (variant: CNVSegment | CNVExon) => void;
 }
 
@@ -107,10 +113,17 @@ function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
   return 'gene' in variant;
 }
 
-export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, onOpenAssessment }: CNVDetailPanelProps) {
+export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, onOpenAssessment, onSaveInterpretation }: CNVDetailPanelProps) {
   const [section, setSection] = React.useState<InspectorSection>('annotation');
+  const readOnly = useInterpretationReadOnly();
+  const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
+  const [interpretation, setInterpretation] = React.useState('');
+  const [savedInterpretation, setSavedInterpretation] = React.useState('');
+  const [saving, setSaving] = React.useState(false), [saveError, setSaveError] = React.useState('');
+  const scope = `${taskId}/${variantType}/${variant?.id}`;
+  const scopeRef = React.useRef(scope); scopeRef.current = scope;
   const [plotOpen, setPlotOpen] = React.useState(false);
-  React.useEffect(() => { setPlotOpen(false); setSection('annotation'); }, [variant?.id, isOpen]);
+  React.useEffect(() => { setPlotOpen(false); setSection('annotation'); setAIResult(undefined); setInterpretation(variant?.interpretation ?? ''); setSavedInterpretation(variant?.interpretation ?? ''); setSaving(false); setSaveError(''); }, [scope, isOpen]);
   if (!isOpen || !variant) return null;
 
   const isExon = isCNVExon(variant);
@@ -147,9 +160,26 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           <p className="mt-1">{variant.assessment?.assessmentState === 'insufficient_evidence' ? '证据不足' : variant.assessment ? getClassificationLabel(variant.assessment.classification) : '尚未评定'} · {variant.assessment ? `${formatScore(variant.assessment.totalScore)} 分` : '—'}</p>
         </div>
         {/* 内容区域 */}
-        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} />
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'assessment', 'interpretation', 'history']} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
+          <section hidden={section !== 'interpretation'} className="space-y-3">
+            <h4 className="text-sm font-semibold">人工解读</h4>
+            <textarea aria-label="CNV 人工解读" readOnly={readOnly} value={interpretation} onChange={event => setInterpretation(event.target.value)} placeholder="请输入您对该 CNV 的解读分析…" className="min-h-32 w-full resize-y rounded-md border border-border-default bg-canvas-default p-3 text-sm" />
+            <div className="flex items-center justify-between gap-2"><span className="text-xs text-fg-muted">{interpretation.length} 字</span><button type="button" disabled={readOnly || saving || !onSaveInterpretation || interpretation === savedInterpretation} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
+              if (!onSaveInterpretation) return;
+              setSaving(true); setSaveError(''); const originalScope = scope; const draft = interpretation;
+              try { await onSaveInterpretation(variant, draft); if (scopeRef.current === originalScope) setSavedInterpretation(draft); }
+              catch (cause) { if (scopeRef.current === originalScope) setSaveError(cause instanceof Error ? cause.message : '保存失败'); }
+              finally { if (scopeRef.current === originalScope) setSaving(false); }
+            }}>{saving ? '保存中…' : '保存人工解读'}</button></div>
+            {saveError && <p role="alert" className="text-sm text-danger-fg">{saveError}</p>}
+          </section>
+          <section hidden={section !== 'history'}>
+            <ResultChangeHistory taskId={taskId} table={variantType === 'exon' ? 'cnv-exon' : 'cnv-segment'} rowId={variant.id} active={section === 'history'} revision={variant.adjustmentVersion} />
+          </section>
           <section hidden={section !== 'assessment'} >
+          {(variant.type === 'Deletion' || variant.type === 'Amplification') && <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 评估</span><AIAssistanceAction key={scope} disabled={readOnly || !taskId} input={{feature:variant.type === 'Deletion'?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(variant),calculator:variant.assessment}} onResult={setAIResult} /></div>}
+          {aiResult && <div className="mb-4"><AIResultCard result={aiResult} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} /></div>}
           <div className="mb-3 flex flex-wrap gap-2">
             {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 计算器</button>}
 

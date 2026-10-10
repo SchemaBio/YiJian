@@ -11,7 +11,7 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { CNVSegment, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getCNVSegments, reportVariant, pinVariant, saveCNVAssessment } from '../result-api';
+import { getCNVSegments, reportVariant, pinVariant, saveCNVAssessment, saveResultRowAdjustment } from '../result-api';
 import { filterableColumns } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
@@ -47,6 +47,7 @@ export function CNVSegmentTab({
   filterState: externalFilterState,
   onFilterChange
 }: CNVSegmentTabProps) {
+  const scopeRef = React.useRef(taskId); scopeRef.current = taskId;
   const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<CNVSegment> | null>(null);
@@ -473,6 +474,14 @@ export function CNVSegmentTab({
 
       {/* CNV 详情面板 */}
       <CNVDetailPanel
+        onSaveInterpretation={async (variant, interpretation) => {
+          const saved = await saveResultRowAdjustment(taskId, 'cnv-segment', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, '更新 CNV 人工解读');
+          if (scopeRef.current !== taskId) return;
+          const changes = { interpretation, adjustmentVersion: saved.adjustment.version };
+          setAssessmentCache(current => current[variant.id] ? { ...current, [variant.id]: { ...current[variant.id], adjustmentVersion: saved.adjustment.version } } : current);
+          setSelectedVariant(current => current?.id === variant.id ? { ...current, ...changes } : current);
+          setResult(current => current ? { ...current, data: current.data.map(row => row.id === variant.id ? { ...row, ...changes } : row) } : current);
+        }}
         taskId={taskId}
         onOpenAssessment={variant => handleOpenAssessmentPanel(variant as CNVSegment)}
         variant={selectedVariant}
@@ -498,6 +507,8 @@ export function CNVSegmentTab({
         <div className="mt-3 text-sm text-fg-muted">正在保存 CNV 评估…</div>
       )}
       <CNVAssessmentPanel
+        taskId={taskId}
+        referenceId={referenceId}
         cnv={assessmentVariant}
         assessment={assessment}
         isOpen={assessmentPanelOpen}

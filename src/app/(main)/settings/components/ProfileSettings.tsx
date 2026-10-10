@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Button, FormItem, Input, Tag } from '@schema/ui-kit';
 import { AlertTriangle, Bot, Building2, KeyRound, Loader2, Save, UserRound } from 'lucide-react';
 import { SupportDialog } from '@/components/support/SupportDialog';
+import { AISettingsPanel } from '@/components/shared/AISettingsPanel';
 import { useAI } from '@/components/providers/AIProvider';
 import type { User, UserOrganizationInfo } from '@/types/user';
 
@@ -144,6 +145,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <ReadOnlyField label="机构编号" mono>{currentOrg?.id ?? '—'}</ReadOnlyField>
         </div>
       </section>
+
+      <AISettingsPanel admin={user.systemRole === 'PLATFORM_ADMIN'} />
 
       <section className="yj-panel p-5">
         <div className="mb-4 flex items-center gap-2">

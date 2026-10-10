@@ -11,6 +11,9 @@ import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
 import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
+import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
+import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
+import { aiVariantContext } from '../utils/ai-context';
 import { SVCv4AssessmentPanel } from './SVCv4AssessmentPanel';
 import type { SVCv4Assessment } from '@/lib/svcv4';
 
@@ -108,7 +111,9 @@ function ACMGPointsEditor({
   variant,
   onSave,
   onCancel,
+  renderAIAction,
 }: {
+  renderAIAction?: (calculator: unknown) => React.ReactNode;
   variant: SNVIndel;
   onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onCancel: () => void;
@@ -157,6 +162,7 @@ function ACMGPointsEditor({
   };
 
   return <div className="space-y-4">
+    {renderAIAction && <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">基于当前编辑证据生成</span>{renderAIAction({ evidence: Object.values(evidence), override, overrideReason, score })}</div>}
     <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">自动初评 · {auto?.profile ?? 'acmg-snv-points-v2'}</span><span>自动分类：{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : '证据不足'} · {auto?.score ?? 0} 分</span></div>
       {auto?.pending?.length ? <p className="mt-1 text-xs text-fg-muted">待确认：{auto.pending.join('；')}</p> : <p className="mt-1 text-xs text-fg-muted">未纳入缺乏当前证据前提的人群、疾病机制、家系或实验室证据。</p>}
@@ -189,6 +195,7 @@ function ACMGPointsEditor({
 
 export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation,onSaveVersionedAssessment }: VariantDetailPanelProps) {
   const [section, setSection] = React.useState<InspectorSection>('annotation');
+  const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
   const [acmgTab, setAcmgTab] = React.useState<'acmg' | 'svcv4'>('acmg');
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
@@ -209,6 +216,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   React.useEffect(() => {
     setSection('annotation');
     setAcmgTab('acmg');
+    setAIResult(undefined);
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
@@ -344,9 +352,14 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
             </div>}
               <section hidden={acmgTab !== 'svcv4'}>
-                <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} variant={variant} readOnly={readOnly} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
+                <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} variant={variant} readOnly={readOnly} onUseAIInterpretation={onSaveInterpretation ? result => { setInterpretation(previous => [previous, formatAIInterpretation(result)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
               </section>
               <section hidden={acmgTab !== 'acmg'}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold">ACMG 现版</span>
+                {!isEditingACMG && <AIAssistanceAction key={`${taskId}/${variant.id}/acmg`} disabled={readOnly} input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride } }} onResult={setAIResult} />}
+              </div>
+              {aiResult && <AIResultCard result={aiResult} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
               {/* ACMG 分类 */}
               <SectionTitle
                 icon={FileText}
@@ -368,7 +381,8 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                   <ACMGPointsEditor
                     variant={variant}
                     onSave={handleSaveACMG}
-                    onCancel={() => setIsEditingACMG(false)}
+                    renderAIAction={calculator => <AIAssistanceAction disabled={readOnly} input={{feature:'acmg',taskId,reference:referenceGenome,variant:aiVariantContext(variant),calculator}} onResult={setAIResult} />}
+                  onCancel={() => setIsEditingACMG(false)}
                   />
                 ) : (
                   <>

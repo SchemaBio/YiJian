@@ -2,6 +2,9 @@
 import * as React from 'react';
 import { evaluateSVCv4, getSVCv4Schema, type EvidenceSchema, type SVCv4Assessment, type SVCv4Schema } from '@/lib/svcv4';
 import type { SNVIndel } from '../types';
+import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
+import type { AIAssistanceResult } from '@/lib/ai-assistance';
+import { aiVariantContext } from '../utils/ai-context';
 import { ACMG_CONFIG } from '../result-api';
 
 const LABELS:Record<string,string>={
@@ -57,7 +60,8 @@ export function EvidenceFields({schema,root=schema,value,onChange,label,disabled
   </label>;
 }
 
-export function SVCv4AssessmentPanel({taskId,variant,readOnly,onSave}: {taskId:string;variant:SNVIndel;readOnly:boolean;onSave?:(assessment:SVCv4Assessment,reason:string)=>Promise<void>}) {
+export function SVCv4AssessmentPanel({taskId,variant,readOnly,onSave,onUseAIInterpretation}: {taskId:string;variant:SNVIndel;readOnly:boolean;onUseAIInterpretation?:(result:AIAssistanceResult)=>void;onSave?:(assessment:SVCv4Assessment,reason:string)=>Promise<void>}) {
+  const [aiResult,setAIResult]=React.useState<AIAssistanceResult>();
   const [schema,setSchema]=React.useState<SVCv4Schema>();
   const [draft,setDraft]=React.useState<SVCv4Assessment>(()=>variant.svcv4Assessment??{disease:'',moi:'',inputs:{},confirmed:false});
   const [dirty,setDirty]=React.useState(false),[reason,setReason]=React.useState(''),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
@@ -68,6 +72,8 @@ export function SVCv4AssessmentPanel({taskId,variant,readOnly,onSave}: {taskId:s
   const save=async()=>{if(!onSave)return;if(!reason.trim()){setError('请填写本次证据调整理由');return;}setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}};
   const result=draft.result;
   return <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">SVC v4.0版</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',taskId,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={setAIResult} /></div>
+    {aiResult&&<AIResultCard result={aiResult} onUseInterpretation={!readOnly&&onUseAIInterpretation?()=>onUseAIInterpretation(aiResult):undefined} />}
     <div className="rounded border border-warning-emphasis/40 bg-warning-subtle p-3 text-sm"><strong>SVC v4.0 试行 · 草案／非权威参考实现</strong><p>以具体疾病为单位评定。缺失信息保持待确认，ClinGen CSpec 为权威计分来源。</p>{schema&&<a href={schema.source} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg">规则版本 {schema.revision.slice(0,12)}</a>}</div>
     <p className="break-words text-sm">{variant.gene} · {variant.chromosome}:{variant.position} {variant.ref} → {variant.alt} · {variant.transcript}<br />{variant.consequence}</p>
     <p className="text-xs text-fg-muted">已有注释参考：gnomAD AF {variant.gnomadAF??'未提供'}；东亚 AF {variant.gnomadEasAF??'未提供'}；AlphaMissense {variant.alphaMissenseScore??'未提供'}。AF 不直接作为 FAF 计分，请核验。</p>

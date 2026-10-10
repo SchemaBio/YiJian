@@ -4,6 +4,7 @@ import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel,
 import * as React from 'react';
 import { Tag, Button, Input } from '@schema/ui-kit';
 import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Pencil, Save, X, Search } from 'lucide-react';
+import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { api } from '@/lib/api';
 import { searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
 import { getSampleDetail, normalizeSampleDetail, sampleDetailPayload } from '@/lib/samples';
@@ -233,7 +234,12 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
           <div className="space-y-4">
             <InfoCard title="诊断信息">
               <div className="space-y-4">
-                <InfoItem
+                {isEditing ? <AIDiagnosisField key={sampleId} value={editData.clinicalDiagnosis?.mainDiagnosis ?? sample.clinicalDiagnosis.mainDiagnosis}
+                  onChange={value => setEditData(previous => ({ ...previous, clinicalDiagnosis: { ...previous.clinicalDiagnosis, mainDiagnosis: value } } as any))}
+                  onTerms={terms => { const merged = [...(sample.clinicalDiagnosis.hpoTerms ?? []), ...terms.filter(term => !sample.clinicalDiagnosis.hpoTerms?.some(old => old.id === term.id))];
+                    setEditData(previous => ({ ...previous, clinicalDiagnosis: { ...previous.clinicalDiagnosis, hpoTerms: merged } } as any));
+                    setSample(previous => previous ? { ...previous, clinicalDiagnosis: { ...previous.clinicalDiagnosis, hpoTerms: merged } } : null);
+                  }} /> : <InfoItem
                   label="主要诊断"
                   value={sample.clinicalDiagnosis.mainDiagnosis}
                   isEditing={isEditing}
@@ -242,7 +248,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                     ...prev,
                     clinicalDiagnosis: { ...prev.clinicalDiagnosis, mainDiagnosis: v }
                   } as any))}
-                />
+                />}
                 <InfoItem
                   label="临床症状"
                   value={
