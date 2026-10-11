@@ -44,7 +44,7 @@ function unwrapList<T>(value: MaybeList<T>): T[] {
 
 function normalizeTemplate(raw: RawReportTemplate): ReportTemplate {
   return {
-    id: asString(raw.id),contractVersion:asString(raw.contractVersion,'legacy-v1'),
+    id: asString(raw.id),contractVersion:asString(raw.contractVersion,'report-snapshot-v2'),
     name: asString(raw.name),
     description: asString(raw.description),
   };

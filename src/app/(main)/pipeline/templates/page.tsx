@@ -1,5 +1,6 @@
 'use client';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
 
 import { HoverHint } from '@/components/shared/HoverHint';
 
@@ -8,8 +9,8 @@ import {useAuth} from '@/components/providers/AuthProvider';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { Input, Select, DataTable, Tag, FormItem, TextArea, type Column } from '@schema/ui-kit';
-import { Search, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces, Share2 } from 'lucide-react';
+import { Input, DataTable, Tag, FormItem, TextArea, type Column } from '@schema/ui-kit';
+import { Search, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AppModal, EmptyState } from '@/components/shared';
 import { ReportEndpointExamples } from './ReportEndpointExamples';
@@ -17,7 +18,7 @@ import { ReportEndpointExamples } from './ReportEndpointExamples';
 type TemplateStatus = 'active' | 'inactive';
 
 interface ReportTemplate {
- revision:number;scope:string;canMaintain:boolean;contractVersion:string;
+ revision:number;scope:string;canMaintain:boolean;
   id: string;
   name: string;
   description: string;
@@ -52,7 +53,7 @@ function normalizeTemplate(value: unknown): ReportTemplate {
   const raw = asRecord(value);
   const isActive = raw.isActive ?? raw.is_active;
   return {
-    id: String(raw.id ?? ''),revision:Number(raw.revision??1),scope:String(raw.scope??'personal'),canMaintain:raw.canMaintain===true,contractVersion:String(raw.contractVersion??'legacy-v1'),
+    id: String(raw.id ?? ''),revision:Number(raw.revision??1),scope:String(raw.scope??'personal'),canMaintain:raw.canMaintain===true,
     name: typeof raw.name === 'string' ? raw.name : '',
     description: typeof raw.description === 'string' ? raw.description : '',
     // The owner can read the endpoint and key-presence flag, but never the key itself.
@@ -95,7 +96,7 @@ async function createReportTemplate(data: FormData): Promise<ReportTemplate> {
   const response = await api.post<unknown>('/v1/report-templates', {
     name: data.name.trim(),
     description: data.description.trim(),
-    apiEndpoint: data.apiEndpoint.trim(),contractVersion:data.contractVersion,
+    apiEndpoint: data.apiEndpoint.trim(),contractVersion:'report-snapshot-v2',
     ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
   });
   return normalizeTemplate(response);
@@ -105,7 +106,7 @@ async function updateReportTemplate(id: string, data: FormData,expectedRevision:
   const response = await api.put<unknown>(`/v1/report-templates/${encodeURIComponent(id)}`, {
     name: data.name.trim(),expectedRevision,
     description: data.description.trim(),
-    apiEndpoint: data.apiEndpoint.trim(),contractVersion:data.contractVersion,
+    apiEndpoint: data.apiEndpoint.trim(),contractVersion:'report-snapshot-v2',
     ...(data.apiKey.trim() ? { apiKey: data.apiKey.trim() } : {}),
   });
   return normalizeTemplate(response);
@@ -121,7 +122,6 @@ async function deleteReportTemplate(id: string): Promise<void> {
 }
 
 interface FormData {
- contractVersion:string;
   name: string;
   description: string;
   apiEndpoint: string;
@@ -129,7 +129,6 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
- contractVersion:'report-snapshot-v2',
   name: '',
   description: '',
   apiEndpoint: '',
@@ -150,6 +149,7 @@ function ReportTemplatesPageContent() {
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<ReportTemplate | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const loadController=React.useRef<AbortController|null>(null);
@@ -214,7 +214,7 @@ function ReportTemplatesPageContent() {
     setFormData({
       name: template.name,
       description: template.description,
-      apiEndpoint: template.apiEndpoint,contractVersion:template.contractVersion,
+      apiEndpoint: template.apiEndpoint,
       apiKey: '',
     });
     setApiTestResult(null);
@@ -244,7 +244,8 @@ function ReportTemplatesPageContent() {
   };
 
   const handleToggleStatus = async (template: ReportTemplate) => {
-    setLoading(true);
+    if (statusUpdatingId) return;
+    setStatusUpdatingId(template.id);
     setError(null);
     try {
       const updated = await setReportTemplateActive(template.id, template.status !== 'active');
@@ -253,7 +254,7 @@ function ReportTemplatesPageContent() {
       console.error('更新报告服务状态失败', err);
       setError(err instanceof Error ? err.message : '更新报告服务状态失败');
     } finally {
-      setLoading(false);
+      setStatusUpdatingId(null);
     }
   };
 
@@ -331,7 +332,6 @@ function ReportTemplatesPageContent() {
       width: 180,
       align: 'center',
     },
- {id:'contract',header:'报告协议',width:140,align:'center',accessor:row=><div><Tag variant={row.contractVersion==='report-snapshot-v2'?'info':'warning'}>{row.contractVersion==='report-snapshot-v2'?'回报快照 v2':'旧版契约'}</Tag></div>},
     {
       id: 'description',
       header: '描述',
@@ -384,33 +384,15 @@ function ReportTemplatesPageContent() {
       id: 'actions',
       header: '操作',
       accessor: (row: ReportTemplate) => (
-        <div className="flex items-center justify-center gap-1">
-          {row.scope==='personal'&&row.canMaintain&&<HoverHint content="共享到当前组织"><button type="button" className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}><Share2 className="w-4 h-4" /></button></HoverHint>}
-          <HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost"
-            className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
-
-            disabled={!row.canMaintain} onClick={() => handleEdit(row)}
-           /></HoverHint>
-          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost"
-            className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-
-            onClick={() => handleDelete(row)}
-            disabled={!row.canMaintain || row.status === 'active'}
-           /></HoverHint>
-          <HoverHint content={row.status === 'active' ? '停用' : '启用'}><button
-            className={`p-1.5 rounded transition-colors ${
-              row.status === 'active'
-                ? 'hover:bg-canvas-subtle text-fg-muted hover:text-warning-fg'
-                : 'hover:bg-canvas-subtle text-fg-muted hover:text-success-fg'
-            }`}
-
-            disabled={!row.canMaintain} onClick={() => handleToggleStatus(row)}
-          >
-            {row.status === 'active' ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-          </button></HoverHint>
-        </div>
+        <TableActions>
+          <TableAction label="编辑" action="edit" disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => handleEdit(row)} />
+          <TableAction label={row.status === 'active' ? '停用' : '启用'} leftIcon={row.status === 'active' ? <PowerOff /> : <Power />}
+            loading={statusUpdatingId === row.id} disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => void handleToggleStatus(row)} />
+          <TableAction label="删除" action="delete" tone="danger" hint={row.status === 'active' ? '停用后可删除' : '删除报告服务'}
+            disabled={!row.canMaintain || row.status === 'active' || statusUpdatingId !== null} onClick={() => handleDelete(row)} />
+        </TableActions>
       ),
-      width: 132,
+      width: 188,
       align: 'center' as const,
     },
   ];
@@ -455,13 +437,13 @@ function ReportTemplatesPageContent() {
           加载报告服务...
         </div>
       ) : filteredTemplates.length > 0 ? (
-        <div className="[&_table]:min-w-[1080px]"><DataTable
+        <DataTable
           data={filteredTemplates.slice((page-1)*20,page*20)}
           columns={columns}
           rowKey="id"
           density="default"
-          striped
-        /></div>
+          className="yj-data-table right-pinned-actions-table report-center-table"
+        />
       ) : error ? null : (
         <EmptyState
           className="yj-panel"
@@ -604,7 +586,7 @@ function ReportTemplatesPageContent() {
               </ul>
             </div>
 
-            <FormItem label="报告协议"><Select value={formData.contractVersion} options={[{value:'report-snapshot-v2',label:'回报快照 v2（含最新判读）'},{value:'legacy-v1',label:'旧版契约（原始结果包）'}]} onChange={v=>setFormData({...formData,contractVersion:Array.isArray(v)?v[0]:v})}/></FormItem><ReportEndpointExamples />
+            <ReportEndpointExamples />
           </div>
       </AppModal>
 
