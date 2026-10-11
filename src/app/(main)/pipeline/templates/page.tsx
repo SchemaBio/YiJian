@@ -533,7 +533,7 @@ function ReportTemplatesPageContent() {
               <h3 className="mb-3 text-sm font-medium text-fg-default">服务连接</h3>
               <div className="space-y-4">
 
-            <FormItem label="服务地址" required hint="平台将从服务端向此 HTTPS 地址发起 POST 请求">
+            <FormItem label="服务地址" required hint="可预先配置尚未上线的 HTTPS 地址；保存不检查连接，生成报告时才调用。">
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   aria-label="服务地址"
