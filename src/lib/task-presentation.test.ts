@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { normalizeTask, normalizeTaskDetail, tasksApi } from './tasks';
-import { sortTasksByInterpretation, taskDisplayCreatedAt, taskDisplayStatus, taskStatusConfig } from './task-presentation';
+import { sortTasksByInterpretation, taskDisplayCreatedAt, taskDisplayStatus, taskStatusClass } from './task-presentation';
 import { api } from './api';
 
 describe('interpretation completion', () => {
@@ -25,7 +25,7 @@ describe('interpretation completion', () => {
     const tasks = [normalizeTask({ id: 'closed-a', status: 'completed', interpretationCompletedAt: 'now' }), normalizeTask({ id: 'active-a', status: 'completed' }), normalizeTask({ id: 'closed-b', status: 'completed', interpretationCompletedAt: 'now' }), normalizeTask({ id: 'active-b', status: 'running' })];
     expect(sortTasksByInterpretation(tasks).map(t => t.id)).toEqual(['active-a', 'active-b', 'closed-a', 'closed-b']);
     expect(tasks.map(t => t.id)).toEqual(['closed-a', 'active-a', 'closed-b', 'active-b']);
-    expect(new Set(['running', 'completed', 'interpretation_completed'].map(status => taskStatusConfig[status as keyof typeof taskStatusConfig].variant)).size).toBe(3);
+    expect(new Set(['queued', 'running', 'pending_interpretation', 'completed', 'interpretation_completed', 'failed'].map(status => taskStatusClass(status as Parameters<typeof taskStatusClass>[0]))).size).toBe(6);
   });
 
   it('sends an explicit false and current attempt when reopening', async () => {

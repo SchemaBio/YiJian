@@ -1,7 +1,7 @@
 'use client';
 
 
-import { taskDisplayCreatedAt, taskDisplayStatus, taskStatusConfig, runningStatusClass } from '@/lib/task-presentation';
+import { taskDisplayCreatedAt, taskDisplayStatus, taskStatusConfig, taskStatusClass } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -75,7 +75,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
     <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
     <HoverHint content="返回任务列表"><button onClick={onBack} aria-label="返回任务列表"  className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button></HoverHint>
     <HoverHint content={task.name}><h1  className="min-w-0 flex-1 truncate text-base font-semibold text-fg-default">{task.name}</h1></HoverHint>
-    <Tag variant={statusInfo.variant} className={task.status === 'running' ? runningStatusClass : undefined}>{statusInfo.label}</Tag>
+    <Tag variant={statusInfo.variant} className={`yj-task-status-tag ${taskStatusClass(taskDisplayStatus(task))}`}>{statusInfo.label}</Tag>
     </div>
     <span className="hidden text-xs text-fg-muted md:inline">{task.pipeline} · {task.pipelineVersion}</span>
     <HoverHint content={task.id}><span className="shrink-0 text-xs text-fg-muted sm:ml-auto" >任务 {task.id.substring(0,8)}</span></HoverHint>
@@ -99,7 +99,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-xl font-semibold text-fg-default">{task.name}</h1>
-            <Tag variant={statusInfo.variant} className={task.status === 'running' ? runningStatusClass : undefined}>{statusInfo.label}</Tag>
+            <Tag variant={statusInfo.variant} className={`yj-task-status-tag ${taskStatusClass(taskDisplayStatus(task))}`}>{statusInfo.label}</Tag>
           </div>
 
           {/* 任务信息 */}

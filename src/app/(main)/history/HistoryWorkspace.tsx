@@ -7,13 +7,14 @@ import { HoverHint } from '@/components/shared/HoverHint';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { HistoryClassificationFilter } from './HistoryClassificationFilter';
+import { HistoryColumnFilter } from './HistoryColumnFilter';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { HistoryWorkerClient, reportDetail, syncReports, type HistoryAudit } from './history-client';
 import { CLASS_LABELS, HISTORY_TYPES, locus, historyPosition, type HistoryQuery, type HistoryQueryResult, type HistoryTask, type HistoryType, type ReportRow } from './history-engine';
 
 const initialQuery: Omit<HistoryQuery, 'table'> = { search: '', includeWithdrawn: false, filters: {}, sort: 'detectionCount', direction: 'desc', page: 1, pageSize: 25 };
-const columns = [['chrom', 'chrom', 90], ['pos', 'pos', 180], ['ref', 'ref', 112], ['alt', 'alt', 112], ['reference', '参考版本', 112], ['gene', '基因', 150], ['classification', '当前分类', 160], ['detectionCount', '涉及任务数', 120], ['firstReportedAt', '首次回报', 180], ['lastReportedAt', '最近回报', 180], ['af', '人群 AF', 128]] as const;
+const columns = [['chrom', 'CHROM', 104], ['pos', 'POS', 180], ['ref', 'REF', 112], ['alt', 'ALT', 112], ['reference', '参考版本', 112], ['gene', '基因', 150], ['classification', '当前分类', 160], ['detectionCount', '涉及任务数', 120], ['firstReportedAt', '首次回报', 180], ['lastReportedAt', '最近回报', 180], ['af', '人群 AF', 128]] as const;
 const formatTime = (value?: string | null) => value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '未提供';
 const classificationLabel = (value: string) => CLASS_LABELS[value] || value || '未提供';
 function ClassBadge({ value }: { value: string }) {
@@ -143,7 +144,7 @@ export default function HistoryWorkspace() {
     const Icon = query.sort === key ? query.direction === 'desc' ? ArrowDown : ArrowUp : ArrowUpDown;
     return <button type="button" aria-label={`按${label}排序`} onClick={() => sort(key)} className="yj-history-sort" data-active={query.sort === key}>{label}<Icon aria-hidden="true" /></button>;
   };
-  const filterControl = (key: string, label: string) => <input aria-label={`${label}筛选`} value={query.filters[key] || ''} onChange={event => filter(key, event.target.value)} list="history-presence-options" placeholder={key === 'detectionCount' || key === 'af' ? '数值条件' : '筛选'} className="yj-history-filter-input" data-filtered={!!query.filters[key]} title={`${label}筛选：${query.filters[key] || (key === 'detectionCount' || key === 'af' ? '例如 >=0.01' : '输入筛选条件')}`} />;
+  const filterControl = (key: string, label: string) => <HistoryColumnFilter label={label} value={query.filters[key] || ''} numeric={key === 'detectionCount' || key === 'af'} onChange={value => filter(key, value)} />;
 
 
   return <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-6 yj-history-page" data-testid="history-workspace">
@@ -161,7 +162,6 @@ export default function HistoryWorkspace() {
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="yj-history-toolbar"><div className="relative min-w-48 max-w-sm flex-1"><Search size={15} className="absolute left-2.5 top-2.5 text-fg-muted" /><input aria-label="搜索历史检出" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索位点、基因、任务或样本" className="yj-history-search h-9 w-full rounded border border-border-default bg-canvas-default pr-3 text-sm" /></div><label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm"><input type="checkbox" checked={query.includeWithdrawn} onChange={event => setQuery(previous => ({ ...previous, includeWithdrawn: event.target.checked, page: 1 }))} />包含已撤回</label><ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={() => { setQuery(initialQuery); setSearch(''); }}>清空筛选</ActionButton><span className="yj-history-match-count">{visibleReady && result ? `${result.total.toLocaleString()} 个匹配位点` : ''}</span></div>
         {error && <div role="alert" className="shrink-0 border-b border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" className="ml-3 underline" onClick={() => setRefresh(value => value + 1)}>重新同步</ActionButton></div>}
-        <datalist id="history-presence-options"><option value="未提供" /><option value="已提供" /></datalist>
         <div className="relative min-h-0 flex-1 overflow-auto">
           <table className="yj-history-table w-full table-fixed text-center text-sm">
             <colgroup>{columns.map(([key, , width]) => <col key={key} style={{ width }} />)}<col style={{ width: 112 }} /></colgroup>

@@ -2,7 +2,7 @@
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { type ButtonAction, ActionButton as Button } from '@/components/shared/ActionButton';
 
-import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByInterpretation, runningStatusClass, type TaskDisplayStatus } from '@/lib/task-presentation';
+import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByInterpretation, taskStatusClass, type TaskDisplayStatus } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -102,7 +102,7 @@ function StatusFilterDropdown({
       return <span className="text-sm text-fg-default">全部状态</span>;
     }
     const config = statusConfig[value as TaskDisplayStatus];
-    return <Tag variant={config.variant} className={`justify-center ${value === 'running' ? runningStatusClass : ''}`}>{config.label}</Tag>;
+    return <Tag variant={config.variant} className={`justify-center yj-task-status-tag ${taskStatusClass(value as TaskDisplayStatus)}`}>{config.label}</Tag>;
   };
 
   return (
@@ -146,7 +146,7 @@ function StatusFilterDropdown({
                   setIsOpen(false);
                 }}
               >
-                <Tag variant={config.variant} className={`justify-center ${option.value === 'running' ? runningStatusClass : ''}`}>{config.label}</Tag>
+                <Tag variant={config.variant} className={`justify-center yj-task-status-tag ${taskStatusClass(option.value as TaskDisplayStatus)}`}>{config.label}</Tag>
               </button>
             );
           })}
@@ -504,7 +504,7 @@ export default function AnalysisPage() {
               ? '未创建计算节点'
               : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className="yj-task-state-label" data-interpretation-completed={!!row.interpretationCompletedAt} data-tone={row.status === 'running' ? 'running' : config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
+        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className={`yj-task-state-label ${taskStatusClass(taskDisplayStatus(row))}`} data-interpretation-completed={!!row.interpretationCompletedAt} data-status={taskDisplayStatus(row)}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
       },
       width: 90,
       align: 'center',

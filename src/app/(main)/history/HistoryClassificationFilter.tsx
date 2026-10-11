@@ -26,7 +26,6 @@ export function HistoryClassificationFilter({ value, onChange }: { value: string
     </button></Popover.Trigger>
     <Popover.Portal><Popover.Content sideOffset={6} align="center" collisionPadding={12} className="yj-history-filter-menu"
       onOpenAutoFocus={event => { event.preventDefault(); menu.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus(); }}>
-      <div className="yj-history-filter-menu-title">当前分类</div>
       <div ref={menu} role="menu" aria-label="当前分类筛选选项" onKeyDown={moveFocus}>
         {options.map(option => <button key={option.value} type="button" role="menuitemradio" aria-checked={value === option.value}
           className="yj-history-filter-option" onClick={() => { onChange(option.value); setOpen(false); }}>

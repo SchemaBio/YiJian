@@ -447,12 +447,7 @@ export default function DataCenterPage() {
       {config?.temporary && (
         <div className="mb-4 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-fg">
           <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
-          <div>
-            <p className="text-sm font-medium">数据仅保留 {config.retention_days} 天</p>
-            <p className="mt-0.5 text-xs leading-5">
-              仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。单个文件不得超过 20 GB。
-            </p>
-          </div>
+          <p className="whitespace-nowrap"><strong className="font-medium">数据仅保留 {config.retention_days} 天</strong><span className="ml-3 text-xs">仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。单个文件不得超过 20 GB。</span></p>
         </div>
       )}
 
