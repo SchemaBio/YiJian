@@ -1,7 +1,9 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, Tag } from '@schema/ui-kit';
+import { Input, Tag } from '@schema/ui-kit';
 import { Link2, Loader2, Search } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listSamples } from '@/lib/samples';
@@ -74,7 +76,7 @@ export function LinkSampleModal({ isOpen, onClose, onSelect, memberName }: LinkS
         {submitError && (
         <div className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
           {submitError}
-          {!loading && samples.length === 0 && <button type="button" className="yj-tool-button ml-2" onClick={() => setRetry(value => value + 1)}>重试</button>}
+          {!loading && samples.length === 0 && <ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-2" onClick={() => setRetry(value => value + 1)}>重试</ActionButton>}
         </div>
       )}
       <section>

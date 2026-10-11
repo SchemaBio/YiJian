@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { Button, Select, Tag } from '@schema/ui-kit';
-import { AlertCircle, Database, RefreshCw, Settings } from 'lucide-react';
+import { Select, Tag } from '@schema/ui-kit';
+import { AlertCircle, Database, Settings } from 'lucide-react';
 import { listPipelines, type Pipeline } from '@/lib/pipelines';
 import { EmptyState } from '@/components/shared';
 
@@ -56,10 +58,10 @@ export default function PipelineConfigPage() {
           <h2 className="yj-page-title">流程配置</h2>
           <p className="yj-page-subtitle">汇总当前分析流程、参考基因组和资源文件配置。</p>
         </div>
-        <Button
+        <Button action="refresh"
           variant="secondary"
           className="yj-tool-button"
-          leftIcon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+
           onClick={() => void loadPipelines()}
           disabled={loading}
         >

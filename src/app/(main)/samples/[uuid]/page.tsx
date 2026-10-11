@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { Button, Tag } from '@schema/ui-kit';
+import { Tag } from '@schema/ui-kit';
 import { ArrowLeft, Database, User, FileText, Activity, Users } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-time';
 import { getSampleDetail } from '@/lib/samples';
@@ -71,7 +73,7 @@ export default function SampleDetailPage() {
         <p className="text-sm text-fg-muted">暂时无法读取样本信息，请重试。</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={handleBack}>返回样本列表</Button>
-          <Button variant="primary" onClick={() => setRetryCount(count => count + 1)}>重试</Button>
+          <Button action="retry" variant="primary" onClick={() => setRetryCount(count => count + 1)}>重试</Button>
         </div>
       </div>
     </PageContent>;

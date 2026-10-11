@@ -186,6 +186,7 @@ export default function AboutPage() {
                       </div>
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <span className="text-xs text-fg-muted font-mono">{lib.version}</span>
+                        {lib.name === 'Lucide' && <a href="/licenses/lucide.txt" target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg hover:underline">版权与许可全文</a>}
                         <a
                           href={lib.url}
                           target="_blank"

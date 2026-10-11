@@ -1,8 +1,10 @@
 ﻿'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, FormItem, Input, Tag } from '@schema/ui-kit';
-import { AlertTriangle, Bot, Building2, KeyRound, Loader2, Save, UserRound } from 'lucide-react';
+import { FormItem, Input, Tag } from '@schema/ui-kit';
+import { AlertTriangle, Bot, Building2, KeyRound, UserRound } from 'lucide-react';
 import { SupportDialog } from '@/components/support/SupportDialog';
 import { AISettingsPanel } from '@/components/shared/AISettingsPanel';
 import { useAI } from '@/components/providers/AIProvider';
@@ -119,10 +121,10 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <ReadOnlyField label="创建时间">{formatTime(user.createdAt)}</ReadOnlyField>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--yj-border-subtle)] pt-4">
-          <Button
+          <Button action="save"
             variant="primary"
             className="min-w-[124px] justify-center"
-            leftIcon={isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+
             onClick={() => void handleSave()}
             disabled={!isDirty || isSaving}
           >
@@ -185,8 +187,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             <Input aria-label="确认新密码" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
           </FormItem>
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => void handleChangePassword()} disabled={isChangingPassword}>
-              {isChangingPassword ? '更新中...' : '修改密码'}
+            <Button loading={isChangingPassword} loadingLabel="更新中..." variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => void handleChangePassword()} disabled={isChangingPassword}>
+              修改密码
             </Button>
             {passwordMessage && <span role="status" className="text-sm text-success-fg">{passwordMessage}</span>}
             {passwordError && <span role="alert" className="text-sm text-danger-fg">{passwordError}</span>}

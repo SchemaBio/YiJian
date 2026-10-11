@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button } from '@schema/ui-kit';
+
 import { AppModal } from '@/components/shared';
-import { Download, FileArchive, Loader2, HardDrive, Coins, Clock3, Copy, AlertTriangle } from 'lucide-react';
+import { Download, FileArchive, HardDrive, Coins, Clock3, AlertTriangle } from 'lucide-react';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { api } from '@/lib/api';
 
@@ -110,7 +112,7 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
         {!!catalog?.missing.length && <details className="mt-3 rounded-md bg-canvas-subtle p-2.5 text-xs text-fg-muted"><summary className="cursor-pointer font-medium">查看未包含的输出（{catalog.missing.length} 项）</summary><ul className="mt-2 space-y-1 leading-5">{catalog.missing.map(item=><li key={item}>{item.replace(/^[a-z_]+/,key=>labels[key]||key)}</li>)}</ul></details>}
         {catalog?.zip_error&&<p role="alert" className="mt-3 text-xs text-danger-fg">{catalog.zip_error}</p>}
         <div className="mt-5 border-t border-border-subtle pt-4">
-          <Button variant="primary" className="w-full shrink-0 whitespace-nowrap" leftIcon={preparing?<Loader2 className="h-4 w-4 animate-spin"/>:<Download className="h-4 w-4"/>} disabled={busy||!catalog||preparing} onClick={()=>void request('zip')}>
+          <Button action="download" variant="primary" className="w-full shrink-0 whitespace-nowrap"  disabled={busy||!catalog||preparing} onClick={()=>void request('zip')}>
             {!catalog?'读取下载信息…':preparing?'正在准备 ZIP':zipReady?'下载原始 ZIP · 1 积分':'准备原始 ZIP · 免费'}
           </Button>
           <p className="mt-2 text-center text-xs text-fg-muted">{zipReady?'下一步确认费用，确认后扣 1 积分并领取下载链接。':'打包完成后再确认下载，准备阶段不扣费。'}</p>
@@ -126,7 +128,7 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
           {catalog?.bam_expires_at && <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">BAM 保留截止：{new Date(catalog.bam_expires_at).toLocaleString('zh-CN')}（任务完成后 7 天）</p>}
           {catalog?.bams.map(file=><div key={file.id} className="rounded-lg border border-border-default p-3">
             <p className="break-all text-sm font-medium">{file.role&&<span className="mr-2 rounded bg-accent-subtle px-1.5 py-0.5 text-xs text-accent-fg">{file.role}</span>}{file.filename}</p>
-            <div className="mt-2 flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm text-fg-default">{gb(file.size_bytes)} <span className="ml-2 font-semibold text-accent-fg">{file.credits} 积分</span></p><p className="mt-0.5 text-[11px] text-fg-muted">{file.size_bytes.toLocaleString('zh-CN')} 字节</p></div><Button variant="primary" size="small" className="shrink-0 whitespace-nowrap" leftIcon={<Download className="h-3.5 w-3.5"/>} disabled={busy} onClick={()=>void request('bam',file)}>申请 BAM 链接</Button></div>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm text-fg-default">{gb(file.size_bytes)} <span className="ml-2 font-semibold text-accent-fg">{file.credits} 积分</span></p><p className="mt-0.5 text-[11px] text-fg-muted">{file.size_bytes.toLocaleString('zh-CN')} 字节</p></div><Button action="download" variant="primary" size="small" className="shrink-0 whitespace-nowrap"  disabled={busy} onClick={()=>void request('bam',file)}>申请 BAM 链接</Button></div>
           </div>)}
           {catalog&&!catalog.bams.length&&<p className="rounded-lg bg-canvas-subtle p-4 text-sm text-fg-muted">{catalog.bam_status === 'deleted' ? 'BAM 及索引已完成到期清理。' : ['expired', 'cleanup_pending'].includes(catalog.bam_status || '') ? 'BAM 保留期已到，下载与 reads 复核已关闭，存储清理正在处理中。' : '当前执行未归档可下载的 BAM。'}</p>}
           {!catalog&&<p className="text-sm text-fg-muted">正在读取 BAM 文件与大小…</p>}
@@ -142,7 +144,7 @@ export function RawResultDownloads({ taskId }: { taskId: string }) {
       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-fg-muted"><span>本申请费用：{issued.credits_charged} 积分</span><span>链接到期：{new Date(issued.expires_at).toLocaleString('zh-CN')}</span><span>申请截止：{new Date(issued.grant_expires_at).toLocaleString('zh-CN')}</span><span>单请求限速 {issued.traffic_limit_bps / 8 / 1024 / 1024} MiB/s · 剩余签发 {issued.remaining_issues} 次</span></div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {!linkExpired && !grantExpired ? <a href={issued.url} download={issued.filename} rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-sm text-fg-on-emphasis"><Download className="h-4 w-4"/>开始下载 / 续传</a> : <span className="text-sm">{grantExpired ? '申请已到期' : '链接已到期，请免费刷新'}</span>}
-        <Button size="small" variant="secondary" disabled={linkExpired || grantExpired} className="whitespace-nowrap" leftIcon={<Copy className="h-3.5 w-3.5"/>} onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError('复制失败，请允许浏览器访问剪贴板'));}}>{copied?'已复制链接':'复制下载链接'}</Button>
+        <Button action="copy" size="small" variant="secondary" disabled={linkExpired || grantExpired} className="whitespace-nowrap"  onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError('复制失败，请允许浏览器访问剪贴板'));}}>{copied?'已复制链接':'复制下载链接'}</Button>
         <Button size="small" variant="secondary" disabled={busy || grantExpired || refreshSeconds > 0 || issued.remaining_issues <= 0} onClick={()=>void refreshIssued()}>{refreshSeconds > 0 ? `${refreshSeconds} 秒后可刷新` : '免费刷新链接'}</Button>
         <span className="text-xs text-fg-muted">刷新不延长申请期限。续传工具需使用新链接和原下载文件。</span>
       </div>

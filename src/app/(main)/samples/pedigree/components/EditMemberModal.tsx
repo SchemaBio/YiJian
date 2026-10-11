@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, Select, Tag } from '@schema/ui-kit';
-import { X, Plus } from 'lucide-react';
+import { Input, Select, Tag } from '@schema/ui-kit';
+
 import { AppModal } from '@/components/shared';
 import type { RelationType, AffectedStatus, PedigreeMember, Gender } from '../types';
 import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';
@@ -156,7 +158,7 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存修改</Button>
+          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存修改</Button>
         </>
       }
     >

@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import { GeneLinks } from './GeneLinks';
 
@@ -186,7 +188,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       {requestError ? (
         <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
           {requestError}
-          <button onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</button>
+          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</ActionButton>
         </div>
       ) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
@@ -213,20 +215,20 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
                 第 {filterState.page} / {totalPages} 页
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
                   上一页
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
                   下一页
-                </button>
+                </ActionButton>
               </div>
             </div>
           )}

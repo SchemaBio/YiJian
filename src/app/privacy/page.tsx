@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, ArrowLeft, Clock, Database, Lock, Eye, Trash2, Download, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, Clock, Database, Lock, Eye, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/AuthProvider';
 

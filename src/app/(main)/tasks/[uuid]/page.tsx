@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { InterpretationReadOnlyContext } from './components/InterpretationLock';
@@ -301,7 +303,7 @@ export default function AnalysisDetailPage() {
     <PageContent padded={false} className="h-full min-h-0 !overflow-hidden flex flex-col">
       <div className="shrink-0 border-b border-border-subtle bg-canvas-default px-3 pt-2 md:px-4">
       {/* 任务信息头部 */}
-      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <button type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{completionSaving ? '保存中…' : task.interpretationCompletedAt ? '取消解读完成' : '解读完成'}</button>} />
+      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel="保存中…" variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? '取消解读完成' : '解读完成'}</ActionButton>} />
       {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">解读已完成，当前为只读。取消解读完成后可继续编辑。</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
 

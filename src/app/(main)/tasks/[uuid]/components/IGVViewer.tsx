@@ -1,7 +1,9 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
 import { AppModal } from '@/components/shared';
 import type { IGVSession, IGVTrackDescriptor, IGVTrackURL } from '../types';
@@ -352,14 +354,14 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded bg-canvas-subtle px-2 py-1 text-fg-default">{locus}</span>
         <span className="text-fg-muted">{session?.reference.id || '参考未知'}</span>
-        <button
+        <ActionButton action="refresh" variant="ghost"
           type="button"
           onClick={() => setReloadToken(value => value + 1)}
           disabled={loading}
           className="yj-tool-button ml-auto"
         >
-          <RefreshCw className="h-4 w-4" /> 刷新证据
-        </button>
+           刷新证据
+        </ActionButton>
       </div>
 
       {error && !showSnapshot && (

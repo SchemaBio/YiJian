@@ -1,7 +1,9 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, TextArea, Tag } from '@schema/ui-kit';
+import { Input, TextArea, Tag } from '@schema/ui-kit';
 import { Search, Check, Users, UserRound, FileText, Loader2 } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listSamples } from '@/lib/samples';
@@ -118,13 +120,13 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
-          <Button
+          <Button action="add" loading={submitting} loadingLabel="创建中..."
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={!formData.probandSampleId || submitting}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+
           >
-            {submitting ? '创建中...' : '创建家系'}
+            创建家系
           </Button>
         </>
       }

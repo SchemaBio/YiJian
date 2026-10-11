@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import { useEffect } from 'react';
 
@@ -40,12 +42,12 @@ export default function Error({ error, reset }: ErrorProps) {
         <p className="text-fg-muted mb-6">
           抱歉，应用程序遇到了一个错误。请尝试刷新页面或稍后再试。
         </p>
-        <button
+        <ActionButton action="retry" variant="ghost"
           onClick={reset}
           className="yj-public-primary inline-flex items-center rounded-xl px-4 py-2 transition-colors"
         >
           重试
-        </button>
+        </ActionButton>
       </div>
     </div>
   );

@@ -1,10 +1,12 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button, Input } from '@schema/ui-kit';
+import { Input } from '@schema/ui-kit';
 import { UserPlus } from 'lucide-react';
 import { api, ApiError, clearLegacyAuthTokens } from '@/lib/api';
 import { hashPassword } from '@/lib/crypto';
@@ -160,14 +162,14 @@ export default function RegisterPage() {
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
-          <Button
+          <Button loading={loading} loadingLabel="注册中..."
             type="submit"
             variant="primary"
             className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
             disabled={loading}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
-            {loading ? '注册中...' : '注册'}
+            注册
           </Button>
 
           <p className="text-center text-sm text-fg-muted">

@@ -1,10 +1,12 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button } from '@schema/ui-kit';
-import { Check, Clipboard, LifeBuoy, Mail, UserRoundX } from 'lucide-react';
+
+import { LifeBuoy, Mail, UserRoundX } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeSupportEmail } from '@/lib/runtime-config';
@@ -64,7 +66,7 @@ export function SupportDialog({ trigger = 'icon', context = 'general' }: Support
       onOpenChange={setOpen}
       title="帮助与支持"
       size="medium"
-      footer={<><Button variant="secondary" onClick={() => setOpen(false)}>关闭</Button><Button variant="primary" leftIcon={copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />} onClick={() => void copyEmail()}>{copied ? '已复制邮箱' : '复制邮箱'}</Button></>}
+      footer={<><Button action="close" variant="secondary" onClick={() => setOpen(false)}>关闭</Button><Button action={copied ? 'copied' : 'copy'} variant="primary"  onClick={() => void copyEmail()}>{copied ? '已复制邮箱' : '复制邮箱'}</Button></>}
     >
       <div className="space-y-5">
         {context === 'account' && <ModalSectionHeading icon={<UserRoundX className="h-4 w-4" />} title="申请删除账户" />}

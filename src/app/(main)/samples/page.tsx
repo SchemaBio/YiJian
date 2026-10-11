@@ -1,24 +1,13 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button, Input, DataTable } from '@schema/ui-kit';
+import { Input, DataTable } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import {
-  AlertCircle,
-  CheckCircle,
-  Database,
-  Download,
-  FileCheck,
-  Link2,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  RefreshCw,
-  XCircle,
-} from 'lucide-react';
+import { AlertCircle, CheckCircle, Database, FileCheck, Link2, Search, XCircle } from 'lucide-react';
 import { NewSampleModal, EditSampleModal, DataLinkModal } from './components';
 import type { NewSampleFormData, EditSampleFormData } from './components';
 import { ConfirmDialog, HoverText, IdCell, MetricTile } from '@/components/shared';
@@ -444,22 +433,18 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           >
             <Link2 className="h-4 w-4" />
           </button></HoverHint>
-          <HoverHint content="编辑"><button
+          <HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost"
             className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-accent-subtle hover:text-accent-fg"
             onClick={() => setEditingSample(row)}
             aria-label="编辑"
 
-          >
-            <Pencil className="h-4 w-4" />
-          </button></HoverHint>
-          <HoverHint content="删除"><button
+           /></HoverHint>
+          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost"
             className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-danger-subtle hover:text-danger-fg"
             onClick={() => setDeleteTargets([row])}
             aria-label="删除"
 
-          >
-            <Trash2 className="h-4 w-4" />
-          </button></HoverHint>
+           /></HoverHint>
         </div>
       ),
       width: 108,
@@ -524,25 +509,25 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             )}
           </div>
           <div className="yj-toolbar w-full flex-wrap sm:w-auto sm:flex-nowrap">
-            <Button
+            <Button action="delete"
               variant="danger"
-              leftIcon={<Trash2 className="h-4 w-4" />}
+
               disabled={selectedSamples.length === 0}
               onClick={() => setDeleteTargets(selectedSamples)}
             >
               批量删除{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
             </Button>
-            <Button
+            <Button action="download"
               variant="secondary"
-              leftIcon={<Download className="h-4 w-4" />}
+
               onClick={handleDownloadTemplate}
             >
               下载模板
             </Button>
-            <HoverHint content="刷新"><Button variant="secondary" aria-label="刷新" disabled={loading} onClick={() => void loadSamples()} leftIcon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}>刷新</Button></HoverHint>
-            <Button
+            <HoverHint content="刷新"><Button action="refresh" variant="secondary" aria-label="刷新" disabled={loading} onClick={() => void loadSamples()} >刷新</Button></HoverHint>
+            <Button action="add"
               variant="primary"
-              leftIcon={<Plus className="h-4 w-4" />}
+
               onClick={() => setIsNewSampleModalOpen(true)}
             >
               新建样本
@@ -554,7 +539,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           {samplesError && (
             <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
               <span>{samplesError}</span>
-              {readFailed && <Button variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>重试读取</Button>}
+              {readFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>重试读取</Button>}
             </div>
           )}
           {!hasLoaded && loading ? <div className="yj-empty-state text-sm text-fg-muted">正在读取样本</div> : readFailed && samples.length === 0 ? null : filteredSamples.length > 0 ? (

@@ -95,7 +95,7 @@ describe('AI generation confirmation and lifecycle', () => {
     const receive = vi.fn();
     render(<AIAssistanceProvider deployment="saas" adapter={pendingAIAssistanceAdapter}><AIAssistanceAction input={{ feature: 'cnv_loss', variant: { id: 'A' } }} onResult={receive} /></AIAssistanceProvider>);
     await waitFor(() => expect(screen.getByRole('button', { name: 'AI 生成CNV Loss 建议' })).toBeDisabled());
-    expect(screen.getByText('AI 服务暂不可用')).toBeVisible();
+    expect(screen.getByText('AI 服务暂不可用', { selector: '.text-xs' })).toBeVisible();
     expect(receive).not.toHaveBeenCalled();
   });
 
@@ -105,7 +105,7 @@ describe('AI generation confirmation and lifecycle', () => {
     const button = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
     await waitFor(() => expect(button).toBeEnabled());
     expect(screen.getByRole('button', { name: 'AI 生成SVC v4.0 草案实验' })).toBeDisabled();
-    expect(screen.getByText('SVC 尚未开放')).toBeVisible();
+    expect(screen.getByText('SVC 尚未开放', { selector: '.text-xs' })).toBeVisible();
     fireEvent.click(button);
     await waitFor(() => expect(client.generate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ confirmedCharge: false })));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

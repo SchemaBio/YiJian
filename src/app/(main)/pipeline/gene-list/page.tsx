@@ -1,12 +1,14 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 import {ResourcePager} from '@/components/shared/ResourcePager';
 import {useAuth} from '@/components/providers/AuthProvider';
 
 import { PageContent } from '@/components/layout';
-import { Button, Input, Tag } from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, ChevronDown, ChevronRight, ListTree, BookOpen, Dna, Loader2 } from 'lucide-react';
+import { Input, Tag } from '@schema/ui-kit';
+import { Search, ChevronDown, ChevronRight, ListTree, BookOpen, Dna } from 'lucide-react';
 import * as React from 'react';
 import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { createGeneList, publishGeneList, deleteGeneList, listGeneLists, updateGeneList, type GeneList } from '@/lib/gene-lists';
@@ -104,11 +106,11 @@ function GeneListModal({
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={submitting}>取消</Button>
-          <Button
+          <Button loading={submitting} action="save"
             variant="primary"
             onClick={handleSubmit}
             disabled={!formData.name || !formData.genes || submitting}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+
           >
             {submitting ? (mode === 'add' ? '添加中...' : '保存中...') : (mode === 'add' ? '添加' : '保存')}
           </Button>
@@ -307,14 +309,14 @@ function GeneListPageContent() {
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleOpenAddModal}>
+        <Button action="add" variant="primary"  onClick={handleOpenAddModal}>
           添加基因列表
         </Button>
       </div>
 
       {error && (
         <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {error}<button type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshGeneLists()}>重试读取</button>
+          {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshGeneLists()}>重试读取</ActionButton>
         </div>
       )}
 
@@ -356,20 +358,16 @@ function GeneListPageContent() {
                   </div>
                   <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 md:col-start-3" onClick={(e) => e.stopPropagation()}>
                     {list.scope==='personal'&&list.canMaintain&&<Button size="small" variant="secondary" onClick={async()=>{try{await publishGeneList(list);await refreshGeneLists();}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}>共享到当前组织</Button>}
-                    <HoverHint content="编辑"><button
+                    <HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost"
                       className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
                       disabled={!list.canMaintain} onClick={() => handleOpenEditModal(list)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button></HoverHint>
-                    <HoverHint content="删除"><button
+                     /></HoverHint>
+                    <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost"
                       className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors"
 
                       disabled={!list.canMaintain} onClick={() => setDeleteTarget(list)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button></HoverHint>
+                     /></HoverHint>
                   </div>
                 </div>
 

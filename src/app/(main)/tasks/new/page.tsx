@@ -1,11 +1,13 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { Button, Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
-import { Coins, Play, AlertTriangle } from 'lucide-react';
+import { Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
+import { Coins, AlertTriangle } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
@@ -202,7 +204,7 @@ export default function NewAnalysisPage() {
         {(loadError || (isTrio && familyError)) && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             <span>{loadError || familyError}</span>
-            <Button variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>重试读取</Button>
+            <Button action="retry" variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>重试读取</Button>
           </div>
         )}
 
@@ -332,10 +334,10 @@ export default function NewAnalysisPage() {
         )}
 
         <div className="flex items-center justify-end">
-          <Button
+          <Button action="start"
             variant="primary"
             className="w-full"
-            leftIcon={<Play className="w-4 h-4" />}
+
             onClick={handleSubmit}
             loading={submitting}
             disabled={!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)}

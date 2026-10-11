@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button } from '@schema/ui-kit';
+
 import { Database, File, Link2, Link2Off, Loader2 } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
@@ -149,13 +151,13 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
             </Button>
           ) : <span className="flex-1" />}
           <Button variant="secondary" disabled={saving} onClick={() => onOpenChange(false)}>取消</Button>
-          <Button
+          <Button loading={saving} loadingLabel="保存中" action="save"
             variant="primary"
             disabled={saving || loading || !read1Id || !read2Id}
-            leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+            leftIcon={<Link2 className="h-4 w-4" />}
             onClick={() => void handleSave()}
           >
-            {saving ? '保存中' : '保存手动关联'}
+            保存手动关联
           </Button>
         </>
       }

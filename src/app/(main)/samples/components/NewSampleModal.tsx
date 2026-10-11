@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, Select, TextArea } from '@schema/ui-kit';
-import { FileText, Search, Stethoscope, UserRound, X } from 'lucide-react';
+import { Input, Select, TextArea } from '@schema/ui-kit';
+import { FileText, Search, Stethoscope, UserRound } from 'lucide-react';
 import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { searchHpoTerms, useHpoTerms, type HpoTerm } from '@/lib/hpo-terms';
@@ -135,8 +137,8 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
-            {submitting ? '创建中...' : '创建样本'}
+          <Button action="add" loading={submitting} loadingLabel="创建中..." variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
+            创建样本
           </Button>
         </>
       }
@@ -224,14 +226,12 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                     >
                       <span className="font-mono text-xs text-accent-fg">{term.id}</span>
                       <span>{term.name}</span>
-                      <button
+                      <ActionButton size="small" iconOnly action="close" variant="ghost"
                         type="button"
                         onClick={() => removeHpoTerm(term.id)}
                         className="ml-1 text-accent-fg hover:text-danger-fg"
                         aria-label={`移除 ${term.name}`}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                       />
                     </div>
                   ))}
                 </div>

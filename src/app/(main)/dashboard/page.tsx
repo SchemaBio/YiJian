@@ -1,20 +1,11 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Button, Tag } from '@schema/ui-kit';
-import {
-  AlertCircle,
-  ArrowRight,
-  CheckCircle2,
-  Clock3,
-  Database,
-  FlaskConical,
-  Plus,
-  RefreshCw,
-  Users,
-  XCircle,
-} from 'lucide-react';
+import { Tag } from '@schema/ui-kit';
+import { AlertCircle, ArrowRight, CheckCircle2, Clock3, Database, FlaskConical, Plus, Users, XCircle } from 'lucide-react';
 import { PageContent } from '@/components/layout';
 import { EmptyState } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -167,9 +158,9 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-          <Button
+          <Button action="refresh"
             variant="secondary"
-            leftIcon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
+
             onClick={() => void loadDashboard()}
             disabled={loading}
           >

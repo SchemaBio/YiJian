@@ -1,11 +1,13 @@
 ﻿'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { AppModal } from '@/components/shared';
 import { PageContent } from '@/components/layout';
-import { Button, DataTable, Tag } from '@schema/ui-kit';
+import { DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { AlertTriangle, BarChart3, Building2, CreditCard, Loader2, Pencil, Plus, RefreshCw, Users } from 'lucide-react';
+import { AlertTriangle, BarChart3, Building2, CreditCard, Loader2, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { hashPassword } from '@/lib/crypto';
 import {
@@ -453,13 +455,13 @@ export default function AdminPage() {
       id: 'actions',
       header: '操作',
       accessor: (row) => (
-        <button
+        <ActionButton action="edit" variant="ghost"
           className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-accent-fg hover:bg-canvas-subtle"
           onClick={() => openEditOrg(row)}
         >
-          <Pencil className="w-3.5 h-3.5" />
+
           编辑
-        </button>
+        </ActionButton>
       ),
       width: 90,
       align: 'center',
@@ -511,8 +513,8 @@ export default function AdminPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          <Button variant="secondary" className="yj-tool-button" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={() => void loadData()}>刷新</Button>
-          <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => { setError(null); setProvisionOpen(true); }}>开通机构</Button>
+          <Button action="refresh" variant="secondary" className="yj-tool-button"  onClick={() => void loadData()}>刷新</Button>
+          <Button action="add" variant="primary"  onClick={() => { setError(null); setProvisionOpen(true); }}>开通机构</Button>
         </div>
       </div>
 
@@ -655,7 +657,7 @@ export default function AdminPage() {
               onChange={(e) => setConfigForm((prev) => ({ ...prev, minBalance: e.target.value }))}
             />
           </label>
-          <Button type="submit" variant="secondary" disabled={isSavingBilling}>保存全局配置</Button>
+          <Button action="save" type="submit" variant="secondary" disabled={isSavingBilling}>保存全局配置</Button>
         </form>
 
         <form className="yj-panel p-4 space-y-3" onSubmit={submitOrgPolicy}>
@@ -719,13 +721,13 @@ export default function AdminPage() {
               placeholder="留空继承全局"
             />
           </label>
-          <Button type="submit" variant="secondary" disabled={isSavingBilling || !policyOrgId}>保存机构策略</Button>
+          <Button action="save" type="submit" variant="secondary" disabled={isSavingBilling || !policyOrgId}>保存机构策略</Button>
         </form>
       </div>
 
       </>}
 
-      <AppModal open={provisionOpen} onOpenChange={(open) => { if (!isSavingBilling) setProvisionOpen(open); }} title="开通机构与管理员账号" size="large" footer={<><Button variant="secondary" onClick={() => setProvisionOpen(false)} disabled={isSavingBilling}>取消</Button><Button form="admin-provision" type="submit" variant="primary" disabled={isSavingBilling}>{isSavingBilling ? '开通中...' : '开通机构'}</Button></>}>
+      <AppModal open={provisionOpen} onOpenChange={(open) => { if (!isSavingBilling) setProvisionOpen(open); }} title="开通机构与管理员账号" size="large" footer={<><Button variant="secondary" onClick={() => setProvisionOpen(false)} disabled={isSavingBilling}>取消</Button><Button loading={isSavingBilling} loadingLabel="开通中..." form="admin-provision" type="submit" variant="primary" disabled={isSavingBilling}>开通机构</Button></>}>
         <form id="admin-provision" className="space-y-4" onSubmit={submitProvisionOrg}>
           {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
 
@@ -749,7 +751,7 @@ export default function AdminPage() {
 
                 </form>
       </AppModal>
-      <AppModal open={Boolean(editingOrg)} onOpenChange={(open) => { if (!open && !isSavingBilling) setEditingOrg(null); }} title="编辑机构配置" size="large" footer={<><Button variant="secondary" onClick={() => setEditingOrg(null)} disabled={isSavingBilling}>取消</Button><Button form="admin-edit-org" type="submit" variant="primary" disabled={isSavingBilling}>{isSavingBilling ? '保存中...' : '保存机构配置'}</Button></>}>
+      <AppModal open={Boolean(editingOrg)} onOpenChange={(open) => { if (!open && !isSavingBilling) setEditingOrg(null); }} title="编辑机构配置" size="large" footer={<><Button variant="secondary" onClick={() => setEditingOrg(null)} disabled={isSavingBilling}>取消</Button><Button loading={isSavingBilling} loadingLabel="保存中..." action="save" form="admin-edit-org" type="submit" variant="primary" disabled={isSavingBilling}>保存机构配置</Button></>}>
         <form id="admin-edit-org" className="space-y-4" onSubmit={submitOrgUpdate}>
           {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
               <div className="text-xs text-fg-muted">当前机构 ID：<span className="font-mono break-all">{editingOrg?.id}</span></div>

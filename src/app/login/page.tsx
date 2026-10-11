@@ -1,10 +1,12 @@
 ﻿'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button, Input } from '@schema/ui-kit';
+import { Input } from '@schema/ui-kit';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
@@ -161,14 +163,14 @@ export default function LoginPage() {
               </label>
             )}
 
-            <Button
+            <Button loading={loading} loadingLabel="登录中..."
               type="submit"
               variant="primary"
               className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
               disabled={loading || (privacyConsentRequired && !agreePrivacy)}
               leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
             >
-              {loading ? '登录中...' : '登录'}
+              登录
             </Button>
           </form>
 

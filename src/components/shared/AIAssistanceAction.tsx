@@ -1,6 +1,8 @@
 'use client';
+import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
+
 import * as React from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { AppModal } from './AppModal';
 import { useAIAssistance } from '@/components/providers/AIAssistanceProvider';
 import { AIRequestError, AI_FEATURE_LABELS, type AIClinicalContext, type AIAssistanceInput, type AIAssistanceResult } from '@/lib/ai-assistance';
@@ -70,16 +72,14 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const continueGeneration = () => { if (charge && !skipConfirmation) setConfirmOpen(true); else void generate(charge); };
   const missingContext = !reference || !context.sampleType || (isSNV && (!context.diseaseId.trim() || !context.inheritance.trim())) || (experimental && context.variantOrigin !== 'germline_confirmed');
   return <>
-    <button type="button" aria-label={`AI 生成${label}`} title={inactiveReason || `AI 生成${label}${deployment === 'saas' ? charge ? ' · 1 积分/次' : ' · 联调期间不扣费' : ''}`}
+    <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={`AI 生成${label}`} hint={inactiveReason || `AI 生成${label}${deployment === 'saas' ? charge ? ' · 1 积分/次' : ' · 联调期间不扣费' : ''}`}
       disabled={disabled || busy || unavailable} className="inline-flex shrink-0 items-center gap-1 rounded-md p-1.5 text-accent-fg transition-colors hover:bg-accent-subtle disabled:opacity-40"
-      onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }}>
-      {busy ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden="true" className="h-4 w-4" />}
-    </button>
+      onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }} />
     {inactiveReason && <span className="text-xs text-fg-muted">{inactiveReason}</span>}
     {deployment === 'saas' && !charge && !inactiveReason && <span className="text-xs text-fg-muted">联调期间不扣费</span>}
-    {busy && serverRequestId && adapter.cancel && <button type="button" disabled={cancelling} className="yj-tool-button" onClick={async () => { setCancelling(true); try { await adapter.cancel!(serverRequestId); } catch { setError('取消请求失败，请重试。'); setCancelling(false); } }}>{cancelling ? '取消中…' : '取消'}</button>}
+    {busy && serverRequestId && adapter.cancel && <ActionButton loading={cancelling} loadingLabel="取消中…" variant="ghost" type="button" disabled={cancelling} className="yj-tool-button" onClick={async () => { setCancelling(true); try { await adapter.cancel!(serverRequestId); } catch { setError('取消请求失败，请重试。'); setCancelling(false); } }}>取消</ActionButton>}
     {error && <p role="alert" className="basis-full text-xs leading-relaxed text-danger-fg">{error}</p>}
-    <AppModal open={contextOpen} onOpenChange={setContextOpen} title="补充 AI 评估上下文" size="small" footer={<><button type="button" className="yj-tool-button" onClick={() => setContextOpen(false)}>取消</button><button type="button" className="yj-tool-button" disabled={missingContext} onClick={() => { setContextOpen(false); continueGeneration(); }}>继续</button></>}>
+    <AppModal open={contextOpen} onOpenChange={setContextOpen} title="补充 AI 评估上下文" size="small" footer={<><ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={() => setContextOpen(false)}>取消</ActionButton><ActionButton variant="ghost" type="button" className="yj-tool-button" disabled={missingContext} onClick={() => { setContextOpen(false); continueGeneration(); }}>继续</ActionButton></>}>
       <div className="space-y-3 text-sm">
         <p className="text-xs text-fg-muted">补充本次评估所需信息。来源未确认时保持“未确认”，不会修改样本或计算器。</p>
         {experimental && <p role="note" className="text-xs text-warning-fg">SVC 草案实验仅供研究与工程对照，输入未核验，禁止临床用途且不结算积分。需明确确认胚系来源才可执行；不会自动确认。</p>}
@@ -90,7 +90,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
       </div>
     </AppModal>
     <AppModal open={confirmOpen} onOpenChange={setConfirmOpen} title="使用 AI 辅助生成" size="small"
-      footer={<><button type="button" onClick={() => setConfirmOpen(false)} className="yj-tool-button">取消</button><button type="button" disabled={disabled || busy} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40" onClick={() => { if (remember) setSkipConfirmation(true); setConfirmOpen(false); void generate(true); }}>确认生成 · 1 积分</button></>}>
+      footer={<><ActionButton variant="ghost" type="button" onClick={() => setConfirmOpen(false)} className="yj-tool-button">取消</ActionButton><button type="button" disabled={disabled || busy} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40" onClick={() => { if (remember) setSkipConfirmation(true); setConfirmOpen(false); void generate(true); }}>确认生成 · 1 积分</button></>}>
       <p className="text-sm leading-relaxed">使用 AI 生成{label}，每次消耗 <strong>1 积分</strong>。</p>
       <p className="mt-2 text-xs leading-relaxed text-fg-muted">生成结果供人工复核。只发送本次输入及相关注释。</p>
       <label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)} />本次会话不再提示</label>
@@ -113,6 +113,6 @@ export function AIResultCard({ result, onUseInterpretation }: { result: AIAssist
     {reviewer && <div className="text-xs text-fg-muted">人工判定：{String(reviewer.classification ?? reviewer.decision ?? '待复核')}{typeof reviewer.reason === 'string' ? ` · ${reviewer.reason}` : ''}</div>}
     {!!result.evidence?.length && <dl className="space-y-2">{result.evidence.map((item, index) => <div key={`${item.code}-${index}`}><dt className="text-xs font-semibold">{item.code}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-fg-muted">{item.reason}</dd></div>)}</dl>}
     {!!result.warnings?.length && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{result.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">待人工复核{result.model ? ` · ${result.model}` : ''}</span>{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <button type="button" className="yj-tool-button" onClick={onUseInterpretation}>填入人工解读</button>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">待人工复核{result.model ? ` · ${result.model}` : ''}</span>{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>填入人工解读</ActionButton>}</div>
   </section>;
 }

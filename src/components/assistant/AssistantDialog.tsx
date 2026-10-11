@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { X, Settings, Trash2, AlertCircle } from 'lucide-react';
+import { Settings, AlertCircle } from 'lucide-react';
 import { useAI } from '@/components/providers/AIProvider';
 import { AssistantChat } from './AssistantChat';
 import Link from 'next/link';
@@ -84,13 +86,11 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
           <img src="/mascot.png" alt="小墨" className="w-5 h-5 object-contain" />
           <span className="font-medium text-fg-default">小墨</span>
         </div>
-        <button
+        <IconActionButton label="关闭" action="close" variant="ghost"
           onClick={onClose}
           className="p-1 rounded hover:bg-canvas-subtle text-fg-muted hover:text-fg-default transition-colors"
-          aria-label="关闭"
-        >
-          <X className="w-4 h-4" />
-        </button>
+
+         />
       </div>
 
       {/* Content */}
@@ -143,14 +143,14 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
           <span className="text-xs text-fg-muted">
             输入自然语言指令控制页面
           </span>
-          <HoverHint content="清空历史"><button
+          <HoverHint content="清空历史"><ActionButton action="delete" variant="ghost"
             onClick={handleClearHistory}
             className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors"
 
           >
-            <Trash2 className="w-3 h-3" />
+
             清空
-          </button></HoverHint>
+          </ActionButton></HoverHint>
         </div>
       )}
     </div>

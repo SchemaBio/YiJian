@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 import {ResourcePager} from '@/components/shared/ResourcePager';
@@ -6,8 +8,8 @@ import {ResourcePager} from '@/components/shared/ResourcePager';
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState, FilePicker, ModalSectionHeading } from '@/components/shared';
-import { Button, Checkbox, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { AlertTriangle, FileText, HardDrive, Loader2, Search, Trash2, Upload } from 'lucide-react';
+import { Checkbox, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
+import { AlertTriangle, FileText, HardDrive, Loader2, Search } from 'lucide-react';
 import { deleteDataAsset, getDataCenterConfig, getUploadStorageStats, listAllBEDAssets, validateBEDAsset, uploadBEDFile, type DataAsset, type DataCenterConfig, type UploadStorageStats } from '@/lib/data-assets';
 import { BUILTIN_BED_ASSETS } from '@/lib/builtin-resources';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -165,7 +167,7 @@ function BedFilesPageContent() {
       accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:'可用',invalid:'内容无效',unavailable:'校验暂不可用',validating:'校验中',pending:'待校验'}[row.validation_status??'pending']) : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
     },
     { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
-    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <div className="flex items-center gap-1">{row.status==='completed'&&row.validation_status!=='valid'&&<HoverHint content={row.validation_code}><button type="button" className="whitespace-nowrap text-xs text-accent-fg"  onClick={async()=>{try{await validateBEDAsset(row.id);await loadData()}catch(e){setError(e instanceof Error?e.message:'校验失败')}}}>重新校验</button></HoverHint>}<HoverHint content="删除"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></HoverHint></div> },
+    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <div className="flex items-center gap-1">{row.status==='completed'&&row.validation_status!=='valid'&&<HoverHint content={row.validation_code}><button type="button" className="whitespace-nowrap text-xs text-accent-fg"  onClick={async()=>{try{await validateBEDAsset(row.id);await loadData()}catch(e){setError(e instanceof Error?e.message:'校验失败')}}}>重新校验</button></HoverHint>}<HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)} /></HoverHint></div> },
   ];
 
   return (
@@ -181,10 +183,10 @@ function BedFilesPageContent() {
         <div className="w-full sm:w-72">
           <Input placeholder="搜索文件名或 UUID..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} />
         </div>
-        <Button variant="primary" className="shrink-0 whitespace-nowrap" leftIcon={<Upload className="h-4 w-4" />} onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>上传 BED 文件</Button>
+        <Button action="upload" variant="primary" className="shrink-0 whitespace-nowrap"  onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>上传 BED 文件</Button>
       </div>
 
-      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>重试读取</button></div>}
+      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>重试读取</ActionButton></div>}
 
       {references.length>0&&<div className="rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm">此 BED 正在被以下资源使用：<ul className="mt-2 space-y-1">{references.map(r=><li key={`${r.kind}:${r.id}`}><a className="text-accent-fg underline" href={r.kind==='task'?`/tasks/${r.id}`:r.kind==='baseline'?'/pipeline/baseline':'/pipeline'}>{r.name||r.id}</a></li>)}</ul></div>}
       {isLoading ? (
@@ -201,7 +203,7 @@ function BedFilesPageContent() {
         onOpenChange={(open) => !open && closeModal()}
         title="上传 BED 文件"
         size="medium"
-        footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>取消</Button><Button variant="primary" onClick={handleUpload} disabled={!file || uploading || storageQuotaReached || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}>{uploading ? `上传中 ${progress}%` : '开始上传'}</Button></>}
+        footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>取消</Button><Button action="upload" variant="primary" onClick={handleUpload} disabled={!file || uploading || storageQuotaReached || Boolean(config?.temporary && !uploadPolicyAcknowledged)} >{uploading ? `上传中 ${progress}%` : '开始上传'}</Button></>}
       >
         <div className="space-y-5">
           <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title="文件信息" description="文件仅适用于所选参考基因组。" />
@@ -229,7 +231,7 @@ function BedFilesPageContent() {
         size="small"
         title="删除 BED 文件"
         onOpenChange={(open) => { if (!open && !deleteBusy) setDeleting(null); }}
-        footer={<><Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleting(null)}>取消</Button><Button variant="danger" disabled={deleteBusy} loading={deleteBusy} leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => void handleDelete()}>确认删除</Button></>}
+        footer={<><Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleting(null)}>取消</Button><Button action="delete" variant="danger" disabled={deleteBusy} loading={deleteBusy}  onClick={() => void handleDelete()}>确认删除</Button></>}
       >
         <p className="text-sm leading-6 text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p>
       </AppModal>

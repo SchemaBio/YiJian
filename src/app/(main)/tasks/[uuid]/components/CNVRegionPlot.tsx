@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { AppModal } from '@/components/shared';
@@ -113,7 +115,7 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
       <div className="my-3 flex flex-wrap items-center gap-3 text-xs"><label className="flex items-center gap-2">选中区间两侧扩展<input aria-label="窗口两侧扩展 kb" type="number" min="0" max="100000" value={flankKB} onChange={e => {const v=Number(e.target.value);if(Number.isFinite(v)&&v>=0&&v<=100000)setFlankKB(v);}} className="w-24 rounded border border-border-default bg-canvas-default px-2 py-1" />kb</label><span>{start.toLocaleString()}–{end.toLocaleString()}（窗口 {(end-start).toLocaleString()} bp）</span></div>
       <p className="mb-2 text-xs text-fg-muted">横线为 Region 合并区间 log2，圆点为区间中点；灰点为原始 CNR bin，虚线为 log2=0。缺测留空，不插值。调整窗口不改变检出时的 bin 大小。</p>
       <p className="mb-2 text-xs text-fg-muted">{cnrStatus}；当前窗口 {bins.length.toLocaleString()} 个原始 bin。</p>
-      <div ref={setHolder}>{loading ? <p role="status" className="py-20 text-center text-sm">正在读取区域信号…</p> : error ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button" onClick={()=>setRetry(v=>v+1)}>重试</button></div> : valid.length === 0 && bins.length === 0 ? <div role="status" className="rounded-md border border-border-default bg-canvas-subtle px-4 py-10 text-center text-sm text-fg-muted">{cnrLoading ? "正在读取原始 CNR 信号…" : rows.length === 0 ? "当前窗口没有可绘制的 Region 或 CNR 信号" : "当前窗口的 Region 区间未提供有效 log2 数值，且没有原始 CNR 信号"}</div> : <canvas ref={setCanvas} aria-label={`${valid.length} 个有 log2 数值的 Region 区间；可在检出表中读取原始数值`} onMouseMove={event => {
+      <div ref={setHolder}>{loading ? <p role="status" className="py-20 text-center text-sm">正在读取区域信号…</p> : error ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" onClick={()=>setRetry(v=>v+1)}>重试</ActionButton></div> : valid.length === 0 && bins.length === 0 ? <div role="status" className="rounded-md border border-border-default bg-canvas-subtle px-4 py-10 text-center text-sm text-fg-muted">{cnrLoading ? "正在读取原始 CNR 信号…" : rows.length === 0 ? "当前窗口没有可绘制的 Region 或 CNR 信号" : "当前窗口的 Region 区间未提供有效 log2 数值，且没有原始 CNR 信号"}</div> : <canvas ref={setCanvas} aria-label={`${valid.length} 个有 log2 数值的 Region 区间；可在检出表中读取原始数值`} onMouseMove={event => {
         const rect=event.currentTarget.getBoundingClientRect(); const coordinate=start+(event.clientX-rect.left-54)/(width-74)*(end-start);
         setHover(valid.find(row=>coordinate>=row.startPosition&&coordinate<=row.endPosition)??null);
       }} onMouseLeave={()=>setHover(null)} className="max-w-full" />}</div>

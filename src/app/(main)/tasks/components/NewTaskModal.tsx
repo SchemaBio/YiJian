@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Button, Input, Select } from '@schema/ui-kit';
+import { Input, Select } from '@schema/ui-kit';
 import { Coins, Search, Loader2, SlidersHorizontal, Database, FileText } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import {
@@ -230,13 +232,13 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={submitting}>取消</Button>
-          <Button
+          <Button action="add" loading={submitting} loadingLabel="创建中..."
             variant="primary"
             onClick={handleSubmit}
             disabled={loadingResources || submitting || !selectedSample || !selectedPipeline}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+
           >
-            {submitting ? '创建中...' : '创建任务'}
+            创建任务
           </Button>
         </>
       }

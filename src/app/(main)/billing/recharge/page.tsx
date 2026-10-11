@@ -1,10 +1,12 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Input, Tag } from '@schema/ui-kit';
-import { ArrowLeft, Check, Clock3, Coins, Copy, CreditCard } from 'lucide-react';
+import { Input, Tag } from '@schema/ui-kit';
+import { ArrowLeft, Clock3, Coins, CreditCard } from 'lucide-react';
 import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
@@ -83,7 +85,7 @@ export default function RechargePage() {
         </div>
       </div>
 
-      {loadError && <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<button type="button" className="yj-tool-button ml-3" onClick={() => setRetry(value => value + 1)}>重试读取</button></div>}
+      {loadError && <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => setRetry(value => value + 1)}>重试读取</ActionButton></div>}
       {error && (
         <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
           {error}
@@ -133,10 +135,10 @@ export default function RechargePage() {
               <p className="text-sm text-fg-muted">申请数量</p>
               <p className="text-2xl font-semibold text-fg-default">{amount} 积分</p>
             </div>
-            <Button
+            <Button action="copy"
               variant="primary"
               className="w-full min-w-[168px] justify-center sm:w-auto"
-              leftIcon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+
               onClick={() => void copyRequest()}
             >
               {copied ? '已复制' : '复制充值申请'}

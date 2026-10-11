@@ -1,13 +1,9 @@
 'use client';
+import { ActionButton as Button, IconActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-} from '@schema/ui-kit';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@schema/ui-kit';
 import type { ModalSize } from '@schema/ui-kit';
 import { cn } from '@/lib/utils';
 
@@ -97,9 +93,10 @@ export function AppModal({
         className
       )}
     >
-      <ModalHeader showCloseButton={showCloseButton}>
+      <ModalHeader showCloseButton={false} className="pr-16">
         {title}
       </ModalHeader>
+      {showCloseButton && <div className="absolute right-4 top-4"><IconActionButton action="close" label="关闭弹窗" variant="ghost" onClick={() => onOpenChange(false)} /></div>}
       <ModalBody>
         {children}
       </ModalBody>
@@ -200,11 +197,14 @@ export function ConfirmDialog({
             {cancelLabel}
           </Button>
           <Button
+            action={variant === 'danger' && /删除/.test(confirmLabel) ? 'delete' : undefined}
+            loading={pending}
+            loadingLabel="处理中..."
             variant={buttonVariant}
             disabled={pending}
             onClick={handleConfirm}
           >
-            {pending ? '处理中...' : confirmLabel}
+            {confirmLabel}
           </Button>
         </>
       }

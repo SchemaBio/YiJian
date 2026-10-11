@@ -1,15 +1,12 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
-import { Button, Select, FormItem, Tag } from '@schema/ui-kit';
+import { Select, FormItem, Tag } from '@schema/ui-kit';
 import { AppModal } from '@/components/shared';
-import {
-  CheckCircle2,
-  FileText,
-  Loader2,
-  Play,
-} from 'lucide-react';
+import { CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { RawResultDownloads } from './RawResultDownloads';
 import { reportsApi, saveDownload, type ReportTemplate } from '@/lib/reports';
 
@@ -116,7 +113,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
-      {generationError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><button type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>重试读取记录</button></div>}
+      {generationError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>重试读取记录</ActionButton></div>}
  {generations.length>0&&<div className="yj-panel p-4"><h4 className="mb-3 text-sm font-medium">报告生成记录</h4><div className="overflow-x-auto"><table className="w-full min-w-[440px] text-left text-sm"><thead className="text-xs text-fg-muted"><tr><th className="pb-2 font-medium">时间</th><th className="pb-2 font-medium">报告方式</th><th className="pb-2 font-medium">状态</th></tr></thead><tbody>{generations.map(g=><tr key={g.id} className="border-t border-border-subtle"><td className="py-3 pr-3 whitespace-nowrap">{new Date(g.createdAt).toLocaleString('zh-CN', {hour12:false})}</td><td className="pr-3">{g.contractVersion==='report-snapshot-v2'?'回报快照':g.contractVersion==='legacy-v1'?'原始结果包':g.contractVersion}</td><td><Tag variant={g.state==='ready'?'success':g.state==='failed'?'danger':g.state==='generating'?'info':'neutral'}>{({ready:'已生成',generating:'生成中',failed:'失败',unknown:'远端结果待核对',pending:'等待生成'} as Record<string,string>)[g.state]??g.state}</Tag>{g.errorCode&&<span className="ml-2 text-xs text-danger-fg">{g.errorCode}</span>}</td></tr>)}</tbody></table></div></div>}
 
       <div className="rounded-xl border border-border-default bg-canvas-default p-5">
@@ -136,16 +133,16 @@ export function ReportTab({ taskId }: ReportTabProps) {
               />
             </FormItem>
           </div>
-          <Button
+          <Button loading={generating} loadingLabel="生成中..." action="start"
             variant="primary"
-            leftIcon={generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+
             onClick={handleGenerate}
             disabled={readOnly || loading || !selectedTemplate || generating || templates.length === 0}
           >
-            {generating ? '生成中...' : '生成并下载'}
+            生成并下载
           </Button>
         </div>
-        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<button type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>重试</button></div>}
+        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>重试</ActionButton></div>}
         {generating && (
           <div className="mt-4 rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-muted">
             <div className="flex items-center gap-2">

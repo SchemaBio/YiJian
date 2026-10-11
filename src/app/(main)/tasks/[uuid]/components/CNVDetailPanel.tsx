@@ -1,4 +1,8 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
+import { IconActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
@@ -9,7 +13,7 @@ import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assist
 import { aiVariantContext } from '../utils/ai-context';
 import { CNVRegionPlot } from './CNVRegionPlot';
 import { CNVExonPlot } from './CNVExonPlot';
-import { X, ExternalLink, FileText, Database, Dna, MapPin } from 'lucide-react';
+import { ExternalLink, FileText, Database, MapPin } from 'lucide-react';
 import { getClassificationLabel, formatScore } from '../utils/pathogenicity-classifier';
 import { Tag } from '@schema/ui-kit';
 import type { CNVSegment, CNVExon } from '../types';
@@ -146,13 +150,11 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
               {typeLabel}
             </Tag>
           </div>
-          <button
+          <IconActionButton label="关闭" action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-            aria-label="关闭"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+           />
         </div>
 
         <div className="yj-inspector-summary">
@@ -165,13 +167,13 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           <section hidden={section !== 'interpretation'} className="space-y-3">
             <h4 className="text-sm font-semibold">人工解读</h4>
             <textarea aria-label="CNV 人工解读" readOnly={readOnly} value={interpretation} onChange={event => setInterpretation(event.target.value)} placeholder="请输入您对该 CNV 的解读分析…" className="min-h-32 w-full resize-y rounded-md border border-border-default bg-canvas-default p-3 text-sm" />
-            <div className="flex items-center justify-between gap-2"><span className="text-xs text-fg-muted">{interpretation.length} 字</span><button type="button" disabled={readOnly || saving || !onSaveInterpretation || interpretation === savedInterpretation} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
+            <div className="flex items-center justify-between gap-2"><span className="text-xs text-fg-muted">{interpretation.length} 字</span><ActionButton loading={saving} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={readOnly || saving || !onSaveInterpretation || interpretation === savedInterpretation} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
               if (!onSaveInterpretation) return;
               setSaving(true); setSaveError(''); const originalScope = scope; const draft = interpretation;
               try { await onSaveInterpretation(variant, draft); if (scopeRef.current === originalScope) setSavedInterpretation(draft); }
               catch (cause) { if (scopeRef.current === originalScope) setSaveError(cause instanceof Error ? cause.message : '保存失败'); }
               finally { if (scopeRef.current === originalScope) setSaving(false); }
-            }}>{saving ? '保存中…' : '保存人工解读'}</button></div>
+            }}>保存人工解读</ActionButton></div>
             {saveError && <p role="alert" className="text-sm text-danger-fg">{saveError}</p>}
           </section>
           <section hidden={section !== 'history'}>
@@ -197,17 +199,17 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title="CNV 特征" />
           <div className="mb-3 flex flex-wrap gap-2">
-            {isExon && taskId && <button type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">外显子 CN 分布图</button>}
-            {showPlot && <button type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">区域信号图 · 设置窗口</button>}
+            {isExon && taskId && <ActionButton variant="ghost" type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">外显子 CN 分布图</ActionButton>}
+            {showPlot && <ActionButton variant="ghost" type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">区域信号图 · 设置窗口</ActionButton>}
           </div>
           <div className="space-y-0">
             <InfoItem
-              label="类型" 
+              label="类型"
               value={
                 <Tag variant={typeVariant}>
                   {typeLabel}
                 </Tag>
-              } 
+              }
             />
             <InfoItem label="拷贝数" value={variant.copyNumber} />
             <InfoItem label="Copy ratio" value={variant.copyRatio === null ? undefined : variant.copyRatio.toFixed(3)} />
@@ -264,7 +266,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             )}
             {isExon && (
               <InfoItem
-                label="GeneCards" 
+                label="GeneCards"
                 value={(variant as CNVExon).gene}
                 link={geneCardsURL((variant as CNVExon).gene)}
               />
@@ -282,16 +284,16 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
                 <Tag variant="success">已置顶</Tag>
               ) : (
                 <Tag variant="neutral">未置顶</Tag>
-              )} 
+              )}
             />
 
             <InfoItem
-              label="回报状态" 
+              label="回报状态"
               value={variant.reported ? (
                 <Tag variant="info">已回报</Tag>
               ) : (
                 <Tag variant="neutral">未回报</Tag>
-              )} 
+              )}
             />
             {variant.reported && variant.reportedBy && (
               <>

@@ -46,7 +46,7 @@ export function HoverHint({ content, children }: { content: React.ReactNode; chi
   const trigger = React.cloneElement(children, {
     'data-hover-hint': '',
     'aria-describedby': open ? [props['aria-describedby'], id].filter(Boolean).join(' ') : props['aria-describedby'],
-    'aria-label': props['aria-label'] ?? (children.type === 'button' && typeof content === 'string' ? content : undefined),
+    'aria-label': props['aria-label'] ?? ((children.type === 'button' || props.iconOnly) && typeof content === 'string' ? content : undefined),
     onMouseEnter: (event: React.MouseEvent<HTMLElement>) => {
       props.onMouseEnter?.(event); target.current = event.currentTarget; hovered.current = true; clearTimer();
       timer.current = setTimeout(() => { if (!open) { setPosition(null); setOpen(true); } }, 200);

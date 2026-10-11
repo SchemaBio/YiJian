@@ -1,12 +1,14 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { AppModal, EmptyState } from '@/components/shared';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button, Input, Select, FormItem, DataTable, Tag } from '@schema/ui-kit';
+import { Input, Select, FormItem, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { CheckCircle2, Loader2, Pencil, RefreshCw, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
 import type { SystemRole, User } from '@/types/user';
 import { approveUser, deleteUser, listPendingUsers, listUsers, rejectUser, updateUser } from '@/lib/users';
 
@@ -178,20 +180,16 @@ export function PermissionsManagement() {
       header: '操作',
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1">
-          <HoverHint content="编辑"><button
+          <HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost"
             className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
             onClick={() => openEditModal(row)}
-          >
-            <Pencil className="w-4 h-4" />
-          </button></HoverHint>
-          <HoverHint content="删除"><button
+           /></HoverHint>
+          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost"
             className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors"
 
             onClick={() => setUserToDelete(row)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button></HoverHint>
+           /></HoverHint>
         </div>
       ),
       width: 90,
@@ -254,7 +252,7 @@ export function PermissionsManagement() {
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="secondary" className="yj-tool-button" leftIcon={isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} onClick={() => void loadUsers()} disabled={isLoading}>
+        <Button action="refresh" variant="secondary" className="yj-tool-button"  onClick={() => void loadUsers()} disabled={isLoading}>
           刷新
         </Button>
       </div>
@@ -295,8 +293,8 @@ export function PermissionsManagement() {
           <Button variant="secondary" onClick={() => setEditingUser(null)} disabled={isSaving}>
             取消
           </Button>
-          <Button variant="primary" onClick={handleSaveUser} disabled={isSaving}>
-            {isSaving ? '保存中...' : '保存'}
+          <Button loading={isSaving} loadingLabel="保存中..." action="save" variant="primary" onClick={handleSaveUser} disabled={isSaving}>
+            保存
           </Button>
          </>}>
           <div className="space-y-4">
@@ -342,8 +340,8 @@ export function PermissionsManagement() {
           <Button variant="secondary" onClick={() => setUserToDelete(null)} disabled={isSaving}>
             取消
           </Button>
-          <Button variant="danger" onClick={handleDeleteUser} disabled={isSaving}>
-            {isSaving ? '删除中...' : '删除'}
+          <Button loading={isSaving} loadingLabel="删除中..." variant="danger" onClick={handleDeleteUser} disabled={isSaving}>
+            删除
           </Button>
          </>}>
           {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}

@@ -1,10 +1,12 @@
 'use client';
+import { ActionButton as Button, ActionButton, IconActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button, Input, DataTable, Tag } from '@schema/ui-kit';
+import { Input, DataTable, Tag } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, List, X, UserPlus, GitBranch, Trash2, Pencil, Save, Download } from 'lucide-react';
+import { Search, List, UserPlus, GitBranch, Trash2, Pencil } from 'lucide-react';
 import { PedigreeTree, MemberDetailPanel, AddMemberModal, LinkSampleModal, NewPedigreeModal, EditPedigreeModal, ConfirmDialog, EditMemberModal, ContextMenu } from './components';
 import type { ContextMenuItem } from './components';
 import type { NewPedigreeFormData } from './components/NewPedigreeModal';
@@ -201,7 +203,7 @@ export default function PedigreePage() {
     };
     setOpenTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);
-    
+
     // 加载详情
     await refreshCurrentPedigree(pedigree.id);
     setSelectedMember(null);
@@ -752,20 +754,16 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
       header: '操作',
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <button
+          <IconActionButton label="编辑" action="edit" variant="ghost"
             className="p-1.5 rounded text-fg-muted hover:text-accent-fg hover:bg-accent-subtle transition-colors"
             onClick={() => handleOpenEditPedigree(row)}
-            aria-label="编辑"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
+
+           />
+          <IconActionButton label="删除" action="delete" variant="ghost"
             className="p-1.5 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors"
             onClick={() => handleOpenDeletePedigree(row.id)}
-            aria-label="删除"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+
+           />
         </div>
       ),
       width: 70,
@@ -815,13 +813,13 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                 <Input placeholder="搜索家系编号、内部编号、样本..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" leftIcon={<Download className="w-4 h-4" />} onClick={handleDownloadTemplate}>下载模板</Button>
-                <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewPedigreeOpen(true)}>新建家系</Button>
+                <Button action="download" variant="secondary"  onClick={handleDownloadTemplate}>下载模板</Button>
+                <Button action="add" variant="primary"  onClick={() => setIsNewPedigreeOpen(true)}>新建家系</Button>
               </div>
             </div>
             {error && (
               <div role="alert" className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-                {error}<button type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>重试读取</button>
+                {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>重试读取</ActionButton>
               </div>
             )}
             {listLoading && (
@@ -849,9 +847,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
             {openTabs.map((tab) => (
               <div key={tab.id} onClick={() => handleSwitchTab(tab.id)} className={`flex items-center gap-2 px-4 py-2 cursor-pointer border-r border-border-muted text-sm whitespace-nowrap transition-colors ${activeTabId === tab.id ? 'bg-canvas-default text-fg-default border-b-2 border-b-accent-emphasis -mb-px' : 'text-fg-muted hover:bg-canvas-inset hover:text-fg-default'}`}>
                 <span>{tab.name}</span>
-                <button onClick={(e) => handleCloseTab(tab.id, e)} className="p-0.5 rounded hover:bg-canvas-inset" aria-label="关闭标签">
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                <IconActionButton label="关闭标签" action="close" variant="ghost" onClick={(e) => handleCloseTab(tab.id, e)} className="p-0.5 rounded hover:bg-canvas-inset"  />
               </div>
             ))}
           </div>
@@ -872,15 +868,15 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
             <div className="flex items-center gap-2">
               {isEditMode ? (
                 <>
-                  <Button variant="secondary" size="small" leftIcon={<UserPlus className="w-4 h-4" />} onClick={() => setIsAddMemberOpen(true)}>
+                  <Button action="add" variant="secondary" size="small"  onClick={() => setIsAddMemberOpen(true)}>
                     添加成员
                   </Button>
-                  <Button variant="primary" size="small" leftIcon={<Save className="w-4 h-4" />} onClick={() => setIsEditMode(false)}>
+                  <Button action="edit" variant="primary" size="small"  onClick={() => setIsEditMode(false)}>
                     完成编辑
                   </Button>
                 </>
               ) : (
-                <Button variant="secondary" size="small" leftIcon={<Pencil className="w-4 h-4" />} onClick={() => setIsEditMode(true)}>
+                <Button action="edit" variant="secondary" size="small"  onClick={() => setIsEditMode(true)}>
                   编辑
                 </Button>
               )}
@@ -894,7 +890,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
               </div>
             ) : error && !currentPedigree ? (
-              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <button type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>重试读取</button>}</div>
+              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>重试读取</ActionButton>}</div>
             ) : currentPedigree ? (
               <PedigreeTree
                 members={currentPedigree.members}

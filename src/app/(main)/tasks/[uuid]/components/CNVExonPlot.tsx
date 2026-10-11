@@ -1,6 +1,8 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 import * as React from 'react';
-import {Copy} from 'lucide-react';
+
 import { AppModal } from '@/components/shared';
 import { HoverHint } from '@/components/shared/HoverHint';
 import type {CNVExon} from '../types';
@@ -37,8 +39,8 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
   return <AppModal open={isOpen} onOpenChange={open=>!open&&onClose()} title={`${variant.gene} · 外显子 CN 分布`} size="large" className="!z-[80] !w-[min(960px,94vw)] !max-w-none">
       <div className="min-h-0">
 
-        {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<button onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</button></div>:<>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><label className="flex items-center gap-2 text-sm">转录本<select value={transcript} onChange={e=>{setTranscript(e.target.value);setHover(null);}} className="rounded border border-border-default bg-canvas-default px-2 py-1">{[...signals.keys()].map(id=><option key={id}>{id}</option>)}</select></label><button onClick={copy} className="yj-tool-button"><Copy className="h-3 w-3"/>{copied||'复制图表数据'}</button></div>
+        {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<ActionButton variant="ghost" onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</ActionButton></div>:<>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><label className="flex items-center gap-2 text-sm">转录本<select value={transcript} onChange={e=>{setTranscript(e.target.value);setHover(null);}} className="rounded border border-border-default bg-canvas-default px-2 py-1">{[...signals.keys()].map(id=><option key={id}>{id}</option>)}</select></label><ActionButton action="copy" variant="ghost" onClick={copy} className="yj-tool-button">{copied||'复制图表数据'}</ActionButton></div>
           {transcript!==variant.transcript&&<p className="mb-2 text-xs text-fg-muted">报告转录本 {variant.transcript} 没有对应信号；当前显示所选转录本 {transcript}，未合并其他转录本。</p>}
           <div className="overflow-x-auto rounded border border-border-default bg-canvas-subtle">
             <svg width={width} height={height} role="img" aria-label={`${variant.gene} ${transcript} 的 ${rows.length} 个外显子 CN 分布，完整读数见下方表格`}>

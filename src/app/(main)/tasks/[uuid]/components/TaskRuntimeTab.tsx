@@ -1,10 +1,12 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button, Tag } from '@schema/ui-kit';
-import { AlertCircle, Check, Clipboard, Clock3, FileText, Loader2, RefreshCw, Server } from 'lucide-react';
+import { Tag } from '@schema/ui-kit';
+import { AlertCircle, Clock3, FileText, Loader2, RefreshCw, Server } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import type { TaskProgressResponse, TaskStatus } from '@/types/task';
 
@@ -273,10 +275,10 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
           <h3 className="yj-section-title">运行状态</h3>
           <p className="mt-1 text-xs text-fg-muted">任务执行、结果入库与工作流日志</p>
         </div>
-        <Button
+        <Button action="refresh"
           variant="secondary"
           size="small"
-          leftIcon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
+
           onClick={() => void loadRuntime()}
           disabled={loading}
         >
@@ -308,8 +310,8 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
             <p className="font-medium">{progress?.result_import_status === 'running' ? '结果导入未结束' : '结构化结果导入失败'}</p>
             <p className="mt-1 text-xs">将从本次已归档文件恢复导入，不会重新申请计算节点。</p>
           </div>
-          <Button variant="secondary" size="small" onClick={() => void handleRetryImport()} disabled={retryingImport}>
-            {retryingImport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          <Button loading={retryingImport} action="refresh" variant="secondary" size="small" onClick={() => void handleRetryImport()} disabled={retryingImport}>
+
             {retryingImport ? '正在导入' : progress?.result_import_status === 'running' ? '恢复导入' : '重新导入结果'}
           </Button>
         </div>
@@ -448,7 +450,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
             <p className="mt-1 text-xs text-fg-muted">最近一次工作流运行输出</p>
           </div>
           {logs && (
-            <Button variant="secondary" size="small" leftIcon={copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />} onClick={() => void handleCopy()}>
+            <Button action={copied ? 'copied' : 'copy'} variant="secondary" size="small"  onClick={() => void handleCopy()}>
               {copied ? '已复制' : '复制'}
             </Button>
           )}

@@ -1,8 +1,10 @@
 'use client';
+import { IconActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
-import { X, ExternalLink, FileText, Database, Dna } from 'lucide-react';
+import { ExternalLink, FileText, Database, Dna } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { MitochondrialVariant, MitochondrialPathogenicity } from '../types';
 
@@ -92,13 +94,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             <h3 className="text-base font-medium text-fg-default">线粒体变异详情</h3>
             <Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>
           </div>
-          <button
+          <IconActionButton label="关闭" action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-            aria-label="关闭"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+           />
         </div>
 
         <InspectorTabs value={section} onChange={setSection} id="mt-inspector" />
@@ -109,7 +109,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem label="基因" value={variant.gene} />
             <InfoItem
-              label="位置" 
+              label="位置"
               value={
                 <button
                   onClick={() => onOpenIGV?.('chrM', variant.position)}
@@ -132,12 +132,12 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem label="异质性比例" value={`${(variant.heteroplasmy * 100).toFixed(1)}%`} />
             <InfoItem
-              label="异质性水平" 
+              label="异质性水平"
               value={
                 variant.heteroplasmy >= 0.8 ? '高异质性 (≥80%)' :
                 variant.heteroplasmy >= 0.4 ? '中等异质性 (40-80%)' :
                 '低异质性 (<40%)'
-              } 
+              }
             />
           </div>
 
@@ -147,8 +147,8 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <SectionTitle icon={Database} title="致病性评估" />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
-              label="致病性" 
-              value={<Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>} 
+              label="致病性"
+              value={<Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>}
             />
             <InfoItem label="关联疾病" value={variant.associatedDisease} />
           </div>
@@ -159,17 +159,17 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <SectionTitle icon={ExternalLink} title="外部资源" />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
-              label="MITOMAP" 
+              label="MITOMAP"
               value="查看"
               link={mitomapAlleleURL(variant.position)}
             />
             <InfoItem
-              label="HmtVar" 
+              label="HmtVar"
               value="查看"
               link={hmtVarURL(variant.position, variant.ref, variant.alt)}
             />
             <InfoItem
-              label="MitoTIP" 
+              label="MitoTIP"
               value="查看"
               link={mitoTipURL(variant.position)}
             />
@@ -186,16 +186,16 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
                 <Tag variant="success">已置顶</Tag>
               ) : (
                 <Tag variant="neutral">未置顶</Tag>
-              )} 
+              )}
             />
 
             <InfoItem
-              label="回报状态" 
+              label="回报状态"
               value={variant.reported ? (
                 <Tag variant="info">已回报</Tag>
               ) : (
                 <Tag variant="neutral">未回报</Tag>
-              )} 
+              )}
             />
             {variant.reported && variant.reportedBy && (
               <>

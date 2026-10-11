@@ -1,13 +1,12 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button, Checkbox, DataTable, Input, type Column } from '@schema/ui-kit';
-import {
-  AlertTriangle, CheckCircle2, Cloud, Database, Download, HardDrive,
-  Loader2, Pencil, RefreshCw, Search, Trash2, Upload, XCircle,
-} from 'lucide-react';
+import { Checkbox, DataTable, Input, type Column } from '@schema/ui-kit';
+import { AlertTriangle, CheckCircle2, Cloud, Database, HardDrive, Loader2, Search, Trash2, Upload, XCircle } from 'lucide-react';
 import {
   deleteDataAsset, downloadDataAsset, getDataCenterConfig, getDataAssetUploadStatus, getUploadStorageStats, listDataAssets,
   retryDataAsset, updateDataAsset, type DataAsset, type DataCenterConfig,
@@ -408,21 +407,13 @@ export default function DataCenterPage() {
       accessor: (asset) => (
         <div className="inline-flex items-center justify-center gap-1">
           {config?.download_allowed && (
-            <HoverHint content="下载"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)}>
-              <Download className="h-4 w-4" />
-            </button></HoverHint>
+            <HoverHint content="下载"><ActionButton size="small" iconOnly action="download" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)} /></HoverHint>
           )}
           {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && (
-            <HoverHint content="重新上传"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }}>
-              <Upload className="h-4 w-4" />
-            </button></HoverHint>
+            <HoverHint content="重新上传"><ActionButton size="small" iconOnly action="upload" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} /></HoverHint>
           )}
-          <HoverHint content="编辑内部编号"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg"  aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }}>
-            <Pencil className="h-4 w-4" />
-          </button></HoverHint>
-          <HoverHint content="删除"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label="删除" onClick={() => setDeleting(asset)}>
-            <Trash2 className="h-4 w-4" />
-          </button></HoverHint>
+          <HoverHint content="编辑内部编号"><ActionButton size="small" iconOnly action="edit" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg"  aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} /></HoverHint>
+          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label="删除" onClick={() => setDeleting(asset)} /></HoverHint>
         </div>
       ),
       width: 120,
@@ -466,7 +457,7 @@ export default function DataCenterPage() {
         </div>
       )}
 
-      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>重试读取</Button>}</div>}
+      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>重试读取</Button>}</div>}
 
       {activeUpload?.status === 'needs_file' && !recoveryChecking && (
         <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
@@ -491,11 +482,9 @@ export default function DataCenterPage() {
             <div className="w-full max-w-[420px]">
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文件名、内部编号或 UUID" leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
             </div>
-            <HoverHint content="刷新"><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label="刷新" onClick={() => void load(search)}>
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </button></HoverHint>
+            <HoverHint content="刷新"><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label="刷新" onClick={() => void load(search)} /></HoverHint>
           </div>
-          <Button variant="primary" leftIcon={<Upload className="h-4 w-4" />} disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? '正在取消…' : uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
+          <Button action="upload" variant="primary"  disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? '正在取消…' : uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
         </div>
 
         {loading ? (
@@ -521,9 +510,9 @@ export default function DataCenterPage() {
         onOpenChange={(open) => { if (canceling && !open) return; setUploadOpen(open); if (!open && !uploadBusy) setUploadPolicyAcknowledged(false); }}
         footer={
           <>
-            {uploading && <Button variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>取消上传</Button>}
-            <Button variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploadBusy ? '隐藏到数据中心' : '取消'}</Button>
-            <Button variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} leftIcon={uploadBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} onClick={() => void handleUpload()}>{canceling ? '取消中...' : uploading ? '上传中...' : '开始上传'}</Button>
+            {uploading && <Button action="upload" variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>取消上传</Button>}
+            <Button loading={uploadBusy} loadingLabel="隐藏到数据中心" variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>取消</Button>
+            <Button action="upload" variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? '取消中...' : uploading ? '上传中...' : '开始上传'}</Button>
           </>
         }
       >
@@ -551,7 +540,7 @@ export default function DataCenterPage() {
         size="small"
         title="编辑内部编号"
         onOpenChange={(open) => { if (!open && !savingEdit) setEditing(null); }}
-        footer={<><Button variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>取消</Button><Button variant="primary" disabled={savingEdit} onClick={() => void handleEdit()}>{savingEdit ? '保存中...' : '保存'}</Button></>}
+        footer={<><Button variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>取消</Button><Button loading={savingEdit} loadingLabel="保存中..." action="save" variant="primary" disabled={savingEdit} onClick={() => void handleEdit()}>保存</Button></>}
       >
         <div className="space-y-3">
           <p className="text-sm text-fg-muted">{editing?.file_name}</p>
@@ -566,7 +555,7 @@ export default function DataCenterPage() {
         size="small"
         title="取消整个上传任务"
         onOpenChange={(open) => { if (!canceling) setCancelUploadConfirmOpen(open); }}
-        footer={<><Button variant="secondary" disabled={canceling} onClick={() => setCancelUploadConfirmOpen(false)}>继续上传</Button><Button variant="danger" disabled={canceling} onClick={() => void handleCancelUpload()}>{canceling ? '取消中...' : '确认取消并删除'}</Button></>}
+        footer={<><Button action="upload" variant="secondary" disabled={canceling} onClick={() => setCancelUploadConfirmOpen(false)}>继续上传</Button><Button loading={canceling} loadingLabel="取消中..." variant="danger" disabled={canceling} onClick={() => void handleCancelUpload()}>确认取消并删除</Button></>}
       >
         <p className="text-sm leading-6 text-fg-muted">将取消整个上传任务并删除该任务中的所有文件（包括已经完成的 Read1/Read2）。此操作无法撤销。</p>
       </AppModal>
@@ -576,7 +565,7 @@ export default function DataCenterPage() {
         size="small"
         title="删除数据资产"
         onOpenChange={(open) => { if (!open) setDeleting(null); }}
-        footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>取消</Button><Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => void handleDelete()}>确认删除</Button></>}
+        footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>取消</Button><Button action="delete" variant="danger"  onClick={() => void handleDelete()}>确认删除</Button></>}
       >
         <p className="text-sm leading-6 text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p>
       </AppModal>

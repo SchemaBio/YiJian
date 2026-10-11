@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, Select } from '@schema/ui-kit';
-import { Activity, Loader2, Network, UserRound } from 'lucide-react';
+import { Input, Select } from '@schema/ui-kit';
+import { Activity, Network, UserRound } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import type { RelationType, AffectedStatus, PedigreeMember } from '../types';
 import type { Gender } from '../../types';
@@ -130,13 +132,13 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button
+          <Button loading={submitting} loadingLabel="添加中..." action="add"
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={submitting || !formData.name}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+
           >
-            {submitting ? '添加中...' : '添加成员'}
+            添加成员
           </Button>
         </>
       }

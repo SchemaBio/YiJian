@@ -1,5 +1,7 @@
 'use client';
-import {Button} from '@schema/ui-kit';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
+
 export function ResourcePager({page,total,onChange,pageSize=20}:{page:number;total:number;onChange:(page:number)=>void;pageSize?:number}){
  if (total === 0) return null;
  if (total <= pageSize) return <div className="py-3 text-xs text-fg-muted">共 {total} 条</div>;

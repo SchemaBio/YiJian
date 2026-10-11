@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, Select, TextArea } from '@schema/ui-kit';
-import { FileText, Loader2, Search, Stethoscope, UserRound, X } from 'lucide-react';
+import { Input, Select, TextArea } from '@schema/ui-kit';
+import { FileText, Search, Stethoscope, UserRound } from 'lucide-react';
 import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { searchHpoTerms, useHpoTerms, type HpoTerm } from '@/lib/hpo-terms';
@@ -136,13 +138,13 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             取消
           </Button>
-          <Button
+          <Button loading={submitting} loadingLabel="保存中..." action="save"
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={submitting}
-            leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+
           >
-            {submitting ? '保存中...' : '保存修改'}
+            保存修改
           </Button>
         </>
       }
@@ -210,9 +212,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
                     <div key={term.id} className="inline-flex items-center gap-1.5 rounded-md border border-accent-muted bg-accent-subtle px-2.5 py-1.5 text-sm text-accent-fg">
                       <span className="font-mono text-xs text-accent-fg">{term.id}</span>
                       <span>{term.name}</span>
-                      <button type="button" onClick={() => removeHpoTerm(term.id)} className="ml-1 text-accent-fg hover:text-danger-fg" aria-label={`移除 ${term.name}`}>
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                      <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" onClick={() => removeHpoTerm(term.id)} className="ml-1 text-accent-fg hover:text-danger-fg" aria-label={`移除 ${term.name}`} />
                     </div>
                   ))}
                 </div>

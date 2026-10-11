@@ -1,7 +1,8 @@
 'use client';
+import { IconActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Copy, Check } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
 
 interface UUIDCellProps {
@@ -41,17 +42,10 @@ export function UUIDCell({ uuid, truncateLength = 8 }: UUIDCellProps) {
       <span className="font-mono text-xs text-accent-fg hover:underline cursor-pointer">
         {isTruncated ? truncated : uuid}
       </span>
-      <button
+      <IconActionButton action={copied ? 'copied' : 'copy'} size="small" label={copied ? '已复制完整 UUID' : '复制完整UUID'} variant="ghost"
         onClick={handleCopy}
         className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 rounded hover:bg-canvas-subtle transition-opacity"
-        aria-label="复制完整UUID"
-      >
-        {copied ? (
-          <Check className="w-3.5 h-3.5 text-success-fg" />
-        ) : (
-          <Copy className="w-3.5 h-3.5 text-fg-muted" />
-        )}
-      </button>
+      />
     </div>
   );
 

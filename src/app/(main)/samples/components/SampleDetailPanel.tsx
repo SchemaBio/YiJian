@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel, formatTurnaroundDays } from '@/lib/sample-display';
 
 import * as React from 'react';
-import { Tag, Button, Input } from '@schema/ui-kit';
-import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Pencil, Save, X, Search } from 'lucide-react';
+import { Tag, Input } from '@schema/ui-kit';
+import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Search } from 'lucide-react';
 import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { api } from '@/lib/api';
 import { searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
@@ -291,7 +293,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                         <span className="font-mono text-xs text-blue-500">{term.id}</span>
                         <span>{term.name}</span>
                         {isEditing && (
-                          <button
+                          <ActionButton size="small" iconOnly action="close" variant="ghost"
                             onClick={() => {
                               const newTerms = sample.clinicalDiagnosis.hpoTerms?.filter(t => t.id !== term.id) || [];
                               setEditData(prev => ({
@@ -304,9 +306,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                               } : null);
                             }}
                             className="ml-1 text-blue-400 hover:text-red-500"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                           />
                         )}
                       </div>
                     ))}
@@ -363,24 +363,24 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
               <InfoItem label="项目编号" value={sample.projectInfo.projectId} />
               <InfoItem label="项目名称" value={sample.projectInfo.projectName} />
               <InfoItem label="检测Panel" value={sample.projectInfo.panel} />
-              <InfoItem 
-                label="检测项目" 
+              <InfoItem
+                label="检测项目"
                 value={
                   sample.projectInfo.testItems.length > 0
                     ? sample.projectInfo.testItems.map((item, i) => (
                         <Tag key={i} variant="info" className="mr-1 mb-1">{item}</Tag>
                       ))
                     : '-'
-                } 
+                }
               />
               <InfoItem label="承诺周期" value={formatTurnaroundDays(sample.projectInfo.turnaroundDays)} />
-              <InfoItem 
-                label="优先级" 
+              <InfoItem
+                label="优先级"
                 value={
                   <Tag variant={sample.projectInfo.priority === 'urgent' ? 'danger' : 'neutral'}>
                     {getSamplePriorityLabel(sample.projectInfo.priority)}
                   </Tag>
-                } 
+                }
               />
             </div>
           </InfoCard>
@@ -475,22 +475,20 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                 <Button variant="secondary" size="small" onClick={handleCancelEdit}>
                   取消
                 </Button>
-                <Button variant="primary" size="small" leftIcon={<Save className="w-4 h-4" />} onClick={handleSave}>
+                <Button action="save" variant="primary" size="small"  onClick={handleSave}>
                   保存
                 </Button>
               </>
             ) : (
-              <Button variant="secondary" size="small" leftIcon={<Pencil className="w-4 h-4" />} onClick={() => setIsEditing(true)}>
+              <Button action="edit" variant="secondary" size="small"  onClick={() => setIsEditing(true)}>
                 编辑
               </Button>
             )}
             {onClose && (
-              <button
+              <ActionButton size="small" iconOnly action="close" variant="ghost"
                 onClick={onClose}
                 className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+               />
             )}
           </div>
         </div>

@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
+
 import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
@@ -6,7 +8,7 @@ import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistan
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
 import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
-import { X, Calculator, Save, RotateCcw } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type {
   CNVSegment,
@@ -235,13 +237,11 @@ export function CNVAssessmentPanel({
               </p>
             </div>
           </div>
-          <button
+          <IconActionButton label="关闭" action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-            aria-label="关闭"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+           />
         </div>
 
         {/* 内容区域 */}
@@ -326,24 +326,24 @@ export function CNVAssessmentPanel({
           {error && <p role="alert" className="mb-2 text-sm text-danger-fg">{error}</p>}
           <div className="flex gap-3">
             {onReset && (
-              <button
+              <ActionButton action="retry" variant="ghost"
                 disabled={readOnly || saving}
                 onClick={onReset}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
               >
-                <RotateCcw className="w-4 h-4" />
+
                 重置
-              </button>
+              </ActionButton>
             )}
             {onSave && (
-              <button
+              <ActionButton loading={saving} loadingLabel="保存中…" action="save" variant="ghost"
                 disabled={readOnly || saving}
                 onClick={() => onSave(assessment)}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-accent-emphasis text-white rounded-md hover:bg-accent-fg transition-colors"
               >
-                <Save className="w-4 h-4" />
-                {saving ? '保存中…' : '保存'}
-              </button>
+
+                保存
+              </ActionButton>
             )}
           </div>
         </div>

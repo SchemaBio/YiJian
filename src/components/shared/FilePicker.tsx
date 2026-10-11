@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button } from '@schema/ui-kit';
-import { Upload } from 'lucide-react';
+
+
 
 export function FilePicker({ label, accept, file, onChange, disabled = false }: {
   label: string;
@@ -30,7 +32,7 @@ export function FilePicker({ label, accept, file, onChange, disabled = false }: 
           if (selected) onChange(selected);
         }}
       />
-      <Button type="button" variant="secondary" size="small" className="yj-tool-button shrink-0" leftIcon={<Upload className="h-4 w-4" />} aria-label={`选择${label}`} aria-describedby={nameID} disabled={disabled} onClick={() => input.current?.click()}>
+      <Button action="upload" type="button" variant="secondary" size="small" className="yj-tool-button shrink-0"  aria-label={`选择${label}`} aria-describedby={nameID} disabled={disabled} onClick={() => input.current?.click()}>
         {file ? '重新选择' : '选择文件'}
       </Button>
       <div id={nameID} className={`mt-1.5 min-w-0 flex-1 break-all text-xs leading-5 ${file ? 'text-fg-default' : 'text-fg-muted'}`}>

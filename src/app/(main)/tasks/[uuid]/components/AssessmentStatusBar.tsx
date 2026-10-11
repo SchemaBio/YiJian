@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 import { useInterpretationReadOnly } from './InterpretationLock';
 import * as React from 'react';
 import {assessmentStatus,cancelAssessment,type AssessmentStatus} from '@/lib/assessment/client';
@@ -21,9 +23,9 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
      <section><h4 className="mb-1 font-semibold">资源版本</h4><p className="break-words text-fg-muted">{status.packVersion && status.packVersion !== 'unavailable' ? `Human Phenotype Ontology、ClinGen、Mondo · ${status.packVersion}` : '评估资源不可用或尚未加载'}</p></section>
    </div>
  </ToolbarPopover>
- {status.state==='loading'&&<button type="button" className="yj-tool-button" onClick={()=>cancelAssessment(taskId)}>取消初评</button>}
- {(status.state==='error'||status.state==='cancelled')&&<button type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await retryBrowserAssessment(taskId);}catch(e){setError(e instanceof Error?e.message:'重试失败');}finally{setBusy(false);}}}>{busy?'准备中…':'重试本地初评'}</button>}
- {!readOnly&&status.reassessmentAvailable&&<button type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error?e.message:'重新评估失败');}finally{setBusy(false);}}}>{busy?'准备中…':'证据版本已更新，重新评估'}</button>}
+ {status.state==='loading'&&<ActionButton action="stop" variant="ghost" type="button" className="yj-tool-button" onClick={()=>cancelAssessment(taskId)}>取消初评</ActionButton>}
+ {(status.state==='error'||status.state==='cancelled')&&<ActionButton loading={busy} loadingLabel="准备中…" action="retry" variant="ghost" type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await retryBrowserAssessment(taskId);}catch(e){setError(e instanceof Error?e.message:'重试失败');}finally{setBusy(false);}}}>重试本地初评</ActionButton>}
+ {!readOnly&&status.reassessmentAvailable&&<ActionButton loading={busy} loadingLabel="准备中…" variant="ghost" type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error?e.message:'重新评估失败');}finally{setBusy(false);}}}>证据版本已更新，重新评估</ActionButton>}
  {(status.error||error)&&<span className="text-danger-fg">{error||status.error}</span>}
  </div>;
 }

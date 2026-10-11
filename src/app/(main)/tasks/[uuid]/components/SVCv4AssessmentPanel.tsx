@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 import * as React from 'react';
 import { evaluateSVCv4, getSVCv4Schema, type EvidenceSchema, type SVCv4Assessment, type SVCv4Schema } from '@/lib/svcv4';
 import type { SNVIndel } from '../types';
@@ -49,8 +51,8 @@ export function EvidenceFields({schema,root=schema,value,onChange,label,disabled
   if(resolved.type==='array') {
     const list=Array.isArray(value)?value:[];
     return <div className="space-y-2 rounded border border-border-subtle p-2"><div className="text-sm font-medium">{title}</div>
-      {list.map((item,index)=><div key={index} className="space-y-1"><EvidenceFields schema={resolved.items??{type:'string'}} root={root} value={item} label={`${title} ${index+1}`} disabled={disabled} depth={depth+1} onChange={v=>onChange(list.map((old,i)=>i===index?v:old))} /><button type="button" disabled={disabled} onClick={()=>onChange(list.filter((_,i)=>i!==index))} className="text-xs text-fg-muted">移除此项</button></div>)}
-      <button type="button" disabled={disabled||list.length>=100} onClick={()=>onChange([...list,resolved.items?.type==='string'?'':{}])} className="text-sm text-accent-fg">添加{title}</button>
+      {list.map((item,index)=><div key={index} className="space-y-1"><EvidenceFields schema={resolved.items??{type:'string'}} root={root} value={item} label={`${title} ${index+1}`} disabled={disabled} depth={depth+1} onChange={v=>onChange(list.map((old,i)=>i===index?v:old))} /><ActionButton action="delete" variant="ghost" type="button" disabled={disabled} onClick={()=>onChange(list.filter((_,i)=>i!==index))} className="text-xs text-fg-muted">移除此项</ActionButton></div>)}
+      <ActionButton action="add" variant="ghost" type="button" disabled={disabled||list.length>=100} onClick={()=>onChange([...list,resolved.items?.type==='string'?'':{}])} className="text-sm text-accent-fg">添加{title}</ActionButton>
     </div>;
   }
   const choices=resolved.enum??(resolved.type==='boolean'?['true','false']:undefined);
@@ -91,7 +93,7 @@ export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,o
       <EvidenceFields schema={{type:'array',items:schema.case}} root={schema.case} value={draft.inputs.cases} label="临床病例" disabled={readOnly||busy} onChange={v=>evidence('cases',v)} />
       <EvidenceFields schema={schema.caseControl} value={draft.inputs.caseControl} label="病例对照研究" disabled={readOnly||busy} onChange={v=>evidence('caseControl',v)} />
       <EvidenceFields schema={schema.case} value={draft.inputs.family} label="家系与位点特异性证据" disabled={readOnly||busy} onChange={v=>evidence('family',v)} />
-      <button type="button" onClick={()=>void calculate()} className="rounded border border-border-default px-3 py-2 text-sm">{busy?'处理中…':'计算新版评定'}</button>
+      <ActionButton loading={busy} loadingLabel="处理中…" action="start" variant="ghost" type="button" onClick={()=>void calculate()} className="rounded border border-border-default px-3 py-2 text-sm">计算新版评定</ActionButton>
     </fieldset>}
     {result&&!dirty&&<div className="space-y-2 rounded border border-border-subtle p-3 text-sm">
       <strong>{result.classification?ACMG_CONFIG[result.classification].label:'未评定'}{result.vusSubclass?` · ${result.vusSubclass}`:''} · {result.score??'—'} 分</strong>
@@ -100,7 +102,7 @@ export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,o
       <details open><summary>适用性、假设与计算依据</summary><ul className="list-disc space-y-1 pl-4 text-xs">{result.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>
       <label className="flex items-start gap-2"><input type="checkbox" disabled={readOnly||busy} checked={draft.confirmed} onChange={e=>setDraft(old=>({...old,confirmed:e.target.checked}))} /><span>我已核验疾病、证据适用性及上述草案假设，确认此参考评定。</span></label>
     </div>}
-    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label="新版证据调整理由" placeholder="本次新版证据调整理由（必填）" className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><button type="button" disabled={busy||dirty||!result} onClick={()=>void save()} className="rounded bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">保存新版评定</button></div>}
+    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label="新版证据调整理由" placeholder="本次新版证据调整理由（必填）" className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><ActionButton action="save" variant="ghost" type="button" disabled={busy||dirty||!result} onClick={()=>void save()} className="rounded bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">保存新版评定</ActionButton></div>}
     {error&&<p role="alert" className="text-sm text-danger-fg">{error}</p>}
   </div>;
 }

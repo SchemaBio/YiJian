@@ -1,9 +1,11 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Button } from '@schema/ui-kit';
+
 import { AlertCircle, CheckCircle, Database, Link2, Link2Off, Loader2 } from 'lucide-react';
 import { bindSampleDataAssets, clearSampleMatchedPair } from '@/lib/samples';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
@@ -82,7 +84,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         footer={
           <>
             <Button variant="secondary" disabled={saving} onClick={() => setMatchOpen(false)}>取消</Button>
-            <Button variant="primary" disabled={saving || !read1Id || !read2Id} leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} onClick={() => void save()}>{saving ? '保存中...' : '保存关联'}</Button>
+            <Button loading={saving} loadingLabel="保存中..." action="save" variant="primary" disabled={saving || !read1Id || !read2Id} leftIcon={<Link2 className="h-4 w-4" />} onClick={() => void save()}>保存关联</Button>
           </>
         }
       >
@@ -111,7 +113,7 @@ export function MatchingTab({ sample, onSampleUpdated }: MatchingTabProps) {
         onOpenChange={(open) => !saving && setClearOpen(open)}
         title="解除数据关联"
         size="small"
-        footer={<><Button variant="secondary" disabled={saving} onClick={() => setClearOpen(false)}>取消</Button><Button variant="danger" disabled={saving} onClick={() => void clear()}>{saving ? '处理中...' : '确认解除'}</Button></>}
+        footer={<><Button variant="secondary" disabled={saving} onClick={() => setClearOpen(false)}>取消</Button><Button loading={saving} loadingLabel="处理中..." variant="danger" disabled={saving} onClick={() => void clear()}>确认解除</Button></>}
       >
         <p className="text-sm text-fg-muted">解除后不会删除数据中心文件，系统可在下一轮重新进行自动匹配。</p>
       </AppModal>

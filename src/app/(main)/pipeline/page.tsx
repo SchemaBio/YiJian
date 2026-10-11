@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 import {useAuth} from '@/components/providers/AuthProvider';
@@ -6,8 +8,8 @@ import {useAuth} from '@/components/providers/AuthProvider';
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
 import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
-import { Button, DataTable, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { Database, Loader2, Pause, Pencil, Play, Plus, Search, Trash2, Workflow } from 'lucide-react';
+import { DataTable, Input, Select, Tag, type Column } from '@schema/ui-kit';
+import { Database, Loader2, Pause, Play, Search, Workflow } from 'lucide-react';
 import { api } from '@/lib/api';
 import {readResourcePages} from '@/lib/resource-pages';
 import {ResourcePager} from '@/components/shared/ResourcePager';
@@ -185,7 +187,7 @@ function PipelineModal({ open, title, initial, beds, baselines, onClose, onSubmi
     setSubmitting(true); setError('');
     try { await onSubmit(form); onClose(); } catch (err) { setError(err instanceof Error ? err.message : '保存流程失败'); } finally { setSubmitting(false); }
   };
-  return <AppModal open={open} onOpenChange={(next) => !next && !submitting && onClose()} title={title} size="large" footer={<><Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button><Button variant="primary" onClick={submit} disabled={!form.name.trim() || submitting} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}>{submitting ? '保存中...' : '保存流程'}</Button></>}>
+  return <AppModal open={open} onOpenChange={(next) => !next && !submitting && onClose()} title={title} size="large" footer={<><Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="保存中..." action="save" variant="primary" onClick={submit} disabled={!form.name.trim() || submitting} >保存流程</Button></>}>
     {error && <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}</div>}
     <PipelineFields form={form} setForm={setForm} beds={beds} baselines={baselines} />
   </AppModal>;
@@ -255,13 +257,13 @@ function PipelineListPageContent() {
     { id: 'bed', header: 'BED 文件', accessor: (row) => <HoverHint content={row.resourceError||row.bedFile}><span className="block truncate" >{row.bedFile}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{row.resourceError}</span>}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'cnv', header: 'CNV 基线', accessor: (row) => <HoverHint content={row.cnvBaseline}><span className="block truncate" >{row.cnvBaseline}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'status', header: '状态', accessor: (row) => <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>{row.status === 'active' ? '启用' : '停用'}</Tag>, width: 90, align: 'center' },
-    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <div className="flex justify-center gap-1"><HoverHint content="编辑"><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle hover:text-accent-fg"  onClick={() => setEditing(row)}><Pencil className="h-4 w-4" /></button></HoverHint><HoverHint content={row.status === 'active' ? '停用' : '启用'}><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"  onClick={() => void toggle(row)}>{row.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button></HoverHint><HoverHint content="删除"><button className="rounded p-1.5 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  onClick={() => setDeleting(row)}><Trash2 className="h-4 w-4" /></button></HoverHint></div>, width: 110, align: 'center' },
+    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <div className="flex justify-center gap-1"><HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost" className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle hover:text-accent-fg"  onClick={() => setEditing(row)} /></HoverHint><HoverHint content={row.status === 'active' ? '停用' : '启用'}><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"  onClick={() => void toggle(row)}>{row.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button></HoverHint><HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost" className="rounded p-1.5 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  onClick={() => setDeleting(row)} /></HoverHint></div>, width: 110, align: 'center' },
   ];
 
   return <PageContent className="yj-page-shell">
     <div className="yj-page-header"><h2 className="yj-page-title">流程列表</h2></div>
-    <div className="yj-toolbar-panel"><div className="w-full sm:w-64"><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索流程..." leftElement={<Search className="h-4 w-4" />} /></div><Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>新建流程</Button></div>
-    {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<button type="button" className="yj-tool-button ml-3" onClick={()=>void load()}>重试</button></div>}
+    <div className="yj-toolbar-panel"><div className="w-full sm:w-64"><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索流程..." leftElement={<Search className="h-4 w-4" />} /></div><Button action="add" variant="primary"  onClick={() => setCreating(true)}>新建流程</Button></div>
+    {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>void load()}>重试</ActionButton></div>}
     {loading ? <div role="status" className="yj-panel flex items-center justify-center gap-2 py-12 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载流程…</div> : filtered.length ? <div className="min-w-0 overflow-x-auto"><div className="min-w-[1100px]"><DataTable data={filtered.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped /></div></div> : !error && <EmptyState className="yj-panel" icon={<Workflow />} title={search.trim()?'未找到匹配流程':'暂无分析流程'} description={search.trim()?'调整搜索条件后重试。':'可基于内置 WES 流程建立组织自己的分析流程。'} />}
     <ResourcePager page={page} total={filtered.length} onChange={setPage}/><PipelineModal open={creating} title="新建分析流程" initial={EMPTY_FORM} beds={beds} baselines={baselines} onClose={() => setCreating(false)} onSubmit={create} />
     <PipelineModal open={editing !== null} title="编辑分析流程" initial={initialEdit} beds={beds} baselines={baselines} onClose={() => setEditing(null)} onSubmit={update} />

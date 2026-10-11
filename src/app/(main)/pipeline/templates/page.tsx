@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 import {ResourcePager} from '@/components/shared/ResourcePager';
@@ -6,17 +8,8 @@ import {useAuth} from '@/components/providers/AuthProvider';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import {
-  Button,
-  Input,
-  Select,
-  DataTable,
-  Tag,
-  FormItem,
-  TextArea,
-  type Column,
-} from '@schema/ui-kit';
-import { Plus, Search, Pencil, Trash2, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces, Share2 } from 'lucide-react';
+import { Input, Select, DataTable, Tag, FormItem, TextArea, type Column } from '@schema/ui-kit';
+import { Search, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces, Share2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AppModal, EmptyState } from '@/components/shared';
 import { ReportEndpointExamples } from './ReportEndpointExamples';
@@ -393,21 +386,17 @@ function ReportTemplatesPageContent() {
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-1">
           {row.scope==='personal'&&row.canMaintain&&<HoverHint content="共享到当前组织"><button type="button" className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors" onClick={async()=>{try{await api.post(`/v1/report-templates/${row.id}/publish`,{expectedRevision:row.revision});await refreshTemplates()}catch(e){setError(e instanceof Error?e.message:'共享失败')}}}><Share2 className="w-4 h-4" /></button></HoverHint>}
-          <HoverHint content="编辑"><button
+          <HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost"
             className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 
             disabled={!row.canMaintain} onClick={() => handleEdit(row)}
-          >
-            <Pencil className="w-4 h-4" />
-          </button></HoverHint>
-          <HoverHint content="删除"><button
+           /></HoverHint>
+          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost"
             className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 
             onClick={() => handleDelete(row)}
             disabled={!row.canMaintain || row.status === 'active'}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button></HoverHint>
+           /></HoverHint>
           <HoverHint content={row.status === 'active' ? '停用' : '启用'}><button
             className={`p-1.5 rounded transition-colors ${
               row.status === 'active'
@@ -449,14 +438,14 @@ function ReportTemplatesPageContent() {
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAdd}>
+        <Button action="add" variant="primary"  onClick={handleAdd}>
           添加报告服务
         </Button>
       </div>
 
       {error && (
         <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {error}<button type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>重试读取</button>
+          {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>重试读取</ActionButton>
         </div>
       )}
 
@@ -494,11 +483,11 @@ function ReportTemplatesPageContent() {
             <Button variant="secondary" onClick={() => setIsModalOpen(false)} disabled={loading}>
               取消
             </Button>
-            <Button
+            <Button loading={loading} action="save"
               variant="primary"
               onClick={handleSubmit}
               disabled={!isFormValid || loading}
-              leftIcon={loading ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+
             >
               {loading ? (editingId ? '保存中...' : '创建中...') : (editingId ? '保存' : '创建')}
             </Button>
@@ -558,16 +547,16 @@ function ReportTemplatesPageContent() {
                   leftElement={<Link className="w-4 h-4" />}
                   className="min-w-0 flex-1"
                 />
-                <Button
+                <Button loading={testingApi} loadingLabel="测试中..."
                   type="button"
                   variant="secondary"
                   size="medium"
                   onClick={handleTestApi}
                   disabled={testingApi || !formData.apiEndpoint || (!editingId && !formData.apiKey.trim())}
-                  leftIcon={testingApi ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  leftIcon={<CheckCircle className="h-4 w-4" />}
                   className="yj-tool-button min-w-[116px] shrink-0 whitespace-nowrap"
                 >
-                  {testingApi ? '测试中...' : '测试连接'}
+                  测试连接
                 </Button>
               </div>
               {apiTestResult && (
@@ -624,7 +613,7 @@ function ReportTemplatesPageContent() {
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
             取消
           </Button>
-          <Button variant="danger" onClick={confirmDelete}>
+          <Button action="delete" variant="danger" onClick={confirmDelete}>
             确认删除
           </Button>
          </>}>

@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input } from '@schema/ui-kit';
-import { X } from 'lucide-react';
+import { Input } from '@schema/ui-kit';
+
 import { AppModal } from '@/components/shared';
 import type { AnalysisTask } from '@/types/task';
 
@@ -80,7 +82,7 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存</Button>
+          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存</Button>
         </>
       }
     >

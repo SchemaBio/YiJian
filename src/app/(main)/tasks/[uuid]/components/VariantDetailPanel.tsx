@@ -1,11 +1,13 @@
 'use client';
+import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
+
 import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { VariantResourceLinks } from './VariantResourceLinks';
 import { ClinVarBadge } from './ClinVarBadge';
-import { X, ExternalLink, FileText, Database, Dna, Edit2, Check, Plus, Trash2, MessageSquare } from 'lucide-react';
+import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
@@ -188,8 +190,8 @@ function ACMGPointsEditor({
     {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder="人工覆写理由（必填）" className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
     <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={changed ? '本次证据调整理由（必填）' : '调整理由（如有）'} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
     {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
-    <button type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason('恢复当前版本自动初评基线'); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">恢复自动基线后保存</button>
-    <div className="flex gap-2"><button type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50"><Check className="h-4 w-4" />{saving ? '保存中…' : '保存证据与分类'}</button><button type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">取消</button></div>
+    <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason('恢复当前版本自动初评基线'); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">恢复自动基线后保存</ActionButton>
+    <div className="flex gap-2"><ActionButton loading={saving} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">保存证据与分类</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">取消</ActionButton></div>
   </div>;
 }
 
@@ -254,7 +256,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     setVersionBusy(true);setVersionError('');
     try{await saveVersioned({activeAcmgVersion:version},versionReason.trim());if(selectedRef.current===variant.id)setVersionReason('');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error?e.message:'切换失败');}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
   };
-  
+
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
   const vaf = optionalAnnotationNumber(sourceAnnotation(variant, 'VAF'));
 
@@ -302,13 +304,11 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <h3 className="text-base font-medium text-fg-default">变异详情</h3>
             {activeConfig ? <Tag variant={activeConfig.variant}>{variant.activeAcmgVersion==='svcv4'&&variant.svcv4Assessment?.result?.vusSubclass?variant.svcv4Assessment.result.vusSubclass:activeConfig.label}</Tag> : <Tag variant="neutral">ACMG 未评定</Tag>}
           </div>
-          <button
+          <IconActionButton label="关闭" action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-            aria-label="关闭"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+           />
         </div>
 
         <div className="yj-inspector-summary">
@@ -334,7 +334,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <div className="mt-2 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
-                <button type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{interpretationSaving ? '保存中…' : '保存人工解读'}</button>
+                <ActionButton loading={interpretationSaving} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">保存人工解读</ActionButton>
               </div>
               {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
             </div>
@@ -366,13 +366,13 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 title="ACMG 分类"
                 action={
                   canEditACMG && !isEditingACMG && (
-                    <button
+                    <ActionButton action="edit" variant="ghost"
                       onClick={() => setIsEditingACMG(true)}
                       className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
                     >
-                      <Edit2 className="w-3 h-3" />
+
                       编辑
-                    </button>
+                    </ActionButton>
                   )
                 }
               />

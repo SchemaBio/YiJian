@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Input, TextArea, Tag } from '@schema/ui-kit';
-import { X, Search, Check, Plus, Trash2 } from 'lucide-react';
+import { Input, TextArea, Tag } from '@schema/ui-kit';
+import { Search, Check } from 'lucide-react';
 import { AppModal } from '@/components/shared';
 import { listSamples } from '@/lib/samples';
 import type { PedigreeListItem } from '../types';
@@ -173,7 +175,7 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button
+          <Button action="save"
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={formData.sampleIds.length === 0 || !formData.probandSampleId || submitting}
@@ -228,9 +230,7 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
                       {!isProband && (
                         <button type="button" onClick={() => handleSetProband(sampleId)} className="text-xs text-accent-fg hover:underline">设为先证者</button>
                       )}
-                      <button type="button" onClick={() => handleRemoveSample(sampleId)} aria-label={`移除样本 ${sample?.internalId || sampleId}`} className="p-1 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" onClick={() => handleRemoveSample(sampleId)} aria-label={`移除样本 ${sample?.internalId || sampleId}`} className="p-1 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors" />
                     </div>
                   </div>
                 );

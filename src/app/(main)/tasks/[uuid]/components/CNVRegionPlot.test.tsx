@@ -5,7 +5,7 @@ import { CNVRegionPlot } from './CNVRegionPlot';
 import { getCNVSegments } from '../result-api';
 import type { CNVSegment } from '../types';
 
-vi.mock('@schema/ui-kit', () => ({ useTheme: () => ({ resolvedTheme: 'light' }) }));
+vi.mock('@schema/ui-kit', async importOriginal => ({ ...await importOriginal<typeof import('@schema/ui-kit')>(), useTheme: () => ({ resolvedTheme: 'light' }) }));
 vi.mock('@/components/shared', () => ({
   AppModal: ({ children }: { children: React.ReactNode }) => {
     const [mounted, setMounted] = React.useState(false);

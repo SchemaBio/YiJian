@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -6,8 +8,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState } from '@/components/shared';
-import { Button, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { AlertTriangle, Coins, Database, ExternalLink, Loader2, Plus, Search } from 'lucide-react';
+import { DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
+import { AlertTriangle, Coins, Database, ExternalLink, Loader2, Search } from 'lucide-react';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { createCNVBaseline, listCNVBaselines, type CNVBaseline, type CNVBaselineStatus } from '@/lib/cnv-baselines';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -171,12 +173,12 @@ export default function BaselinePage() {
       </div>
       <div className="yj-toolbar-panel">
         <div className="w-full sm:w-72"><Input placeholder="搜索名称、基因组或 BED..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
-        <Button variant="primary" className="shrink-0 whitespace-nowrap" leftIcon={<Plus className="h-4 w-4" />} disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
+        <Button action="add" variant="primary" className="shrink-0 whitespace-nowrap"  disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
       </div>
-      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><button type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>重试读取</button></div>}
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>重试读取</ActionButton></div>}
       {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <div className="min-w-0 overflow-x-auto"><div className="min-w-[1420px]"><DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped /></div></div>}
 
-      <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}>{submitting ? '正在投递...' : '启动校正流程'}</Button></>}>
+      <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
         <div className="space-y-5">
           <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
           {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}

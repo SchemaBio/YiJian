@@ -3,6 +3,8 @@ export type { AppModalProps } from './AppModal';
 export { MetricTile } from './MetricTile';
 export { EmptyState } from './EmptyState';
 export { FilePicker } from './FilePicker';
+export { ActionButton, IconActionButton, ACTION_ICONS } from './ActionButton';
+export type { ActionButtonProps, IconActionButtonProps, ButtonAction } from './ActionButton';
 
 export { IdCell, HoverText } from './IdCell';
 

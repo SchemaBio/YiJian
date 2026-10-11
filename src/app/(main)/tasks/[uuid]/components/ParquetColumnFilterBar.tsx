@@ -1,7 +1,9 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Download, X, ListFilter, Bookmark } from 'lucide-react';
+import { ListFilter, Bookmark } from 'lucide-react';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import type { TableFilterState } from '../types';
 import { exportEffectiveTable } from '../result-api';
@@ -119,7 +121,7 @@ export function ParquetColumnFilterBar({
   return (
     <div className="yj-filter-tools mb-2 flex flex-wrap items-center gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        {taskId && table && <button type="button" disabled={exporting} onClick={() => void exportTable()} className="yj-tool-button order-3"><Download className="h-3.5 w-3.5" />{exporting ? '导出中' : '导出 CSV'}</button>}
+        {taskId && table && <ActionButton loading={exporting} loadingLabel="导出中" action="download" variant="ghost" type="button" disabled={exporting} onClick={() => void exportTable()} className="yj-tool-button order-3">导出 CSV</ActionButton>}
         <ToolbarPopover label="添加筛选" icon={<ListFilter size={14} />}><div className="grid gap-3">
         <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {columns.map(item => <option key={item} value={item}>{label(item)}</option>)}
@@ -135,13 +137,13 @@ export function ParquetColumnFilterBar({
       {viewsURL&&<div className="flex flex-wrap items-center gap-2 text-xs">
 
         <ToolbarPopover label="筛选视图" icon={<Bookmark size={14} />}><div className="grid gap-3">
-        <button type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</button>
+        <ActionButton action="refresh" variant="ghost" type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</ActionButton>
         <select aria-label="加载个人筛选方案" value={selectedView} className="h-8 max-w-[180px] rounded border border-border-default bg-canvas-default px-2" onChange={event=>setSelectedView(event.target.value)}>
           <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
         </select>
         <button type="button" disabled={!selectedView} onClick={applyView} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">应用方案</button>
         <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="方案名称" className="h-8 w-32 rounded border border-border-default bg-canvas-default px-2" />
-        <button type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">{viewSaving?'保存中':'保存方案'}</button>
+        <ActionButton loading={viewSaving} loadingLabel="保存中" action="save" variant="ghost" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">保存方案</ActionButton>
         </div></ToolbarPopover>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
       </div>}
       {viewControls}
@@ -153,7 +155,7 @@ export function ParquetColumnFilterBar({
             const shown = Array.isArray(filter.value) ? filter.value.join(' / ') : filter.value;
             return <span key={filter.column} className="inline-flex items-center gap-1 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs text-fg-default">
               {label(filter.column)} {op}{shown ? ` ${shown}` : ''}
-              <button type="button" aria-label={`移除${label(filter.column)}筛选`} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset"><X className="h-3 w-3" /></button>
+              <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" aria-label={`移除${label(filter.column)}筛选`} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset" />
             </span>;
           })}
         </div>

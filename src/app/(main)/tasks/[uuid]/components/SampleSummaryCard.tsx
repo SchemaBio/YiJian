@@ -6,7 +6,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 import * as React from 'react';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import { Tag } from '@schema/ui-kit';
-import { User, Calendar, FlaskConical, HeartPulse, Users } from 'lucide-react';
+import { User, Calendar, HeartPulse, Users } from 'lucide-react';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import { GENDER_CONFIG } from '@/app/(main)/samples/types';
 

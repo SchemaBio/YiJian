@@ -1,4 +1,6 @@
 'use client';
+import { type ButtonAction, ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+
 import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByInterpretation, runningStatusClass, type TaskDisplayStatus } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
 
@@ -6,9 +8,9 @@ import { HoverHint } from '@/components/shared/HoverHint';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { Button, Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
+import { Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Search, Plus, RotateCcw, Play, Square, Pencil, Trash2, BookOpen, Eye, ChevronDown, Loader2, AlertTriangle, FileSpreadsheet, List, MoreHorizontal, Clock } from 'lucide-react';
+import { Search, ChevronDown, Loader2, AlertTriangle, List } from 'lucide-react';
 import { NewTaskModal, BatchTaskModal, EditTaskModal } from './components';
 import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
@@ -184,12 +186,12 @@ function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
-    if (task.interpretationCompletedAt) return { label: '完成', icon: BookOpen, onClick: () => onView(task), className: 'border-border-default bg-canvas-subtle text-fg-muted hover:bg-canvas-inset' };
+    if (task.interpretationCompletedAt) return { label: '完成', action: 'completed' as ButtonAction, onClick: () => onView(task), className: 'border-border-default bg-canvas-subtle text-fg-muted hover:bg-canvas-inset' };
     if (task.executionPhase === 'terminating') return null;
     if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
       return {
         label: task.status === 'completed' ? '释放节点' : '取消',
-        icon: Square,
+        action: 'stop' as ButtonAction,
         onClick: () => onStop(task.id),
         className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
       };
@@ -198,7 +200,7 @@ function TaskActionsCell({
       case 'waiting_for_data':
         return {
           label: '等待',
-          icon: Clock,
+          action: 'wait' as ButtonAction,
           onClick: undefined,
           disabled: true,
           className: 'border-border-default bg-canvas-subtle text-fg-muted cursor-default',
@@ -206,14 +208,14 @@ function TaskActionsCell({
       case 'queued':
         return {
           label: '启动',
-          icon: Play,
+          action: 'start' as ButtonAction,
           onClick: () => onStart(task.id),
           className: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100',
         };
       case 'running':
         return {
           label: '取消',
-          icon: Square,
+          action: 'stop' as ButtonAction,
           onClick: () => onStop(task.id),
           className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
         };
@@ -221,7 +223,7 @@ function TaskActionsCell({
       case 'completed':
         return {
           label: '解读',
-          icon: BookOpen,
+          action: 'interpret' as ButtonAction,
           onClick: () => onView(task),
           className: 'border-sky-200 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100',
         };
@@ -229,7 +231,7 @@ function TaskActionsCell({
       case 'failed':
         return {
           label: '重试',
-          icon: RotateCcw,
+          action: 'retry' as ButtonAction,
           onClick: () => onRetry(task.id),
           className: 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300 hover:bg-amber-100',
         };
@@ -254,39 +256,37 @@ function TaskActionsCell({
         onClick={(event) => event.stopPropagation()}
       >
         {primaryAction && (
-          <button
+          <ActionButton action={primaryAction.action} size="small" loading={isLoading} loadingLabel="处理中" variant="ghost"
             type="button"
             onClick={primaryAction.onClick}
             disabled={isLoading || primaryAction.disabled}
             aria-label={primaryAction.label}
-            className={`task-primary-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors ${isLoading ? 'cursor-wait opacity-60' : primaryAction.disabled ? '' : 'active:translate-y-px'} ${primaryAction.className}`}
+            className={`task-primary-action inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors ${isLoading ? 'cursor-wait opacity-60' : primaryAction.disabled ? '' : 'active:translate-y-px'} ${primaryAction.className}`}
           >
-            {isLoading ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <primaryAction.icon className="h-3.5 w-3.5 shrink-0" />}
-            {isLoading ? '处理中' : primaryAction.label}
-          </button>
+
+            {primaryAction.label}
+          </ActionButton>
         )}
 
-        <HoverHint content="查看详情"><button
+        <HoverHint content="查看详情"><ActionButton size="small" action="view" variant="ghost"
           type="button"
           onClick={() => onDetails(task)}
           aria-label={`查看任务 ${task.internalId || task.id} 详情`}
 
           className="task-detail-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-border-default bg-canvas-default px-2 text-xs font-medium text-fg-default transition-colors hover:bg-canvas-subtle whitespace-nowrap"
         >
-          <Eye className="h-3.5 w-3.5 shrink-0" />
+
           <span className="task-detail-label">查看详情</span>
-        </button></HoverHint>
+        </ActionButton></HoverHint>
 
         <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
           <HoverHint content="更多操作"><PopoverPrimitive.Trigger asChild>
-            <button
+            <ActionButton size="small" iconOnly action="more" variant="ghost"
               type="button"
               className="task-more-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
               aria-label="更多任务操作"
 
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
+             />
           </PopoverPrimitive.Trigger></HoverHint>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
@@ -298,7 +298,7 @@ function TaskActionsCell({
               className="z-50 w-44 overflow-hidden rounded-lg border border-border-default bg-canvas-default p-1.5 shadow-[0_10px_30px_rgba(17,24,39,0.14)] outline-none"
             >
               <div role="menu" aria-label="任务操作">
-                <HoverHint content={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'}><button
+                <HoverHint content={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'}><ActionButton action="edit" variant="ghost"
                   type="button"
                   role="menuitem"
                   disabled={!canEdit}
@@ -309,10 +309,10 @@ function TaskActionsCell({
                   }}
                   className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-fg-default transition-colors hover:bg-canvas-subtle disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                 >
-                  <Pencil className="h-4 w-4 text-fg-muted" />
+
                   编辑任务
-                </button></HoverHint>
-                <HoverHint content="删除任务"><button
+                </ActionButton></HoverHint>
+                <HoverHint content="删除任务"><ActionButton action="delete" variant="ghost"
                   type="button"
                   role="menuitem"
                   disabled={!canDelete}
@@ -323,9 +323,9 @@ function TaskActionsCell({
                   }}
                   className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-danger-fg transition-colors hover:bg-danger-subtle disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-40 disabled:hover:bg-transparent"
                 >
-                  <Trash2 className="h-4 w-4" />
+
                   删除任务
-                </button></HoverHint>
+                </ActionButton></HoverHint>
                 {!canEdit && (
                   <p className="mx-2 mt-1 border-t border-border-muted pt-2 pb-1 text-[11px] leading-4 text-fg-muted">
                     {task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止任务再进行修改'}
@@ -680,8 +680,8 @@ export default function AnalysisPage() {
             <div className="yj-task-heading">
               <div><h2 className="yj-page-title">任务中心</h2><p className="yj-page-subtitle">跟踪分析进度，进入结果判读。</p></div>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setIsBatchTaskModalOpen(true)}>批量新建</Button>
-                <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsNewTaskModalOpen(true)}>新建任务</Button>
+                <Button action="add" variant="secondary"  onClick={() => setIsBatchTaskModalOpen(true)}>批量新建</Button>
+                <Button action="add" variant="primary"  onClick={() => setIsNewTaskModalOpen(true)}>新建任务</Button>
               </div>
             </div>
 
@@ -717,7 +717,7 @@ export default function AnalysisPage() {
                   </span>
                   <p className="text-sm font-medium text-[var(--yj-text-strong)] mb-1">任务列表暂不可用</p>
                   <p className="text-sm text-danger-fg mb-4">{error}</p>
-                  <Button variant="secondary" onClick={refetch}>重试</Button>
+                  <Button action="retry" variant="secondary" onClick={refetch}>重试</Button>
                 </div>
               </div>
             )}

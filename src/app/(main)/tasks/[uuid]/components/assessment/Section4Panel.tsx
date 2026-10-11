@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import { Tooltip } from '@schema/ui-kit';
-import { HelpCircle, Plus, Minus } from 'lucide-react';
+import { HelpCircle, Minus } from 'lucide-react';
 import type { Section4Criteria } from '../../types';
 
 interface Section4PanelProps {
@@ -49,14 +51,12 @@ function Counter({
           <Minus className="w-4 h-4" />
         </button>
         <span className="w-8 text-center font-mono text-sm">{value}</span>
-        <button
+        <ActionButton size="small" iconOnly action="add" variant="ghost"
           type="button"
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
           className="p-1 rounded border border-border hover:bg-canvas-subtle disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+         />
       </div>
     </div>
   );

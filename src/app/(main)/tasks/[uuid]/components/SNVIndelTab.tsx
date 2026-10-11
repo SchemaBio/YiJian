@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -439,7 +441,7 @@ export function SNVIndelTab({
             </select>
           </div>
 
-          <button className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</button>
+          <ActionButton action="refresh" variant="ghost" className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</ActionButton>
 
           {/* ACMG筛选 */}
           <select
@@ -497,20 +499,20 @@ export function SNVIndelTab({
                 第 {filterState.page} / {totalPages} 页
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
                   上一页
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
                   下一页
-                </button>
+                </ActionButton>
               </div>
             </div>
           )}

@@ -8,7 +8,7 @@ import { igvSVGToPNG } from '@/lib/igv-snapshot';
 import type { IGVSession } from '../types';
 
 vi.mock('igv/dist/igv.esm.js', () => ({ default: { createBrowser: vi.fn(), removeBrowser: vi.fn() } }));
-vi.mock('@schema/ui-kit', () => ({ Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock('@schema/ui-kit', async importOriginal => ({ ...await importOriginal<typeof import('@schema/ui-kit')>(), Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('@/components/shared', () => ({ AppModal: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('../result-api', () => ({ getIGVSession: vi.fn(), getIGVTrackURLs: vi.fn(), getIGVSnapshot: vi.fn(), saveIGVSnapshot: vi.fn() }));
 

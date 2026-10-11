@@ -1,12 +1,14 @@
 ﻿'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { Button, DataTable } from '@schema/ui-kit';
+import { DataTable } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
-import { Clock3, Coins, CreditCard, Gauge, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Clock3, Coins, CreditCard, Gauge, Loader2, ShieldCheck } from 'lucide-react';
 import {
   billingReferenceTaskId,
   getBillingBalance,
@@ -156,10 +158,10 @@ export default function BillingSettingsPage() {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <SupportDialog trigger="button" context="billing" />
-          <Button
+          <Button action="refresh"
             variant="secondary"
             className="min-w-[88px] justify-center"
-            leftIcon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+
             onClick={() => void loadData(page)}
             disabled={isLoading}
           >

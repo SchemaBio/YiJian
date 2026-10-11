@@ -1,7 +1,9 @@
 'use client';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button } from '@schema/ui-kit';
+
 import { CheckCircle2, Coins, Download, FileSpreadsheet, Loader2, Upload, XCircle } from 'lucide-react';
 import { AppModal } from '@/components/shared';
 import { ApiError } from '@/lib/api';

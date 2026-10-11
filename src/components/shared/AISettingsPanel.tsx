@@ -1,4 +1,6 @@
 'use client';
+import { ActionButton } from '@/components/shared/ActionButton';
+
 import * as React from 'react';
 import { Sparkles } from 'lucide-react';
 import { useAIAssistance } from '@/components/providers/AIAssistanceProvider';
@@ -24,9 +26,9 @@ export function AISettingsPanel({ admin }: { admin: boolean }) {
       </div>
       {settings.keyConfigured && <label className="flex items-center gap-2 text-xs text-fg-muted"><input type="checkbox" checked={draft.clearKey} onChange={event => setDraft({ ...draft, clearKey: event.target.checked })} />清除已保存的 Key</label>}
       <p className="text-xs text-fg-muted">Key 不回显、不写入浏览器存储。</p>
-      <button type="button" disabled={busy || !settings.connected || (draft.enabled && (!draft.baseUrl.trim() || !draft.model.trim() || (!draft.apiKey.trim() && !settings.keyConfigured)))} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
+      <ActionButton loading={busy} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={busy || !settings.connected || (draft.enabled && (!draft.baseUrl.trim() || !draft.model.trim() || (!draft.apiKey.trim() && !settings.keyConfigured)))} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
         setBusy(true); setMessage(''); try { const saved = await adapter.saveSettings(draft); setSettings(saved); setDraft(previous => ({ ...previous, apiKey: '', clearKey: false })); setMessage('AI 配置已保存'); } catch (cause) { setMessage(cause instanceof Error ? cause.message : '保存失败'); } finally { setBusy(false); }
-      }}>{busy ? '保存中…' : '保存 AI 配置'}</button>
+      }}>保存 AI 配置</ActionButton>
       {message && <p role="status" className="text-sm">{message}</p>}
     </>}
   </section>;

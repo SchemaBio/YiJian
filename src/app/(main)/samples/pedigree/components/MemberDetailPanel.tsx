@@ -1,8 +1,10 @@
 'use client';
+import { ActionButton as Button, IconActionButton } from '@/components/shared/ActionButton';
+
 
 import * as React from 'react';
-import { Button, Tag } from '@schema/ui-kit';
-import { X, User, Link2, Trash2, Pencil } from 'lucide-react';
+import { Tag } from '@schema/ui-kit';
+import { User, Link2 } from 'lucide-react';
 import type { PedigreeMember } from '../types';
 import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';
 import { GENDER_CONFIG } from '../../types';
@@ -38,13 +40,11 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
           <User className="w-4 h-4 text-fg-muted" />
           <span className="font-medium text-fg-default">{member.name}</span>
         </div>
-        <button
+        <IconActionButton label="关闭成员详情" action="close" variant="ghost"
           onClick={onClose}
-          aria-label="关闭成员详情"
+
           className="p-1 rounded hover:bg-canvas-inset text-fg-muted hover:text-fg-default transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+         />
       </div>
 
       {/* 内容 */}
@@ -54,22 +54,22 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
           <h4 className="text-xs font-medium text-fg-muted">基本信息</h4>
           <div className="grid grid-cols-2 gap-3">
             <InfoItem label="姓名" value={member.name} />
-            <InfoItem 
-              label="性别" 
-              value={<span className={genderInfo.color}>{genderInfo.label}</span>} 
+            <InfoItem
+              label="性别"
+              value={<span className={genderInfo.color}>{genderInfo.label}</span>}
             />
             <InfoItem label="关系" value={relationInfo.label} />
-            <InfoItem 
-              label="出生年份" 
-              value={member.birthYear ? `${member.birthYear}年` : '-'} 
+            <InfoItem
+              label="出生年份"
+              value={member.birthYear ? `${member.birthYear}年` : '-'}
             />
-            <InfoItem 
-              label="状态" 
+            <InfoItem
+              label="状态"
               value={
-                member.isDeceased 
+                member.isDeceased
                   ? <span className="text-fg-muted">已故 {member.deceasedYear ? `(${member.deceasedYear})` : ''}</span>
                   : <span className="text-success-fg">在世</span>
-              } 
+              }
             />
           </div>
         </div>
@@ -78,7 +78,7 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
         <div className="space-y-3">
           <h4 className="text-xs font-medium text-fg-muted">患病状态</h4>
           <div className="space-y-2">
-            <Tag 
+            <Tag
               variant={
                 member.affectedStatus === 'affected' ? 'danger' :
                 member.affectedStatus === 'carrier' ? 'warning' :
@@ -120,10 +120,10 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
       {/* 底部操作 */}
       <div className="p-4 border-t border-border-default space-y-2">
         {isEditMode && (
-          <Button
+          <Button action="edit"
             variant="secondary"
             className="w-full"
-            leftIcon={<Pencil className="w-4 h-4" />}
+
             onClick={() => onEditMember?.(member)}
           >
             编辑成员信息
@@ -140,10 +140,10 @@ export function MemberDetailPanel({ member, isEditMode, onClose, onEditMember, o
           </Button>
         )}
         {member.relation !== 'proband' && (
-          <Button
+          <Button action="delete"
             variant="ghost"
             className="w-full text-danger-fg hover:bg-danger-subtle"
-            leftIcon={<Trash2 className="w-4 h-4" />}
+
             onClick={() => onRemoveMember?.(member.id)}
           >
             移除成员
