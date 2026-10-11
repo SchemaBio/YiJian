@@ -204,7 +204,6 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
   const [interpretation, setInterpretation] = React.useState('');
-  const [versionReason,setVersionReason]=React.useState('');
   const [versionBusy,setVersionBusy]=React.useState(false);
   const [versionError,setVersionError]=React.useState('');
   const [interpretationSaving, setInterpretationSaving] = React.useState(false);
@@ -223,7 +222,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     setLocalClassification(null);
     setLocalCriteria(null);
     setInterpretation(variant?.interpretation ?? '');
-    setVersionReason('');setVersionError('');setVersionBusy(false);
+    setVersionError('');setVersionBusy(false);
     setInterpretationError('');
     setInterpretationSaving(false);
   }, [variant?.id]);
@@ -252,9 +251,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     }
   };
   const selectVersion=async(version:'legacy'|'svcv4')=>{
-    if(!versionReason.trim()){setVersionError('请填写版本切换理由');return;}
+    if(readOnly || versionBusy || !onSaveVersionedAssessment)return;
     setVersionBusy(true);setVersionError('');
-    try{await saveVersioned({activeAcmgVersion:version},versionReason.trim());if(selectedRef.current===variant.id)setVersionReason('');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error?e.message:'切换失败');}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
+    try{await saveVersioned({activeAcmgVersion:version},'');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error?e.message:'切换失败');}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
   };
 
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
@@ -347,8 +346,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               sections={['acmg', 'svcv4']} labels={{ acmg: '现版', svcv4: 'SVC v4.0版' }} ariaLabel="ACMG 计算器版本" />
             <div id="variant-acmg-calculator-content" role="tabpanel" aria-labelledby={`variant-acmg-calculator-${acmgTab}`} className="pt-3">
             {!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
-              <input aria-label="版本切换理由" placeholder="版本切换理由（必填）" className="w-full rounded border border-border-default bg-canvas-default p-2 text-sm" value={versionReason} onChange={e=>setVersionReason(e.target.value)} />
-              <button type="button" disabled={versionBusy||(variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4')||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')} className="rounded border border-border-default px-3 py-1.5 text-sm disabled:opacity-50">{versionBusy?'切换中…':`采用${acmgTab==='acmg'?'现版':'SVC v4.0试行'}结果`}</button>
+              <ActionButton action="completed" type="button" loading={versionBusy} loadingLabel="切换中…" disabled={(variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4')||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')}>采用{acmgTab==='acmg'?'现版':'SVC v4.0试行'}结果</ActionButton>
               {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
             </div>}
               <section hidden={acmgTab !== 'svcv4'}>

@@ -35,7 +35,7 @@ describe('same-screen interpretation', () => {
     await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({id:'A'}),'',''));
   });
 
-  it('browses both assessment tabs without adoption and requires a reason to adopt', async () => {
+  it('browses both assessment tabs without adoption and adopts without entering a reason', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const assessed = {...variant('A'), activeAcmgVersion:'legacy' as const, svcv4Assessment:{revision:'fixed',source:'https://example.org',authoritative:false,disease:'疾病',moi:'AD',confirmed:true,inputs:{},result:{state:'classified',classification:'VUS',score:0,vusSubclass:'VUS-low',warnings:[],breakdown:{},details:{}}}} as SNVIndel;
     render(<VariantDetailPanel taskId="task" variant={assessed} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
@@ -51,11 +51,19 @@ describe('same-screen interpretation', () => {
     expect(save).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('tab',{name:'SVC v4.0版'}));
     fireEvent.click(screen.getByRole('button',{name:'采用SVC v4.0试行结果'}));
-    expect(screen.getByText('请填写版本切换理由')).toBeVisible();
-    expect(save).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('版本切换理由'),{target:{value:'完成复核，采用试行结果'}});
-    fireEvent.click(screen.getByRole('button',{name:'采用SVC v4.0试行结果'}));
-    await waitFor(()=>expect(save).toHaveBeenCalledWith(assessed,{activeAcmgVersion:'svcv4'},'完成复核，采用试行结果'));
+    expect(screen.queryByLabelText('版本切换理由')).not.toBeInTheDocument();
+    await waitFor(()=>expect(save).toHaveBeenCalledWith(assessed,{activeAcmgVersion:'svcv4'},''));
+  });
+
+  it('shows both AI entries even when the AI service is unavailable', async () => {
+    render(<VariantDetailPanel taskId="task" variant={variant('A')} isOpen onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ACMG' }));
+    expect(screen.getByRole('button', { name: 'AI 生成ACMG 现版建议' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'AI 生成ACMG 现版建议' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('tab', { name: 'SVC v4.0版' }));
+    await screen.findByRole('button', { name: '计算新版评定' });
+    expect(screen.getByRole('button', { name: 'AI 生成SVC v4.0 草案实验' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'AI 生成SVC v4.0 草案实验' })).toBeDisabled();
   });
 
   it('retains an interpretation draft when visiting evidence and returning', async () => {
