@@ -18,11 +18,15 @@
 .yj-action-button:focus-visible { outline: 2px solid var(--color-accent-emphasis); outline-offset: 2px; }
 .yj-action-button:disabled { cursor: default; }
 .yj-action-button[role='menuitem'] { justify-content: flex-start; }
-.task-primary-action[data-action='start'] { color: var(--color-success-fg); background: var(--color-success-subtle); border-color: var(--color-success-muted); }
-.task-primary-action[data-action='stop'] { color: var(--color-danger-fg); background: var(--color-danger-subtle); border-color: var(--color-danger-muted); }
-.task-primary-action[data-action='retry'] { color: var(--color-warning-fg); background: var(--color-warning-subtle); border-color: var(--color-warning-muted); }
-.task-primary-action[data-action='interpret'] { color: var(--color-accent-fg); background: var(--color-accent-subtle); border-color: var(--color-accent-muted); }
-.task-primary-action[data-action]:not(:disabled):hover { filter: brightness(.96); }
+.yj-table-actions { display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; white-space: nowrap; }
+.yj-table-action-hint { display: inline-flex; }
+.yj-table-actions .yj-table-action > span { gap: 4px; }
+.yj-table-actions .yj-table-action { padding: 0 8px; font-size: 12px; font-weight: 500; border: 1px solid transparent; background: transparent; color: var(--color-fg-muted); }
+.yj-table-actions .yj-table-action:not(:disabled):hover { background: var(--color-canvas-subtle); border-color: var(--color-border-default); color: var(--color-fg-default); }
+.yj-table-actions .yj-table-action-primary { background: var(--color-accent-subtle); border-color: var(--color-accent-muted); color: var(--color-accent-fg); }
+.yj-table-actions .yj-table-action-primary:not(:disabled):hover { background: var(--color-accent-subtle); border-color: var(--color-accent-emphasis); color: var(--color-accent-fg); }
+.yj-table-actions .yj-table-action-danger:not(:disabled):hover { background: var(--color-danger-subtle); border-color: var(--color-danger-muted); color: var(--color-danger-fg); }
+.yj-table-actions .yj-table-action:disabled { opacity: .45; background: transparent; border-color: transparent; color: var(--color-fg-muted); }
 .yj-icon-button-hint { display: inline-flex; }
 .yj-loading-label { display: inline-grid !important; }
 .yj-loading-label > span { grid-area: 1 / 1; }
@@ -66,6 +70,8 @@
 .yj-task-toolbar input { min-width: 0; }
 .yj-task-page .task-center-table { box-shadow: none; }
 .yj-task-page .task-center-table td { padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
+.task-center-table tbody tr:has([data-interpretation-completed='true']) > td { background: var(--yj-panel-subtle) !important; }
+.task-center-table tbody tr:has([data-interpretation-completed='true']):hover > td { background: var(--yj-panel-muted) !important; }
 .yj-task-state-label { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .yj-task-state-label > span { width: 6px; height: 6px; border-radius: 50%; background: var(--yj-text-muted); }
 .yj-task-state-label[data-tone='success'] > span { background: var(--color-success-fg); }
@@ -132,6 +138,10 @@
 [data-theme='dark'] .yj-hover-hint-arrow { fill: #161b22; }
 
 .yj-history-classification { display: inline-flex; max-width: 100%; padding: 3px 8px; border: 1px solid var(--yj-border-subtle); border-radius: 5px; color: var(--yj-text-muted); background: var(--yj-panel-subtle); font-size: 12px; overflow-wrap: anywhere; }
+.yj-history-table { min-width: 1736px; border-collapse: separate; border-spacing: 0; }
+.yj-history-table thead tr:last-child > th { border-bottom: 1px solid var(--yj-border-strong); }
+.yj-history-table th, .yj-history-table td { text-align: center; }
+.yj-history-table tbody tr > td { padding: 14px 16px; vertical-align: middle; border-bottom: 1px solid var(--yj-border-subtle) !important; line-height: 1.6; }
 .yj-history-classification[data-classification='Pathogenic'] { color: #a33143; background: #fdecef; }
 .yj-history-classification[data-classification='Likely_Pathogenic'] { color: #a75520; background: #fff0e5; }
 .yj-history-classification[data-classification='VUS'] { color: #916000; background: #fff4d6; }

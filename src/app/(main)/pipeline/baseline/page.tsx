@@ -1,15 +1,15 @@
 'use client';
+import { TableActions, TableActionLink } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import Link from 'next/link';
 import { PageContent } from '@/components/layout';
 import { AppModal, EmptyState } from '@/components/shared';
 import { DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
-import { AlertTriangle, Coins, Database, ExternalLink, Loader2, Search } from 'lucide-react';
+import { AlertTriangle, Coins, Database, Loader2, Search } from 'lucide-react';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { createCNVBaseline, listCNVBaselines, type CNVBaseline, type CNVBaselineStatus } from '@/lib/cnv-baselines';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -161,7 +161,9 @@ export default function BaselinePage() {
     { id: 'status', header: '状态', accessor: (row) => row.is_builtin ? <Tag variant="success">内置可用</Tag> : row.start_error ? <Tag variant="danger">投递异常</Tag> : <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
     { id: 'output', header: '基线输出', accessor: (row) => <HoverHint content={row.start_error || row.output_path || row.error}><span className="block max-w-[300px] truncate font-mono text-xs" >{row.is_builtin ? '系统内置资源' : row.start_error || row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span></HoverHint>, width: 300, align: 'left' },
     { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
-    { id: 'task', header: '任务', accessor: (row) => row.is_builtin ? '-' : <Link href={`/tasks/${encodeURIComponent(row.task_id)}`} className="inline-flex items-center gap-1 text-accent-fg hover:underline">查看<ExternalLink className="h-3.5 w-3.5" /></Link>, width: 90, align: 'center' },
+    { id: 'actions', header: '操作', accessor: (row) => row.is_builtin
+      ? <span className="text-xs text-fg-muted">只读</span>
+      : <TableActions><TableActionLink href={`/tasks/${encodeURIComponent(row.task_id)}`} label="查看任务" /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
   ];
 
   return (
@@ -176,7 +178,7 @@ export default function BaselinePage() {
         <Button action="add" variant="primary" className="shrink-0 whitespace-nowrap"  disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
       </div>
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>重试读取</ActionButton></div>}
-      {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <div className="min-w-0 overflow-x-auto"><div className="min-w-[1420px]"><DataTable data={filteredItems} columns={columns} rowKey="id" density="default" striped /></div></div>}
+      {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table baseline-center-table" />}
 
       <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
         <div className="space-y-5">

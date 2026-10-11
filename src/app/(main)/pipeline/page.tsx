@@ -1,4 +1,5 @@
 'use client';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -257,14 +258,18 @@ function PipelineListPageContent() {
     { id: 'bed', header: 'BED 文件', accessor: (row) => <HoverHint content={row.resourceError||row.bedFile}><span className="block truncate" >{row.bedFile}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{row.resourceError}</span>}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'cnv', header: 'CNV 基线', accessor: (row) => <HoverHint content={row.cnvBaseline}><span className="block truncate" >{row.cnvBaseline}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'status', header: '状态', accessor: (row) => <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>{row.status === 'active' ? '启用' : '停用'}</Tag>, width: 90, align: 'center' },
-    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <div className="flex justify-center gap-1"><HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost" className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle hover:text-accent-fg"  onClick={() => setEditing(row)} /></HoverHint><HoverHint content={row.status === 'active' ? '停用' : '启用'}><button className="rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"  onClick={() => void toggle(row)}>{row.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button></HoverHint><HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost" className="rounded p-1.5 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  onClick={() => setDeleting(row)} /></HoverHint></div>, width: 110, align: 'center' },
+    { id: 'actions', header: '操作', accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">只读</span> : <TableActions>
+      <TableAction action="edit" label="编辑" onClick={() => setEditing(row)} />
+      <TableAction label={row.status === 'active' ? '停用' : '启用'} leftIcon={row.status === 'active' ? <Pause /> : <Play />} onClick={() => void toggle(row)} />
+      <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleting(row)} />
+    </TableActions>, width: 224, minWidth: 224, align: 'center', pinned: 'right' },
   ];
 
   return <PageContent className="yj-page-shell">
     <div className="yj-page-header"><h2 className="yj-page-title">流程列表</h2></div>
     <div className="yj-toolbar-panel"><div className="w-full sm:w-64"><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索流程..." leftElement={<Search className="h-4 w-4" />} /></div><Button action="add" variant="primary"  onClick={() => setCreating(true)}>新建流程</Button></div>
     {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>void load()}>重试</ActionButton></div>}
-    {loading ? <div role="status" className="yj-panel flex items-center justify-center gap-2 py-12 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载流程…</div> : filtered.length ? <div className="min-w-0 overflow-x-auto"><div className="min-w-[1100px]"><DataTable data={filtered.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped /></div></div> : !error && <EmptyState className="yj-panel" icon={<Workflow />} title={search.trim()?'未找到匹配流程':'暂无分析流程'} description={search.trim()?'调整搜索条件后重试。':'可基于内置 WES 流程建立组织自己的分析流程。'} />}
+    {loading ? <div role="status" className="yj-panel flex items-center justify-center gap-2 py-12 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />加载流程…</div> : filtered.length ? <DataTable data={filtered.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table pipeline-center-table" /> : !error && <EmptyState className="yj-panel" icon={<Workflow />} title={search.trim()?'未找到匹配流程':'暂无分析流程'} description={search.trim()?'调整搜索条件后重试。':'可基于内置 WES 流程建立组织自己的分析流程。'} />}
     <ResourcePager page={page} total={filtered.length} onChange={setPage}/><PipelineModal open={creating} title="新建分析流程" initial={EMPTY_FORM} beds={beds} baselines={baselines} onClose={() => setCreating(false)} onSubmit={create} />
     <PipelineModal open={editing !== null} title="编辑分析流程" initial={initialEdit} beds={beds} baselines={baselines} onClose={() => setEditing(null)} onSubmit={update} />
     <ConfirmDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)} title="确认删除" message={`确定要删除流程「${deleting?.name ?? ''}」吗？此操作不可撤销。`} variant="danger" onConfirm={remove} />

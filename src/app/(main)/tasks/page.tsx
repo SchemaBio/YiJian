@@ -1,5 +1,6 @@
 'use client';
-import { type ButtonAction, ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
+import { type ButtonAction, ActionButton as Button } from '@/components/shared/ActionButton';
 
 import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByInterpretation, runningStatusClass, type TaskDisplayStatus } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -178,7 +179,6 @@ function TaskActionsCell({
   isLoading: boolean;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
 
   // 动态按钮配置：根据状态和进度自动切换
   // 1. 启动 - 排队中(queued)状态
@@ -186,14 +186,13 @@ function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
-    if (task.interpretationCompletedAt) return { label: '完成', action: 'completed' as ButtonAction, onClick: () => onView(task), className: 'border-border-default bg-canvas-subtle text-fg-muted hover:bg-canvas-inset' };
+    if (task.interpretationCompletedAt) return { label: '完成', action: 'completed' as ButtonAction, onClick: () => onView(task) };
     if (task.executionPhase === 'terminating') return null;
     if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
       return {
         label: task.status === 'completed' ? '释放节点' : '取消',
         action: 'stop' as ButtonAction,
         onClick: () => onStop(task.id),
-        className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
       };
     }
     switch (task.status) {
@@ -203,21 +202,18 @@ function TaskActionsCell({
           action: 'wait' as ButtonAction,
           onClick: undefined,
           disabled: true,
-          className: 'border-border-default bg-canvas-subtle text-fg-muted cursor-default',
         };
       case 'queued':
         return {
           label: '启动',
           action: 'start' as ButtonAction,
           onClick: () => onStart(task.id),
-          className: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100',
         };
       case 'running':
         return {
           label: '取消',
           action: 'stop' as ButtonAction,
           onClick: () => onStop(task.id),
-          className: 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100',
         };
       case 'pending_interpretation':
       case 'completed':
@@ -225,7 +221,6 @@ function TaskActionsCell({
           label: '解读',
           action: 'interpret' as ButtonAction,
           onClick: () => onView(task),
-          className: 'border-sky-200 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100',
         };
       case 'cancelled':
       case 'failed':
@@ -233,7 +228,6 @@ function TaskActionsCell({
           label: '重试',
           action: 'retry' as ButtonAction,
           onClick: () => onRetry(task.id),
-          className: 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300 hover:bg-amber-100',
         };
       default:
         return null;
@@ -251,92 +245,16 @@ function TaskActionsCell({
 
   return (
     <>
-      <div
-        className="task-actions"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {primaryAction && (
-          <ActionButton action={primaryAction.action} size="small" loading={isLoading} loadingLabel="处理中" variant="ghost"
-            type="button"
-            onClick={primaryAction.onClick}
-            disabled={isLoading || primaryAction.disabled}
-            aria-label={primaryAction.label}
-            className={`task-primary-action inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors ${isLoading ? 'cursor-wait opacity-60' : primaryAction.disabled ? '' : 'active:translate-y-px'} ${primaryAction.className}`}
-          >
-
-            {primaryAction.label}
-          </ActionButton>
-        )}
-
-        <HoverHint content="查看详情"><ActionButton size="small" action="view" variant="ghost"
-          type="button"
-          onClick={() => onDetails(task)}
-          aria-label={`查看任务 ${task.internalId || task.id} 详情`}
-
-          className="task-detail-action inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-border-default bg-canvas-default px-2 text-xs font-medium text-fg-default transition-colors hover:bg-canvas-subtle whitespace-nowrap"
-        >
-
-          <span className="task-detail-label">查看详情</span>
-        </ActionButton></HoverHint>
-
-        <PopoverPrimitive.Root open={showMoreMenu} onOpenChange={setShowMoreMenu}>
-          <HoverHint content="更多操作"><PopoverPrimitive.Trigger asChild>
-            <ActionButton size="small" iconOnly action="more" variant="ghost"
-              type="button"
-              className="task-more-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:bg-canvas-subtle hover:text-fg-default data-[state=open]:bg-canvas-subtle data-[state=open]:text-fg-default"
-              aria-label="更多任务操作"
-
-             />
-          </PopoverPrimitive.Trigger></HoverHint>
-          <PopoverPrimitive.Portal>
-            <PopoverPrimitive.Content
-              side="bottom"
-              align="end"
-              sideOffset={6}
-              collisionPadding={12}
-              onClick={(event) => event.stopPropagation()}
-              className="z-50 w-44 overflow-hidden rounded-lg border border-border-default bg-canvas-default p-1.5 shadow-[0_10px_30px_rgba(17,24,39,0.14)] outline-none"
-            >
-              <div role="menu" aria-label="任务操作">
-                <HoverHint content={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'}><ActionButton action="edit" variant="ghost"
-                  type="button"
-                  role="menuitem"
-                  disabled={!canEdit}
-
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    onEdit(task);
-                  }}
-                  className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-fg-default transition-colors hover:bg-canvas-subtle disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                >
-
-                  编辑任务
-                </ActionButton></HoverHint>
-                <HoverHint content="删除任务"><ActionButton action="delete" variant="ghost"
-                  type="button"
-                  role="menuitem"
-                  disabled={!canDelete}
-
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    setShowDeleteConfirm(true);
-                  }}
-                  className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-danger-fg transition-colors hover:bg-danger-subtle disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-40 disabled:hover:bg-transparent"
-                >
-
-                  删除任务
-                </ActionButton></HoverHint>
-                {!canEdit && (
-                  <p className="mx-2 mt-1 border-t border-border-muted pt-2 pb-1 text-[11px] leading-4 text-fg-muted">
-                    {task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止任务再进行修改'}
-                  </p>
-                )}
-              </div>
-              <PopoverPrimitive.Arrow className="fill-canvas-default" />
-            </PopoverPrimitive.Content>
-          </PopoverPrimitive.Portal>
-        </PopoverPrimitive.Root>
-      </div>
+      <TableActions>
+        {primaryAction && <TableAction action={primaryAction.action} label={primaryAction.label}
+          tone={primaryAction.action === 'stop' ? 'danger' : primaryAction.disabled || primaryAction.action === 'completed' ? 'default' : 'primary'}
+          loading={isLoading} loadingLabel="处理中" disabled={isLoading || primaryAction.disabled} onClick={primaryAction.onClick} />}
+        <TableAction action="view" label="详情" hint="查看任务详情" aria-label={`查看任务 ${task.internalId || task.id} 详情`} onClick={() => onDetails(task)} />
+        <TableAction action="edit" label="编辑" disabled={!canEdit || isLoading}
+          hint={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'} onClick={() => onEdit(task)} />
+        <TableAction action="delete" label="删除" tone="danger" disabled={!canDelete || isLoading}
+          hint={canDelete ? '删除任务' : '解读已完成，请先取消解读完成'} onClick={() => setShowDeleteConfirm(true)} />
+      </TableActions>
 
       <ConfirmDialog
         open={showDeleteConfirm}
@@ -586,7 +504,7 @@ export default function AnalysisPage() {
               ? '未创建计算节点'
               : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className="yj-task-state-label" data-tone={row.status === 'running' ? 'running' : config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
+        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className="yj-task-state-label" data-interpretation-completed={!!row.interpretationCompletedAt} data-tone={row.status === 'running' ? 'running' : config.variant}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
       },
       width: 90,
       align: 'center',
@@ -665,9 +583,9 @@ export default function AnalysisPage() {
           isLoading={actionLoading === row.id}
         />
       ),
-      width: 200,
-      minWidth: 200,
-      maxWidth: 200,
+      width: 312,
+      minWidth: 312,
+      maxWidth: 312,
       align: 'center',
       pinned: 'right',
     },
@@ -754,7 +672,6 @@ export default function AnalysisPage() {
                     data={filteredTasks}
                     columns={columns}
                     rowKey="id"
-                    striped
                     density="compact"
                     className="yj-data-table right-pinned-actions-table task-center-table"
                   />

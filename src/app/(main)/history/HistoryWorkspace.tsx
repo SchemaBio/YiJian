@@ -9,12 +9,11 @@ import { Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { HistoryWorkerClient, reportDetail, syncReports, type HistoryAudit } from './history-client';
-import { CLASS_LABELS, HISTORY_TYPES, locus, type HistoryQuery, type HistoryQueryResult, type HistoryTask, type HistoryType, type ReportRow } from './history-engine';
+import { CLASS_LABELS, HISTORY_TYPES, locus, historyPosition, type HistoryQuery, type HistoryQueryResult, type HistoryTask, type HistoryType, type ReportRow } from './history-engine';
 
 const initialQuery: Omit<HistoryQuery, 'table'> = { search: '', includeWithdrawn: false, filters: {}, sort: 'detectionCount', direction: 'desc', page: 1, pageSize: 25 };
-const columns = [['locus', '位点 / 参考版本', 24], ['gene', '基因', 12], ['classification', '当前分类', 17], ['detectionCount', '涉及任务数', 10], ['reportedAt', '回报时间', 19], ['af', '人群 AF', 9]] as const;
+const columns = [['chrom', 'chrom', 90], ['pos', 'pos', 180], ['ref', 'ref', 112], ['alt', 'alt', 112], ['reference', '参考版本', 112], ['gene', '基因', 150], ['classification', '当前分类', 160], ['detectionCount', '涉及任务数', 120], ['firstReportedAt', '首次回报', 180], ['lastReportedAt', '最近回报', 180], ['af', '人群 AF', 128]] as const;
 const formatTime = (value?: string | null) => value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '未提供';
-const formatDate = (value?: string | null) => value ? new Date(value).toLocaleDateString('zh-CN') : '未提供';
 const classificationLabel = (value: string) => CLASS_LABELS[value] || value || '未提供';
 function ClassBadge({ value }: { value: string }) {
   return <HoverHint content={value || undefined}><span data-classification={value} className="yj-history-classification">{classificationLabel(value)}</span></HoverHint>;
@@ -155,27 +154,28 @@ export default function HistoryWorkspace() {
         {error && <div role="alert" className="shrink-0 border-b border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" className="ml-3 underline" onClick={() => setRefresh(value => value + 1)}>重新同步</ActionButton></div>}
         <datalist id="history-presence-options"><option value="未提供" /><option value="已提供" /></datalist>
         <div className="relative min-h-0 flex-1 overflow-auto">
-          <table className="w-full min-w-[880px] table-fixed border-collapse text-center text-sm">
-            <colgroup>{columns.map(([key, , width]) => <col key={key} style={{ width: `${width}%` }} />)}<col style={{ width: '9%' }} /></colgroup>
-            <thead className="sticky top-0 z-10 bg-canvas-subtle shadow-sm">
-              <tr>{columns.map(([key, label]) => <th key={key} className="border-b border-border-default px-2 pt-3 pb-2 font-medium">
-                {key === 'reportedAt' ? <div className="flex items-center justify-center gap-3 text-xs">{sortControl('firstReportedAt', '首次回报')}{sortControl('lastReportedAt', '最近回报')}</div> : key === 'locus' ? <div className="flex items-center justify-center gap-3">{sortControl('locus', '位点')}<span className="text-xs font-normal text-fg-muted">{sortControl('reference', '参考版本')}</span></div> : sortControl(key, label)}
-              </th>)}<th className="border-b border-border-default px-2">来源</th></tr>
-              <tr>{columns.map(([key, label]) => <th key={key} className="border-b border-border-default px-2 pb-2 font-normal">
+          <table className="yj-history-table w-full table-fixed text-center text-sm">
+            <colgroup>{columns.map(([key, , width]) => <col key={key} style={{ width }} />)}<col style={{ width: 112 }} /></colgroup>
+            <thead className="sticky top-0 z-10 bg-canvas-subtle">
+              <tr>{columns.map(([key, label]) => <th key={key} className="px-4 pt-4 pb-3 font-medium whitespace-nowrap">{sortControl(key, label)}</th>)}<th className="px-4">来源</th></tr>
+              <tr>{columns.map(([key, label]) => <th key={key} className="px-4 pb-3 font-normal">
                 {key === 'classification' ? <select aria-label={`${label}筛选`} value={query.filters[key] || ''} onChange={event => filter(key, event.target.value)} className="h-7 w-full rounded border border-border-default bg-canvas-default px-1 text-xs"><option value="">全部分类</option><option value="__missing">未提供</option>{Object.entries(CLASS_LABELS).filter(([value]) => value).map(([value, text]) => <option value={value} key={value}>{text}</option>)}</select>
-                  : key === 'locus' ? <div className="grid grid-cols-[minmax(0,1fr)_76px] gap-1.5">{filterControl('locus', '位点')}{filterControl('reference', '参考版本')}</div>
-                  : key === 'reportedAt' ? <div className="grid grid-cols-2 gap-1.5">{filterControl('firstReportedAt', '首次回报')}{filterControl('lastReportedAt', '最近回报')}</div>
                   : filterControl(key, label)}
-              </th>)}<th className="border-b border-border-default" /></tr>
+              </th>)}<th /></tr>
             </thead>
-            <tbody>{!visibleReady || !result ? <tr><td colSpan={7} className="p-12 text-fg-muted">{error ? '同步未完成，点击重新同步' : '正在同步回报索引，完整统计将在同步完成后显示…'}</td></tr> : result.groups.length === 0 ? <tr><td colSpan={7} className="p-12 text-fg-muted">{result.totalVariants ? '没有符合条件的历史记录' : '尚无已选入回报的位点'}</td></tr> : result.groups.map(group => <tr key={group.id} className={`border-b border-border-default ${selected === group.id ? 'bg-accent-subtle' : 'hover:bg-canvas-subtle'}`}>
-              <td className="px-3 py-3 text-left"><span className="block break-all font-mono text-xs leading-5">{group.locus}</span><span className="mt-1 block text-[11px] text-fg-muted">{group.reference || '参考版本未提供'}</span>{!group.identityKnown && <span className="mt-1 block text-xs text-warning-fg">身份不完整，独立记录</span>}</td>
-              <td className="break-words px-2 py-3">{group.gene || '未提供'}</td>
-              <td className="px-2 py-3"><ClassBadge value={group.classification} />{group.classification === 'mixed' && <div className="mt-1 break-words text-[11px] text-fg-muted">{Object.entries(group.classificationCounts).map(([value, count]) => `${classificationLabel(value)} ${count}`).join(' · ')}</div>}</td>
-              <td className="px-2 py-3 font-semibold tabular-nums">{group.detectionCount}</td>
-              <td className="px-2 py-3 text-left text-xs leading-5 tabular-nums"><div title={formatTime(group.firstReportedAt)}><span className="mr-2 text-[11px] text-fg-muted">首次</span>{formatDate(group.firstReportedAt)}</div><div className="mt-1" title={formatTime(group.lastReportedAt)}><span className="mr-2 text-[11px] text-fg-muted">最近</span>{formatDate(group.lastReportedAt)}</div></td>
-              <td className="break-all px-2 py-3 font-mono text-xs">{group.fields.gnomadAF || '未提供'}</td>
-              <td className="px-1 py-3"><ActionButton variant="ghost" onClick={() => setSelected(group.id)} aria-label={`查看 ${group.sourceCount} 条来源`} className="yj-tool-button !px-2 text-xs">{group.sourceCount} 条</ActionButton></td>
+            <tbody>{!visibleReady || !result ? <tr><td colSpan={12} className="p-12 text-fg-muted">{error ? '同步未完成，点击重新同步' : '正在同步回报索引，完整统计将在同步完成后显示…'}</td></tr> : result.groups.length === 0 ? <tr><td colSpan={12} className="p-12 text-fg-muted">{result.totalVariants ? '没有符合条件的历史记录' : '尚无已选入回报的位点'}</td></tr> : result.groups.map(group => <tr key={group.id} className={selected === group.id ? 'bg-accent-subtle' : 'hover:bg-canvas-subtle'}>
+              <td className="font-mono text-xs">{group.fields.chromosome || '未提供'}</td>
+              <td className="font-mono text-xs whitespace-nowrap">{historyPosition(group.fields) || '未提供'}{!group.identityKnown && <span className="mt-1 block text-xs text-warning-fg">身份不完整，独立记录</span>}</td>
+              <td className="font-mono text-xs break-all">{group.fields.ref || '未提供'}</td>
+              <td className="font-mono text-xs break-all">{group.fields.alt || '未提供'}</td>
+              <td className="whitespace-nowrap">{group.reference || '未提供'}</td>
+              <td className="break-words font-medium">{group.gene || '未提供'}</td>
+              <td><ClassBadge value={group.classification} />{group.classification === 'mixed' && <div className="mt-2 break-words text-xs leading-5 text-fg-muted">{Object.entries(group.classificationCounts).map(([value, count]) => `${classificationLabel(value)} ${count}`).join(' · ')}</div>}</td>
+              <td className="font-semibold tabular-nums">{group.detectionCount}</td>
+              <td className="whitespace-nowrap text-xs tabular-nums">{formatTime(group.firstReportedAt)}</td>
+              <td className="whitespace-nowrap text-xs tabular-nums">{formatTime(group.lastReportedAt)}</td>
+              <td className="break-all font-mono text-xs">{group.fields.gnomadAF || '未提供'}</td>
+              <td><ActionButton action="view" size="small" variant="ghost" onClick={() => setSelected(group.id)} aria-label={`查看 ${group.sourceCount} 条来源`} className="!px-2 text-xs">{group.sourceCount} 条</ActionButton></td>
             </tr>)}</tbody>
           </table>
         </div>

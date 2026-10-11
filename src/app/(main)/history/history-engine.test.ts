@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HistoryEngine, type HistoryQuery, type ReportRow } from './history-engine';
+import { HistoryEngine, historyPosition, type HistoryQuery, type ReportRow } from './history-engine';
 
 const query: HistoryQuery = { table: 'snv-indel', search: '', includeWithdrawn: false, filters: {}, sort: 'detectionCount', direction: 'desc', page: 1, pageSize: 25 };
 function row(id: string, task = 'task-a', values: Partial<ReportRow> = {}): ReportRow {
@@ -7,6 +7,25 @@ function row(id: string, task = 'task-a', values: Partial<ReportRow> = {}): Repo
     fields: { chromosome: 'chr1', position: '123', ref: 'A', alt: 'G', gene: 'TEST', gnomadAF: '0.0001' }, reported: true, classification: 'Pathogenic', reportedClassification: 'Pathogenic', firstReportedAt: '2026-10-01T01:00:00Z', lastReportedAt: '2026-10-02T01:00:00Z', reportedBy: 'doctor', adjustmentVersion: 1, updatedAt: '2026-10-02T01:00:00Z', ...values };
 }
 describe('history browser aggregation', () => {
+  it('filters split coordinate columns independently and sorts positions naturally', () => {
+    const engine = new HistoryEngine();
+    engine.apply([
+      row('a', 'task-a', { groupKey: 'a', fields: { chromosome: 'chr2', position: '20', ref: 'A', alt: 'G' } }),
+      row('b', 'task-b', { groupKey: 'b', fields: { chromosome: 'chr1', position: '3', ref: 'C', alt: 'T' } }),
+    ], {});
+    expect(engine.query({ ...query, sort: 'pos', direction: 'asc' }).groups.map(group => group.id)).toEqual(['b', 'a']);
+    for (const [key, value] of Object.entries({ chrom: 'chr2', pos: '20', ref: 'A', alt: 'G' })) {
+      expect(engine.query({ ...query, filters: { [key]: value } }).groups.map(group => group.id)).toEqual(['a']);
+    }
+  });
+  it('retains interval coordinates and missing alleles in the split columns', () => {
+    const fields = { chromosome: 'chrX', startPosition: '100', endPosition: '200' };
+    expect(historyPosition(fields)).toBe('100-200');
+    expect(historyPosition({})).toBe('');
+    const engine = new HistoryEngine();
+    engine.apply([row('interval', 'task-a', { table: 'cnv-segment', groupKey: 'interval', fields })], {});
+    expect(engine.query({ ...query, table: 'cnv-segment', filters: { pos: '100-200', ref: '未提供', alt: '未提供' } }).total).toBe(1);
+  });
   it('publishes an incremental synchronization atomically and discards interrupted scans', () => {
     const engine = new HistoryEngine(); engine.apply([row('a')], {});
     engine.begin('snv-indel'); engine.stage('snv-indel', [row('a', 'task-a', { revision: 2, reported: false }), row('b', 'task-b')], {});

@@ -39,6 +39,19 @@ export function locus(fields: Record<string, string>): string {
   return fields.startPosition && fields.endPosition ? `${chrom}:${fields.startPosition}-${fields.endPosition}` : chrom;
 }
 
+export function historyPosition(fields: Record<string, string>): string {
+  return fields.position || (fields.startPosition && fields.endPosition ? `${fields.startPosition}-${fields.endPosition}` : '');
+}
+
+function columnValue(group: HistoryGroup, key: string): string | number {
+  if (key === 'chrom') return group.fields.chromosome || '';
+  if (key === 'pos') return historyPosition(group.fields);
+  if (key === 'ref' || key === 'alt') return group.fields[key] || '';
+  if (key === 'af') return group.fields.gnomadAF || '';
+  const value = group[key as keyof HistoryGroup];
+  return typeof value === 'number' ? value : String(value ?? '');
+}
+
 function afNumbers(raw: string | undefined): number[] {
   return (raw || '').split(/[&,;|]/).filter(value => value.trim() && value.trim() !== '.').map(Number).filter(Number.isFinite);
 }
@@ -126,7 +139,7 @@ export class HistoryEngine {
       return Object.entries(query.filters).every(([key, filter]) => {
         if (!filter.trim()) return true;
         if (key === 'classification') return filter === '__missing' ? '' in group.classificationCounts || !Object.keys(group.classificationCounts).length : filter === 'mixed' ? group.classification === 'mixed' : filter in group.classificationCounts;
-        const value = key === 'af' ? group.fields.gnomadAF || '' : String(group[key as keyof HistoryGroup] ?? '');
+        const value = String(columnValue(group, key));
         if (filter === '__missing' || filter === '未提供') return !value;
         if (filter === '__present' || filter === '已提供') return Boolean(value);
         if (key === 'detectionCount' || key === 'af') {
@@ -143,7 +156,7 @@ export class HistoryEngine {
     const collator = new Intl.Collator('zh-CN', { numeric: true });
     filtered.sort((a, b) => {
       const afA = query.sort === 'af' ? afNumbers(a.fields.gnomadAF) : [], afB = query.sort === 'af' ? afNumbers(b.fields.gnomadAF) : [];
-      const av = query.sort === 'af' ? (afA.length ? Math.min(...afA) : undefined) : a[query.sort as keyof HistoryGroup], bv = query.sort === 'af' ? (afB.length ? Math.min(...afB) : undefined) : b[query.sort as keyof HistoryGroup];
+      const av = query.sort === 'af' ? (afA.length ? Math.min(...afA) : undefined) : columnValue(a, query.sort), bv = query.sort === 'af' ? (afB.length ? Math.min(...afB) : undefined) : columnValue(b, query.sort);
       if (!av && av !== 0) return !bv && bv !== 0 ? a.id.localeCompare(b.id) : 1;
       if (!bv && bv !== 0) return -1;
       const primary = query.sort === 'af' && Number.isFinite(Number(av)) && Number.isFinite(Number(bv)) ? Number(av) - Number(bv) : typeof av === 'number' && typeof bv === 'number' ? av - bv : collator.compare(String(av), String(bv));

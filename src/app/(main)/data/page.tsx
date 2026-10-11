@@ -1,4 +1,5 @@
 'use client';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -405,19 +406,17 @@ export default function DataCenterPage() {
       id: 'actions',
       header: '操作',
       accessor: (asset) => (
-        <div className="inline-flex items-center justify-center gap-1">
-          {config?.download_allowed && (
-            <HoverHint content="下载"><ActionButton size="small" iconOnly action="download" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="下载" disabled={asset.status !== 'completed'} onClick={() => void handleDownload(asset)} /></HoverHint>
-          )}
-          {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && (
-            <HoverHint content="重新上传"><ActionButton size="small" iconOnly action="upload" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg disabled:opacity-40"  aria-label="重新上传" disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} /></HoverHint>
-          )}
-          <HoverHint content="编辑内部编号"><ActionButton size="small" iconOnly action="edit" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-accent-subtle hover:text-accent-fg"  aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} /></HoverHint>
-          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label="删除" onClick={() => setDeleting(asset)} /></HoverHint>
-        </div>
+        <TableActions>
+          {config?.download_allowed && <TableAction action="download" label="下载" disabled={asset.status !== 'completed'}
+            hint={asset.status === 'completed' ? '下载文件' : '文件上传完成后可下载'} onClick={() => void handleDownload(asset)} />}
+          {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label="重传" hint="重新上传" aria-label="重新上传"
+            disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} />}
+          <TableAction action="edit" label="编辑" hint="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
+          <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleting(asset)} />
+        </TableActions>
       ),
-      width: 120,
-      minWidth: 120,
+      width: 288,
+      minWidth: 288,
       align: 'center',
       pinned: 'right',
     },

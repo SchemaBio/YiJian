@@ -1,4 +1,5 @@
 'use client';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -54,6 +55,8 @@ function BedFilesPageContent() {
   const [uploadError, setUploadError] = React.useState('');
   const [deleting, setDeleting] = React.useState<DataAsset | null>(null);
   const [deleteBusy, setDeleteBusy] = React.useState(false);
+  const [validatingId, setValidatingId] = React.useState<string | null>(null);
+  const validationBusy = React.useRef(false);
   const [references,setReferences]=React.useState<{kind:string;id:string;name:string}[]>([]);
 
   const loadController=React.useRef<AbortController|null>(null);
@@ -148,6 +151,22 @@ function BedFilesPageContent() {
     }
   };
 
+  const handleValidate = async (row: DataAsset) => {
+    if (validationBusy.current) return;
+    validationBusy.current = true;
+    setValidatingId(row.id);
+    setError(null);
+    try {
+      await validateBEDAsset(row.id);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '校验失败');
+    } finally {
+      validationBusy.current = false;
+      setValidatingId(null);
+    }
+  };
+
   const columns: Column<DataAsset>[] = [
     {
       id: 'fileName', header: '文件名', width: 280, align: 'left',
@@ -167,7 +186,15 @@ function BedFilesPageContent() {
       accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:'可用',invalid:'内容无效',unavailable:'校验暂不可用',validating:'校验中',pending:'待校验'}[row.validation_status??'pending']) : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
     },
     { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
-    { id: 'actions', header: '操作', width: 80, align: 'center', accessor: (row) => row.is_builtin ? '-' : <div className="flex items-center gap-1">{row.status==='completed'&&row.validation_status!=='valid'&&<HoverHint content={row.validation_code}><button type="button" className="whitespace-nowrap text-xs text-accent-fg"  onClick={async()=>{try{await validateBEDAsset(row.id);await loadData()}catch(e){setError(e instanceof Error?e.message:'校验失败')}}}>重新校验</button></HoverHint>}<HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-subtle hover:text-danger-fg"  aria-label={`删除 ${row.file_name}`} onClick={() => setDeleting(row)} /></HoverHint></div> },
+    { id: 'actions', header: '操作', width: 200, minWidth: 200, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
+      ? <span className="text-xs text-fg-muted">只读</span>
+      : <TableActions>
+        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction action="refresh" label="重新校验"
+          hint={row.validation_status === 'validating' ? '文件正在校验，请稍候' : '重新校验 BED 文件'}
+          loading={validatingId === row.id} loadingLabel="校验中" disabled={validatingId !== null || row.validation_status === 'validating'} onClick={() => void handleValidate(row)} />}
+        <TableAction action="delete" label="删除" tone="danger" aria-label={`删除 ${row.file_name}`} disabled={validatingId === row.id}
+          onClick={() => setDeleting(row)} />
+      </TableActions> },
   ];
 
   return (
@@ -194,7 +221,7 @@ function BedFilesPageContent() {
       ) : error && items.length === 0 ? null : filteredFiles.length === 0 ? (
         <EmptyState className="yj-panel" icon={<FileText />} title={searchQuery.trim() ? "未找到匹配 BED 文件" : "暂无 BED 文件"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "上传 BED 文件后即可在分析流程和 CNV 基线任务中选择。"} />
       ) : (
-        <div className="min-w-0 overflow-x-auto"><div className="min-w-[1040px]"><DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" striped /></div></div>
+        <DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table bed-center-table" />
       )}
 
       <ResourcePager page={page} total={filteredFiles.length} onChange={setPage} />

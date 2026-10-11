@@ -1,5 +1,6 @@
 'use client';
-import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
 
@@ -424,32 +425,15 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       id: 'actions',
       header: '操作',
       accessor: (row) => (
-        <div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>
-          <HoverHint content={row.matchedPair ? '更新数据关联' : '手动关联数据'}><button
-            className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-success-subtle hover:text-success-fg"
-            onClick={() => setLinkingSample(row)}
-            aria-label="关联测序数据"
-
-          >
-            <Link2 className="h-4 w-4" />
-          </button></HoverHint>
-          <HoverHint content="编辑"><ActionButton size="small" iconOnly action="edit" variant="ghost"
-            className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-accent-subtle hover:text-accent-fg"
-            onClick={() => setEditingSample(row)}
-            aria-label="编辑"
-
-           /></HoverHint>
-          <HoverHint content="删除"><ActionButton size="small" iconOnly action="delete" variant="ghost"
-            className="rounded-md p-1.5 text-fg-muted transition-colors hover:bg-danger-subtle hover:text-danger-fg"
-            onClick={() => setDeleteTargets([row])}
-            aria-label="删除"
-
-           /></HoverHint>
-        </div>
+        <TableActions>
+          <TableAction label="关联" leftIcon={<Link2 />} hint={row.matchedPair ? '更新数据关联' : '手动关联数据'} aria-label="关联测序数据" onClick={() => setLinkingSample(row)} />
+          <TableAction action="edit" label="编辑" onClick={() => setEditingSample(row)} />
+          <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleteTargets([row])} />
+        </TableActions>
       ),
-      width: 108,
-      minWidth: 104,
-      maxWidth: 120,
+      width: 224,
+      minWidth: 224,
+      maxWidth: 224,
       align: 'center',
       pinned: 'right',
     },
