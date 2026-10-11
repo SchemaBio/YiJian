@@ -1,7 +1,10 @@
 // @vitest-environment node
 import {afterEach,expect,it,vi} from 'vitest';
 import {contentSecurityPolicy,isDuckDBWorkerPath} from './lib/content-security-policy';
-import {config} from './middleware';
+import {config,middleware} from './middleware';
+import {NextRequest} from 'next/server';
+import {checkTaskDetailAccess} from './lib/task-detail-access';
+vi.mock('./lib/task-detail-access',()=>({checkTaskDetailAccess:vi.fn()}));
 afterEach(()=>vi.unstubAllEnvs());
 it('permits the local WASM engine in production without JavaScript eval',()=>{
  vi.stubEnv('NODE_ENV','production');
@@ -24,4 +27,21 @@ it('isolates Emscripten generated JavaScript permission to the two DuckDB worker
   expect(isDuckDBWorkerPath(path)).toBe(false);
   expect(contentSecurityPolicy('nonce',isDuckDBWorkerPath(path))).not.toContain("'unsafe-eval'");
  }
+});
+
+it('returns HTTP 404 before rendering a calibration report, including tab URLs',async()=>{
+ vi.mocked(checkTaskDetailAccess).mockResolvedValue('not_found');
+ const r=await middleware(new NextRequest('https://yijian.example/tasks/a09e825c-d944-4a6e-99f3-20ea35d0e2de?tab=report',{headers:{cookie:'access_token=test-session'}}));
+ expect(r.status).toBe(404);
+ expect(r.headers.get('x-middleware-rewrite')).toBe('https://yijian.example/404');
+ expect(r.headers.get('cache-control')).toContain('no-store');
+});
+it('permits ordinary analysis pages and leaves non-detail routes alone',async()=>{
+ vi.mocked(checkTaskDetailAccess).mockResolvedValue('allowed');
+ const r=await middleware(new NextRequest('https://yijian.example/tasks/00000000-0000-0000-0000-000000000001',{headers:{cookie:'access_token=test-session'}}));
+ expect(r.status).toBe(200);
+ expect(r.headers.get('x-middleware-next')).toBe('1');
+ vi.mocked(checkTaskDetailAccess).mockClear();
+ expect((await middleware(new NextRequest('https://yijian.example/tasks/new'))).status).toBe(200);
+ expect(checkTaskDetailAccess).not.toHaveBeenCalled();
 });

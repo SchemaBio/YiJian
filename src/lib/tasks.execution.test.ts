@@ -46,3 +46,9 @@ describe('execution state responses', () => {
     });
   });
 });
+
+it('preserves calibration task identity in list and detail responses', () => {
+ for (const task of [normalizeTask({id:'task',template:'baseline_fix'}), normalizeTaskDetail({id:'task',template:'baseline_fix'})]) {
+  expect(task.template).toBe('baseline_fix');
+ }
+});

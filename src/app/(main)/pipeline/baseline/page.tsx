@@ -1,5 +1,5 @@
 'use client';
-import { TableActions, TableActionLink } from '@/components/shared/TableActions';
+import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -163,7 +163,7 @@ export default function BaselinePage() {
     { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
     { id: 'actions', header: '操作', accessor: (row) => row.is_builtin
       ? <span className="text-xs text-fg-muted">只读</span>
-      : <TableActions><TableActionLink href={`/tasks/${encodeURIComponent(row.task_id)}`} label="查看任务" /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
+      : <TableActions><TableAction action="view" label="查看任务" disabled hint="CNV 校正任务不提供变异解读详情" /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
   ];
 
   return (

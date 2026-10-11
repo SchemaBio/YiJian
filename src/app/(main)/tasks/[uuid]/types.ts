@@ -14,6 +14,7 @@ export type AnalysisStatus =
 
 // ============ 分析任务详情 ============
 export interface AnalysisTaskDetail {
+  template?: string;
   id: string;                    // UUID
   name: string;                  // 任务名称
   sampleId: string;              // 样本ID (UUID)

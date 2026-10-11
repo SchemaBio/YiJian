@@ -21,6 +21,7 @@
 
 - `YiJian/docs/AUTOMATIC_ASSESSMENT_IMPLEMENTATION.md`
 - `YiJian/docs/AUTOMATIC_ASSESSMENT_PRODUCTION_20261007.md`
+- `YiJian/docs/CNV_BASELINE_EXECUTION.md`：CNV 校正的最小资源下载、基线归档登记与实例释放链路（2026-10-11 本地修订，部署状态以现场为准）。
 - `Squid/LIVE_NODE_DIAGNOSTIC_HANDOFF.md`：历史节点诊断记录，**不是当前配置的唯一依据**。其早期镜像、暂停队列、旧实例 IP 和版本已过时。
 
 当前结果方案是**浏览器本地计算**。交互筛选、排序、统计、分页和自动初评在浏览器 Worker 执行；服务器准备授权数据、核验来源并保存人工调整。不要恢复服务端查询作为页面计算的切换方案。

@@ -1,4 +1,5 @@
 'use client';
+import { canInterpretTask } from '@/lib/task-interpretation';
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -65,8 +66,13 @@ export default function AnalysisDetailPage() {
       setLoading(true);
       setNotFound(false);
       try {
-        const [taskData, sampleData, contextData] = await Promise.all([
-          tasksApi.get(uuid),
+        const taskData = await tasksApi.get(uuid);
+        if (controller.signal.aborted) return;
+        if (!canInterpretTask(taskData)) {
+          setNotFound(true); setTask(null); setSample(null); setResultContext(null);
+          return;
+        }
+        const [sampleData, contextData] = await Promise.all([
           tasksApi.getSample(uuid).catch(() => null),
 			getResultContext(uuid, controller.signal).catch(cause => {
 				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
@@ -90,7 +96,7 @@ export default function AnalysisDetailPage() {
   }, [uuid]);
 
 	React.useEffect(() => {
-		if (loading) return;
+		if (loading || !task || !canInterpretTask(task)) return;
 		let disposed = false;
 		let requestInFlight = false;
 		const refreshContext = async () => {
@@ -112,7 +118,7 @@ export default function AnalysisDetailPage() {
 			disposed = true;
 			window.clearInterval(timer);
 		};
-	}, [loading, resultContext?.state, uuid]);
+	}, [loading, task?.id, task?.template, resultContext?.state, uuid]);
 
 	React.useEffect(() => {
 		const controller = new AbortController();

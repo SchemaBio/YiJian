@@ -1,3 +1,4 @@
+import { checkTaskDetailAccess } from './lib/task-detail-access';
 import { contentSecurityPolicy, isDuckDBWorkerPath } from './lib/content-security-policy';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -7,12 +8,32 @@ function createNonce() {
   return btoa(String.fromCharCode(...Array.from(bytes)));
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const nonce = createNonce();
   const csp = contentSecurityPolicy(nonce, isDuckDBWorkerPath(request.nextUrl.pathname));
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);
+
+  const taskRoute = request.nextUrl.pathname.match(/^\/tasks\/([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\/?$/i);
+  if (taskRoute) {
+    const token = request.cookies.get('access_token')?.value;
+    const access = token ? await checkTaskDetailAccess(taskRoute[1], token) : 'unauthorized';
+    if (access === 'not_found') {
+      const destination = request.nextUrl.clone();
+      destination.pathname = '/404'; destination.search = '';
+      const response = NextResponse.rewrite(destination, { status: 404, request: { headers: requestHeaders } });
+      response.headers.set('Content-Security-Policy', csp);
+      response.headers.set('Cache-Control', 'private, no-store');
+      return response;
+    }
+    if (access === 'unauthorized') {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    if (access === 'unavailable') {
+      return new NextResponse('任务服务暂时不可用，请稍后重试。', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' } });
+    }
+  }
 
   const response = NextResponse.next({
     request: {

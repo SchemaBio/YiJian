@@ -8,6 +8,7 @@ export type TaskStatus =
   | 'pending_interpretation';
 
 export interface AnalysisTask {
+  template?: string;
   id: string;
   name?: string;
   sampleId: string;
@@ -38,6 +39,7 @@ export interface AnalysisTask {
 }
 
 export interface AnalysisTaskDetail {
+  template?: string;
   id: string;
   name: string;
   sampleId: string;

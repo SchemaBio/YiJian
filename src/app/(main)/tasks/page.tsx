@@ -1,6 +1,7 @@
 'use client';
-import { TableActions, TableAction } from '@/components/shared/TableActions';
-import { type ButtonAction, ActionButton as Button } from '@/components/shared/ActionButton';
+import { canInterpretTask } from '@/lib/task-interpretation';
+import { TaskActionsCell } from './components/TaskActionsCell';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByInterpretation, taskStatusClass, type TaskDisplayStatus } from '@/lib/task-presentation';
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -17,7 +18,7 @@ import type { NewTaskFormData, EditTaskFormData } from './components';
 import type { AnalysisTask } from '@/types/task';
 import { tasksApi } from '@/lib/tasks';
 import { useApi, usePolling } from '@/hooks';
-import { ConfirmDialog, EmptyState, IdCell, TaskStatusTag } from '@/components/shared';
+import { EmptyState, IdCell, TaskStatusTag } from '@/components/shared';
 import { TaskCostValue } from '@/components/billing';
 import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -45,6 +46,7 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.name === candidate.name
       && task.sampleId === candidate.sampleId
       && task.internalId === candidate.internalId
+      && task.template === candidate.template
       && task.pipeline === candidate.pipeline
       && task.pipelineVersion === candidate.pipelineVersion
       && task.status === candidate.status
@@ -153,119 +155,6 @@ function StatusFilterDropdown({
         </div>
       )}
     </div>
-  );
-}
-
-// 操作单元格组件
-function TaskActionsCell({
-  task,
-  onStart,
-  onStop,
-  onRetry,
-  onEdit,
-  onDelete,
-  onView,
-  onDetails,
-  isLoading,
-}: {
-  task: AnalysisTask;
-  onStart: (id: string) => void;
-  onStop: (id: string) => void;
-  onRetry: (id: string) => void;
-  onEdit: (task: AnalysisTask) => void;
-  onDelete: (id: string) => void;
-  onView: (task: AnalysisTask) => void;
-  onDetails: (task: AnalysisTask) => void;
-  isLoading: boolean;
-}) {
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-
-  // 动态按钮配置：根据状态和进度自动切换
-  // 1. 启动 - 排队中(queued)状态
-  // 2. 停止 - 运行中(running)状态
-  // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
-  // 4. 重试 - 失败(failed)状态
-  const getPrimaryAction = () => {
-    if (task.interpretationCompletedAt) return { label: '完成', action: 'completed' as ButtonAction, onClick: () => onView(task) };
-    if (task.executionPhase === 'terminating') return null;
-    if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
-      return {
-        label: task.status === 'completed' ? '释放节点' : '取消',
-        action: 'stop' as ButtonAction,
-        onClick: () => onStop(task.id),
-      };
-    }
-    switch (task.status) {
-      case 'waiting_for_data':
-        return {
-          label: '等待',
-          action: 'wait' as ButtonAction,
-          onClick: undefined,
-          disabled: true,
-        };
-      case 'queued':
-        return {
-          label: '启动',
-          action: 'start' as ButtonAction,
-          onClick: () => onStart(task.id),
-        };
-      case 'running':
-        return {
-          label: '取消',
-          action: 'stop' as ButtonAction,
-          onClick: () => onStop(task.id),
-        };
-      case 'pending_interpretation':
-      case 'completed':
-        return {
-          label: '解读',
-          action: 'interpret' as ButtonAction,
-          onClick: () => onView(task),
-        };
-      case 'cancelled':
-      case 'failed':
-        return {
-          label: '重试',
-          action: 'retry' as ButtonAction,
-          onClick: () => onRetry(task.id),
-        };
-      default:
-        return null;
-    }
-  };
-
-  const primaryAction = getPrimaryAction();
-  const executionInFlight = Boolean(
-    task.executionPhase
-      && task.executionPhase !== 'idle'
-      && task.executionPhase !== 'terminal'
-  );
-  const canEdit = !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
-  const canDelete = !task.interpretationCompletedAt;
-
-  return (
-    <>
-      <TableActions>
-        {primaryAction && <TableAction action={primaryAction.action} label={primaryAction.label}
-          tone={primaryAction.action === 'stop' ? 'danger' : primaryAction.disabled || primaryAction.action === 'completed' ? 'default' : 'primary'}
-          loading={isLoading} loadingLabel="处理中" disabled={isLoading || primaryAction.disabled} onClick={primaryAction.onClick} />}
-        <TableAction action="view" label="详情" hint="查看任务详情" aria-label={`查看任务 ${task.internalId || task.id} 详情`} onClick={() => onDetails(task)} />
-        <TableAction action="edit" label="编辑" disabled={!canEdit || isLoading}
-          hint={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'} onClick={() => onEdit(task)} />
-        <TableAction action="delete" label="删除" tone="danger" disabled={!canDelete || isLoading}
-          hint={canDelete ? '删除任务' : '解读已完成，请先取消解读完成'} onClick={() => setShowDeleteConfirm(true)} />
-      </TableActions>
-
-      <ConfirmDialog
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
-        title="删除分析任务"
-        message={`确定删除任务 ${task.internalId || task.id}？已产生的运行记录和结果可能无法恢复。`}
-        confirmLabel="确认删除"
-        variant="danger"
-        onConfirm={() => onDelete(task.id)}
-      />
-    </>
   );
 }
 
@@ -415,10 +304,12 @@ export default function AnalysisPage() {
   };
 
   const handleOpenDetails = React.useCallback((task: AnalysisTask) => {
+    if (!canInterpretTask(task)) return;
     router.push(`/tasks/${encodeURIComponent(task.id)}`);
   }, [router]);
 
   const handleOpenInterpretation = React.useCallback((task: AnalysisTask) => {
+    if (!canInterpretTask(task)) return;
     router.push(`/tasks/${encodeURIComponent(task.id)}?tab=overview`);
   }, [router]);
 

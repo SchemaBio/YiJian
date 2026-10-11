@@ -13,6 +13,7 @@ import type { SampleDetail } from '@/app/(main)/samples/types';
 import { normalizeSampleDetail } from './samples';
 
 interface RawTask {
+  template?: string;
   id?: string;
   sampleId?: string;
   sample_id?: string;
@@ -95,6 +96,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     name: typeof raw.name === 'string' ? raw.name : undefined,
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),
     internalId: String(raw.internalId ?? raw.internal_id ?? ''),
+    template: typeof raw.template === 'string' ? raw.template : undefined,
     pipeline: String(raw.pipeline ?? ''),
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
@@ -128,6 +130,7 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     name: String(raw.name ?? raw.id ?? ''),
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),
     internalId: String(raw.internalId ?? raw.internal_id ?? ''),
+    template: typeof raw.template === 'string' ? raw.template : undefined,
     pipeline: String(raw.pipeline ?? ''),
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),

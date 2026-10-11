@@ -30,6 +30,10 @@ NEXT_PUBLIC_BACKEND=octopus
 `YIJIAN_BACKEND` 只能是 `octopus` 或 `squid`。选择 `squid` 时，客户端自动
 将 Octopus 核心接口路由到 `/v1/octopus`，不再单独配置 API 前缀或 flavor。
 为兼容旧部署，运行时仍识别 `YIJIAN_BACKEND_FLAVOR`，新配置应统一使用 `YIJIAN_BACKEND`。
+任务详情路由会在服务端核验任务类型，CNV 校正任务（`baseline_fix`）返回 404。
+Docker 默认通过 `octopus:8080/api` 或 `squid:8080/api` 核验；自定义网络或端口时，
+设置仅服务端使用的 `YIJIAN_SERVER_API_URL`，不要填写浏览器中的 localhost 地址。
+
 数据中心在 `octopus` 自部署模式下显示总容量无限制；在 `squid` SaaS 模式下，
 显示并预检由平台管理员为当前租户分配的共享存储总容量，配额值为 `0` 时同样表示无限制。
 
