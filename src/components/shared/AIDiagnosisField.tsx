@@ -16,11 +16,11 @@ export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }:
       <AIAssistanceAction disabled={disabled || !value.trim()} input={{ feature: 'hpo', diagnosis: value }} onBusyChange={setBusy}
         onResult={result => {
           const canonical = new Map(terms.map(term => [term.id, term]));
-          const generated = result.hpoTerms ?? [];
+          const generated = (result.hpoTerms ?? []).filter(term => !term.polarity || term.polarity === 'present');
           const unique = [...new Map(generated.map(term => [term.id, term])).values()];
           const verified = unique.filter(term => canonical.has(term.id)).map(term => ({ id: term.id, name: canonical.get(term.id)!.name }));
           onTerms(verified);
-          setMessage(`${verified.length ? `已补充 ${verified.length} 个 HPO 术语，请复核后保存。` : '未生成可用的 HPO 术语。'}${verified.length < unique.length ? '未收录的编号已忽略。' : ''}`);
+          setMessage(`${verified.length ? `已补充 ${verified.length} 个 HPO 术语，请复核后保存。` : '未生成可用的 HPO 术语。'}${verified.length < unique.length ? '未收录的编号已忽略。' : ''}${result.warnings?.length ? ` ${result.warnings.join('；')}` : ''}`);
         }} />
     </div>
     <TextArea id={id} value={value} disabled={disabled || busy} onChange={event => { setMessage(''); onChange(event.target.value); }} placeholder="请输入临床诊断" rows={2} />

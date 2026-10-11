@@ -120,9 +120,9 @@ export default function BillingSettingsPage() {
     {
       id: 'reference_id',
       header: '关联任务',
-      accessor: (row) => row.reference_id ? (
-        <Link href={`/tasks/${encodeURIComponent(billingReferenceTaskId(row.reference_id))}`} className="whitespace-nowrap font-mono text-xs text-accent-fg hover:underline">
-          {billingReferenceTaskId(row.reference_id)}
+      accessor: (row) => (row.related_task_id || (row.reference_id && row.billing_basis !== 'ai_assistance')) ? (
+        <Link href={`/tasks/${encodeURIComponent(row.related_task_id || billingReferenceTaskId(row.reference_id!))}`} className="whitespace-nowrap font-mono text-xs text-accent-fg hover:underline">
+          {row.related_task_id || billingReferenceTaskId(row.reference_id!)}
         </Link>
       ) : '-',
       width: 300,

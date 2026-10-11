@@ -22,6 +22,7 @@ export interface BillingTransaction {
   balance_after: number;
   type: BillingTransactionType;
   reference_id?: string;
+  related_task_id?: string;
   description?: string;
   billing_basis?: string;
   created_by: number;

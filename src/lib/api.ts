@@ -68,6 +68,7 @@ function isUnsafeMethod(method?: string): boolean {
 
 const CORE_API_PREFIX_FALLBACK = '/v1/octopus';
 const CORE_API_ROOTS = [
+  'ai-assistance',
   'tasks',
   'samples',
   'pipelines',

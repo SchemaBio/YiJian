@@ -12,7 +12,7 @@ describe('AI HPO generation', () => {
       generate: vi.fn().mockResolvedValue({ feature: 'hpo', summary: '提取表型', hpoTerms: [{ id: 'HP:0001250', name: '错误名称' }, { id: 'HP:0001250', name: '重复名称' }, { id: 'HP:9999999', name: '未收录术语' }] }) };
     const receive = vi.fn();
     render(<AIAssistanceProvider deployment="opensource" adapter={client}><AIDiagnosisField value="癫痫" onChange={vi.fn()} onTerms={receive} /></AIAssistanceProvider>);
-    const button = screen.getByRole('button', { name: 'AI 生成HPO 表型术语' });
+    const button = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     await waitFor(() => expect(receive).toHaveBeenCalledWith([{ id: 'HP:0001250', name: '癫痫发作' }]));

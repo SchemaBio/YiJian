@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { pendingAIAssistanceAdapter, type AIAssistanceAdapter, type AIAssistanceSettings, type AIDeployment } from '@/lib/ai-assistance';
+import { httpAIAssistanceAdapter } from '@/lib/ai-assistance-client';
 
 interface AssistanceContext {
   adapter: AIAssistanceAdapter;
@@ -14,7 +15,7 @@ interface AssistanceContext {
 const Context = React.createContext<AssistanceContext | null>(null);
 const PREFIX = 'yijian:ai-charge-confirmation:';
 
-export function AIAssistanceProvider({ children, adapter = pendingAIAssistanceAdapter, deployment = getRuntimeBackendFlavor() === 'squid' ? 'saas' : 'opensource', scope = 'session' }: {
+export function AIAssistanceProvider({ children, adapter = httpAIAssistanceAdapter, deployment = getRuntimeBackendFlavor() === 'squid' ? 'saas' : 'opensource', scope = 'session' }: {
   children: React.ReactNode; adapter?: AIAssistanceAdapter; deployment?: AIDeployment; scope?: string;
 }) {
   const [settings, setSettings] = React.useState<AIAssistanceSettings>({ enabled: deployment === 'saas', connected: false, configured: false });
@@ -24,8 +25,9 @@ export function AIAssistanceProvider({ children, adapter = pendingAIAssistanceAd
     try { setSkip(sessionStorage.getItem(sessionKey) === '1'); } catch { setSkip(false); }
     const controller = new AbortController();
     setSettings({ enabled: deployment === 'saas', connected: false, configured: false });
-    void adapter.getSettings(deployment, controller.signal).then(value => { if (!controller.signal.aborted) setSettings(value); }).catch(() => undefined);
-    return () => controller.abort();
+    const refresh = () => { void adapter.getSettings(deployment, controller.signal).then(value => { if (!controller.signal.aborted) setSettings(value); }).catch(() => { if (!controller.signal.aborted) setSettings(previous => ({ ...previous, connected: false, configured: false })); }); };
+    refresh(); const timer = setInterval(refresh, 30000);
+    return () => { clearInterval(timer); controller.abort(); };
   }, [adapter, deployment, sessionKey]);
   const setSkipConfirmation = React.useCallback((value: boolean) => {
     setSkip(value);

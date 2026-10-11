@@ -5,6 +5,7 @@ import type { SNVIndel } from '../types';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
+import { svcExperimentalInput } from '@/lib/svc-experimental';
 import { ACMG_CONFIG } from '../result-api';
 
 const LABELS:Record<string,string>={
@@ -60,7 +61,7 @@ export function EvidenceFields({schema,root=schema,value,onChange,label,disabled
   </label>;
 }
 
-export function SVCv4AssessmentPanel({taskId,variant,readOnly,onSave,onUseAIInterpretation}: {taskId:string;variant:SNVIndel;readOnly:boolean;onUseAIInterpretation?:(result:AIAssistanceResult)=>void;onSave?:(assessment:SVCv4Assessment,reason:string)=>Promise<void>}) {
+export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,onUseAIInterpretation}: {reference?:string;taskId:string;variant:SNVIndel;readOnly:boolean;onUseAIInterpretation?:(result:AIAssistanceResult)=>void;onSave?:(assessment:SVCv4Assessment,reason:string)=>Promise<void>}) {
   const [aiResult,setAIResult]=React.useState<AIAssistanceResult>();
   const [schema,setSchema]=React.useState<SVCv4Schema>();
   const [draft,setDraft]=React.useState<SVCv4Assessment>(()=>variant.svcv4Assessment??{disease:'',moi:'',inputs:{},confirmed:false});
@@ -72,7 +73,7 @@ export function SVCv4AssessmentPanel({taskId,variant,readOnly,onSave,onUseAIInte
   const save=async()=>{if(!onSave)return;if(!reason.trim()){setError('请填写本次证据调整理由');return;}setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}};
   const result=draft.result;
   return <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">SVC v4.0版</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',taskId,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={setAIResult} /></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">SVC v4.0版</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',mode:'experimental',draftAssessment:svcExperimentalInput(draft),taskId,reference,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={setAIResult} /></div>
     {aiResult&&<AIResultCard result={aiResult} onUseInterpretation={!readOnly&&onUseAIInterpretation?()=>onUseAIInterpretation(aiResult):undefined} />}
     <div className="rounded border border-warning-emphasis/40 bg-warning-subtle p-3 text-sm"><strong>SVC v4.0 试行 · 草案／非权威参考实现</strong><p>以具体疾病为单位评定。缺失信息保持待确认，ClinGen CSpec 为权威计分来源。</p>{schema&&<a href={schema.source} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg">规则版本 {schema.revision.slice(0,12)}</a>}</div>
     <p className="break-words text-sm">{variant.gene} · {variant.chromosome}:{variant.position} {variant.ref} → {variant.alt} · {variant.transcript}<br />{variant.consequence}</p>
