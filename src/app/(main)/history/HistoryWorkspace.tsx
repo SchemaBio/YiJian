@@ -5,7 +5,8 @@ import { ActionButton, IconActionButton } from '@/components/shared/ActionButton
 import * as React from 'react';
 import { HoverHint } from '@/components/shared/HoverHint';
 import { useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Search, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { HistoryClassificationFilter } from './HistoryClassificationFilter';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { HistoryWorkerClient, reportDetail, syncReports, type HistoryAudit } from './history-client';
@@ -138,28 +139,36 @@ export default function HistoryWorkspace() {
     } catch { if (checkedScope === activeScope.current) setSourceError('来源无法打开，请刷新后重试。'); }
   };
   const activeScope = React.useRef(scope); activeScope.current = scope;
-  const sortControl = (key: string, label: string) => <button type="button" aria-label={`按${label}排序`} onClick={() => sort(key)} className="hover:text-accent-fg">{label}{query.sort === key ? query.direction === 'desc' ? ' ↓' : ' ↑' : ''}</button>;
-  const filterControl = (key: string, label: string) => <input aria-label={`${label}筛选`} value={query.filters[key] || ''} onChange={event => filter(key, event.target.value)} list="history-presence-options" placeholder={key === 'detectionCount' || key === 'af' ? '数值条件' : label} className="h-7 min-w-0 w-full rounded border border-border-default bg-canvas-default px-1.5 text-center text-xs" title={`${label}筛选：${query.filters[key] || (key === 'detectionCount' || key === 'af' ? '例如 >=0.01' : '输入筛选条件')}`} />;
+  const sortControl = (key: string, label: string) => {
+    const Icon = query.sort === key ? query.direction === 'desc' ? ArrowDown : ArrowUp : ArrowUpDown;
+    return <button type="button" aria-label={`按${label}排序`} onClick={() => sort(key)} className="yj-history-sort" data-active={query.sort === key}>{label}<Icon aria-hidden="true" /></button>;
+  };
+  const filterControl = (key: string, label: string) => <input aria-label={`${label}筛选`} value={query.filters[key] || ''} onChange={event => filter(key, event.target.value)} list="history-presence-options" placeholder={key === 'detectionCount' || key === 'af' ? '数值条件' : '筛选'} className="yj-history-filter-input" data-filtered={!!query.filters[key]} title={`${label}筛选：${query.filters[key] || (key === 'detectionCount' || key === 'af' ? '例如 >=0.01' : '输入筛选条件')}`} />;
 
 
-  return <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-6" data-testid="history-workspace">
-    <header className="shrink-0 pb-3"><div className="flex flex-wrap items-center justify-between gap-2">
-      <div><h1 className="yj-page-title">历史检出</h1><p className="mt-1 text-xs text-fg-muted">仅统计已选入回报的位点，不代表所有检出位点或人群频率。同一位点按不同任务计数。</p></div>
-      <ActionButton action="refresh" variant="ghost" type="button" onClick={() => setRefresh(value => value + 1)} disabled={syncing} className="yj-tool-button shrink-0">刷新</ActionButton>
-    </div><div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm"><span>有效回报位点 <strong>{visibleReady && result ? result.totalVariants.toLocaleString() : '—'}</strong></span><span>涉及任务 <strong>{visibleReady && result ? result.totalTasks.toLocaleString() : '—'}</strong></span><span className="text-xs text-fg-muted">{syncing ? `同步中 · 已接收 ${received.toLocaleString()} 条` : visibleReady ? '' : '等待同步'}</span></div></header>
+  return <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-6 yj-history-page" data-testid="history-workspace">
+    <header className="yj-history-header">
+      <div className="yj-history-heading"><h1>历史检出</h1><p>跨任务查看已选入回报的位点，同一位点按任务计数。</p></div>
+      <dl className="yj-history-summary">
+        <div><dt>有效回报位点</dt><dd>{visibleReady && result ? result.totalVariants.toLocaleString() : '—'}</dd></div>
+        <div><dt>涉及任务</dt><dd>{visibleReady && result ? result.totalTasks.toLocaleString() : '—'}</dd></div>
+      </dl>
+      <ActionButton action="refresh" variant="secondary" type="button" onClick={() => setRefresh(value => value + 1)} disabled={syncing}>刷新</ActionButton>
+    </header>
+    {(syncing || !visibleReady) && <p className="yj-history-sync" role="status">{syncing ? `同步中 · 已接收 ${received.toLocaleString()} 条` : '等待同步'}</p>}
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border-default bg-[var(--yj-panel-bg)]">
-      <nav aria-label="变异类型" className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-default px-3 py-2">{HISTORY_TYPES.map(([key, label]) => <button type="button" key={key} aria-current={table === key ? 'page' : undefined} onClick={() => chooseType(key)} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm ${table === key ? 'bg-[var(--yj-sage-subtle)] font-semibold text-accent-fg' : 'text-fg-muted hover:bg-[var(--yj-panel-bg)]'}`}>{label}</button>)}</nav>
+      <nav aria-label="变异类型" className="yj-history-type-tabs">{HISTORY_TYPES.map(([key, label]) => <button type="button" key={key} aria-current={table === key ? 'page' : undefined} onClick={() => chooseType(key)}>{label}</button>)}</nav>
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border-default p-3"><div className="relative min-w-48 max-w-sm flex-1"><Search size={15} className="absolute left-2.5 top-2.5 text-fg-muted" /><input aria-label="搜索历史检出" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索位点、基因、任务或样本" className="yj-history-search h-9 w-full rounded border border-border-default bg-canvas-default pr-3 text-sm" /></div><label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm"><input type="checkbox" checked={query.includeWithdrawn} onChange={event => setQuery(previous => ({ ...previous, includeWithdrawn: event.target.checked, page: 1 }))} />包含已撤回</label><ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={() => { setQuery(initialQuery); setSearch(''); }}>清空筛选</ActionButton><span className="text-xs text-fg-muted">{visibleReady && result ? `${result.total.toLocaleString()} 个匹配位点` : ''}</span></div>
+        <div className="yj-history-toolbar"><div className="relative min-w-48 max-w-sm flex-1"><Search size={15} className="absolute left-2.5 top-2.5 text-fg-muted" /><input aria-label="搜索历史检出" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索位点、基因、任务或样本" className="yj-history-search h-9 w-full rounded border border-border-default bg-canvas-default pr-3 text-sm" /></div><label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm"><input type="checkbox" checked={query.includeWithdrawn} onChange={event => setQuery(previous => ({ ...previous, includeWithdrawn: event.target.checked, page: 1 }))} />包含已撤回</label><ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={() => { setQuery(initialQuery); setSearch(''); }}>清空筛选</ActionButton><span className="yj-history-match-count">{visibleReady && result ? `${result.total.toLocaleString()} 个匹配位点` : ''}</span></div>
         {error && <div role="alert" className="shrink-0 border-b border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" className="ml-3 underline" onClick={() => setRefresh(value => value + 1)}>重新同步</ActionButton></div>}
         <datalist id="history-presence-options"><option value="未提供" /><option value="已提供" /></datalist>
         <div className="relative min-h-0 flex-1 overflow-auto">
           <table className="yj-history-table w-full table-fixed text-center text-sm">
             <colgroup>{columns.map(([key, , width]) => <col key={key} style={{ width }} />)}<col style={{ width: 112 }} /></colgroup>
-            <thead className="sticky top-0 z-10 bg-canvas-subtle">
-              <tr>{columns.map(([key, label]) => <th key={key} className="px-4 pt-4 pb-3 font-medium whitespace-nowrap">{sortControl(key, label)}</th>)}<th className="px-4">来源</th></tr>
+            <thead className="yj-history-table-head sticky top-0 z-10">
+              <tr>{columns.map(([key, label]) => <th key={key} className="px-4 pt-3 pb-2 font-medium whitespace-nowrap" aria-sort={query.sort === key ? query.direction === 'asc' ? 'ascending' : 'descending' : 'none'}>{sortControl(key, label)}</th>)}<th className="px-4">来源</th></tr>
               <tr>{columns.map(([key, label]) => <th key={key} className="px-4 pb-3 font-normal">
-                {key === 'classification' ? <select aria-label={`${label}筛选`} value={query.filters[key] || ''} onChange={event => filter(key, event.target.value)} className="h-7 w-full rounded border border-border-default bg-canvas-default px-1 text-xs"><option value="">全部分类</option><option value="__missing">未提供</option>{Object.entries(CLASS_LABELS).filter(([value]) => value).map(([value, text]) => <option value={value} key={value}>{text}</option>)}</select>
+                {key === 'classification' ? <HistoryClassificationFilter value={query.filters[key] || ''} onChange={value => filter(key, value)} />
                   : filterControl(key, label)}
               </th>)}<th /></tr>
             </thead>
@@ -179,7 +188,7 @@ export default function HistoryWorkspace() {
             </tr>)}</tbody>
           </table>
         </div>
-        <footer className="flex h-11 shrink-0 items-center justify-between gap-2 border-t border-border-default px-3 text-xs"><span>撤回来源不计入任务数</span>{result && result.total > query.pageSize && <div className="flex items-center gap-3"><IconActionButton label="上一页" action="previous" variant="ghost"  disabled={!result || result.page <= 1} onClick={() => setQuery(previous => ({ ...previous, page: previous.page - 1 }))} className="disabled:opacity-30" /><span>{result?.page || 1} / {Math.max(1, Math.ceil((result?.total || 0) / query.pageSize))}</span><IconActionButton label="下一页" action="next" variant="ghost"  disabled={!result || result.page * query.pageSize >= result.total} onClick={() => setQuery(previous => ({ ...previous, page: previous.page + 1 }))} className="disabled:opacity-30" /></div>}</footer>
+        <footer className="flex h-11 shrink-0 items-center justify-between gap-2 border-t border-border-default px-3 text-xs"><span>撤回来源不计入任务数；本页不代表全部检出位点或人群频率。</span>{result && result.total > query.pageSize && <div className="flex items-center gap-3"><IconActionButton label="上一页" action="previous" variant="ghost"  disabled={!result || result.page <= 1} onClick={() => setQuery(previous => ({ ...previous, page: previous.page - 1 }))} className="disabled:opacity-30" /><span>{result?.page || 1} / {Math.max(1, Math.ceil((result?.total || 0) / query.pageSize))}</span><IconActionButton label="下一页" action="next" variant="ghost"  disabled={!result || result.page * query.pageSize >= result.total} onClick={() => setQuery(previous => ({ ...previous, page: previous.page + 1 }))} className="disabled:opacity-30" /></div>}</footer>
       </section>
     </div>
     {visibleReady && selected && <div className="fixed inset-0 z-50">
