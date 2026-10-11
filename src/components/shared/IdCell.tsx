@@ -8,6 +8,8 @@ interface IdCellProps {
   id: string;
   /** Number of characters to show (default: 8) */
   truncateLength?: number;
+  /** Display the complete UUID without truncation. */
+  full?: boolean;
 }
 
 interface HoverTextProps {
@@ -31,7 +33,7 @@ export function HoverText({ value, className = '' }: HoverTextProps) {
  * @example
  * <IdCell id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
  */
-export function IdCell({ id, truncateLength = 8 }: IdCellProps) {
+export function IdCell({ id, truncateLength = 8, full = false }: IdCellProps) {
   const [copyStatus, setCopyStatus] = React.useState<'idle' | 'copied' | 'failed'>('idle');
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -50,10 +52,10 @@ export function IdCell({ id, truncateLength = 8 }: IdCellProps) {
       <button
         type="button"
         aria-label={copyStatus === 'copied' ? '已复制编号' : copyStatus === 'failed' ? '复制失败' : '复制编号'}
-        className={`font-mono text-xs cursor-pointer ${copyStatus === 'copied' ? 'text-green-600' : copyStatus === 'failed' ? 'text-danger-fg' : 'text-accent-fg hover:underline'}`}
+        className={`whitespace-nowrap font-mono text-xs cursor-pointer ${copyStatus === 'copied' ? 'text-green-600' : copyStatus === 'failed' ? 'text-danger-fg' : 'text-accent-fg hover:underline'}`}
         onClick={handleClick}
       >
-        {id.substring(0, truncateLength)}
+        {full ? id : id.substring(0, truncateLength)}
       </button>
     </Tooltip>
   );

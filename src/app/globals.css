@@ -540,7 +540,7 @@
 
   .sample-management-table table {
     overflow: visible !important;
-    min-width: 1650px;
+    min-width: 1784px;
     table-layout: fixed;
   }
 
@@ -613,12 +613,12 @@
   }
 
   .data-center-table table {
-    min-width: 1470px;
+    min-width: 1708px;
     table-layout: fixed;
   }
 
   .task-center-table table {
-    min-width: 1170px;
+    min-width: 1662px;
     table-layout: fixed;
   }
 
@@ -628,7 +628,7 @@
   }
 
   .bed-center-table table {
-    min-width: 1160px;
+    min-width: 1072px;
     table-layout: fixed;
   }
 
@@ -639,9 +639,9 @@
 
   .task-center-table th:last-child,
   .task-center-table td:last-child {
-    width: 312px;
-    min-width: 312px;
-    max-width: 312px;
+    width: 272px;
+    min-width: 272px;
+    max-width: 272px;
   }
 
   .right-pinned-actions-table thead th:last-child {

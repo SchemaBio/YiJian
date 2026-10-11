@@ -9,7 +9,7 @@ import * as React from 'react';
 import { Database, File, Link2, Link2Off, Loader2 } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
-import { bindSampleDataAssets, clearSampleMatchedPair } from '@/lib/samples';
+import { bindSampleDataAssets, clearSampleMatchedPair, getSampleDataLink } from '@/lib/samples';
 import type { Sample } from '../types';
 
 interface DataLinkModalProps {
@@ -82,19 +82,41 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  const read1Assets = assets.filter((asset) => asset.status === 'completed' && asset.read_type === 'read1');
-  const read2Assets = assets.filter((asset) => asset.status === 'completed' && asset.read_type === 'read2');
+  const [unavailable, setUnavailable] = React.useState(false);
+  const usableAssets = assets.filter(asset => asset.status === 'completed' && (!asset.expires_at || new Date(asset.expires_at).getTime() > Date.now()));
+  const read1Assets = usableAssets.filter(asset => asset.read_type === 'read1');
+  const read2Assets = usableAssets.filter(asset => asset.read_type === 'read2');
 
   React.useEffect(() => {
     if (!open || !sample) return;
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError('');
+    setAssets([]);
+    setUnavailable(false);
     setRead1Id('');
     setRead2Id('');
-    listDataAssets()
-      .then((result) => {
-        if (!cancelled) setAssets(result.items ?? []);
+    const loadAssets = async () => {
+      const files: DataAsset[] = [];
+      let page = 1, totalPages = 1;
+      do {
+        const result = await listDataAssets('', { status: 'completed', page, signal: controller.signal });
+        files.push(...(result.items ?? []));
+        totalPages = result.total_pages || 1;
+        page++;
+      } while (page <= totalPages && !controller.signal.aborted);
+      return files;
+    };
+    Promise.all([loadAssets(), getSampleDataLink(sample.id, controller.signal)])
+      .then(([files, link]) => {
+        if (cancelled) return;
+        // Current files remain visible even if they are outside the list page.
+        const current = [link.read1, link.read2].filter((file): file is DataAsset => !!file);
+        setAssets(Array.from(new Map([...files, ...current].map(file => [file.id, file])).values()));
+        setRead1Id(link.read1?.id || '');
+        setRead2Id(link.read2?.id || '');
+        setUnavailable(link.unavailable);
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : '加载数据资产失败');
@@ -102,7 +124,7 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [open, sample]);
 
   const handleSave = async () => {
@@ -153,7 +175,7 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
           <Button variant="secondary" disabled={saving} onClick={() => onOpenChange(false)}>取消</Button>
           <Button loading={saving} loadingLabel="保存中" action="save"
             variant="primary"
-            disabled={saving || loading || !read1Id || !read2Id}
+            disabled={saving || loading || !!error || !read1Assets.some(asset => asset.id === read1Id) || !read2Assets.some(asset => asset.id === read2Id)}
             leftIcon={<Link2 className="h-4 w-4" />}
             onClick={() => void handleSave()}
           >
@@ -187,6 +209,7 @@ export function DataLinkModal({ open, sample, onOpenChange, onSaved }: DataLinkM
             当前组织没有完整的可用 Read1/Read2 文件，请先在数据中心上传并等待文件就绪。
           </div>
         )}
+        {!loading && unavailable && <p role="status" className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs text-warning-fg">原关联文件已到期或不可访问，请重新选择可用文件。</p>}
         {error && (
           <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{error}</div>
         )}

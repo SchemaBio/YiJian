@@ -448,7 +448,7 @@ export default function AnalysisPage() {
       header: '任务',
       accessor: (row) => (
         <div className="min-w-0 text-left">
-          <IdCell id={row.id} />
+          <IdCell id={row.id} full />
           <div className="mt-1">
             <HoverHint content={row.name || row.pipeline}>
               <button type="button" onClick={() => handleOpenDetails(row)} className="block max-w-[220px] truncate text-xs text-fg-muted hover:text-accent-fg">
@@ -458,7 +458,7 @@ export default function AnalysisPage() {
           </div>
         </div>
       ),
-      width: 240,
+      width: 300,
       align: 'left',
     },
     {
@@ -467,10 +467,10 @@ export default function AnalysisPage() {
       accessor: (row) => (
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-sm font-medium text-fg-default">{row.internalId || '-'}</span>
-          <IdCell id={row.sampleId} />
+          <IdCell id={row.sampleId} full />
         </div>
       ),
-      width: 140,
+      width: 300,
       align: 'center',
     },
     {
@@ -583,9 +583,9 @@ export default function AnalysisPage() {
           isLoading={actionLoading === row.id}
         />
       ),
-      width: 312,
-      minWidth: 312,
-      maxWidth: 312,
+      width: 272,
+      minWidth: 272,
+      maxWidth: 272,
       align: 'center',
       pinned: 'right',
     },

@@ -349,9 +349,9 @@ export default function DataCenterPage() {
     {
       id: 'uuid',
       header: 'UUID',
-      accessor: (asset) => <IdCell id={asset.id} truncateLength={8} />,
-      width: 150,
-      minWidth: 150,
+      accessor: (asset) => <IdCell id={asset.id} full />,
+      width: 300,
+      minWidth: 300,
     },
     {
       id: 'readType',
@@ -415,8 +415,8 @@ export default function DataCenterPage() {
           <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleting(asset)} />
         </TableActions>
       ),
-      width: 288,
-      minWidth: 288,
+      width: 208,
+      minWidth: 208,
       align: 'center',
       pinned: 'right',
     },
@@ -445,11 +445,11 @@ export default function DataCenterPage() {
       </div>
 
       {config?.temporary && (
-        <div className="mb-4 flex items-start gap-3 rounded-md border border-border-default bg-canvas-default px-4 py-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" />
+        <div className="mb-4 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-fg">
+          <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
           <div>
-            <p className="text-sm font-medium text-fg-default">数据仅保留 {config.retention_days} 天</p>
-            <p className="mt-0.5 text-xs leading-5 text-fg-muted">
+            <p className="text-sm font-medium">数据仅保留 {config.retention_days} 天</p>
+            <p className="mt-0.5 text-xs leading-5">
               仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。单个文件不得超过 20 GB。
             </p>
           </div>

@@ -314,10 +314,18 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     {
       id: 'uuid',
       header: 'UUID',
-      accessor: (row) => <IdCell id={row.id} truncateLength={row.id.split('-', 1)[0].length} />,
-      width: 112,
-      minWidth: 104,
-      maxWidth: 140,
+      accessor: (row) => <IdCell id={row.id} full />,
+      width: 300,
+      minWidth: 300,
+      maxWidth: 300,
+    },
+    {
+      id: 'createdAt',
+      header: '创建时间',
+      accessor: (row) => <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt)}</span>,
+      width: 156,
+      minWidth: 150,
+      maxWidth: 190,
     },
     {
       id: 'gender',
@@ -412,16 +420,6 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       maxWidth: 220,
     },
     {
-      id: 'createdAt',
-      header: '创建时间',
-      accessor: (row) => (
-        <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt)}</span>
-      ),
-      width: 156,
-      minWidth: 150,
-      maxWidth: 190,
-    },
-    {
       id: 'actions',
       header: '操作',
       accessor: (row) => (
@@ -431,9 +429,9 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleteTargets([row])} />
         </TableActions>
       ),
-      width: 224,
-      minWidth: 224,
-      maxWidth: 224,
+      width: 194,
+      minWidth: 194,
+      maxWidth: 194,
       align: 'center',
       pinned: 'right',
     },

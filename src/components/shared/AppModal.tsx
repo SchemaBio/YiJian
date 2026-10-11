@@ -1,5 +1,5 @@
 'use client';
-import { ActionButton as Button, IconActionButton } from '@/components/shared/ActionButton';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
 import * as React from 'react';
@@ -96,7 +96,7 @@ export function AppModal({
       <ModalHeader showCloseButton={false} className="pr-16">
         {title}
       </ModalHeader>
-      {showCloseButton && <div className="absolute right-4 top-4"><IconActionButton action="close" label="关闭弹窗" variant="ghost" onClick={() => onOpenChange(false)} /></div>}
+      {showCloseButton && <div className="absolute right-4 top-4"><Button action="close" iconOnly aria-label="关闭弹窗" variant="ghost" onClick={() => onOpenChange(false)} /></div>}
       <ModalBody>
         {children}
       </ModalBody>

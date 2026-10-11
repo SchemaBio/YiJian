@@ -186,10 +186,10 @@ function BedFilesPageContent() {
       accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:'可用',invalid:'内容无效',unavailable:'校验暂不可用',validating:'校验中',pending:'待校验'}[row.validation_status??'pending']) : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
     },
     { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
-    { id: 'actions', header: '操作', width: 200, minWidth: 200, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
+    { id: 'actions', header: '操作', width: 152, minWidth: 152, maxWidth: 152, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
       ? <span className="text-xs text-fg-muted">只读</span>
       : <TableActions>
-        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction action="refresh" label="重新校验"
+        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction action="refresh" label="校验"
           hint={row.validation_status === 'validating' ? '文件正在校验，请稍候' : '重新校验 BED 文件'}
           loading={validatingId === row.id} loadingLabel="校验中" disabled={validatingId !== null || row.validation_status === 'validating'} onClick={() => void handleValidate(row)} />}
         <TableAction action="delete" label="删除" tone="danger" aria-label={`删除 ${row.file_name}`} disabled={validatingId === row.id}

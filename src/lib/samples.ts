@@ -1,5 +1,10 @@
 import { api } from './api';
 import type { Sample, SampleDetail } from '@/app/(main)/samples/types';
+import type { DataAsset } from './data-assets';
+
+export function getSampleDataLink(id: string, signal?: AbortSignal): Promise<{ read1: DataAsset | null; read2: DataAsset | null; unavailable: boolean }> {
+  return api.get(`/v1/samples/${encodeURIComponent(id)}/data-link`, { cache: 'no-store', signal });
+}
 
 type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] }; total?: number };
 type SampleFormPayload = {
