@@ -42,3 +42,7 @@ export function listCNVBaselines(): Promise<CNVBaseline[]> {
 export function createCNVBaseline(input: CreateCNVBaselineInput): Promise<CNVBaseline> {
   return api.post<CNVBaseline>('/v1/cnv-baselines', input);
 }
+
+export function deleteCNVBaseline(id: string): Promise<void> {
+  return api.delete<void>(`/v1/cnv-baselines/${encodeURIComponent(id)}`);
+}
