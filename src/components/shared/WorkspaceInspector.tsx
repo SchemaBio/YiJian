@@ -4,27 +4,28 @@ import * as React from 'react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 /** Docked on wide workspaces, modal drawer on smaller screens. */
-export function WorkspaceInspector({ children, label, onClose }: {
+export function WorkspaceInspector({ children, label, onClose, nonModal = false }: {
   children: React.ReactNode;
   label: string;
   onClose: () => void;
+  nonModal?: boolean;
 }) {
   const docked = useMediaQuery('(min-width: 1440px)');
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (docked) return;
+    if (docked || nonModal) return;
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.focus();
     return () => { if (previous?.isConnected) previous.focus(); };
-  }, [docked]);
+  }, [docked, nonModal]);
 
   return <>
-    {!docked && <div className="yj-inspector-backdrop" aria-hidden="true" onClick={onClose} />}
-    <div ref={ref} role={docked ? 'region' : 'dialog'} aria-modal={docked ? undefined : true}
+    {!docked && !nonModal && <div className="yj-inspector-backdrop" aria-hidden="true" onClick={onClose} />}
+    <div ref={ref} role={docked ? 'region' : 'dialog'} aria-modal={docked || nonModal ? undefined : true}
       aria-label={label} tabIndex={-1} className="yj-inspector"
       onKeyDown={event => {
         if (event.key === 'Escape' && !event.defaultPrevented) { event.stopPropagation(); onClose(); }
-        if (event.key !== 'Tab' || docked) return;
+        if (event.key !== 'Tab' || docked || nonModal) return;
         const controls = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]') ?? [])
           .filter(element => element.getClientRects().length > 0);
         const first = controls[0], last = controls.at(-1);

@@ -6,8 +6,8 @@ import { getCNVSegments } from '../result-api';
 import type { CNVSegment } from '../types';
 
 vi.mock('@schema/ui-kit', async importOriginal => ({ ...await importOriginal<typeof import('@schema/ui-kit')>(), useTheme: () => ({ resolvedTheme: 'light' }) }));
-vi.mock('@/components/shared', () => ({
-  AppModal: ({ children }: { children: React.ReactNode }) => {
+vi.mock('./CNVPlotWindow', () => ({
+  CNVPlotWindow: ({ children }: { children: React.ReactNode }) => {
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => { const timer = setTimeout(() => setMounted(true), 50); return () => clearTimeout(timer); }, []);
     return mounted ? <div>{children}</div> : null;

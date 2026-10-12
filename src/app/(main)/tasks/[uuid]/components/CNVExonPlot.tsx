@@ -3,7 +3,7 @@ import { ActionButton } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
 
-import { AppModal } from '@/components/shared';
+import { CNVPlotWindow } from './CNVPlotWindow';
 import { HoverHint } from '@/components/shared/HoverHint';
 import type {CNVExon} from '../types';
 import {loadCNR,exonSignals,type ExonSignal} from '../utils/cnv-signal';
@@ -36,7 +36,7 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
   const y=(cn:number)=>bottom-(cn/max)*(bottom-top);
   const x=(i:number)=>left+(i+0.5)*(width-left-20)/Math.max(1,rows.length);
   const copy=async()=>{try{await navigator.clipboard.writeText(['基因\t转录本\t外显子\t染色体\t起点(1-based)\t终点\tCN估计\tlog2\tbin数',...rows.map(row=>`${variant.gene}\t${transcript}\t${row.exon}\t${variant.chromosome}\t${row.start+1}\t${row.end}\t${row.cn.toFixed(3)}\t${row.log2.toFixed(3)}\t${row.bins}`)].join('\n'));setCopied('已复制');}catch{setCopied('复制失败，可选择下方表格复制');}};
-  return <AppModal open={isOpen} onOpenChange={open=>!open&&onClose()} title={`${variant.gene} · 外显子 CN 分布`} size="large" className="!z-[80] !w-[min(960px,94vw)] !max-w-none">
+  return <CNVPlotWindow open={isOpen} onClose={onClose} title={`${variant.gene} · 外显子 CN 分布`}>
       <div className="min-h-0">
 
         {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<ActionButton variant="ghost" onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</ActionButton></div>:<>
@@ -47,7 +47,7 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
               {[0,1,2,3,4].filter(n=>n<=max).map(n=><g key={n}><line x1={left} x2={width-15} y1={y(n)} y2={y(n)} stroke={n===2?'var(--color-fg-muted)':'var(--color-border-default)'} strokeDasharray={n===2?'5 4':'2 3'}/><text x={left-8} y={y(n)+4} textAnchor="end" fontSize={11} fill="var(--color-fg-muted)">{n}</text></g>)}
               <text x={7} y={15} fontSize={11} fill="var(--color-fg-muted)">CN</text>
               {rows.map((row,i)=><g key={row.exon} onMouseEnter={()=>setHover(row)} onMouseLeave={()=>setHover(null)}>
-                <HoverHint content={`外显子 ${row.exon} · CN ${row.cn.toFixed(3)} · log2 ${row.log2.toFixed(3)} · ${row.bins} bins`}><rect tabIndex={0} x={x(i)-Math.min(10,(width-left)/rows.length/3)} y={y(row.cn)} width={Math.min(20,(width-left)/rows.length*0.6)} height={bottom-y(row.cn)} rx={2} fill={row.cn<1.5?'#0284c7':row.cn>2.5?'#d97706':'var(--color-fg-muted)'} opacity={hover===row?1:0.8} /></HoverHint>
+                <HoverHint content={`外显子 ${row.exon} · CN ${row.cn.toFixed(3)} · log2 ${row.log2.toFixed(3)} · ${row.bins} bins`}><circle tabIndex={0} cx={x(i)} cy={y(row.cn)} r={hover===row?6:4.5} onFocus={()=>setHover(row)} onBlur={()=>setHover(null)} fill={row.cn<1.5?'#0284c7':row.cn>2.5?'#d97706':'var(--color-fg-muted)'} opacity={hover===row?1:0.8} /></HoverHint>
                 <text x={x(i)} y={bottom+17} textAnchor="middle" fontSize={10} fill="var(--color-fg-muted)">{row.exon}</text>
               </g>)}
               <text x={width/2} y={height-10} textAnchor="middle" fontSize={12} fill="var(--color-fg-muted)">转录本外显子编号</text>
@@ -58,5 +58,5 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
           <details><summary className="cursor-pointer text-sm text-accent-fg">外显子读数表（可选中复制）</summary><div className="mt-2 max-h-56 overflow-auto"><table className="w-full text-center text-xs"><thead className="sticky top-0 bg-canvas-subtle"><tr>{['外显子','起点(1-based)','终点','CN 估计','log2','bin 数'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.exon} className="border-b border-border-subtle"><td className="p-1.5">{row.exon}</td><td>{row.start+1}</td><td>{row.end}</td><td>{row.cn.toFixed(3)}</td><td>{row.log2.toFixed(3)}</td><td>{row.bins}</td></tr>)}</tbody></table></div></details>
         </>}
       </div>
-  </AppModal>;
+  </CNVPlotWindow>;
 }

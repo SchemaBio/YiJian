@@ -5,12 +5,26 @@ import { CNVDetailPanel } from './CNVDetailPanel';
 import type { CNVSegment } from '../types';
 import { getResultRowAdjustmentHistory } from '../result-api';
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => true }));
-vi.mock('./CNVRegionPlot', () => ({ CNVRegionPlot: () => null }));
-vi.mock('./CNVExonPlot', () => ({ CNVExonPlot: () => null }));
+vi.mock('./CNVRegionPlot', () => ({ CNVRegionPlot: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => isOpen ? <button onClick={onClose}>测试关闭区域图</button> : null }));
+vi.mock('./CNVExonPlot', () => ({ CNVExonPlot: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => isOpen ? <button onClick={onClose}>测试关闭外显子图</button> : null }));
 vi.mock('../result-api', () => ({ getResultRowAdjustmentHistory: vi.fn().mockResolvedValue([]) }));
 const variant: CNVSegment = { id: 'A', chromosome: '1', startPosition: 100, endPosition: 200, length: 100, type: 'Deletion', copyNumber: 1, copyRatio: 0.5, log2Ratio: -1, genes: ['GENE'], confidence: null, pinned: false, reviewed: false, reported: false, interpretation: '旧解读' };
 
 describe('CNV interpretation tabs', () => {
+  it('opens the plot with the inspector, preserves it when the inspector closes, and allows reopening', () => {
+    const props = { taskId: 'task', variantType: 'segment' as const, variant, isOpen: true, onClose: vi.fn() };
+    const view = render(<CNVDetailPanel {...props} />);
+    expect(screen.getByRole('button', { name: '测试关闭区域图' })).toBeInTheDocument();
+    const open = screen.getByRole('button', { name: '区域信号图' });
+    const close = screen.getByRole('button', { name: '关闭' });
+    expect(open.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '测试关闭区域图' }));
+    expect(screen.queryByRole('button', { name: '测试关闭区域图' })).not.toBeInTheDocument();
+    fireEvent.click(open);
+    view.rerender(<CNVDetailPanel {...props} isOpen={false} />);
+    expect(screen.getByRole('button', { name: '测试关闭区域图' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '变异详情' })).not.toBeInTheDocument();
+  });
   it('retains a draft across tabs, shows history and saves through the existing callback', async () => {
     vi.mocked(getResultRowAdjustmentHistory).mockResolvedValue([{ id: 'event', actor: '医生', createdAt: '', before: { interpretation: '旧解读' }, after: { interpretation: '新解读' }, reason: '人工核验' }]);
     const save = vi.fn().mockResolvedValue(undefined);
