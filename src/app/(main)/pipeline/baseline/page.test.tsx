@@ -25,7 +25,7 @@ it('keeps the loaded credit rate when baseline reading is retried', async () => 
 });
 
 it('keeps calibration task navigation disabled without a task link', async () => {
- vi.mocked(listCNVBaselines).mockResolvedValue([{ id: 'baseline', name: '自定义基线', task_id: 'calibration-task', reference_genome: 'GRCh38', status: 'running', progress: 30, read_pairs: [], bed: {file_name: 'test.bed'}, created_at: '2026-10-11T00:00:00Z' }] as Awaited<ReturnType<typeof listCNVBaselines>>);
+ vi.mocked(listCNVBaselines).mockResolvedValue([{ id: 'baseline', name: '自定义基线', task_id: 'calibration-task', reference_genome: 'GRCh38', status: 'running', progress: 30, read_pairs: [], bed: {id: 'bed-asset', file_name: 'test.bed'}, input_bytes: 0, credit_cost: 0, credits_charged: 0, created_at: '2026-10-11T00:00:00Z', updated_at: '2026-10-11T00:00:00Z' }]);
  render(<BaselinePage />);
  expect(await screen.findByRole('button', {name: '查看任务'})).toBeDisabled();
  expect(screen.queryByRole('link', {name: '查看任务'})).not.toBeInTheDocument();
