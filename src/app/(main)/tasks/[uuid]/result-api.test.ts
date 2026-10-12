@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '@/lib/api';
-import { queryBrowserParquet, exportBrowserParquet } from '@/lib/parquet-browser';
+import { queryBrowserParquet } from '@/lib/parquet-browser';
 import { DEFAULT_FILTER_STATE } from './types';
-import { exportEffectiveTable, getCNVSegments, getSNVIndels, reportVariant, reviewVariant, saveResultRowAdjustment } from './result-api';
+import { getCNVSegments, getSNVIndels, reportVariant, reviewVariant, saveResultRowAdjustment } from './result-api';
 
 vi.mock('@/lib/api', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), download: vi.fn() }, ApiError: class extends Error {} }));
 vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserParquet:vi.fn(),updateBrowserOverlay:vi.fn().mockResolvedValue(undefined)}));
 
-describe('versioned Parquet adjustments and effective export', () => {
+describe('versioned Parquet adjustments', () => {
   beforeEach(() => vi.clearAllMocks());
   async function load(task: string) {
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({ items: [{ id: 'row', attemptId: 'attempt', datasetVersion: 'hash', adjustmentVersion: 0 }], total: 1, rowCount:1, columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version: 'hash', attemptId: 'attempt' });
@@ -53,13 +53,5 @@ describe('versioned Parquet adjustments and effective export', () => {
     await load('task-conflict');
     vi.mocked(api.put).mockRejectedValueOnce(new Error('409 conflict'));
     await expect(reviewVariant('task-conflict', 'snv-indel', 'row', true)).rejects.toThrow('409 conflict');
-  });
-  it('exports the same filters and snapshot as the displayed query', async () => {
-    await load('task-export');
-    const state = { ...DEFAULT_FILTER_STATE, columnFilters: [{ column: 'reviewed', operator: 'equals' as const, value: 'false' }] };
-    await exportEffectiveTable('task-export', 'snv-indel', state);
-    expect(exportBrowserParquet).toHaveBeenCalledWith('task-export','snv-indel', expect.objectContaining({ filters: [{ column: 'reviewed', operator: 'equals' as const, value: 'false' }] }));
-    expect(api.post).not.toHaveBeenCalled();
-    expect(api.download).not.toHaveBeenCalled();
   });
 });

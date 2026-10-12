@@ -6,7 +6,7 @@ import * as React from 'react';
 import { ListFilter, Bookmark } from 'lucide-react';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import type { TableFilterState } from '../types';
-import { exportEffectiveTable } from '../result-api';
+import type { ResultTable } from '@/lib/assessment/types';
 import { api } from '@/lib/api';
 import { retainBrowserTable, refreshBrowserTable } from '@/lib/parquet-browser';
 
@@ -38,7 +38,7 @@ export function ParquetColumnFilterBar({
 }: {
   viewControls?: React.ReactNode;
   taskId?: string;
-  table?: Parameters<typeof exportEffectiveTable>[1];
+  table?: ResultTable;
   columns: string[];
   columnTypes?: Record<string, 'text' | 'number' | 'enum' | 'boolean'>;
   state: TableFilterState;
@@ -82,15 +82,6 @@ export function ParquetColumnFilterBar({
     finally{if(scopeRef.current===scope)setViewSaving(false);}
   };
   const applyView=()=>{const v=views.find(v=>v.name===selectedView);if(v){try{onChange({...JSON.parse(v.stateJson),page:1});setViewName(v.name);setViewMessage('已恢复个人筛选方案');}catch{setViewMessage('筛选方案无效');}}};
-  const [exporting, setExporting] = React.useState(false);
-  const [exportError, setExportError] = React.useState('');
-  const exportTable = async () => {
-    if (!taskId || !table) return;
-    setExporting(true); setExportError('');
-    try { const result = await exportEffectiveTable(taskId, table, state); const url = URL.createObjectURL(result.blob); const link = document.createElement('a'); link.href = url; link.download = result.filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-    catch (cause) { setExportError(cause instanceof Error ? cause.message : '导出失败'); }
-    finally { setExporting(false); }
-  };
   const [column, setColumn] = React.useState('');
   const [operator, setOperator] = React.useState<FilterOperator>('contains');
   const [value, setValue] = React.useState('');
@@ -121,7 +112,6 @@ export function ParquetColumnFilterBar({
   return (
     <div className="yj-filter-tools mb-2 flex flex-wrap items-center gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        {taskId && table && <ActionButton loading={exporting} loadingLabel="导出中" action="download" variant="ghost" type="button" disabled={exporting} onClick={() => void exportTable()} className="yj-tool-button order-3">导出 CSV</ActionButton>}
         <ToolbarPopover label="添加筛选" icon={<ListFilter size={14} />}><div className="grid gap-3">
         <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {columns.map(item => <option key={item} value={item}>{label(item)}</option>)}
@@ -147,7 +137,6 @@ export function ParquetColumnFilterBar({
         </div></ToolbarPopover>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
       </div>}
       {viewControls}
-      {exportError && <p role="alert" className="mt-2 text-sm text-red-600">{exportError}</p>}
       {filters.length > 0 && (
         <div className="basis-full flex flex-wrap gap-2" aria-live="polite">
           {filters.map(filter => {

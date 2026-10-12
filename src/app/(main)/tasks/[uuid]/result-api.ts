@@ -1,7 +1,7 @@
 import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
 import {assessmentStatus} from '@/lib/assessment/client';
-import { queryBrowserParquet, exportBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
+import { queryBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
 import type {
   ACMGClassification,
@@ -787,10 +787,4 @@ export interface ResultRowAdjustmentEvent {
 
 export function getResultRowAdjustmentHistory(taskId: string, type: string, rowId: string, signal?: AbortSignal): Promise<ResultRowAdjustmentEvent[]> {
   return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}/history`, { signal });
-}
-
-export async function exportEffectiveTable(taskId: string, type: ResultQueryType, state: TableFilterState) {
- const snapshot = tableSnapshots.get(`${taskId}/${type}`);
- if (!snapshot?.datasetVersion || !snapshot.attemptId) throw new Error('请先加载结果，再导出');
- return exportBrowserParquet(taskId,type,await buildTableQuery(type,state));
 }
