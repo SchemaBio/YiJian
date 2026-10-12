@@ -412,7 +412,7 @@ export interface TabConfig {
 
 export const TAB_CONFIGS: TabConfig[] = [
   { id: 'overview', label: '总览' },
-  { id: 'snv-indel', label: '变异判读' },
+  { id: 'snv-indel', label: '变异解读' },
   { id: 'report', label: '报告与文件' },
 ];
 

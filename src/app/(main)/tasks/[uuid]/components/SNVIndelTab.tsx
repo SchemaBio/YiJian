@@ -409,10 +409,11 @@ export function SNVIndelTab({
 
   return (
     <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen ? 'yj-has-inspector' : ''}`}>
+      <div className="yj-variant-toolbar">
       <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
       {/* 工具栏 */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="yj-variant-controls-row">
+        <div className="flex flex-wrap items-center gap-2">
           {/* 搜索框 */}
           <div className="w-52 shrink-0">
             <Input
@@ -441,7 +442,7 @@ export function SNVIndelTab({
             </select>
           </div>
 
-          <ActionButton action="refresh" variant="ghost" className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</ActionButton>
+          <ActionButton action="refresh" iconOnly aria-label="刷新基因列表" variant="ghost" className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</ActionButton>
 
           {/* ACMG筛选 */}
           <select
@@ -465,6 +466,7 @@ export function SNVIndelTab({
           )}
       <span>共 {result?.total ?? 0} 条 SNP/InDel</span>
         </div>
+      </div>
       </div>
 
       {/* 数据表格 */}

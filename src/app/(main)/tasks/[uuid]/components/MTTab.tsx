@@ -270,8 +270,9 @@ export function MTTab({
 
   return (
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="yj-variant-toolbar">
       <ParquetColumnFilterBar taskId={taskId} table="mt" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
@@ -298,6 +299,7 @@ export function MTTab({
         <div className="text-sm text-fg-muted">
           共 {result?.total ?? 0} 条线粒体变异
         </div>
+      </div>
       </div>
 
 		{error && !loading ? (

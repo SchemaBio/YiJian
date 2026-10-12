@@ -7,15 +7,18 @@ import {assessmentStatus,cancelAssessment,type AssessmentStatus} from '@/lib/ass
 import {reevaluateBrowserResults,retryBrowserAssessment} from '@/lib/parquet-browser';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import { Info } from 'lucide-react';
+import { TaskNavigationCollapsed } from './TaskNavigation';
 export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}){
  const readOnly = useInterpretationReadOnly();
+ const compact = React.useContext(TaskNavigationCollapsed);
  const [status,setStatus]=React.useState<AssessmentStatus|undefined>(()=>assessmentStatus(taskId));
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
  React.useEffect(()=>{setStatus(assessmentStatus(taskId));const update=(event:Event)=>{const value=(event as CustomEvent<AssessmentStatus>).detail;if(value.taskId===taskId)setStatus(value);};window.addEventListener('yijian:assessment-status',update);return()=>window.removeEventListener('yijian:assessment-status',update);},[taskId]);
  if(!status)return null;
  return <div className="yj-assessment-status shrink-0" data-state={status.state}>
- <ToolbarPopover label={status.state==='loading'?`初评 · ${status.processed.toLocaleString()} 条`:status.state==='error'?'初评失败':'评估信息'} icon={<Info size={14} />}>
+ <ToolbarPopover iconOnly={compact} label={status.state==='loading'?`初评 · ${status.processed.toLocaleString()} 条`:status.state==='error'?'初评失败':'评估信息'} icon={<Info size={14} />}>
    <div className="space-y-4 text-xs leading-relaxed">
+     {(status.error||error)&&<p role="alert" className="text-danger-fg">{error||status.error}</p>}
      {status.state==='loading'&&<p role="status">正在进行本地初评 · 已处理 {status.processed.toLocaleString()} 条</p>}
      {status.state==='ready'&&<p>自动置顶 {status.pinned??0} 条{table ? ` · 当前类型 ${status.pinnedByTable?.[table]??0} 条` : ''}</p>}
      <section><h4 className="mb-1 font-semibold">评估版本</h4><p className="break-words text-fg-muted">{status.version || '未提供'}</p></section>
@@ -23,9 +26,9 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
      <section><h4 className="mb-1 font-semibold">资源版本</h4><p className="break-words text-fg-muted">{status.packVersion && status.packVersion !== 'unavailable' ? `Human Phenotype Ontology、ClinGen、Mondo · ${status.packVersion}` : '评估资源不可用或尚未加载'}</p></section>
    </div>
  </ToolbarPopover>
- {status.state==='loading'&&<ActionButton action="stop" variant="ghost" type="button" className="yj-tool-button" onClick={()=>cancelAssessment(taskId)}>取消初评</ActionButton>}
- {(status.state==='error'||status.state==='cancelled')&&<ActionButton loading={busy} loadingLabel="准备中…" action="retry" variant="ghost" type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await retryBrowserAssessment(taskId);}catch(e){setError(e instanceof Error?e.message:'重试失败');}finally{setBusy(false);}}}>重试本地初评</ActionButton>}
- {!readOnly&&status.reassessmentAvailable&&<ActionButton loading={busy} loadingLabel="准备中…" variant="ghost" type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error?e.message:'重新评估失败');}finally{setBusy(false);}}}>证据版本已更新，重新评估</ActionButton>}
- {(status.error||error)&&<span className="text-danger-fg">{error||status.error}</span>}
+ {status.state==='loading'&&<ActionButton iconOnly={compact} aria-label="取消初评" action="stop" variant="ghost" type="button" className="yj-tool-button" onClick={()=>cancelAssessment(taskId)}>{!compact && "取消初评"}</ActionButton>}
+ {(status.state==='error'||status.state==='cancelled')&&<ActionButton iconOnly={compact} aria-label="重试本地初评" loading={busy} loadingLabel={compact ? undefined : "准备中…"} action="retry" variant="ghost" type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await retryBrowserAssessment(taskId);}catch(e){setError(e instanceof Error?e.message:'重试失败');}finally{setBusy(false);}}}>{!compact && "重试本地初评"}</ActionButton>}
+ {!readOnly&&status.reassessmentAvailable&&<ActionButton iconOnly={compact} aria-label="证据版本已更新，重新评估" action="refresh" loading={busy} loadingLabel={compact ? undefined : "准备中…"} variant="ghost" type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error?e.message:'重新评估失败');}finally{setBusy(false);}}}>{!compact && "证据版本已更新，重新评估"}</ActionButton>}
+ {(status.error||error)&&<span className={compact ? "sr-only" : "text-danger-fg"}>{error||status.error}</span>}
  </div>;
 }

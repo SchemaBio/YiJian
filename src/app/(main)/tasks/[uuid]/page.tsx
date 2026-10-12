@@ -312,20 +312,18 @@ export default function AnalysisDetailPage() {
       <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel="保存中…" variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? '取消解读完成' : '解读完成'}</ActionButton>} />
       {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">解读已完成，当前为只读。取消解读完成后可继续编辑。</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
-
-      {/* 样本信息汇总卡片 */}
       {sample && <SampleSummaryCard sample={sample} />}
+
       </div>
       <div className="min-h-0 flex-1 flex flex-col overflow-hidden px-3 pb-3 md:px-4 md:pb-4">
 
       {/* 标签面板和内容 */}
-		<div className="flex-1 min-h-0"><ResultTabs key={resultContextKey} activeTab={activeTab} onTabChange={handleTabChange} tools={<AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />}>
+		<div className="flex-1 min-h-0"><ResultTabs activeTab={activeTab} onTabChange={handleTabChange} variantNavigation={isVariantTab && <VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />} tools={<AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />}>
 			{isVariantTab ? (
-				<div className="yj-result-workspace">
-					<VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />
+				<div key={resultContextKey} className="yj-result-workspace">
 					<div className="yj-result-content">{renderTabContent()}</div>
 				</div>
-			) : <div className="h-full overflow-auto">{renderTabContent()}</div>}
+			) : <div key={resultContextKey} className="h-full overflow-auto">{renderTabContent()}</div>}
 		</ResultTabs></div>
       </div>
     </PageContent>

@@ -43,12 +43,40 @@
   border: 1px solid var(--yj-border-subtle); border-radius: 12px; box-shadow: var(--yj-shadow-raised);
 }
 .yj-result-workspace { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.yj-variant-nav { flex-shrink: 0; overflow: auto; background: var(--yj-panel-bg); border-bottom: 1px solid var(--yj-border-subtle); padding: 8px 16px; }
+.yj-task-workspace { display: flex; height: 100%; min-height: 0; min-width: 0; }
+.yj-task-nav { width: 204px; flex: 0 0 204px; min-height: 0; overflow-y: auto; border-right: 1px solid var(--yj-border-subtle); background: var(--yj-panel-bg); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.yj-task-nav-primary { display: flex; flex-direction: column; gap: 4px; }
+.yj-task-nav-button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; border-radius: 6px; padding: 8px 12px; text-align: left; }
+.yj-task-nav-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 6px 12px; border-radius: 6px; font-size: 12px; color: var(--yj-text-muted); }
+.yj-task-nav-toggle:hover { background: var(--yj-panel-subtle); }
+.yj-task-nav-toggle:focus-visible { outline: 2px solid var(--color-accent-emphasis); outline-offset: -2px; }
+.yj-task-nav[data-collapsed='true'] { width: 52px; flex-basis: 52px; padding-inline: 6px; }
+.yj-task-nav[data-collapsed='true'] .yj-task-nav-button,
+.yj-task-nav[data-collapsed='true'] .yj-task-nav-toggle,
+.yj-task-nav[data-collapsed='true'] .yj-variant-nav-items button { justify-content: center; padding-inline: 0; }
+.yj-task-nav[data-collapsed='true'] .yj-variant-nav { margin-left: 0; border-left: 0; padding: 4px 0; border-block: 1px solid var(--yj-border-subtle); }
+.yj-task-nav[data-collapsed='true'] .yj-task-nav-tools .yj-tool-button { justify-content: center; width: 100%; }
+.yj-task-nav-tools { margin-top: auto; border-top: 1px solid var(--yj-border-subtle); padding-top: 8px; }
+.yj-task-nav-tools:empty { display: none; }
+.yj-task-nav-tools .yj-assessment-status { flex-direction: column; align-items: stretch; overflow-wrap: anywhere; }
+.yj-task-nav-tools .yj-tool-button { white-space: normal; text-align: left; justify-content: flex-start; }
+.yj-task-workspace-panel { flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+.yj-variant-nav { margin: 0 0 4px 10px; border-left: 1px solid var(--yj-border-subtle); padding: 2px 0 2px 6px; }
 .yj-variant-nav > p { display: none; }
-.yj-variant-nav-items { display: flex; gap: 4px; width: max-content; }
-.yj-variant-nav-items button { white-space: nowrap; }
+.yj-variant-nav-items { display: flex; flex-direction: column; gap: 2px; }
+.yj-variant-nav-items button { white-space: nowrap; min-height: 34px; font-size: 12px; padding: 6px 8px; gap: 4px; }
 .yj-result-content { flex: 1; min-height: 0; min-width: 0; overflow: hidden; background: var(--yj-panel-bg); padding: 0 16px 12px; }
+@media (max-width: 767px) {
+  .yj-task-nav { width: 184px; flex-basis: 184px; padding: 8px 4px; }
+  .yj-task-nav-button { padding-inline: 8px; }
+}
 .yj-interpretation-panel { position: relative; padding: 12px 0 0; }
+.yj-result-content > .variant-tab-panel { padding-top: 12px; }
+.yj-variant-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; flex-shrink: 0; margin-bottom: 8px; }
+.yj-variant-controls-row { display: contents; }
+.yj-variant-controls-row > div:first-child { order: 0; }
+.yj-variant-toolbar > .yj-filter-tools { order: 1; margin-bottom: 0; }
+.yj-variant-controls-row > div:last-child { order: 2; margin-left: auto; font-size: 12px; }
 .yj-inspector {
   position: fixed; right: 0; top: 0; bottom: 0; width: min(480px, 100vw); z-index: 60;
   display: flex; flex-direction: column; min-height: 0; background: var(--yj-panel-bg);
@@ -85,7 +113,7 @@
   .yj-has-inspector > .yj-inspector { position: absolute; width: 420px; z-index: 10; box-shadow: none; }
 }
 @media (max-width: 767px) {
-  .yj-variant-nav { padding-inline: 12px; }
+  .yj-variant-nav { padding-inline: 6px 0; }
   .yj-result-content { padding-inline: 12px; }
   .yj-task-page { padding: 16px; }
   .yj-task-metrics { gap: 12px 20px; }
