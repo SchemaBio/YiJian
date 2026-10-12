@@ -170,7 +170,7 @@ export default function BaselinePage() {
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header"><div><h2 className="yj-page-title">CNV 基线</h2><p className="yj-page-subtitle">使用所选正常样本对系统内置 CNV 基线进行校正。</p></div></div>
-      <div className="mb-2 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-fg">
+      <div className="mb-2 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
         <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
         <span>CNV 基线由系统内置基线结合所选样本进行校正生成。该结果仅供分析参考，准确度尚未经充分验证，请结合其他检测方法和临床证据综合判断。</span>
       </div>
@@ -183,7 +183,7 @@ export default function BaselinePage() {
 
       <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
         <div className="space-y-5">
-          <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
           {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormItem label="基线名称" required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>

@@ -445,7 +445,7 @@ export default function DataCenterPage() {
       </div>
 
       {config?.temporary && (
-        <div className="mb-4 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-fg">
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
           <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
           <p className="whitespace-nowrap"><strong className="font-medium">数据仅保留 {config.retention_days} 天</strong><span className="ml-3 text-xs">仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。单个文件不得超过 20 GB。</span></p>
         </div>
@@ -511,7 +511,7 @@ export default function DataCenterPage() {
         }
       >
         <div className="space-y-6">
-          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
+          {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
           {isSaaS && <p className="text-xs text-fg-muted">当前已用 {formatBytes(totalBytes)}，总容量 {storageQuotaLabel}。</p>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
