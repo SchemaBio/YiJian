@@ -117,17 +117,17 @@ export default function PrivacyPage() {
           </section>
 
           {/* 第五条 数据保留与删除策略 */}
-          <section className="rounded-[var(--yj-radius-panel)] border border-warning-muted bg-warning-subtle p-4">
-            <h2 className="text-base font-semibold text-warning-fg mb-3 flex items-center gap-2">
+          <section className="rounded-[var(--yj-radius-panel)] border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+            <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span>第五条 数据保留与删除策略</span>
             </h2>
-            <div className="space-y-3 text-sm text-warning-fg leading-relaxed pl-0 md:pl-6">
-              <p><strong className="text-warning-fg">5.1 原始测序数据：</strong>用户上传的原始测序文件（FASTQ/BAM 等），自上传完成之日起保留 <strong className="text-danger-fg">7 个自然日</strong>，到期后由系统自动永久删除，<strong className="text-danger-fg">不可恢复</strong>。请用户在删除前确认已完成所需分析。</p>
-              <p><strong className="text-warning-fg">5.2 分析结果：</strong>分析任务产生的结果数据（变异列表、注释、报告等）在用户账户存续期间保留，用户可随时手动删除。</p>
-              <p><strong className="text-warning-fg">5.3 账户信息：</strong>用户注册信息在账户存续期间保留。用户注销账户后，我们将在 30 个工作日内删除全部关联数据。</p>
-              <p><strong className="text-warning-fg">5.4 系统日志：</strong>操作日志和系统日志保留不超过 180 天，到期自动清理。</p>
-              <p><strong className="text-warning-fg">5.5 数据备份：</strong>为保障服务连续性，系统可能对分析结果进行备份。备份数据随主数据一同删除，删除操作完成后 72 小时内备份数据将被彻底清除。</p>
+            <div className="space-y-3 text-sm leading-relaxed pl-0 md:pl-6">
+              <p><strong>5.1 原始测序数据：</strong>用户上传的原始测序文件（FASTQ/BAM 等），自上传完成之日起保留 <strong>7 个自然日</strong>，到期后由系统自动永久删除，<strong>不可恢复</strong>。请用户在删除前确认已完成所需分析。</p>
+              <p><strong>5.2 分析结果：</strong>分析任务产生的结果数据（变异列表、注释、报告等）在用户账户存续期间保留，用户可随时手动删除。</p>
+              <p><strong>5.3 账户信息：</strong>用户注册信息在账户存续期间保留。用户注销账户后，我们将在 30 个工作日内删除全部关联数据。</p>
+              <p><strong>5.4 系统日志：</strong>操作日志和系统日志保留不超过 180 天，到期自动清理。</p>
+              <p><strong>5.5 数据备份：</strong>为保障服务连续性，系统可能对分析结果进行备份。备份数据随主数据一同删除，删除操作完成后 72 小时内备份数据将被彻底清除。</p>
             </div>
           </section>
 
