@@ -127,8 +127,8 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
   const scope = `${taskId}/${variantType}/${variant?.id}`;
   const scopeRef = React.useRef(scope); scopeRef.current = scope;
   const [plotOpen, setPlotOpen] = React.useState(false);
-  React.useEffect(() => { setPlotOpen(false); setSection('annotation'); setAIResult(undefined); setInterpretation(variant?.interpretation ?? ''); setSavedInterpretation(variant?.interpretation ?? ''); setSaving(false); setSaveError(''); }, [scope, isOpen]);
-  if (!isOpen || !variant) return null;
+  React.useEffect(() => { if (isOpen && taskId && variant) setPlotOpen(true); setSection('annotation'); setAIResult(undefined); setInterpretation(variant?.interpretation ?? ''); setSavedInterpretation(variant?.interpretation ?? ''); setSaving(false); setSaveError(''); }, [scope, isOpen]);
+  if (!variant) return null;
 
   const isExon = isCNVExon(variant);
   const exonRatio = isExon ? variant.ratio : null;
@@ -139,7 +139,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
 
   return (
     <>
-      <WorkspaceInspector label="变异详情" onClose={onClose}>
+      {isOpen && <WorkspaceInspector label="变异详情" onClose={onClose} nonModal>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
@@ -150,11 +150,14 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
               {typeLabel}
             </Tag>
           </div>
+          <div className="flex items-center gap-1">
+          {taskId && <IconActionButton label={isExon ? '外显子 CN 分布图' : '区域信号图'} action="view" variant="ghost" onClick={() => setPlotOpen(true)} />}
           <IconActionButton label="关闭" action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
 
            />
+          </div>
         </div>
 
         <div className="yj-inspector-summary">
@@ -198,10 +201,6 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           <section hidden={section !== 'evidence'} >
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title="CNV 特征" />
-          <div className="mb-3 flex flex-wrap gap-2">
-            {isExon && taskId && <ActionButton variant="ghost" type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">外显子 CN 分布图</ActionButton>}
-            {showPlot && <ActionButton variant="ghost" type="button" onClick={() => setPlotOpen(true)} className="yj-tool-button">区域信号图 · 设置窗口</ActionButton>}
-          </div>
           <div className="space-y-0">
             <InfoItem
               label="类型"
@@ -305,7 +304,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           </section>
         </div>
 
-      </WorkspaceInspector>
+      </WorkspaceInspector>}
 
       {isExon && taskId && <CNVExonPlot variant={variant} taskId={taskId} isOpen={plotOpen} onClose={() => setPlotOpen(false)} />}
       {/* CNV 图弹窗 */}

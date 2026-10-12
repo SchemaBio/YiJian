@@ -4,15 +4,22 @@ import * as React from 'react';
 import { api } from '@/lib/api';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
+import type { ResultTable } from '@/lib/assessment/types';
 
 vi.mock('@/components/shared/ToolbarPopover', () => ({ ToolbarPopover: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('@/lib/api',()=>({api:{get:vi.fn(),put:vi.fn()}}));
-vi.mock('../result-api',()=>({exportEffectiveTable:vi.fn()}));
 vi.mock('@/lib/parquet-browser',()=>({retainBrowserTable:()=>()=>{},refreshBrowserTable:vi.fn().mockResolvedValue(undefined)}));
 
 describe('personal filter synchronization',()=>{
   beforeEach(()=>vi.clearAllMocks());
   const preset={...DEFAULT_FILTER_STATE,searchQuery:'GENE',page:5,columnFilters:[{column:'GnomAD_AF',operator:'lte' as const,value:'0.001'}]};
+  it.each<ResultTable>(['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'])('does not offer CSV export for %s', async table => {
+    vi.mocked(api.get).mockResolvedValue([]);
+    render(<ParquetColumnFilterBar taskId="task" table={table} columns={['Gene']} state={DEFAULT_FILTER_STATE} onChange={vi.fn()} />);
+    await waitFor(() => expect(api.get).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /导出/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '刷新修改' })).toBeInTheDocument();
+  });
   it('does not offer server computation switching', async () => {
     vi.mocked(api.get).mockResolvedValue([]);
     render(<ParquetColumnFilterBar taskId="task" table="snv-indel" columns={[]} state={DEFAULT_FILTER_STATE} onChange={vi.fn()} />);

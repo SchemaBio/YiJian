@@ -3,7 +3,7 @@ import { ActionButton } from '@/components/shared/ActionButton';
 
 
 import * as React from 'react';
-import { AppModal } from '@/components/shared';
+import { CNVPlotWindow } from './CNVPlotWindow';
 import { useTheme } from '@schema/ui-kit';
 import { getCNVSegments } from '../result-api';
 import {loadCNR, normalizeContig as contig, type CNRBin} from '../utils/cnv-signal';
@@ -111,7 +111,7 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
     ctx.restore(); ctx.fillStyle=color('--color-fg-default','#374151'); ctx.textAlign='left'; ctx.fillText('log2 ratio',4,12);
   }, [isOpen,width,valid,bins,start,end,minimum,maximum,variant,resolvedTheme,canvas]);
   if (!isOpen) return null;
-  return <AppModal open={isOpen} onOpenChange={open=>!open&&onClose()} title={`${variant.chromosome} · CNV Region 信号图`} size="large" className="!z-[80] !w-[min(900px,94vw)] !max-w-none">
+  return <CNVPlotWindow open={isOpen} onClose={onClose} title={`${variant.chromosome} · CNV Region 信号图`}>
       <div className="my-3 flex flex-wrap items-center gap-3 text-xs"><label className="flex items-center gap-2">选中区间两侧扩展<input aria-label="窗口两侧扩展 kb" type="number" min="0" max="100000" value={flankKB} onChange={e => {const v=Number(e.target.value);if(Number.isFinite(v)&&v>=0&&v<=100000)setFlankKB(v);}} className="w-24 rounded border border-border-default bg-canvas-default px-2 py-1" />kb</label><span>{start.toLocaleString()}–{end.toLocaleString()}（窗口 {(end-start).toLocaleString()} bp）</span></div>
       <p className="mb-2 text-xs text-fg-muted">横线为 Region 合并区间 log2，圆点为区间中点；灰点为原始 CNR bin，虚线为 log2=0。缺测留空，不插值。调整窗口不改变检出时的 bin 大小。</p>
       <p className="mb-2 text-xs text-fg-muted">{cnrStatus}；当前窗口 {bins.length.toLocaleString()} 个原始 bin。</p>
@@ -120,5 +120,5 @@ export function CNVRegionPlot({ taskId, variant, isOpen, onClose }: {
         setHover(valid.find(row=>coordinate>=row.startPosition&&coordinate<=row.endPosition)??null);
       }} onMouseLeave={()=>setHover(null)} className="max-w-full" />}</div>
       {!loading && !error && (valid.length > 0 || bins.length > 0) && <p className="mt-2 min-h-5 text-xs text-fg-muted">{hover ? `${hover.chromosome}:${hover.startPosition}–${hover.endPosition} · log2 ${hover.log2Ratio} · CN ${hover.copyNumber??'未提供'}` : `${valid.length}/${rows.length} 个合并区间提供 log2；蓝色缺失，红色扩增，灰色其他，浅黄色为选中区间。`}</p>}
-  </AppModal>;
+  </CNVPlotWindow>;
 }

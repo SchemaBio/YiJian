@@ -18,6 +18,15 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it('shows transcript location, totals and HGVS in annotation', async () => {
+    render(<VariantDetailPanel taskId="task" variant={{ ...variant('A'), annotationValues: { Location: 'Exon 2/20' } }} isOpen onClose={vi.fn()} />);
+    const section = screen.getByRole('heading', { name: '转录本与 HGVS' }).closest('section')!;
+    await waitFor(() => expect(within(section).getByText('NM_001000')).toBeVisible());
+    expect(within(section).getByText('20')).toBeVisible();
+    expect(within(section).getByText('19（按外显子总数推算）')).toBeVisible();
+    expect(within(section).getByText('c.1A>G')).toBeVisible();
+    expect(within(section).getByText('p.(Lys1Arg)')).toBeVisible();
+  });
   it('labels the quick result and its source without presenting it as ACMG points', async () => {
     render(<VariantDetailPanel taskId="task" variant={{...variant('A'),acmgClassification:'Benign',acmgAssessmentSource:'automatic',automaticAcmg:{profile:'fast',state:'evaluated',score:0,classification:'Benign',classificationBasis:'clinvar_reference',criteria:[],pending:[],screeningNotes:['ClinVar：Benign；专家组审核','gnomAD：总体 AF=0.2；常见']}}} isOpen onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', {name:'ACMG'}));

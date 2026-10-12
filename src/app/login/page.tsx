@@ -49,7 +49,7 @@ export default function LoginPage() {
     }
 
     if (privacyConsentRequired && !agreePrivacy) {
-      setError('请阅读并同意用户隐私协议');
+      setError('请阅读并确认已了解隐私政策');
       return;
     }
 
@@ -155,9 +155,9 @@ export default function LoginPage() {
                   className="mt-0.5 h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
                 <span className="text-sm leading-relaxed text-[var(--yj-text-muted)]">
-                  我已阅读并同意{' '}
+                  我已阅读并了解{' '}
                   <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">
-                    《用户隐私协议与免责声明》
+                    《隐私政策》
                   </Link>
                 </span>
               </label>

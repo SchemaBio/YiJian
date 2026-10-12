@@ -16,7 +16,7 @@ import { DEFAULT_FILTER_STATE } from '../types';
 import { getSNVIndels, ACMG_CONFIG, getGeneLists, reportVariant, pinVariant, saveResultRowAdjustment, type GeneListOption } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { VariantDetailPanel } from './VariantDetailPanel';
-import { formatPopulationFrequency, sourceAnnotation } from '../utils/snv-annotations';
+import { formatPopulationFrequency, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { ClinVarBadge } from './ClinVarBadge';
 import { filterableColumns } from './ResultColumnFilter';
@@ -389,6 +389,13 @@ export function SNVIndelTab({
       align: 'center',
     },
     {
+      id: 'transcriptLocation',
+      header: '外显子/内含子',
+      accessor: row => transcriptLocation(row).label,
+      width: 130,
+      align: 'center',
+    },
+    {
       id: 'hgvsc',
       header: 'cDNA变化',
       accessor: 'hgvsc',
@@ -417,7 +424,7 @@ export function SNVIndelTab({
           {/* 搜索框 */}
           <div className="w-52 shrink-0">
             <Input
-              className="[&_input]:min-w-0 [&_input]:w-0"
+              className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
               placeholder="搜索基因、位置..."
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}

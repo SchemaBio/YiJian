@@ -11,7 +11,7 @@ import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-rea
 import { Tag } from '@schema/ui-kit';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
-import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from '../utils/snv-annotations';
+import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
@@ -258,6 +258,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
   const vaf = optionalAnnotationNumber(sourceAnnotation(variant, 'VAF'));
+  const transcriptInfo = transcriptLocation(variant);
 
   // 保存 ACMG 分类
   const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false) => {
@@ -466,6 +467,20 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
           </section>
           <section hidden={section !== 'annotation'} className="yj-annotation-layout">
+            <section aria-labelledby="transcript-heading">
+              <h4 id="transcript-heading" className="yj-annotation-heading">转录本与 HGVS</h4>
+              <dl className="yj-annotation-fields">
+                <AnnotationField label="转录本编号" value={annotation('Transcript', variant.transcript)} />
+                <AnnotationField label="外显子编号" value={transcriptInfo.exonNumber} />
+                <AnnotationField label="内含子编号" value={transcriptInfo.intronNumber} />
+                <AnnotationField label="外显子总数" value={transcriptInfo.exonTotal ? `${transcriptInfo.exonTotal}${transcriptInfo.exonTotalDerived ? '（按内含子总数推算）' : ''}` : undefined} />
+                <AnnotationField label="内含子总数" value={transcriptInfo.intronTotal ? `${transcriptInfo.intronTotal}${transcriptInfo.intronTotalDerived ? '（按外显子总数推算）' : ''}` : undefined} />
+                <AnnotationField label="位置原始注释" value={transcriptInfo.location} />
+                <AnnotationField label="HGVSc" value={annotation('HGVS_c', variant.hgvsc)} />
+                <AnnotationField label="HGVSp" value={annotation('HGVS_p', variant.hgvsp)} />
+                <AnnotationField label="变异后果" value={variant.consequence} />
+              </dl>
+            </section>
             <section aria-labelledby="gencc-heading">
               <h4 id="gencc-heading" className="yj-annotation-heading">GenCC · 基因与疾病关联</h4>
               <dl className="yj-annotation-fields">

@@ -276,7 +276,7 @@ export function MTTab({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
-              className="[&_input]:min-w-0 [&_input]:w-0"
+              className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
               placeholder="搜索基因、疾病..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}

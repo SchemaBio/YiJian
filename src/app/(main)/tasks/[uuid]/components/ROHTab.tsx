@@ -176,7 +176,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       <div className="yj-variant-controls-row">
         <div className="w-52 max-w-full shrink-0 sm:w-64">
           <Input
-              className="[&_input]:min-w-0 [&_input]:w-0"
+              className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
             placeholder="搜索染色体、基因..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}

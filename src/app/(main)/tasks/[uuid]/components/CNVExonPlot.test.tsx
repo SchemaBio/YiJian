@@ -20,6 +20,8 @@ it('announces a read failure and restores the chart after retry', async () => {
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '重新读取' }));
   await screen.findByRole('img', { name: /1 个外显子/ });
+  expect(document.querySelectorAll('svg[role="img"] circle')).toHaveLength(1);
+  expect(document.querySelectorAll('svg[role="img"] rect')).toHaveLength(0);
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(loadCNR).toHaveBeenCalledTimes(2);
 });

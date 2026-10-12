@@ -735,6 +735,20 @@
 
 /* UI-kit 的弹性输入框应随表单列宽收缩，避免窄屏双列表单溢出。 */
 @layer utilities {
+  /* 图标与输入框共享外层边框，内部保持透明，避免全局输入样式遮挡图标。 */
+  .yj-modern .yj-interpretation-panel .yj-variant-search > input.flex-1,
+  .yj-modern .yj-interpretation-panel .yj-variant-search > input.flex-1:focus {
+    background-color: transparent !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    box-shadow: none !important;
+  }
+
+  .yj-variant-search > span,
+  .yj-variant-search > span > svg {
+    flex-shrink: 0;
+  }
+
   .yj-app-modal input.flex-1 {
     min-width: 0;
     width: 0;

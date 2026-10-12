@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 import { listSamples, normalizeSample, samplePayload } from '@/lib/samples';
 import type { Sample } from './types';
 import { GENDER_CONFIG } from './types';
+import { downloadSampleList } from '@/lib/sample-export';
 
 function formatDateTime(value: string): string {
   const date = new Date(value);
@@ -491,6 +492,12 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             )}
           </div>
           <div className="yj-toolbar w-full flex-wrap sm:w-auto sm:flex-nowrap">
+            <Button action="export" variant="secondary" disabled={readFailed || selectedSamples.length === 0} onClick={() => {
+              try { downloadSampleList(selectedSamples); }
+              catch (cause) { setSamplesError(cause instanceof Error ? cause.message : '导出样本清单失败'); }
+            }}>
+              导出已选样本{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
+            </Button>
             <Button action="delete"
               variant="danger"
 

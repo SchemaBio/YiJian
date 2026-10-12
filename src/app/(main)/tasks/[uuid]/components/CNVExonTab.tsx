@@ -316,7 +316,7 @@ export function CNVExonTab({
     {
       id: 'iscnCandidate',
       header: 'ISCN 候选',
-      accessor: row => <HoverHint content="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based"><span className="block whitespace-normal break-words font-mono text-xs" >{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span></HoverHint>,
+      accessor: row => <HoverHint content="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based"><span className="yj-iscn-full block whitespace-normal break-words font-mono text-xs" >{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span></HoverHint>,
       width: 300,
     },
     {
@@ -389,7 +389,7 @@ export function CNVExonTab({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
-              className="[&_input]:min-w-0 [&_input]:w-0"
+              className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
               placeholder="搜索基因、外显子..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}

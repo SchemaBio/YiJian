@@ -7,11 +7,11 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { AppModal, EmptyState } from '@/components/shared';
+import { AppModal, ConfirmDialog, EmptyState } from '@/components/shared';
 import { DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
 import { AlertTriangle, Coins, Database, Loader2, Search } from 'lucide-react';
 import { listDataAssets, type DataAsset } from '@/lib/data-assets';
-import { createCNVBaseline, listCNVBaselines, type CNVBaseline, type CNVBaselineStatus } from '@/lib/cnv-baselines';
+import { createCNVBaseline, deleteCNVBaseline, listCNVBaselines, type CNVBaseline, type CNVBaselineStatus } from '@/lib/cnv-baselines';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { AssetMultiSelect } from './AssetMultiSelect';
 import { getBillingConfig } from '@/lib/billing';
@@ -58,6 +58,7 @@ export default function BaselinePage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState<CNVBaseline | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState('');
   const [name, setName] = React.useState('');
@@ -92,7 +93,7 @@ export default function BaselinePage() {
   }, [scope]);
 
   React.useEffect(() => {
-    setModalOpen(false); setName(''); setBedID(''); setRead1IDs([]); setRead2IDs([]); setAssets([]); setItems([]); setFormError('');
+    setModalOpen(false); setDeleting(null); setName(''); setBedID(''); setRead1IDs([]); setRead2IDs([]); setAssets([]); setItems([]); setFormError('');
     void loadData();
     return () => { ++loadGeneration.current; assetController.current?.abort(); };
   }, [loadData]);
@@ -163,13 +164,13 @@ export default function BaselinePage() {
     { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
     { id: 'actions', header: '操作', accessor: (row) => row.is_builtin
       ? <span className="text-xs text-fg-muted">只读</span>
-      : <TableActions><TableAction action="view" label="查看任务" disabled hint="CNV 校正任务不提供变异解读详情" /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
+      : <TableActions><TableAction action="delete" label="删除" tone="danger" aria-label={`删除 ${row.name}`} disabled={['queued', 'waiting_for_data', 'running'].includes(row.status)} hint={['queued', 'waiting_for_data', 'running'].includes(row.status) ? '校正任务结束后可删除' : '删除自定义基线'} onClick={() => setDeleting(row)} /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
   ];
 
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header"><div><h2 className="yj-page-title">CNV 基线</h2><p className="yj-page-subtitle">使用所选正常样本对系统内置 CNV 基线进行校正。</p></div></div>
-      <div className="mb-2 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-fg">
+      <div className="mb-2 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
         <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
         <span>CNV 基线由系统内置基线结合所选样本进行校正生成。该结果仅供分析参考，准确度尚未经充分验证，请结合其他检测方法和临床证据综合判断。</span>
       </div>
@@ -182,7 +183,7 @@ export default function BaselinePage() {
 
       <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
         <div className="space-y-5">
-          <div className="rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-xs leading-5 text-warning-fg">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
           {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormItem label="基线名称" required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>
@@ -195,6 +196,13 @@ export default function BaselinePage() {
           {isSaaS && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">{estimatedCredits === null ? '预计积分暂不可用' : `预计消耗 ${estimatedCredits} 积分`}</div><div className="mt-0.5 text-xs text-fg-muted">按 R1/R2 总大小向上取整计费。{creditRate === null ? '最终金额以服务端计费配置为准。' : `每 GiB ${creditRate} 积分，不足 1 GiB 按 1 GiB 计。`}</div></div></div><div className="shrink-0 text-xs text-fg-muted">{(selectedInputBytes / (1024 ** 3)).toFixed(2)} GiB</div></div>}
         </div>
       </AppModal>
+      <ConfirmDialog key={scope} open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)} title="删除 CNV 基线" confirmLabel="确认删除" variant="danger" message={`确定删除自定义基线「${deleting?.name ?? ''}」吗？关联任务记录和归档文件将保留。被流程或未结束任务使用的基线无法删除。`} onConfirm={async () => {
+        if (!deleting || deleting.is_builtin) return;
+        const generation = loadGeneration.current;
+        await deleteCNVBaseline(deleting.id);
+        if (generation !== loadGeneration.current) return;
+        await loadData();
+      }} />
     </PageContent>
   );
 }
