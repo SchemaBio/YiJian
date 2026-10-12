@@ -3,7 +3,7 @@
 import * as React from 'react';
 import type { TabType } from '../types';
 import { TAB_CONFIGS, VARIANT_TAB_CONFIGS } from '../types';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Microscope, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { HoverHint } from '@/components/shared/HoverHint';
 import { TASK_NAV_ICONS, TaskNavigationCollapsed } from './TaskNavigation';
 
@@ -71,7 +71,7 @@ export function ResultTabs({ activeTab, onTabChange, children, tools, variantNav
         >
           {TAB_CONFIGS.map((tab, index) => {
 						const isActive = primaryActiveTab === tab.id;
-            const Icon = TASK_NAV_ICONS[tab.id];
+            const Icon = tab.id === 'snv-indel' ? Microscope : TASK_NAV_ICONS[tab.id];
             return (
               <React.Fragment key={tab.id}><HoverHint content={collapsed ? tab.label : undefined}><button
                 key={tab.id}
