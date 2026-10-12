@@ -4,14 +4,14 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Tag } from '@schema/ui-kit';
 import { AlertCircle, ArrowRight, CheckCircle2, Clock3, Database, FlaskConical, Plus, Users, XCircle } from 'lucide-react';
 import { PageContent } from '@/components/layout';
 import { EmptyState } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { api } from '@/lib/api';
 import { tasksApi } from '@/lib/tasks';
-import type { AnalysisTask, TaskStatsResponse, TaskStatus } from '@/types/task';
+import type { AnalysisTask, TaskStatsResponse } from '@/types/task';
+import { taskDisplayStatus, taskStatusConfig, taskStatusClass } from '@/lib/task-presentation';
 
 interface DashboardStats {
   totalSamples: number;
@@ -40,24 +40,6 @@ const EMPTY_TASK_STATS: TaskStatsResponse = {
   window_start: '',
 };
 
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  waiting_for_data: '等待数据',
-  queued: '排队中',
-  running: '运行中',
-  completed: '已完成',
-  failed: '失败',
-  cancelled: '已取消',
-  pending_interpretation: '待解读',
-};
-
-function statusVariant(status: TaskStatus): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
-  if (status === 'completed') return 'success';
-  if (status === 'failed') return 'danger';
-  if (status === 'running') return 'info';
-  if (status === 'queued' || status === 'waiting_for_data') return 'warning';
-  return 'neutral';
-}
-
 function formatDateTime(value: string): string {
   if (!value) return '-';
   const date = new Date(value);
@@ -66,7 +48,14 @@ function formatDateTime(value: string): string {
 }
 
 export default function DashboardPage() {
+  const { user, currentOrg } = useAuth();
+  return <DashboardPageContent key={`${user?.id ?? ''}:${currentOrg?.id ?? ''}`} />;
+}
+
+function DashboardPageContent() {
   const { user } = useAuth();
+  const generation = React.useRef(0);
+  const inFlight = React.useRef(false);
   const [stats, setStats] = React.useState<DashboardStats>(EMPTY_STATS);
   const [taskStats, setTaskStats] = React.useState<TaskStatsResponse>(EMPTY_TASK_STATS);
   const [tasks, setTasks] = React.useState<AnalysisTask[]>([]);
@@ -74,15 +63,19 @@ export default function DashboardPage() {
   const [error, setError] = React.useState('');
   const [updatedAt, setUpdatedAt] = React.useState<string>('');
 
-  const loadDashboard = React.useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const loadDashboard = React.useCallback(async (background = false) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    const requestGeneration = ++generation.current;
+    if (!background) { setLoading(true); setError(''); }
 
     const [dashboardResult, tasksResult, taskStatsResult] = await Promise.allSettled([
       api.get<DashboardStats>('/v1/dashboard/stats'),
       tasksApi.list({ page: 1, page_size: 6 }),
       tasksApi.getStats(),
     ]);
+
+    if (requestGeneration !== generation.current) return;
 
     const failures: string[] = [];
     if (dashboardResult.status === 'fulfilled') {
@@ -106,10 +99,24 @@ export default function DashboardPage() {
     setError(failures.length > 0 ? `${failures.join('、')}暂时不可用` : '');
     setUpdatedAt(new Date().toISOString());
     setLoading(false);
+    inFlight.current = false;
   }, []);
 
   React.useEffect(() => {
     void loadDashboard();
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void loadDashboard(true);
+    };
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      ++generation.current;
+      inFlight.current = false;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [loadDashboard]);
 
   const cardToneClasses = {
@@ -217,16 +224,9 @@ export default function DashboardPage() {
                     <div className="truncate text-sm font-medium text-fg-default">{task.internalId || task.sampleId || task.id}</div>
                     <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt)}</div>
                   </div>
-                  <Tag
-                    variant={statusVariant(task.status)}
-                    className={`h-4 w-fit justify-self-start px-1.5 text-[11px] leading-4 ${
-                      task.status === 'running'
-                        ? 'border-[var(--color-variant-indel)] bg-[var(--color-variant-indel-subtle)] text-[var(--color-variant-indel)]'
-                        : ''
-                    }`}
-                  >
-                    {STATUS_LABEL[task.status] ?? task.status}
-                  </Tag>
+                  <span className={`yj-task-state-label ${taskStatusClass(taskDisplayStatus(task))}`} data-status={taskDisplayStatus(task)} data-interpretation-completed={!!task.interpretationCompletedAt}>
+                    <span aria-hidden="true" />{taskStatusConfig[taskDisplayStatus(task)].label}
+                  </span>
                   <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                     {task.status === 'running' && (
                       typeof task.progress === 'number' && Number.isFinite(task.progress) ? (
