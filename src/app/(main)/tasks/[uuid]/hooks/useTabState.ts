@@ -46,7 +46,7 @@ function filtersFromURL(params: URLSearchParams): TableFilterState {
         const value = params.get('columnFilters');
         const parsed: unknown = value ? JSON.parse(value) : [];
         if (!Array.isArray(parsed)) return [];
-        return parsed.filter(item => item && typeof item.column === 'string' && typeof item.operator === 'string' && ['contains', 'equals', 'in', 'gt', 'gte', 'lt', 'lte', 'is_missing', 'is_not_missing'].includes(item.operator));
+        return parsed.filter(item => item && typeof item.column === 'string' && typeof item.operator === 'string' && ['contains', 'not_contains', 'equals', 'in', 'gt', 'gte', 'lt', 'lte', 'between', 'is_missing', 'is_not_missing'].includes(item.operator));
       } catch {
         return [];
       }

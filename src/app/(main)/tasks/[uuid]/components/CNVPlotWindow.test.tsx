@@ -2,6 +2,18 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { CNVPlotWindow } from './CNVPlotWindow';
 
+it('opens below a high row and moves above a low row without covering either', () => {
+  const props = { open: true, title: '避让所选行', onClose: vi.fn(), children: '图表' };
+  const view = render(<CNVPlotWindow {...props} anchor={{ top: 100, bottom: 140, left: 80, right: 1000 }} />);
+  const dialog = screen.getByRole('dialog', { name: '避让所选行' });
+  expect(parseInt(dialog.style.top)).toBe(152);
+  expect(dialog.style.maxHeight).toContain(`${window.innerHeight - 168}px`);
+  view.rerender(<CNVPlotWindow {...props} anchor={{ top: 600, bottom: 640, left: 80, right: 1000 }} />);
+  expect(parseInt(dialog.style.top)).toBe(16);
+  expect(dialog.style.maxHeight).toContain('572px');
+  expect(16 + 572).toBeLessThan(600);
+});
+
 it('moves the window by dragging its header', () => {
   const original = window.PointerEvent;
   window.PointerEvent = class extends MouseEvent { pointerId = 1; } as typeof PointerEvent;

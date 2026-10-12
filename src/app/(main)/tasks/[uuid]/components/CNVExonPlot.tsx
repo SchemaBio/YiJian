@@ -3,12 +3,12 @@ import { ActionButton } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
 
-import { CNVPlotWindow } from './CNVPlotWindow';
+import { CNVPlotWindow, type CNVPlotAnchor } from './CNVPlotWindow';
 import { HoverHint } from '@/components/shared/HoverHint';
 import type {CNVExon} from '../types';
 import {loadCNR,exonSignals,type ExonSignal} from '../utils/cnv-signal';
 
-export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;variant:CNVExon;isOpen:boolean;onClose:()=>void}) {
+export function CNVExonPlot({taskId,variant,isOpen,onClose,anchor}:{taskId:string;variant:CNVExon;isOpen:boolean;onClose:()=>void;anchor?:CNVPlotAnchor}) {
   const [signals,setSignals]=React.useState<Map<string,ExonSignal[]>>(new Map());
   const [transcript,setTranscript]=React.useState('');
   const [status,setStatus]=React.useState('');
@@ -36,7 +36,7 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose}:{taskId:string;varia
   const y=(cn:number)=>bottom-(cn/max)*(bottom-top);
   const x=(i:number)=>left+(i+0.5)*(width-left-20)/Math.max(1,rows.length);
   const copy=async()=>{try{await navigator.clipboard.writeText(['基因\t转录本\t外显子\t染色体\t起点(1-based)\t终点\tCN估计\tlog2\tbin数',...rows.map(row=>`${variant.gene}\t${transcript}\t${row.exon}\t${variant.chromosome}\t${row.start+1}\t${row.end}\t${row.cn.toFixed(3)}\t${row.log2.toFixed(3)}\t${row.bins}`)].join('\n'));setCopied('已复制');}catch{setCopied('复制失败，可选择下方表格复制');}};
-  return <CNVPlotWindow open={isOpen} onClose={onClose} title={`${variant.gene} · 外显子 CN 分布`}>
+  return <CNVPlotWindow anchor={anchor} open={isOpen} onClose={onClose} title={`${variant.gene} · 外显子 CN 分布`}>
       <div className="min-h-0">
 
         {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<ActionButton variant="ghost" onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</ActionButton></div>:<>

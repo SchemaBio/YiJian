@@ -14,10 +14,11 @@ import { Search } from 'lucide-react';
 import type { CNVExon, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getCNVExons, reportVariant, pinVariant, saveCNVAssessment, saveResultRowAdjustment } from '../result-api';
-import { filterableColumns } from './ResultColumnFilter';
+import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
+import type { CNVPlotAnchor } from './CNVPlotWindow';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
 import { CNVAssessmentPanel } from './CNVAssessmentPanel';
 import { useCNVAssessment } from '../hooks/useCNVAssessment';
@@ -89,6 +90,15 @@ export function CNVExonTab({
 
   const filterState = externalFilterState ?? internalFilterState;
   const setFilterState = onFilterChange ?? setInternalFilterState;
+
+  const clickedRow = React.useRef<Element | undefined>(undefined);
+  const [plotAnchor, setPlotAnchor] = React.useState<CNVPlotAnchor>();
+  React.useLayoutEffect(() => {
+    const row = clickedRow.current;
+    if (!row?.isConnected) { setPlotAnchor(undefined); return; }
+    const bounds = row.getBoundingClientRect();
+    setPlotAnchor({ top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right });
+  }, [selectedVariant, detailPanelOpen]);
 
   // 点击行打开详情面板
   const handleRowClick = React.useCallback((variant: CNVExon) => {
@@ -382,9 +392,12 @@ export function CNVExonTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
+    <div onClickCapture={event => {
+      const row = (event.target as HTMLElement).closest('tbody tr');
+      if (row) clickedRow.current = row;
+    }} data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="cnv-exon" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
+      <ParquetColumnFilterBar taskId={taskId} table="cnv-exon" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'cnv-exon')} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
@@ -465,6 +478,7 @@ export function CNVExonTab({
 
       {/* CNV 详情面板 */}
       <CNVDetailPanel
+        plotAnchor={plotAnchor}
         onSaveInterpretation={async (variant, interpretation) => {
           const saved = await saveResultRowAdjustment(taskId, 'cnv-exon', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, '更新 CNV 人工解读');
           if (scopeRef.current !== taskId) return;

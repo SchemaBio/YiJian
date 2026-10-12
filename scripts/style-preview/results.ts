@@ -22,10 +22,18 @@ const cnvs = Array.from({ length: 64732 }, (_, i) => ({ id: `demo-cnv-${i}`, chr
 function cnvPage(total: number, state: any) {
   let filtered = cnvs.slice(0, total);
   for (const filter of state.columnFilters ?? []) {
+    if (filter.column === 'Col4') {
+      filtered = filtered.filter(row => {
+        const value = row.type === 'Amplification' ? 'DUP' : 'DEL';
+        const contains = value.toLowerCase().includes(String(filter.value).toLowerCase());
+        return filter.operator === 'not_contains' ? !contains : filter.operator === 'contains' ? contains : value === filter.value;
+      });
+      continue;
+    }
     const key = { Chromosome: 'chromosome', Start: 'startPosition', End: 'endPosition' }[filter.column];
     if (key) filtered = filtered.filter(row => filter.operator === 'equals' ? String(row[key]) === filter.value : filter.operator === 'lt' ? Number(row[key]) < Number(filter.value) : filter.operator === 'gt' ? Number(row[key]) > Number(filter.value) : true);
   }
-  return { data: filtered.slice((state.page - 1) * state.pageSize, state.page * state.pageSize), total: filtered.length, page: state.page, pageSize: state.pageSize, version: 'preview-v1', columns: ['Chromosome', 'Start', 'End', 'Copy_Ratio'], columnTypes: { Copy_Ratio: 'number' } };
+  return { data: filtered.slice((state.page - 1) * state.pageSize, state.page * state.pageSize), total: filtered.length, page: state.page, pageSize: state.pageSize, version: 'preview-v1', columns: ['Chromosome', 'Start', 'End', 'Col4', 'Copy_Ratio'], columnAliases: { Chromosome: ['chromosome'], Start: ['startPosition'], End: ['endPosition'], Col4: ['type'], Copy_Ratio: ['copyRatio'] }, columnTypes: { Col4: 'enum', Copy_Ratio: 'number' } };
 }
 export const getCNVSegments = async (_task: string, state: any) => {
   if (state.columnFilters?.some((filter: any) => filter.column === 'Start') && new URLSearchParams(location.search).get('previewFailure') === 'region') {

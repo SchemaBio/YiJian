@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { buildLocalSelection, effectiveField, localPredicate, literal } from './parquet-browser-sql';
 describe('browser effective Parquet query', () => {
     const raw = ['Chromosome', 'Position', 'Gene', 'GnomAD_AF', 'Transcript'];
+    it('excludes literal text without case sensitivity, including empty cells', () => {
+        const predicate = localPredicate({ column: 'Gene', operator: 'not_contains', value: "BRCA'_%" }, raw);
+        expect(predicate).toBe(`NOT contains(lower(COALESCE(CAST(t."Gene" AS VARCHAR), '')), lower('BRCA''_%'))`);
+        expect(buildLocalSelection({ offset: 0, limit: 20, filters: [{ column: 'Gene', operator: 'not_contains', value: 'BRCA' }] }, raw).where).toContain('NOT contains(');
+    });
     it('uses the stored baseline and overlays before filtering', () => {
         const q = buildLocalSelection({ offset: 0, limit: 20, filters: [{ column: 'reviewed', operator: 'equals', value: 'false' }, { column: 'acmgClassification', operator: 'equals', value: 'Pathogenic' }] }, raw);
         expect(q.where).toContain("COALESCE(json_extract_string(o.payload, '$.reviewed'), 'false')");

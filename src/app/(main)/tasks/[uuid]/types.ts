@@ -287,6 +287,7 @@ export interface CNVSegment extends VariantReviewStatus {
   copyRatio: number | null;
   log2Ratio: number | null;
   genes: string[];
+  /** Raw signal weight; CNV Region segment weights are not probabilities. */
   confidence: number | null;
 }
 
@@ -431,7 +432,7 @@ export const VARIANT_TAB_CONFIGS: TabConfig[] = [
 export interface TableFilterState {
   searchQuery: string;
   filters: Record<string, string | string[]>;
-  columnFilters?: Array<{ column: string; operator: 'contains' | 'equals' | 'in' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'is_missing' | 'is_not_missing'; value?: string | string[] }>;
+  columnFilters?: Array<{ column: string; operator: 'contains' | 'not_contains' | 'equals' | 'in' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'is_missing' | 'is_not_missing'; value?: string | string[] }>;
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
   page: number;

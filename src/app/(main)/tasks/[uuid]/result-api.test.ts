@@ -39,6 +39,12 @@ describe('versioned Parquet adjustments', () => {
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
+  it('preserves Region signal weights above one and sorts by the source weight field', async () => {
+    vi.mocked(queryBrowserParquet).mockResolvedValueOnce({ items: [{ id: 'weighted-cnv', weight: 12.34 }], total: 1, rowCount: 1, columns: ['Col7'], columnTypes: { Col7: 'text' }, fieldProfileVersion: 'parquet-fields-v2', offset: 0, limit: 20, version: 'hash', attemptId: 'attempt' });
+    const page = await getCNVSegments('weighted-task', { ...DEFAULT_FILTER_STATE, sortColumn: 'confidence', sortDirection: 'desc' });
+    expect(page.data[0].confidence).toBe(12.34);
+    expect(queryBrowserParquet).toHaveBeenLastCalledWith('weighted-task', 'cnv-segment', expect.objectContaining({ sort: 'Col7', direction: 'desc' }), undefined);
+  });
   it('passes the attempt, object and expected adjustment versions on every save', async () => {
     await load('task-save');
     vi.mocked(api.put).mockResolvedValueOnce({ adjustment: { version: 1, adjustments: { reviewed: true } } });

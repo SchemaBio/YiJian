@@ -14,10 +14,11 @@ import { Search } from 'lucide-react';
 import type { CNVSegment, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getCNVSegments, reportVariant, pinVariant, saveCNVAssessment, saveResultRowAdjustment } from '../result-api';
-import { filterableColumns } from './ResultColumnFilter';
+import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { CNVDetailPanel } from './CNVDetailPanel';
+import type { CNVPlotAnchor } from './CNVPlotWindow';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
 import { CNVAssessmentPanel } from './CNVAssessmentPanel';
 import { useCNVAssessment } from '../hooks/useCNVAssessment';
@@ -89,6 +90,15 @@ export function CNVSegmentTab({
 
   const filterState = externalFilterState ?? internalFilterState;
   const setFilterState = onFilterChange ?? setInternalFilterState;
+
+  const clickedRow = React.useRef<Element | undefined>(undefined);
+  const [plotAnchor, setPlotAnchor] = React.useState<CNVPlotAnchor>();
+  React.useLayoutEffect(() => {
+    const row = clickedRow.current;
+    if (!row?.isConnected) { setPlotAnchor(undefined); return; }
+    const bounds = row.getBoundingClientRect();
+    setPlotAnchor({ top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right });
+  }, [selectedVariant, detailPanelOpen]);
 
   // 点击行打开详情面板
   const handleRowClick = React.useCallback((variant: CNVSegment) => {
@@ -375,8 +385,8 @@ export function CNVSegmentTab({
     },
     {
       id: 'confidence',
-      header: '置信度',
-      accessor: (row) => row.confidence === null ? '未提供' : `${(row.confidence * 100).toFixed(0)}%`,
+      header: '信号权重',
+      accessor: (row) => <HoverHint content="区段信号权重，不是置信概率，可大于 1"><span>{row.confidence === null ? '未提供' : String(row.confidence)}</span></HoverHint>,
       width: 80,
       sortable: true,
     },
@@ -385,9 +395,12 @@ export function CNVSegmentTab({
   const totalPages = result ? Math.ceil(result.total / result.pageSize) : 0;
 
   return (
-    <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
+    <div onClickCapture={event => {
+      const row = (event.target as HTMLElement).closest('tbody tr');
+      if (row) clickedRow.current = row;
+    }} data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
+      <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'cnv-segment')} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
@@ -478,6 +491,7 @@ export function CNVSegmentTab({
 
       {/* CNV 详情面板 */}
       <CNVDetailPanel
+        plotAnchor={plotAnchor}
         onSaveInterpretation={async (variant, interpretation) => {
           const saved = await saveResultRowAdjustment(taskId, 'cnv-segment', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, '更新 CNV 人工解读');
           if (scopeRef.current !== taskId) return;

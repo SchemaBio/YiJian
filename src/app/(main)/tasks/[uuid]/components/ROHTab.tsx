@@ -11,7 +11,7 @@ import { Search } from 'lucide-react';
 import type { PaginatedResult, ROHRegion, TableFilterState } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getROHRegions, reportVariant, pinVariant } from '../result-api';
-import { filterableColumns } from './ResultColumnFilter';
+import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
@@ -172,7 +172,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
   return (
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="roh" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="roh" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'roh')} state={filterState} onChange={setFilterState} />
       <div className="yj-variant-controls-row">
         <div className="w-52 max-w-full shrink-0 sm:w-64">
           <Input

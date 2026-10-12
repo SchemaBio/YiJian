@@ -19,7 +19,7 @@ import { VariantDetailPanel } from './VariantDetailPanel';
 import { formatPopulationFrequency, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { ClinVarBadge } from './ClinVarBadge';
-import { filterableColumns } from './ResultColumnFilter';
+import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 
 interface SNVIndelTabProps {
@@ -417,7 +417,7 @@ export function SNVIndelTab({
   return (
     <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
+      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'snv-indel')} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
       {/* 工具栏 */}
       <div className="yj-variant-controls-row">
         <div className="flex flex-wrap items-center gap-2">

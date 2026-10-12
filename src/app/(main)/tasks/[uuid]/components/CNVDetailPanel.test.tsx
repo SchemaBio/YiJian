@@ -16,6 +16,8 @@ describe('CNV interpretation tabs', () => {
     const view = render(<CNVDetailPanel {...props} />);
     expect(screen.getByRole('button', { name: '测试关闭区域图' })).toBeInTheDocument();
     const open = screen.getByRole('button', { name: '区域信号图' });
+    expect(open).toHaveTextContent('区域信号图');
+    expect(open.querySelector('svg')).not.toBeNull();
     const close = screen.getByRole('button', { name: '关闭' });
     expect(open.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '测试关闭区域图' }));

@@ -7,6 +7,10 @@
 }
 .yj-tool-button:hover { background: var(--yj-panel-subtle); }
 .yj-tool-button:disabled { opacity: .5; cursor: default; }
+.yj-filter-view-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px; align-items: center; gap: 8px; }
+.yj-filter-view-field { width: 100%; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--color-border-default); border-radius: 6px; background: var(--color-canvas-default); color: var(--color-fg-default); font-size: 12px; }
+.yj-filter-view .yj-filter-view-action { width: 104px; height: 32px; min-height: 32px; padding: 0 8px; white-space: nowrap; font-size: 12px; }
+.yj-filter-view-field:focus-visible { outline: 2px solid var(--color-accent-emphasis); outline-offset: 2px; }
 .yj-action-button { height: 32px; min-height: 32px; gap: 6px; border-radius: 6px; }
 .yj-action-button-compact { height: 28px; min-height: 28px; }
 .yj-action-button[data-icon-only] { width: 32px; padding: 0; }

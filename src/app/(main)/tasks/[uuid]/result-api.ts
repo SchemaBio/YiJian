@@ -601,6 +601,7 @@ function parquetColumn(type: ResultQueryType, column: string): string {
   if (type === 'cnv-exon' && column === 'log2Ratio') return 'Col9';
   if (type === 'cnv-exon' && column === 'gene') return 'Col5';
   if (type === 'cnv-exon' && column === 'confidence') return 'Col18';
+  if (type === 'cnv-segment' && column === 'confidence') return 'Col7';
   if (type === 'mei' && column === 'teType') return 'TE_Type';
   return aliases[column] ?? column;
 }

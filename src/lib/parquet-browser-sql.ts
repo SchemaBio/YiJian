@@ -65,6 +65,8 @@ export function localPredicate(f: LocalFilter, raw: string[]): string {
         throw new Error('筛选值无效');
     if (f.operator === 'contains')
         return `contains(lower(${text}), lower(${literal(values[0])}))`;
+    if (f.operator === 'not_contains')
+        return `NOT contains(lower(COALESCE(${text}, '')), lower(${literal(values[0])}))`;
     if (f.operator === 'equals' || f.operator === 'in')
         return `EXISTS (SELECT 1 FROM UNNEST(string_split(${text}, '&')) AS u(v) WHERE v IN (${values.map(literal).join(',')}))`;
     if (fieldType(f.column) !== 'number')

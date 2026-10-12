@@ -11,7 +11,7 @@ import { api } from '@/lib/api';
 import { retainBrowserTable, refreshBrowserTable } from '@/lib/parquet-browser';
 
 const OPS = [
-  ['contains', '包含'], ['equals', '精确匹配'], ['in', '任一匹配'],
+  ['contains', '包含'], ['not_contains', '不包含'], ['equals', '精确匹配'], ['in', '任一匹配'],
   ['gt', '>'], ['gte', '≥'], ['lt', '<'], ['lte', '≤'], ['between', '范围'],
   ['is_missing', '缺失'], ['is_not_missing', '非缺失'],
 ] as const;
@@ -32,6 +32,7 @@ export function ParquetColumnFilterBar({
   taskId, table,
   columns,
   columnTypes,
+  columnLabels,
   state,
   onChange,
   viewControls,
@@ -41,10 +42,12 @@ export function ParquetColumnFilterBar({
   table?: ResultTable;
   columns: string[];
   columnTypes?: Record<string, 'text' | 'number' | 'enum' | 'boolean'>;
+  columnLabels?: Record<string, string>;
   state: TableFilterState;
   onChange: (state: TableFilterState) => void;
 }) {
   const [views,setViews]=React.useState<Array<{name:string;stateJson:string;version:number}>>([]);
+  const fieldLabel = (field: string) => columnLabels?.[field] ?? label(field);
   const [viewName,setViewName]=React.useState('');
   const [selectedView,setSelectedView]=React.useState('');
   const [viewMessage,setViewMessage]=React.useState('');
@@ -114,7 +117,7 @@ export function ParquetColumnFilterBar({
       <div className="flex flex-wrap items-center gap-2">
         <ToolbarPopover label="添加筛选" icon={<ListFilter size={14} />}><div className="grid gap-3">
         <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
-          {columns.map(item => <option key={item} value={item}>{label(item)}</option>)}
+          {columns.map(item => <option key={item} value={item}>{fieldLabel(item)}</option>)}
         </select>
         <select aria-label="筛选方式" value={operator} onChange={event => setOperator(event.target.value as FilterOperator)} className="h-8 rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {availableOps.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
@@ -126,14 +129,26 @@ export function ParquetColumnFilterBar({
       </div>
       {viewsURL&&<div className="flex flex-wrap items-center gap-2 text-xs">
 
-        <ToolbarPopover label="筛选视图" icon={<Bookmark size={14} />}><div className="grid gap-3">
-        <ActionButton action="refresh" variant="ghost" type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2">刷新修改</ActionButton>
-        <select aria-label="加载个人筛选方案" value={selectedView} className="h-8 max-w-[180px] rounded border border-border-default bg-canvas-default px-2" onChange={event=>setSelectedView(event.target.value)}>
+        <ToolbarPopover label="筛选视图" icon={<Bookmark size={14} />}><div className="yj-filter-view grid gap-4">
+        <div className="grid gap-2">
+        <span className="text-xs font-medium text-fg-muted">已保存方案</span>
+        <div className="yj-filter-view-row">
+        <select aria-label="加载个人筛选方案" value={selectedView} className="yj-filter-view-field" onChange={event=>setSelectedView(event.target.value)}>
           <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
         </select>
-        <button type="button" disabled={!selectedView} onClick={applyView} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">应用方案</button>
-        <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="方案名称" className="h-8 w-32 rounded border border-border-default bg-canvas-default px-2" />
-        <ActionButton loading={viewSaving} loadingLabel="保存中" action="save" variant="ghost" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="h-8 shrink-0 whitespace-nowrap rounded border border-border-default px-2 disabled:opacity-50">保存方案</ActionButton>
+        <ActionButton action="start" disabled={!selectedView} onClick={applyView} className="yj-filter-view-action">应用方案</ActionButton>
+        </div>
+        </div>
+        <div className="grid gap-2">
+        <span className="text-xs font-medium text-fg-muted">保存当前筛选</span>
+        <div className="yj-filter-view-row">
+        <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="输入方案名称" className="yj-filter-view-field" />
+        <ActionButton loading={viewSaving} loadingLabel="保存中" action="save" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="yj-filter-view-action">保存方案</ActionButton>
+        </div>
+        </div>
+        <div className="flex justify-end border-t border-border-default pt-3">
+        <ActionButton action="refresh" variant="ghost" type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="yj-filter-view-action">刷新修改</ActionButton>
+        </div>
         </div></ToolbarPopover>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
       </div>}
       {viewControls}
@@ -143,8 +158,8 @@ export function ParquetColumnFilterBar({
             const op = OPS.find(([key]) => key === filter.operator)?.[1] ?? filter.operator;
             const shown = Array.isArray(filter.value) ? filter.value.join(' / ') : filter.value;
             return <span key={filter.column} className="inline-flex items-center gap-1 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs text-fg-default">
-              {label(filter.column)} {op}{shown ? ` ${shown}` : ''}
-              <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" aria-label={`移除${label(filter.column)}筛选`} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset" />
+              {fieldLabel(filter.column)} {op}{shown ? ` ${shown}` : ''}
+              <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" aria-label={`移除${fieldLabel(filter.column)}筛选`} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset" />
             </span>;
           })}
         </div>

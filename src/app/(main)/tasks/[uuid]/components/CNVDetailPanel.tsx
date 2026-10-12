@@ -13,6 +13,7 @@ import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assist
 import { aiVariantContext } from '../utils/ai-context';
 import { CNVRegionPlot } from './CNVRegionPlot';
 import { CNVExonPlot } from './CNVExonPlot';
+import type { CNVPlotAnchor } from './CNVPlotWindow';
 import { ExternalLink, FileText, Database, MapPin } from 'lucide-react';
 import { getClassificationLabel, formatScore } from '../utils/pathogenicity-classifier';
 import { Tag } from '@schema/ui-kit';
@@ -26,6 +27,7 @@ interface CNVDetailPanelProps {
   allSegments?: CNVSegment[];  // 保留旧调用方兼容；区域图从完整本地数据集查询
   referenceId?: string;
   taskId?: string;
+  plotAnchor?: CNVPlotAnchor;
   onSaveInterpretation?: (variant: CNVSegment | CNVExon, interpretation: string) => Promise<void>;
   onOpenAssessment?: (variant: CNVSegment | CNVExon) => void;
 }
@@ -117,7 +119,7 @@ function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
   return 'gene' in variant;
 }
 
-export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, onOpenAssessment, onSaveInterpretation }: CNVDetailPanelProps) {
+export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, plotAnchor, onOpenAssessment, onSaveInterpretation }: CNVDetailPanelProps) {
   const [section, setSection] = React.useState<InspectorSection>('annotation');
   const readOnly = useInterpretationReadOnly();
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
@@ -141,7 +143,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
     <>
       {isOpen && <WorkspaceInspector label="变异详情" onClose={onClose} nonModal>
         {/* 头部 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">
               {variantType === 'exon' ? 'CNV外显子详情' : 'CNV区域详情'}
@@ -150,8 +152,8 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
               {typeLabel}
             </Tag>
           </div>
-          <div className="flex items-center gap-1">
-          {taskId && <IconActionButton label={isExon ? '外显子 CN 分布图' : '区域信号图'} action="view" variant="ghost" onClick={() => setPlotOpen(true)} />}
+          <div className="ml-auto flex items-center gap-2">
+          {taskId && <ActionButton action="view" size="small" variant="secondary" className="shrink-0" onClick={() => setPlotOpen(true)}>{isExon ? '外显子 CN 分布图' : '区域信号图'}</ActionButton>}
           <IconActionButton label="关闭" action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
@@ -306,10 +308,11 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
 
       </WorkspaceInspector>}
 
-      {isExon && taskId && <CNVExonPlot variant={variant} taskId={taskId} isOpen={plotOpen} onClose={() => setPlotOpen(false)} />}
+      {isExon && taskId && <CNVExonPlot anchor={plotAnchor} variant={variant} taskId={taskId} isOpen={plotOpen} onClose={() => setPlotOpen(false)} />}
       {/* CNV 图弹窗 */}
       {showPlot && !isExon && (
         <CNVRegionPlot
+          anchor={plotAnchor}
           variant={variant as CNVSegment}
           taskId={taskId!}
           isOpen={plotOpen}

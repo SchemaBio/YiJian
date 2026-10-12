@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import type { ResultTable } from '@/lib/assessment/types';
+import { resultColumnLabels } from './ResultColumnFilter';
 
 vi.mock('@/components/shared/ToolbarPopover', () => ({ ToolbarPopover: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('@/lib/api',()=>({api:{get:vi.fn(),put:vi.fn()}}));
@@ -13,6 +14,21 @@ vi.mock('@/lib/parquet-browser',()=>({retainBrowserTable:()=>()=>{},refreshBrows
 describe('personal filter synchronization',()=>{
   beforeEach(()=>vi.clearAllMocks());
   const preset={...DEFAULT_FILTER_STATE,searchQuery:'GENE',page:5,columnFilters:[{column:'GnomAD_AF',operator:'lte' as const,value:'0.001'}]};
+  it.each<ResultTable>(['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'])('uses the visible label and excludes text in %s', table => {
+    const change = vi.fn();
+    const columnLabels = resultColumnLabels([{ id: 'gene', header: '基因', accessor: 'gene' }], { columns: ['Source_Gene'], columnAliases: { Source_Gene: ['gene'] } }, table);
+    const props = { table, columns: ['Source_Gene'], columnLabels, state: DEFAULT_FILTER_STATE, onChange: change };
+    const view = render(<ParquetColumnFilterBar {...props} />);
+    expect(screen.getByRole('option', { name: '基因' })).toHaveValue('Source_Gene');
+    fireEvent.change(screen.getByLabelText('筛选方式'), { target: { value: 'not_contains' } });
+    fireEvent.change(screen.getByLabelText('筛选值'), { target: { value: 'BRCA' } });
+    fireEvent.click(screen.getByRole('button', { name: '应用' }));
+    const next = change.mock.calls[0][0];
+    expect(next.columnFilters).toEqual([{ column: 'Source_Gene', operator: 'not_contains', value: 'BRCA' }]);
+    view.rerender(<ParquetColumnFilterBar {...props} state={next} />);
+    expect(screen.getByText('基因 不包含 BRCA')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '移除基因筛选' })).toBeInTheDocument();
+  });
   it.each<ResultTable>(['snv-indel', 'cnv-segment', 'cnv-exon', 'str', 'mei', 'mt', 'upd', 'roh'])('does not offer CSV export for %s', async table => {
     vi.mocked(api.get).mockResolvedValue([]);
     render(<ParquetColumnFilterBar taskId="task" table={table} columns={['Gene']} state={DEFAULT_FILTER_STATE} onChange={vi.fn()} />);
