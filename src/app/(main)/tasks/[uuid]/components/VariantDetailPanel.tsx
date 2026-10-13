@@ -4,6 +4,7 @@ import { formatNumericString } from '@/i18n/format';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { resultHistoryReason } from '@/i18n/result-history';
 import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
@@ -442,9 +443,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {/* 人群频率 */}
           <SectionTitle icon={Database} title={t("tasks.populationFrequency1705e3")} />
           <div className="space-y-0">
-            <InfoItem label={t("tasks.gnomadOverallAf6abfe1")} value={formatPopulationFrequency(annotation('GnomAD_AF', variant.gnomadAF))} />
-            <InfoItem label={t("tasks.gnomadEastAsianAfe9255d")} value={formatPopulationFrequency(annotation('GnomAD_AF_EAS', variant.gnomadEasAF))} />
-            <InfoItem label="VEP MAX_AF" value={formatPopulationFrequency(annotation('MAX_AF', variant.maxAF))} />
+            <InfoItem label={t("tasks.gnomadOverallAf6abfe1")} value={formatPopulationFrequency(annotation('GnomAD_AF', variant.gnomadAF), t)} />
+            <InfoItem label={t("tasks.gnomadEastAsianAfe9255d")} value={formatPopulationFrequency(annotation('GnomAD_AF_EAS', variant.gnomadEasAF), t)} />
+            <InfoItem label="VEP MAX_AF" value={formatPopulationFrequency(annotation('MAX_AF', variant.maxAF), t)} />
             <InfoItem label="gnomAD nhomalt XX" value={annotation('GnomAD_nhomalt_XX', variant.gnomadNhomaltXX)} />
             <InfoItem label="gnomAD nhomalt XY" value={annotation('GnomAD_nhomalt_XY', variant.gnomadNhomaltXY)} />
             <p className="mt-2 text-xs text-fg-muted">{t("tasks.afIsTheOriginalRatioFromTo137eda")}</p>
@@ -469,7 +470,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           <div className="space-y-2">
             {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">{t("tasks.noChangesd43ef6")}</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
               <div className="flex flex-wrap justify-between gap-1 text-xs text-fg-muted"><span>{event.actor || t("tasks.user9ba763")}</span><time>{event.createdAt ? new Date(event.createdAt).toLocaleString(t.locale) : ''}</time></div>
-              <p className="mt-1 text-sm text-fg-default">{event.reason || t("tasks.noReasonProvidedcb9c56")}</p>
+              <p className="mt-1 text-sm text-fg-default">{resultHistoryReason(event.reason, t)}</p>
               {adjustmentDiff(event.before, event.after, t).map(change => <p key={change.key} className="mt-1 break-words text-xs text-fg-muted"><span className="font-medium">{change.key}：</span>{change.before} → {change.after}</p>)}
             </article>)}
           </div>

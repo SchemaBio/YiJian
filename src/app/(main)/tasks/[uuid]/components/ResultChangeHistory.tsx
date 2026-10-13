@@ -2,6 +2,7 @@
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { resultHistoryReason } from '@/i18n/result-history';
 import { chineseText, type TextTranslator } from '@/i18n/text';
 
 import * as React from 'react';
@@ -22,7 +23,7 @@ export function ResultChangeHistory({ taskId, table, rowId, active, revision }: 
   return <div className="space-y-3"><h4 className="text-sm font-semibold">{t("tasks.interpretationChangeHistory8ee03f")}</h4>
     {loading ? <p className="text-sm text-fg-muted">{t("tasks.loading300ee3")}</p> : error ? <p role="alert" className="text-sm text-danger-fg">{error}</p> : !taskId ? <p className="text-sm text-fg-muted">{t("tasks.noAssociatedTask39462d")}</p> : events.length === 0 ? <p className="text-sm text-fg-muted">{t("tasks.noChangesd43ef6")}</p> : events.map(event => <article key={event.id} className="rounded-md border border-border-subtle p-3">
       <div className="flex flex-wrap justify-between gap-2 text-xs text-fg-muted"><span>{event.actor || t("tasks.user9ba763")}</span><time>{event.createdAt ? new Date(event.createdAt).toLocaleString(t.locale) : ''}</time></div>
-      <p className="mt-2 text-sm">{event.reason || t("tasks.noReasonProvidedcb9c56")}</p>
+      <p className="mt-2 text-sm">{resultHistoryReason(event.reason, t)}</p>
       {changes(event.before, event.after, t).map(item => <p key={item.key} className="mt-1 whitespace-pre-wrap break-words text-xs text-fg-muted"><strong>{item.key === 'interpretation' ? t("tasks.manualInterpretation1fcaef") : item.key}：</strong>{item.before} → {item.after}</p>)}
     </article>)}
   </div>;

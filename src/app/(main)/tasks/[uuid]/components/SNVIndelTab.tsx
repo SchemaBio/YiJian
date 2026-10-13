@@ -363,12 +363,12 @@ export function SNVIndelTab({
     },
     {
       id: 'gnomadAF', header: t("tasks.gnomadOverallAf6abfe1"),
-      accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF', row.gnomadAF)),
+      accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF', row.gnomadAF), t),
       width: 130, align: 'center', sortable: true,
     },
     {
       id: 'gnomadEasAF', header: t("tasks.gnomadEastAsianAfe9255d"),
-      accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF_EAS', row.gnomadEasAF)),
+      accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF_EAS', row.gnomadEasAF), t),
       width: 130, align: 'center', sortable: true,
     },
     {

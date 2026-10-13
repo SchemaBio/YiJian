@@ -2,6 +2,7 @@
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { resultHistoryReason } from '@/i18n/result-history';
 import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
@@ -20,7 +21,7 @@ import { CLASS_LABELS, HISTORY_TYPES, locus, historyPosition, type HistoryQuery,
 
 const initialQuery: Omit<HistoryQuery, 'table'> = { search: '', includeWithdrawn: false, filters: {}, sort: 'detectionCount', direction: 'desc', page: 1, pageSize: 25 };
 const columns = [['chrom', 'CHROM', 104], ['pos', 'POS', 180], ['ref', 'REF', 112], ['alt', 'ALT', 112], ['reference', '参考版本', 112], ['gene', '基因', 150], ['classification', '当前分类', 160], ['detectionCount', '涉及任务数', 120], ['firstReportedAt', '首次回报', 180], ['lastReportedAt', '最近回报', 180], ['af', '人群 AF', 128]] as const;
-const formatTime = (value?: string | null, t: TextTranslator = chineseText) => value ? new Date(value).toLocaleString(t.locale, { hour12: false }) : '未提供';
+const formatTime = (value?: string | null, t: TextTranslator = chineseText) => value ? new Date(value).toLocaleString(t.locale, { hour12: false }) : t('history.notProvided071fb2');
 const classificationLabel = (value: string) => CLASS_LABELS[value] || value || '未提供';
 function ClassBadge({ value }: { value: string }) {
   const t = useText();
@@ -186,7 +187,7 @@ export default function HistoryWorkspace() {
               <td className="font-mono text-xs break-all">{group.fields.alt || t("history.notProvided071fb2")}</td>
               <td className="whitespace-nowrap">{group.reference || t("history.notProvided071fb2")}</td>
               <td className="break-words font-medium">{group.gene || t("history.notProvided071fb2")}</td>
-              <td><ClassBadge value={group.classification} />{group.classification === 'mixed' && <div className="mt-2 break-words text-xs leading-5 text-fg-muted">{Object.entries(group.classificationCounts).map(([value, count]) => `${classificationLabel(value)} ${count}`).join(' · ')}</div>}</td>
+              <td><ClassBadge value={group.classification} />{group.classification === 'mixed' && <div className="mt-2 break-words text-xs leading-5 text-fg-muted">{Object.entries(group.classificationCounts).map(([value, count]) => `${t(classificationLabel(value))} ${count}`).join(' · ')}</div>}</td>
               <td className="font-semibold tabular-nums">{group.detectionCount}</td>
               <td className="whitespace-nowrap text-xs tabular-nums">{formatTime(group.firstReportedAt, t)}</td>
               <td className="whitespace-nowrap text-xs tabular-nums">{formatTime(group.lastReportedAt, t)}</td>
@@ -230,7 +231,7 @@ export default function HistoryWorkspace() {
                 {task?.currentAttempt === row.attemptId ? <button type="button" onClick={() => void openSource(row)} className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-xs font-medium text-fg-on-emphasis hover:opacity-90">{t("history.openSourceWorkspace5f1e44")}</button> : <p className="w-full text-xs leading-5 text-fg-muted">{t("history.historicalExecutionSnapshotTaskExecutionBatchHas334159")}</p>}
                 <button type="button" className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-md border border-border-default px-3 text-xs hover:bg-canvas-subtle" onClick={() => setAuditID(auditID === row.id ? '' : row.id)} aria-expanded={auditID === row.id}>{auditID === row.id ? t("history.collapseChanges4db4f2") : t("history.viewChanges432d99")}</button>
               </div>
-              {auditID === row.id && <section className="mt-4 border-t border-border-default pt-4" aria-label={t("history.changeHistorybe740c")}><h4 className="mb-3 text-xs font-semibold">{t("history.changeHistory69ed91")}<span className="font-normal text-fg-muted">{t("history.latestRecords161804")}</span></h4>{auditError ? <p role="alert" className="text-sm text-danger-fg">{auditError}</p> : !audit ? <p className="text-xs text-fg-muted">{t("history.loadingRecords198967")}</p> : !audit.length ? <p className="text-xs text-fg-muted">{t("history.noTraceableChanges530a5f")}</p> : <ol className="space-y-3">{audit.map(event => <li key={event.id} className="rounded-lg bg-canvas-subtle p-3 text-xs leading-5"><div className="flex flex-wrap justify-between gap-x-3 text-fg-muted"><time>{formatTime(event.createdAt, t)}</time><span className="break-all">{event.actor || t("history.unknownOperator62269c")}</span></div><p className="mt-1 whitespace-pre-wrap break-words">{event.reason || t("history.changeHistorybe740c")}</p>{event.before.reported !== event.after.reported && <p className="mt-1 font-medium">{event.after.reported === true ? t("history.includeInReport233738") : t("history.withdrawFromReport41c14c")}</p>}{event.after.acmgClassification !== event.before.acmgClassification && <p className="mt-1">{t("history.classification292397")}{classificationLabel(String(event.before.acmgClassification || ''))} → {classificationLabel(String(event.after.acmgClassification || ''))}</p>}</li>)}</ol>}</section>}
+              {auditID === row.id && <section className="mt-4 border-t border-border-default pt-4" aria-label={t("history.changeHistorybe740c")}><h4 className="mb-3 text-xs font-semibold">{t("history.changeHistory69ed91")}<span className="font-normal text-fg-muted">{t("history.latestRecords161804")}</span></h4>{auditError ? <p role="alert" className="text-sm text-danger-fg">{auditError}</p> : !audit ? <p className="text-xs text-fg-muted">{t("history.loadingRecords198967")}</p> : !audit.length ? <p className="text-xs text-fg-muted">{t("history.noTraceableChanges530a5f")}</p> : <ol className="space-y-3">{audit.map(event => <li key={event.id} className="rounded-lg bg-canvas-subtle p-3 text-xs leading-5"><div className="flex flex-wrap justify-between gap-x-3 text-fg-muted"><time>{formatTime(event.createdAt, t)}</time><span className="break-all">{event.actor || t("history.unknownOperator62269c")}</span></div><p className="mt-1 whitespace-pre-wrap break-words">{event.reason ? resultHistoryReason(event.reason, t) : t("history.changeHistorybe740c")}</p>{event.before.reported !== event.after.reported && <p className="mt-1 font-medium">{event.after.reported === true ? t("history.includeInReport233738") : t("history.withdrawFromReport41c14c")}</p>}{event.after.acmgClassification !== event.before.acmgClassification && <p className="mt-1">{t("history.classification292397")}{t(classificationLabel(String(event.before.acmgClassification || '')))} → {t(classificationLabel(String(event.after.acmgClassification || '')))}</p>}</li>)}</ol>}</section>}
             </div>
           </article>)}
         </div>

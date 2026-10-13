@@ -280,7 +280,7 @@ export function MEITab({
     {
       id: 'frequency',
       header: t("tasks.populationFrequency1705e3"),
-      accessor: (row) => formatPopulationFrequency(row.frequency),
+      accessor: (row) => formatPopulationFrequency(row.frequency, t),
       width: 90,
       align: 'center',
       sortable: true,

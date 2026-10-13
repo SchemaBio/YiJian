@@ -1,4 +1,5 @@
 import type { SNVIndel } from '../types';
+import { chineseText, type TextTranslator } from '@/i18n/text';
 
 export function optionalAnnotationNumber(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '' || value === '.') return undefined;
@@ -37,10 +38,10 @@ export function transcriptLocation(variant: SNVIndel) {
 }
 
 // Population AF is a fraction; sample VAF is a separate sequencing metric.
-export function formatPopulationFrequency(value?: string | number): string {
-  if (value === null || value === undefined || value === '' || value === '.') return '未提供';
+export function formatPopulationFrequency(value?: string | number, t: TextTranslator = chineseText): string {
+  if (value === null || value === undefined || value === '' || value === '.') return t('history.notProvided071fb2');
   return String(value).split('&').map(part => {
     const number = optionalAnnotationNumber(part.trim());
-    return number !== undefined && number >= 0 && number <= 1 ? String(number) : '未提供';
+    return number !== undefined && number >= 0 && number <= 1 ? String(number) : t('history.notProvided071fb2');
   }).join(' & ');
 }

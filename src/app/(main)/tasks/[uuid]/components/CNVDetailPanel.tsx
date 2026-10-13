@@ -271,7 +271,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
                 />
               </>
             ) : (
-              <InfoItem label={t("tasks.externalResources227d9d")} value="未提供任务参考版本" />
+              <InfoItem label={t("tasks.externalResources227d9d")} value={t("display.taskReferenceVersionNotProvided8f850e")} />
             )}
             {isExon && (
               <InfoItem
