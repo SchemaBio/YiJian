@@ -4,6 +4,7 @@ import { LocalizedError } from '@/i18n/errors';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { pipelineDisplayName } from '@/lib/builtin-resources';
 
 
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -256,7 +257,7 @@ export default function NewAnalysisPage() {
           <Select
             options={pipelines.map((pipeline) => ({
               value: pipeline.id,
-              label: `${pipeline.name}${pipeline.version ? ` (${pipeline.version})` : ''}`,
+              label: `${pipelineDisplayName(pipeline.id, pipeline.name, t)}${pipeline.version ? ` (${pipeline.version})` : ''}`,
             }))}
             value={selectedPipeline}
             onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}

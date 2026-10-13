@@ -4,6 +4,17 @@ import { chineseText, type TextTranslator } from '@/i18n/text';
 
 export type BuiltinGenome = 'hg19' | 'hg38';
 
+/** Translate reserved built-in IDs at display time; never rename custom pipelines. */
+export function pipelineDisplayName(id: string, original: string, t: TextTranslator): string {
+  const labels: Record<string, string> = {
+    'builtin-wes-single': 'pipeline.wesSingleSampleAnalysis400a61',
+    'builtin-wes-family': 'pipeline.wesFamilyAnalysise07024',
+    'builtin-wes-single-hg38': 'pipeline.wesSingleSampleAnalysisHg188750',
+    'builtin-wes-family-hg38': 'pipeline.wesFamilyAnalysisHg97410c',
+  };
+  return Object.hasOwn(labels, id) ? t(labels[id]) : original;
+}
+
 export function builtinBEDId(genome: BuiltinGenome): string {
   return `builtin-bed-${genome}`;
 }

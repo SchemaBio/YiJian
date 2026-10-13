@@ -4,6 +4,7 @@ import { LocalizedError } from '@/i18n/errors';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { pipelineDisplayName } from '@/lib/builtin-resources';
 
 
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -114,7 +115,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     if (pipelines.length > 0) {
       return pipelines.map(p => ({
         value: p.id,
-        label: `${p.name}${p.version ? ` (${p.version})` : ''}`,
+        label: `${pipelineDisplayName(p.id, p.name, t)}${p.version ? ` (${p.version})` : ''}`,
       }));
     }
     return templates.map(t => ({

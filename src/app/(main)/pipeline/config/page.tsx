@@ -2,6 +2,7 @@
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { pipelineDisplayName } from '@/lib/builtin-resources';
 import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -123,7 +124,7 @@ export default function PipelineConfigPage() {
                 onChange={(value) => setSelectedId(Array.isArray(value) ? value[0] : value)}
                 options={pipelines.map(item => ({
                   value: item.id,
-                  label: `${item.name} (${item.version || t("pipeline.versionUnspecifiedfb6d6c")})`,
+                  label: `${pipelineDisplayName(item.id, item.name, t)} (${item.version || t("pipeline.versionUnspecifiedfb6d6c")})`,
                 }))}
               />
             </section>
@@ -131,7 +132,7 @@ export default function PipelineConfigPage() {
             {selected && (
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-semibold text-fg-default">{selected.name}</h3>
+                  <h3 className="text-base font-semibold text-fg-default">{pipelineDisplayName(selected.id, selected.name, t)}</h3>
                   <Tag variant={selected.status === 'active' ? 'success' : 'neutral'}>
                     {selected.status === 'active' ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}
                   </Tag>
