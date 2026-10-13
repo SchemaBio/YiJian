@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -39,6 +46,7 @@ export function MTTab({
   filterState: externalFilterState,
   onFilterChange
 }: MTTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<MitochondrialVariant> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -99,13 +107,13 @@ export function MTTab({
 			await pinVariant(taskId, 'mt', id, checked);
 		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '更新置顶状态失败');
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToUpdatePinStatus77c5f1"));
 		} finally {
 			setPendingVariantIDs((previous) => {
 				const next = new Set(previous); next.delete(id); return next;
 			});
 		}
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 处理回报状态变更
   const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
@@ -119,13 +127,13 @@ export function MTTab({
 			await reportVariant(taskId, 'mt', id, checked);
 		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '标记回报失败');
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToMarkForReport8d3bd6"));
 		} finally {
 			setPendingVariantIDs((previous) => {
 				const next = new Set(previous); next.delete(id); return next;
 			});
 		}
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: MitochondrialVariant) => {
@@ -143,7 +151,7 @@ export function MTTab({
 			const data = await getMitochondrialVariants(taskId, filterState, controller.signal);
 			if (!controller.signal.aborted) setResult(data);
 		} catch (cause) {
-			if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : '无法加载线粒体结果');
+			if (!controller.signal.aborted) setError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToLoadMitochondrialResults8c7db0"));
 		} finally {
 			if (!controller.signal.aborted) setLoading(false);
 		}
@@ -210,12 +218,12 @@ export function MTTab({
     },
     {
       id: 'position',
-      header: '位置',
+      header: t("history.position88c344"),
       accessor: (row) => (
         <PositionLink
           chromosome="chrM"
           position={row.position}
-          label={`m.${row.position}`}
+          label={translateUI(`m.${row.position}`, t)}
           onClick={handleOpenIGV}
         />
       ),
@@ -224,43 +232,43 @@ export function MTTab({
     },
     {
       id: 'change',
-      header: '参考/变异',
+      header: t("tasks.referenceAlternateabcf6a"),
       accessor: (row) => `${row.ref}>${row.alt}`,
       width: 80,
     },
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       accessor: (row) => <GeneLinks genes={row.gene} />,
       width: 100,
       sortable: true,
     },
     {
       id: 'heteroplasmy',
-      header: '异质性比例',
-      accessor: (row) => `${(row.heteroplasmy * 100).toFixed(1)}%`,
+      header: t("tasks.heteroplasmyFractionba19ec"),
+      accessor: (row) => `${formatNumericString((row.heteroplasmy * 100).toFixed(1), t.locale)}%`,
       width: 100,
       sortable: true,
     },
     {
       id: 'pathogenicity',
-      header: '致病性',
+      header: t("history.pathogenicityfa6024"),
       accessor: (row) => {
         const config = PATHOGENICITY_CONFIG[row.pathogenicity];
-        return <Tag variant={config.variant}>{config.label}</Tag>;
+        return <Tag variant={config.variant}>{translateUI(config.label, t)}</Tag>;
       },
       width: 100,
       sortable: true,
     },
     {
       id: 'associatedDisease',
-      header: '关联疾病',
+      header: t("history.associatedDiseasea79330"),
       accessor: 'associatedDisease',
       width: 200,
     },
     {
       id: 'haplogroup',
-      header: '单倍群',
+      header: t("history.haplogroupd4fd42"),
       accessor: (row) => row.haplogroup || '-',
       width: 80,
     },
@@ -271,13 +279,13 @@ export function MTTab({
   return (
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="mt" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'mt')} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="mt" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'mt', t)} state={filterState} onChange={setFilterState} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
               className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
-              placeholder="搜索基因、疾病..."
+              placeholder={t("tasks.searchGeneOrDisease26b2d3")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -289,16 +297,15 @@ export function MTTab({
             onChange={(e) => handlePathogenicityFilter(e.target.value)}
             className="px-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default"
           >
-            <option value="">全部致病性</option>
+            <option value="">{t("tasks.allPathogenicityClasses41bc41")}</option>
             {Object.entries(PATHOGENICITY_CONFIG).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
+              <option key={key} value={key}>{translateUI(config.label, t)}</option>
             ))}
           </select>
         </div>
 
         <div className="text-sm text-fg-muted">
-          共 {result?.total ?? 0} 条线粒体变异
-        </div>
+          {t("history.total497064")}{result?.total ?? 0} {t("tasks.mitochondrialVariants764fd0")}</div>
       </div>
       </div>
 
@@ -314,7 +321,7 @@ export function MTTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
-            columns={filterableColumns(columns, result, filterState, setFilterState, 'mt')}
+            columns={localizeDisplay(filterableColumns(columns, result, filterState, setFilterState, 'mt', t), t)}
             rowKey="id"
             striped
             density="compact"
@@ -327,31 +334,27 @@ export function MTTab({
           {totalPages > 1 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
-                第 {filterState.page} / {totalPages} 页
-              </div>
+                {t("history.pagef49534")}{filterState.page} / {totalPages} {t("history.labelaf8438")}</div>
               <div className="flex items-center gap-2">
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
-                  上一页
-                </ActionButton>
+                  {t("history.previousb41561")}</ActionButton>
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
-                  下一页
-                </ActionButton>
+                  {t("history.next67a246")}</ActionButton>
               </div>
             </div>
           )}
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无线粒体变异数据
-        </div>
+          {t("tasks.noMitochondrialVariantData1e6694")}</div>
       )}
 		{operationError && (
 			<div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>

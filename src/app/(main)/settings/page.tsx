@@ -1,17 +1,21 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ProfileSettings } from './components/ProfileSettings';
 
 export default function SettingsProfilePage() {
+  const t = useText();
   const { user, currentOrg, isLoading, updateProfile, changePassword } = useAuth();
 
   if (isLoading) {
     return (
       <PageContent className="yj-page-shell">
         <div className="yj-empty-state">
-          <p className="text-fg-muted">正在加载个人信息...</p>
+          <p className="text-fg-muted">{t("settings.loadingProfile42b12a")}</p>
         </div>
       </PageContent>
     );
@@ -21,7 +25,7 @@ export default function SettingsProfilePage() {
     return (
       <PageContent className="yj-page-shell">
         <div className="yj-empty-state">
-          <p className="text-fg-muted">未登录或会话已过期</p>
+          <p className="text-fg-muted">{t("settings.notSignedInOrSessionExpired2192cf")}</p>
         </div>
       </PageContent>
     );
@@ -31,8 +35,8 @@ export default function SettingsProfilePage() {
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">个人设置</h2>
-          <p className="yj-page-subtitle">管理个人资料、组织信息和账户安全。</p>
+          <h2 className="yj-page-title">{t("settings.personalSettingsf787ab")}</h2>
+          <p className="yj-page-subtitle">{t("settings.manageYourProfileOrganizationAndAccountSecurityc0c73c")}</p>
         </div>
       </div>
       <ProfileSettings

@@ -8,6 +8,10 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/runtime-config.js',
+        headers: [{ key: 'Cache-Control', value: 'no-store' }],
+      },
+      {
         source: '/:path*',
         headers: [
           ...(isProduction

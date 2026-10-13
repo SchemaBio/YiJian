@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import { Building2 } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
@@ -11,13 +14,14 @@ interface OrganizationSwitcherProps {
 }
 
 export function OrganizationSwitcher({ className, collapsed = false }: OrganizationSwitcherProps) {
+  const t = useText();
   const { currentOrg } = useAuth();
-  const orgName = currentOrg?.name || '组织';
+  const orgName = currentOrg?.name || t("samples.tissuea3540e");
 
   if (collapsed) {
     return (
       <div className={cn('flex w-full items-center justify-center py-2', className)}>
-        <Tooltip content={orgName} placement="right" variant="nav">
+        <Tooltip content={translateUI(orgName, t)} placement="right" variant="nav">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--yj-panel-subtle)] text-fg-muted">
             <Building2 className="h-4 w-4" />
           </div>

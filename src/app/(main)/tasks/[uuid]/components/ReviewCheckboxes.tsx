@@ -1,4 +1,8 @@
-﻿'use client';
+'use client';
+﻿
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
@@ -17,12 +21,13 @@ interface ReviewCheckboxProps {
  * 置顶标记。置顶和取消都会写入 Octopus 的不可变审计事件。
  */
 export function PinCheckbox({ checked, onChange, disabled, source, reasons }: ReviewCheckboxProps) {
+  const t = useText();
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
-  const tooltip = readOnly ? '解读已完成，请先取消解读完成' : checked ? `${source === 'automatic' ? `系统自动置顶：${reasons?.join('；')||'证据支持的重要候选'}` : '重要位点已置顶'}；点击取消置顶` : `点击置顶重要位点${reasons?.length?'；初评：'+reasons.join('；'):''}`;
+  const tooltip = readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked ? t("tasks.clickToUnpinbda191", {p0: String(source === 'automatic' ? t('系统自动置顶：{p0}{p1}', {p0:reasons?.join('；')||t("display.evidenceSupportedKeyCandidate43d43a"), p1:''}) : t("display.keyLocusPinneda50ba8"))}) : t("tasks.clickToPinImportantLocus56c657", {p0: String(reasons?.length?t("display.initialAssessment325903")+reasons.join('；'):'')});
 
   return (
-    <Tooltip content={tooltip} placement="top" variant="nav">
+    <Tooltip content={translateUI(tooltip, t)} placement="top" variant="nav">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -38,7 +43,7 @@ export function PinCheckbox({ checked, onChange, disabled, source, reasons }: Re
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
         data-result-mark="pin"
-        aria-label={checked ? '取消置顶' : '置顶重要位点'}
+        aria-label={checked ? t("tasks.unpincfb5cd") : t("tasks.pinImportantLocus904270")}
         aria-pressed={checked}
       >
         <Pin className={`w-5 h-5 ${checked ? 'fill-success-subtle' : ''}`} />
@@ -51,14 +56,15 @@ export function PinCheckbox({ checked, onChange, disabled, source, reasons }: Re
  * 回报标记。
  */
 export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
+  const t = useText();
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
-  const tooltip = readOnly ? '解读已完成，请先取消解读完成' : checked
-    ? '已标记回报；点击可撤回，此标记不代表正式报告已签发'
-    : '点击选入回报';
+  const tooltip = readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked
+    ? t("tasks.selectedForReportClickToWithdrawThis7e81d6")
+    : t("tasks.clickToIncludeInReportd66934");
 
   return (
-    <Tooltip content={tooltip} placement="top" variant="nav">
+    <Tooltip content={translateUI(tooltip, t)} placement="top" variant="nav">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -74,7 +80,7 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
         data-result-mark="report"
-        aria-label={checked ? '撤回回报' : '选入回报'}
+        aria-label={checked ? t("history.withdrawFromReport41c14c") : t("history.includeInReport233738")}
         aria-pressed={checked}
       >
         <FileCheck2 className={`w-5 h-5 ${checked ? 'fill-accent-subtle' : ''}`} />
@@ -87,9 +93,11 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
  * 置顶和回报状态的列头。
  */
 export function PinColumnHeader() {
-  return '置顶';
+  const t = useText();
+  return t("tasks.pin7bcf18");
 }
 
 export function ReportColumnHeader() {
-  return '回报';
+  const t = useText();
+  return t("tasks.report6c4cc0");
 }

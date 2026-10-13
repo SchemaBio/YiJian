@@ -6,9 +6,12 @@ import { AIAssistanceProvider } from './AIAssistanceProvider';
 import { AuthProvider, useAuth } from './AuthProvider';
 import { AIProvider } from './AIProvider';
 import { UploadProvider } from './UploadProvider';
+import { LocaleProvider } from './LocaleProvider';
+import type { Locale } from '@/i18n/locales';
 
 interface AppProvidersProps {
   children: React.ReactNode;
+  locale: Locale;
 }
 
 /**
@@ -17,8 +20,9 @@ interface AppProvidersProps {
  * AuthProvider for authentication,
  * and AIProvider for AI assistant configuration.
  */
-export function AppProviders({ children }: AppProvidersProps) {
+export function AppProviders({ children, locale }: AppProvidersProps) {
   return (
+    <LocaleProvider initialLocale={locale}>
     <ThemeProvider defaultTheme="light" storageKey="germline-theme">
       <AuthProvider>
         <UploadProvider>
@@ -28,6 +32,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         </UploadProvider>
       </AuthProvider>
     </ThemeProvider>
+    </LocaleProvider>
   );
 }
 

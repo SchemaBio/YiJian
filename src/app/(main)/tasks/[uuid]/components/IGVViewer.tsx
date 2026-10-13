@@ -1,4 +1,11 @@
 'use client';
+import { LocalizedError } from '@/i18n/errors';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -56,9 +63,9 @@ class SignedTrackResolver {
   }
 
   indexURL(trackId: string): () => Promise<string> {
-    return async () => {
+    return async (t: TextTranslator = chineseText) => {
       const value = (await this.ensure(trackId)).indexURL;
-      if (!value) throw new Error('该轨迹缺少索引');
+      if (!value) throw new Error(t("tasks.thisTrackHasNoIndexc19b1a"));
       return value;
     };
   }
@@ -68,7 +75,7 @@ class SignedTrackResolver {
     // its pending ID list. Loop once more in that case so it starts the next
     // batch instead of receiving an artificial "not returned" error.
     for (;;) {
-      if (this.controller.signal.aborted) throw new Error('IGV 查看器已关闭');
+      if (this.controller.signal.aborted) throw new LocalizedError("display.igvViewerClosed0d74e7");
       const cached = this.cache.get(trackId);
       if (cached && cached.expiresAt - Date.now() > signedURLRefreshLeadMs) return cached.value;
       this.pending.add(trackId);
@@ -93,7 +100,7 @@ class SignedTrackResolver {
       await this.pendingRequest;
       const refreshed = this.cache.get(trackId);
       if (refreshed) return refreshed.value;
-      if (!this.pending.has(trackId)) throw new Error('轨迹授权未返回');
+      if (!this.pending.has(trackId)) throw new LocalizedError("display.trackAuthorizationNotReturned99b034");
     }
   }
 }
@@ -143,6 +150,7 @@ function staticGeneTrack(session: IGVSession): IGVTrackConfig | null {
 }
 
 export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, onClose, session: suppliedSession, flanking = 100 }: IGVViewerProps) {
+  const t = useText();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const browserRef = React.useRef<import('igv').IGVBrowser | null>(null);
   const resolverRef = React.useRef<SignedTrackResolver | null>(null);
@@ -179,7 +187,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
     void getIGVSnapshot(taskId, locus, controller.signal).then(value => {
       if (!controller.signal.aborted) setSnapshotState({ key: snapshotKey, value });
     }).catch(() => {
-      if (!controller.signal.aborted) setSnapshotNotice('截图查询失败，请刷新重试。');
+      if (!controller.signal.aborted) setSnapshotNotice(t("tasks.screenshotLookupFailedRefreshAndRetry6359dc"));
     }).finally(() => {
       if (!controller.signal.aborted) setSnapshotLoading(false);
     });
@@ -202,7 +210,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         if (!controller.signal.aborted) setLoadedSession(value);
       })
       .catch(cause => {
-        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : '无法读取测序证据');
+        if (!controller.signal.aborted) setError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToReadSequencingEvidence890a11"));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -222,7 +230,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
     const reference = referenceConfiguration(session);
     if (!session.available || !reference) {
       setLoading(false);
-      setError(session.reason || '该执行没有可判读的参考序列或测序证据');
+      setError(session.reason || t("tasks.thisExecutionHasNoInterpretableReferenceSequence8c1466"));
       return;
     }
 
@@ -257,7 +265,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         igvAPI = igv;
         if (!active || !containerRef.current) return;
 		if (typeof igv?.createBrowser !== 'function') {
-		  throw new Error('IGV ESM 模块未提供浏览器初始化接口');
+		  throw new Error(t("tasks.igvEsmModuleHasNoBrowserInitializationd4c184"));
 		}
 		const browser = await igv.createBrowser(containerRef.current, { reference, locus: locusRef.current, tracks: [] });
         createdBrowser = browser;
@@ -280,9 +288,9 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
           }
           try {
             const loaded = await browser.loadTrack(configuration);
-            if (!loaded) failures.push(configuration.name || '未命名轨迹');
+            if (!loaded) failures.push(configuration.name || t("tasks.unnamedTrackf0ccb4"));
           } catch {
-            failures.push(configuration.name || '未命名轨迹');
+            failures.push(configuration.name || t("tasks.unnamedTrackf0ccb4"));
           }
           if (!active) {
             await dispose();
@@ -295,7 +303,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         setLoading(false);
       } catch (cause) {
         if (!active) return;
-        setError(cause instanceof Error ? cause.message : '无法初始化 IGV 测序证据');
+        setError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToInitializeIgvEvidence1bdd82"));
         setLoading(false);
       }
     })();
@@ -322,7 +330,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         // Large regions show a zoom-in placeholder instead of reads.
         if (Math.abs((endPosition ?? position) - position) + 2 * flanking > 30000) return;
         const visibleMessages = containerRef.current?.querySelectorAll<HTMLElement>('.igv-viewport-message, .igv-zoom-in-notice-container');
-        if (visibleMessages && [...visibleMessages].some(item => item.textContent && getComputedStyle(item).display !== 'none')) throw new Error('轨迹尚未成功绘制');
+        if (visibleMessages && [...visibleMessages].some(item => item.textContent && getComputedStyle(item).display !== 'none')) throw new Error(t("tasks.trackHasNotRenderedSuccessfully905d97"));
         const displayedLocus = browser.currentLoci();
         const expected = /^([^:]+):(\d+)-(\d+)$/.exec(locus);
         const actual = typeof displayedLocus === 'string' ? /^([^:]+):([\d.]+)-([\d.]+)$/.exec(displayedLocus) : null;
@@ -334,13 +342,13 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         void igvSVGToPNG(svg).then(image => saveIGVSnapshot(taskId, locus, session.version, image)).then(value => {
           if (!controller.signal.aborted) {
             setSnapshotState({ key: snapshotKey, value });
-            setSnapshotNotice('截图已保存，BAM 到期后仍可查看。');
+            setSnapshotNotice(t("tasks.screenshotSavedAvailableAfterBamExpiry9fa891"));
           }
         }).catch(() => {
-          if (!controller.signal.aborted) setSnapshotNotice('截图保存失败，请刷新重试；实时 BAM 仍可查看。');
+          if (!controller.signal.aborted) setSnapshotNotice(t("tasks.screenshotSaveFailedRefreshAndRetryLive4bedf4"));
         });
       } catch {
-        if (!controller.signal.aborted) setSnapshotNotice('截图保存失败，请刷新重试；实时 BAM 仍可查看。');
+        if (!controller.signal.aborted) setSnapshotNotice(t("tasks.screenshotSaveFailedRefreshAndRetryLive4bedf4"));
       }
     });
     return () => controller.abort();
@@ -350,18 +358,17 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
   const unavailableTracks = session?.tracks.filter(track => !track.available && track.format !== 'cnr') ?? [];
   return (
-    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title="IGV 测序证据" size="large" className="!z-[80] !w-[min(1100px,94vw)] !max-w-none">
+    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title={t("tasks.igvSequencingEvidencefca9b1")} size="large" className="!z-[80] !w-[min(1100px,94vw)] !max-w-none">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded bg-canvas-subtle px-2 py-1 text-fg-default">{locus}</span>
-        <span className="text-fg-muted">{session?.reference.id || '参考未知'}</span>
+        <span className="text-fg-muted">{session?.reference.id || t("tasks.unknownReference15bf46")}</span>
         <ActionButton action="refresh" variant="ghost"
           type="button"
           onClick={() => setReloadToken(value => value + 1)}
           disabled={loading}
           className="yj-tool-button ml-auto"
         >
-           刷新证据
-        </ActionButton>
+           {t("tasks.refreshEvidence5a53e4")}</ActionButton>
       </div>
 
       {error && !showSnapshot && (
@@ -372,24 +379,24 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       )}
       {!showSnapshot && (trackErrors.length > 0 || unavailableTracks.length > 0) && (
         <div className="mb-3 rounded-lg border border-warning-emphasis bg-warning-subtle p-3 text-sm text-warning-fg">
-          {trackErrors.length > 0 && <p>未加载的轨迹：{trackErrors.join('、')}。</p>}
-          {unavailableTracks.map(track => <p key={track.id}>{track.name}：{track.reason || '不可用'}。</p>)}
+          {trackErrors.length > 0 && <p>{t("tasks.unloadedTracks6bea53")}{trackErrors.join('、')}。</p>}
+          {unavailableTracks.map(track => <p key={track.id}>{track.name}：{track.reason || t("tasks.unavailablebeff4a")}。</p>)}
         </div>
       )}
 
       {snapshotNotice && <p role="status" className="mb-3 text-sm text-fg-muted">{snapshotNotice}</p>}
       {showSnapshot && (
         <div className="space-y-3">
-          <p className="rounded-lg bg-warning-subtle p-3 text-sm text-warning-fg">这是 BAM 保留期间保存的截图，无法交互查看 reads。{snapshot?.createdAt && ` 保存于 ${new Date(snapshot.createdAt).toLocaleString('zh-CN')}`} · {snapshot?.reference}</p>
+          <p className="rounded-lg bg-warning-subtle p-3 text-sm text-warning-fg">{t("tasks.screenshotSavedDuringBamRetentionReadsCannot452197")}{snapshot?.createdAt && t("tasks.savedAt5aa49b", {p0: String(new Date(snapshot.createdAt).toLocaleString(t.locale))})} · {snapshot?.reference}</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={snapshot?.url} alt={`IGV 历史截图 ${locus}`} className="h-auto w-full rounded-lg border border-border-default" onError={() => { setSnapshotState({ key: snapshotKey, value: { available: false } }); setSnapshotNotice('截图读取失败，请刷新重试。'); }} />
+          <img src={snapshot?.url} alt={t("tasks.historicalIgvScreenshota10645", {p0: String(locus)})} className="h-auto w-full rounded-lg border border-border-default" onError={() => { setSnapshotState({ key: snapshotKey, value: { available: false } }); setSnapshotNotice(t("tasks.unableToLoadScreenshotRefreshAndRetryd9aecf")); }} />
         </div>
       )}
       <div className={showSnapshot || (!liveBAM && unavailableTracks.some(track => track.format === 'bam')) || (error && !loading && !browserRef.current) ? 'hidden' : 'relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default'}>
         <div ref={containerRef} className="min-h-[260px] w-full min-w-[640px]" />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-canvas-default/80">
-            <div className="flex items-center gap-3 text-sm text-fg-muted"><div className="h-5 w-5 animate-spin rounded-full border-b-2 border-accent-emphasis" />正在加载参考和轨迹…</div>
+            <div className="flex items-center gap-3 text-sm text-fg-muted"><div className="h-5 w-5 animate-spin rounded-full border-b-2 border-accent-emphasis" />{t("tasks.loadingReferenceAndTracks02e5bf")}</div>
           </div>
         )}
       </div>
@@ -405,8 +412,9 @@ interface PositionLinkProps {
 }
 
 export function PositionLink({ chromosome, position, label, onClick }: PositionLinkProps) {
+  const t = useText();
   return (
-    <Tooltip content="在当前任务的 IGV 证据中查看" placement="top" variant="nav">
+    <Tooltip content={t("tasks.viewInThisTaskIgvEvidence7d29a6")} placement="top" variant="nav">
       <button onClick={event => { event.stopPropagation(); onClick(chromosome, position); }} className="text-left text-accent-fg hover:underline">
         {label ?? `${chromosome}:${position}`}
       </button>

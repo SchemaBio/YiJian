@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import type { TabType } from '../types';
@@ -16,6 +19,7 @@ interface ResultTabsProps {
 }
 
 export function ResultTabs({ activeTab, onTabChange, children, tools, variantNavigation }: ResultTabsProps) {
+  const t = useText();
   const tabRefs = React.useRef<Map<TabType, HTMLButtonElement>>(new Map());
   const [collapsed, setCollapsed] = React.useState(false);
 	const lastVariantTab = React.useRef<TabType>('snv-indel');
@@ -61,25 +65,25 @@ export function ResultTabs({ activeTab, onTabChange, children, tools, variantNav
   return (
     <TaskNavigationCollapsed.Provider value={collapsed}><div className="yj-task-workspace">
       {/* 标签页导航 */}
-      <aside className="yj-task-nav" data-collapsed={collapsed} aria-label="任务解读导航">
-        <HoverHint content={collapsed ? '展开解读导航' : '收起解读导航'}><button type="button" className="yj-task-nav-toggle" aria-label={collapsed ? '展开解读导航' : '收起解读导航'} aria-expanded={!collapsed} onClick={() => setCollapsed(value => !value)}>
-          {collapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <><PanelLeftClose size={16} aria-hidden="true" /><span>收起导航</span></>}
+      <aside className="yj-task-nav" data-collapsed={collapsed} aria-label={t("tasks.taskInterpretationNavigationc858d6")}>
+        <HoverHint content={collapsed ? t("tasks.expandInterpretationNavigation1d44b6") : t("tasks.collapseInterpretationNavigation2f6777")}><button type="button" className="yj-task-nav-toggle" aria-label={collapsed ? t("tasks.expandInterpretationNavigation1d44b6") : t("tasks.collapseInterpretationNavigation2f6777")} aria-expanded={!collapsed} onClick={() => setCollapsed(value => !value)}>
+          {collapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <><PanelLeftClose size={16} aria-hidden="true" /><span>{t("tasks.collapseNavigation6fb54f")}</span></>}
         </button></HoverHint>
         <nav
 			className="yj-task-nav-primary"
-          aria-label="分析结果标签页"
+          aria-label={t("tasks.analysisResultTabs8397d1")}
         >
           {TAB_CONFIGS.map((tab, index) => {
 						const isActive = primaryActiveTab === tab.id;
             const Icon = tab.id === 'snv-indel' ? Microscope : TASK_NAV_ICONS[tab.id];
             return (
-              <React.Fragment key={tab.id}><HoverHint content={collapsed ? tab.label : undefined}><button
+              <React.Fragment key={tab.id}><HoverHint content={translateUI(collapsed ? tab.label : undefined, t)}><button
                 key={tab.id}
                 ref={(el) => {
                   if (el) tabRefs.current.set(tab.id, el);
                 }}
                 id={`tab-${tab.id}`}
-                aria-label={tab.label}
+                aria-label={translateUI(tab.label, t)}
                 aria-current={isActive ? 'page' : undefined}
                 aria-controls={`tabpanel-${tab.id}`}
                 tabIndex={0}
@@ -95,7 +99,7 @@ export function ResultTabs({ activeTab, onTabChange, children, tools, variantNav
                 `}
               >
                 <Icon size={16} aria-hidden="true" className="shrink-0" />
-                {!collapsed && <span>{tab.label}</span>}
+                {!collapsed && <span>{translateUI(tab.label, t)}</span>}
               </button></HoverHint>{tab.id === 'snv-indel' && isVariantTab && variantNavigation}</React.Fragment>
             );
           })}

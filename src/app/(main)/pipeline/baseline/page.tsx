@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
@@ -16,7 +23,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { AssetMultiSelect } from './AssetMultiSelect';
 import { getBillingConfig } from '@/lib/billing';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { BUILTIN_CNV_BASELINES } from '@/lib/builtin-resources';
+import { BUILTIN_CNV_BASELINES, resourceDisplayName } from '@/lib/builtin-resources';
 import { buildCNVSamplePairs, selectedCNVSamplePairs } from '@/lib/cnv-sample-pairs';
 
 type ReferenceGenome = 'GRCh37' | 'GRCh38';
@@ -37,9 +44,9 @@ function statusVariant(status: CNVBaselineStatus): 'success' | 'danger' | 'warni
   return 'neutral';
 }
 
-function formatTime(value: string): string {
+function formatTime(value: string, t: TextTranslator = chineseText): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(t.locale, { hour12: false });
 }
 
 function assetOptions(assets: DataAsset[]) {
@@ -47,6 +54,7 @@ function assetOptions(assets: DataAsset[]) {
 }
 
 export default function BaselinePage() {
+  const t = useText();
   const { user, currentOrg } = useAuth();
   const scope = `${user?.id || ''}:${currentOrg?.id || ''}`;
   const loadGeneration = React.useRef(0);
@@ -88,9 +96,9 @@ export default function BaselinePage() {
       if (generation !== loadGeneration.current || controller.signal.aborted) return;
       setItems([...BUILTIN_CNV_BASELINES, ...baselines]); setAssets(data);
     } catch (err) {
-      if (generation === loadGeneration.current && !controller.signal.aborted) setError(err instanceof Error ? err.message : '加载 CNV 基线失败');
+      if (generation === loadGeneration.current && !controller.signal.aborted) setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToLoadCnvBaselines50b9e8"));
     } finally { if (generation === loadGeneration.current) setLoading(false); }
-  }, [scope]);
+  }, [scope, t]);
 
   React.useEffect(() => {
     setModalOpen(false); setDeleting(null); setName(''); setBedID(''); setPairIDs([]); setAssets([]); setItems([]); setFormError('');
@@ -137,7 +145,7 @@ export default function BaselinePage() {
   const handleCreate = async () => {
     if (submitting) return;
     if (!name.trim() || !bedID || pairIDs.length === 0) {
-      setFormError('请填写名称，选择 BED，并勾选完整的样本组。');
+      setFormError(t("pipeline.enterANameSelectBedAndChoose656623"));
       return;
     }
     const generation = loadGeneration.current;
@@ -150,54 +158,54 @@ export default function BaselinePage() {
       setModalOpen(false); setName(''); setBedID(''); setPairIDs([]); setFormError('');
       setSubmitting(false);
     } catch (err) {
-      if (generation === loadGeneration.current) setFormError(err instanceof Error ? err.message : '创建 CNV 基线任务失败');
+      if (generation === loadGeneration.current) setFormError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToCreateCnvBaselineTask744668"));
     } finally { setSubmitting(false); }
   };
 
   const columns: Column<CNVBaseline>[] = [
-    { id: 'name', header: '基线名称', accessor: 'name', width: 190, align: 'left' },
-    { id: 'reference', header: '参考基因组', accessor: (row) => <Tag variant="info">{row.reference_genome}</Tag>, width: 120, align: 'center' },
-    { id: 'data', header: '数据组', accessor: (row) => row.is_builtin ? '-' : `${row.read_pairs.length} 对 R1/R2`, width: 110, align: 'center' },
-    ...(isSaaS ? [{ id: 'credits', header: '积分', accessor: (row: CNVBaseline) => row.is_builtin ? '-' : `${row.credits_charged || row.credit_cost} 积分`, width: 90, align: 'center' as const }] : []),
-    { id: 'bed', header: 'BED 文件', accessor: (row) => <HoverHint content={row.bed.file_name}><span className="block truncate" >{row.bed.file_name}</span></HoverHint>, width: 220, align: 'left' },
-    { id: 'status', header: '状态', accessor: (row) => row.is_builtin ? <Tag variant="success">内置可用</Tag> : row.start_error ? <Tag variant="danger">投递异常</Tag> : <Tag variant={statusVariant(row.status)}>{statusLabels[row.status]}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
-    { id: 'output', header: '基线输出', accessor: (row) => <HoverHint content={row.start_error || row.output_path || row.error}><span className="block max-w-[300px] truncate font-mono text-xs" >{row.is_builtin ? '系统内置资源' : row.start_error || row.output_path || (row.status === 'failed' ? row.error || '执行失败' : '-')}</span></HoverHint>, width: 300, align: 'left' },
-    { id: 'created', header: '创建时间', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at), width: 170, align: 'center' },
-    { id: 'actions', header: '操作', accessor: (row) => row.is_builtin
-      ? <span className="text-xs text-fg-muted">只读</span>
-      : <TableActions><TableAction action="delete" label="删除" tone="danger" aria-label={`删除 ${row.name}`} disabled={['queued', 'waiting_for_data', 'running'].includes(row.status)} hint={['queued', 'waiting_for_data', 'running'].includes(row.status) ? '校正任务结束后可删除' : '删除自定义基线'} onClick={() => setDeleting(row)} /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
+    { id: 'name', header: t("pipeline.baselineName97a06f"), accessor: (row) => resourceDisplayName(row.id, row.name, t), width: 190, align: 'left' },
+    { id: 'reference', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => <Tag variant="info">{row.reference_genome}</Tag>, width: 120, align: 'center' },
+    { id: 'data', header: t("pipeline.dataGroupse12c50"), accessor: (row) => row.is_builtin ? '-' : t("pipeline.rRPairs41bb65", {p0: String(row.read_pairs.length)}), width: 110, align: 'center' },
+    ...(isSaaS ? [{ id: 'credits', header: t("pipeline.creditsb3e265"), accessor: (row: CNVBaseline) => row.is_builtin ? '-' : t("pipeline.credits0193ac", {p0: String(row.credits_charged || row.credit_cost)}), width: 90, align: 'center' as const }] : []),
+    { id: 'bed', header: t("pipeline.bedFiles8ee058"), accessor: (row) => <HoverHint content={resourceDisplayName(row.bed.id, row.bed.file_name, t)}><span className="block truncate" >{resourceDisplayName(row.bed.id, row.bed.file_name, t)}</span></HoverHint>, width: 220, align: 'left' },
+    { id: 'status', header: t("admin.status62e951"), accessor: (row) => row.is_builtin ? <Tag variant="success">{t("pipeline.builtInAvailablece8d4a")}</Tag> : row.start_error ? <Tag variant="danger">{t("pipeline.submissionError00b115")}</Tag> : <Tag variant={statusVariant(row.status)}>{translateUI(statusLabels[row.status], t)}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
+    { id: 'output', header: t("pipeline.baselineOutputc3704f"), accessor: (row) => <HoverHint content={row.start_error || row.output_path || row.error}><span className="block max-w-[300px] truncate font-mono text-xs" >{row.is_builtin ? t("pipeline.builtInResources3e067f") : row.start_error || row.output_path || (row.status === 'failed' ? row.error || t("pipeline.executionFailed9746cf") : '-')}</span></HoverHint>, width: 300, align: 'left' },
+    { id: 'created', header: t("admin.createdAt84e380"), accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at, t), width: 170, align: 'center' },
+    { id: 'actions', header: t("admin.actionsf3ea6d"), accessor: (row) => row.is_builtin
+      ? <span className="text-xs text-fg-muted">{t("pipeline.readOnlyffc1d0")}</span>
+      : <TableActions><TableAction action="delete" label={t("data.delete3755f5")} tone="danger" aria-label={t("pipeline.delete05cefd", {p0: String(row.name)})} disabled={['queued', 'waiting_for_data', 'running'].includes(row.status)} hint={['queued', 'waiting_for_data', 'running'].includes(row.status) ? t("pipeline.canBeDeletedAfterCalibrationFinishes14d5f8") : t("pipeline.deleteCustomBaseline25cb0b")} onClick={() => setDeleting(row)} /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },
   ];
 
   return (
     <PageContent className="yj-page-shell">
-      <div className="yj-page-header"><div><h2 className="yj-page-title">CNV 基线</h2><p className="yj-page-subtitle">使用所选正常样本对系统内置 CNV 基线进行校正。</p></div></div>
+      <div className="yj-page-header"><div><h2 className="yj-page-title">{t("pipeline.cnvBaselinefd84b0")}</h2><p className="yj-page-subtitle">{t("pipeline.calibrateBuiltInCnvBaselinesWithSelectedccc394")}</p></div></div>
       <div className="mb-2 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
         <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
-        <span>CNV 基线由系统内置基线结合所选样本进行校正生成。该结果仅供分析参考，准确度尚未经充分验证，请结合其他检测方法和临床证据综合判断。</span>
+        <span>{t("pipeline.cnvBaselinesAreCalibratedFromBuiltInb4f70e")}</span>
       </div>
       <div className="yj-toolbar-panel">
-        <div className="w-full sm:w-72"><Input placeholder="搜索名称、基因组或 BED..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
-        <Button action="add" variant="primary" className="shrink-0 whitespace-nowrap"  disabled={loading || !!error} onClick={() => setModalOpen(true)}>校正内置 CNV 基线</Button>
+        <div className="w-full sm:w-72"><Input placeholder={t("pipeline.searchNameGenomeOrBed21acca")} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} /></div>
+        <Button action="add" variant="primary" className="shrink-0 whitespace-nowrap"  disabled={loading || !!error} onClick={() => setModalOpen(true)}>{t("pipeline.calibrateBuiltInCnvBaseline652cda")}</Button>
       </div>
-      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>重试读取</ActionButton></div>}
-      {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table baseline-center-table" />}
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
+      {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">{t("pipeline.loadingCnvBaselinesdeab54")}</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? t("pipeline.noMatchingCnvBaselines4b0bd0") : t("pipeline.noCnvBaselinesc371fa")} description={searchQuery.trim() ? t("pipeline.adjustYourSearchAndRetryf591c7") : t("pipeline.selectUploadedRRDataAndBed712257")} /> : <DataTable data={filteredItems} columns={localizeDisplay(columns, t)} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table baseline-center-table" />}
 
-      <AppModal closeOnEscape={!pairsOpen} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || pairIDs.length === 0 || selectedPairs.length !== pairIDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
+      <AppModal closeOnEscape={!pairsOpen} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title={t("pipeline.calibrateBuiltInCnvBaseline652cda")} size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>{t("admin.cancel4d0b46")}</Button><Button loading={submitting} loadingLabel={t("pipeline.submittinge2d944")} variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || pairIDs.length === 0 || selectedPairs.length !== pairIDs.length} leftIcon={<Database className="h-4 w-4" />}>{t("pipeline.startCalibrationPipeline285e3b")}</Button></>}>
         <div className="space-y-5">
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{t("pipeline.calibrateTheBuiltInBaselineWithSelected0c0f7a")}</div>
           {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormItem label="基线名称" required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>
-            <FormItem label="参考基因组" required><Select value={genome} onChange={(value) => { setGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome); setBedID(''); }} options={genomeOptions} /></FormItem>
+            <FormItem label={t("pipeline.baselineName97a06f")} required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder={t("pipeline.forExampleGrchWesNormalQ377821")} /></FormItem>
+            <FormItem label={t("pipeline.referenceGenome903ba5")} required><Select value={genome} onChange={(value) => { setGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome); setBedID(''); }} options={localizeDisplay(genomeOptions, t)} /></FormItem>
           </div>
-          <FormItem label="样本组" required hint={`已选择 ${selectedPairs.length} 组样本；每组包含配套的 Read1 和 Read2`}><AssetMultiSelect label="样本组" unit="组样本" value={pairIDs} onChange={setPairIDs} onOpenChange={setPairsOpen} options={pairOptions} disabled={submitting} /></FormItem>
-          <p className="text-xs leading-5 text-fg-muted">优先按数据编号配对，未填写编号的数据按文件名配对。仅显示唯一且完整的 Read1/Read2 样本组；缺失、重复或过期的数据请先在数据中心整理。</p>
-          {selectedPairs.length > 0 && <div className="overflow-x-auto rounded-md border border-border-default"><table className="w-full min-w-[460px] text-left text-xs"><caption className="border-b border-border-default bg-canvas-subtle px-3 py-2 text-left">已选样本组 · Read1/Read2 同组提交</caption><thead><tr><th className="p-2">样本</th><th className="p-2">Read1</th><th className="p-2">Read2</th></tr></thead><tbody>{selectedPairs.map(pair => <tr key={pair.id} className="border-t border-border-default"><td className="break-all p-2">{pair.label}</td><td className="max-w-48 break-all p-2">{pair.read1.file_name}</td><td className="max-w-48 break-all p-2">{pair.read2.file_name}</td></tr>)}</tbody></table></div>}
-          <FormItem label="BED 文件" required hint={`仅显示 ${genome} 的可用 BED 文件`}><Select searchable value={bedID} onChange={(value) => setBedID(Array.isArray(value) ? value[0] : value)} options={bedOptions} placeholder={bedOptions.length ? '选择 BED 文件' : `暂无 ${genome} BED 文件`} disabled={bedOptions.length === 0} /></FormItem>
-          {isSaaS && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">{estimatedCredits === null ? '预计积分暂不可用' : `预计消耗 ${estimatedCredits} 积分`}</div><div className="mt-0.5 text-xs text-fg-muted">按 R1/R2 总大小向上取整计费。{creditRate === null ? '最终金额以服务端计费配置为准。' : `每 GiB ${creditRate} 积分，不足 1 GiB 按 1 GiB 计。`}</div></div></div><div className="shrink-0 text-xs text-fg-muted">{(selectedInputBytes / (1024 ** 3)).toFixed(2)} GiB</div></div>}
+          <FormItem label={t("pipeline.sampleGroups5d1b88")} required hint={t("pipeline.sampleGroupsSelectedEachContainsPairedReadc7e5ae", {p0: String(selectedPairs.length)})}><AssetMultiSelect label={t("pipeline.sampleGroups5d1b88")} unit={t("组样本")} value={pairIDs} onChange={setPairIDs} onOpenChange={setPairsOpen} options={pairOptions} disabled={submitting} /></FormItem>
+          <p className="text-xs leading-5 text-fg-muted">{t("pipeline.pairByDataIdFirstThenFilenamecbcd4d")}</p>
+          {selectedPairs.length > 0 && <div className="overflow-x-auto rounded-md border border-border-default"><table className="w-full min-w-[460px] text-left text-xs"><caption className="border-b border-border-default bg-canvas-subtle px-3 py-2 text-left">{t("pipeline.selectedSampleGroupsReadReadSubmittedTogether8b17f0")}</caption><thead><tr><th className="p-2">{t("history.sample610da8")}</th><th className="p-2">Read1</th><th className="p-2">Read2</th></tr></thead><tbody>{selectedPairs.map(pair => <tr key={pair.id} className="border-t border-border-default"><td className="break-all p-2">{pair.label}</td><td className="max-w-48 break-all p-2">{pair.read1.file_name}</td><td className="max-w-48 break-all p-2">{pair.read2.file_name}</td></tr>)}</tbody></table></div>}
+          <FormItem label={t("pipeline.bedFiles8ee058")} required hint={t("pipeline.onlyAvailableBedFilesForAreShown678dcf", {p0: String(genome)})}><Select searchable value={bedID} onChange={(value) => setBedID(Array.isArray(value) ? value[0] : value)} options={bedOptions} placeholder={bedOptions.length ? t("pipeline.selectBedFile4585dc") : t("pipeline.noBedFilesFor88b79e", {p0: String(genome)})} disabled={bedOptions.length === 0} /></FormItem>
+          {isSaaS && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">{estimatedCredits === null ? t("pipeline.estimatedCreditsUnavailable91c3b5") : t("pipeline.estimatedCostCredits1e7fdd", {p0: String(estimatedCredits)})}</div><div className="mt-0.5 text-xs text-fg-muted">{t("pipeline.billedOnTotalRRSizeRoundede291a1")}{creditRate === null ? t("pipeline.finalCostFollowsServerBillingSettingsc816c1") : t("pipeline.creditsPerGibLessThanGibIs700984", {p0: String(creditRate)})}</div></div></div><div className="shrink-0 text-xs text-fg-muted">{formatNumericString((selectedInputBytes / (1024 ** 3)).toFixed(2), t.locale)} GiB</div></div>}
         </div>
       </AppModal>
-      <ConfirmDialog key={scope} open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)} title="删除 CNV 基线" confirmLabel="确认删除" variant="danger" message={`确定删除自定义基线「${deleting?.name ?? ''}」吗？关联任务记录和归档文件将保留。被流程或未结束任务使用的基线无法删除。`} onConfirm={async () => {
+      <ConfirmDialog key={scope} open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)} title={t("pipeline.deleteCnvBaseline87ea69")} confirmLabel={t("data.confirmDeletion3c06ab")} variant="danger" message={t("pipeline.deleteCustomBaselineTaskRecordsAndArchived2baf2e", {p0: String(deleting?.name ?? '')})} onConfirm={async () => {
         if (!deleting || deleting.is_builtin) return;
         const generation = loadGeneration.current;
         await deleteCNVBaseline(deleting.id);

@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { localizeDisplay } from '@/i18n/text';
+
 import { ActionButton as Button, ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 
 
@@ -43,6 +48,7 @@ function formatDate(d: Date): string {
 }
 
 export default function PedigreePage() {
+  const t = useText();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [openTabs, setOpenTabs] = React.useState<OpenTab[]>([]);
@@ -113,11 +119,11 @@ export default function PedigreePage() {
     } catch (err) {
       console.error('加载家系列表失败', err);
       setPedigrees([]);
-      setError('加载家系列表失败，请稍后重试');
+      setError(t("samples.unableToLoadPedigreesRetryLater7f2627"));
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     refreshPedigrees();
@@ -133,12 +139,12 @@ export default function PedigreePage() {
     } catch (err) {
       console.error('加载家系详情失败', err);
       setCurrentPedigree(null);
-      setError('加载家系详情失败，请稍后重试');
+      setError(t("samples.unableToLoadPedigreeDetailsRetryLater21aae1"));
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // 处理 URL 参数，自动打开对应家系或关闭所有标签
   React.useEffect(() => {
@@ -207,7 +213,7 @@ export default function PedigreePage() {
     // 加载详情
     await refreshCurrentPedigree(pedigree.id);
     setSelectedMember(null);
-  }, [openTabs, refreshCurrentPedigree]);
+  }, [openTabs, refreshCurrentPedigree, t]);
 
   // 切换标签
   const handleSwitchTab = React.useCallback(async (tabId: string) => {
@@ -217,7 +223,7 @@ export default function PedigreePage() {
       await refreshCurrentPedigree(tab.pedigreeId);
       setSelectedMember(null);
     }
-  }, [openTabs, refreshCurrentPedigree]);
+  }, [openTabs, refreshCurrentPedigree, t]);
 
   // 关闭标签
   const handleCloseTab = React.useCallback((tabId: string, e?: React.MouseEvent) => {
@@ -235,7 +241,7 @@ export default function PedigreePage() {
       return newTabs;
     });
     setSelectedMember(null);
-  }, [activeTabId, refreshCurrentPedigree]);
+  }, [activeTabId, refreshCurrentPedigree, t]);
 
   // 添加成员
   const handleAddMember = async (memberData: Omit<PedigreeMember, 'id' | 'generation' | 'position'>) => {
@@ -284,7 +290,7 @@ export default function PedigreePage() {
       setAddMemberHint(null);
     } catch (err) {
       console.error('Failed to add pedigree member', err);
-      const message = err instanceof Error ? err.message : 'Failed to add pedigree member';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToAddPedigreeMember72dac0");
       setError(message);
       throw new Error(message);
     }
@@ -319,7 +325,7 @@ export default function PedigreePage() {
       setLinkingMemberId(null);
     } catch (err) {
       console.error('Failed to link sample', err);
-      const message = err instanceof Error ? err.message : 'Failed to link sample';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToLinkSampleb2877a");
       setError(message);
       throw new Error(message);
     }
@@ -331,7 +337,7 @@ export default function PedigreePage() {
       const samples = await listSamples();
       const probandSample = samples.find(s => s.id === data.probandSampleId);
       if (!probandSample) {
-        const message = '未找到先证者样本';
+        const message = t("samples.probandSampleNotFoundeee120");
         setError(message);
         throw new Error(message);
       }
@@ -343,7 +349,7 @@ export default function PedigreePage() {
       });
       const probandMember = await createPedigreeMember(created.id, {
         sampleId: data.probandSampleId,
-        name: probandSample.internalId || '先证者',
+        name: probandSample.internalId || t("samples.probandc8c1fa"),
         gender: probandSample.gender,
         relation: 'proband',
         affectedStatus: 'affected',
@@ -366,7 +372,7 @@ export default function PedigreePage() {
       refreshPedigrees();
     } catch (err) {
       console.error('创建家系失败', err);
-      const message = err instanceof Error ? err.message : '创建家系失败，请稍后重试';
+      const message = err instanceof Error ? errorText(err, t) : t("samples.unableToCreatePedigreeRetryLaterf46831");
       setError(message);
       throw new Error(message);
     }
@@ -402,7 +408,7 @@ export default function PedigreePage() {
       setEditingPedigree(null);
     } catch (err) {
       console.error('Failed to update pedigree', err);
-      const message = err instanceof Error ? err.message : 'Failed to update pedigree';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToUpdatePedigree805c6a");
       setError(message);
       throw new Error(message);
     }
@@ -425,7 +431,7 @@ export default function PedigreePage() {
       setDeletingPedigreeId(null);
     } catch (err) {
       console.error('Failed to delete pedigree', err);
-      const message = err instanceof Error ? err.message : 'Failed to delete pedigree';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToDeletePedigree36d271");
       setError(message);
       throw new Error(message);
     }
@@ -477,7 +483,7 @@ export default function PedigreePage() {
       setDeletingMemberId(null);
     } catch (err) {
       console.error('Failed to delete pedigree member', err);
-      const message = err instanceof Error ? err.message : 'Failed to delete pedigree member';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToDeletePedigreeMember1b79d8");
       setError(message);
       throw new Error(message);
     }
@@ -528,7 +534,7 @@ export default function PedigreePage() {
       refreshPedigrees();
     } catch (err) {
       console.error('Failed to update pedigree member', err);
-      const message = err instanceof Error ? err.message : 'Failed to update pedigree member';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToUpdatePedigreeMemberd62176");
       setError(message);
       throw new Error(message);
     }
@@ -556,7 +562,7 @@ export default function PedigreePage() {
       refreshPedigrees();
     } catch (err) {
       console.error('设置先证者失败', err);
-      setError('设置先证者失败，请稍后重试');
+      setError(t("samples.unableToSetProbandRetryLater7b1559"));
     }
   };
 
@@ -566,7 +572,7 @@ export default function PedigreePage() {
     const member = contextMenu.member;
     return [
       {
-        label: '编辑成员',
+        label: t("samples.editMemberab5fcb"),
         icon: <Pencil className="w-4 h-4" />,
         onClick: () => {
           setEditingMember(member);
@@ -575,7 +581,7 @@ export default function PedigreePage() {
       },
       { separator: true },
       {
-        label: '添加子女',
+        label: t("samples.addChildd34103"),
         icon: <UserPlus className="w-4 h-4" />,
         onClick: () => {
           setAddMemberHint({
@@ -587,7 +593,7 @@ export default function PedigreePage() {
         },
       },
       {
-        label: '添加兄弟姐妹',
+        label: t("samples.addSibling0add2e"),
         icon: <UserPlus className="w-4 h-4" />,
         onClick: () => {
           setAddMemberHint({
@@ -599,7 +605,7 @@ export default function PedigreePage() {
         },
       },
       {
-        label: '添加配偶',
+        label: t("samples.addSpouse5e8688"),
         icon: <UserPlus className="w-4 h-4" />,
         onClick: () => {
           setAddMemberHint({
@@ -611,14 +617,14 @@ export default function PedigreePage() {
       },
       { separator: true },
       {
-        label: '设为先证者',
+        label: t("samples.setAsProband5e864f"),
         icon: <GitBranch className="w-4 h-4" />,
         onClick: () => handleSetProband(member.id),
         disabled: member.id === currentPedigree?.probandId,
       },
       { separator: true },
       {
-        label: '删除成员',
+        label: t("samples.deleteMembera045fb"),
         icon: <Trash2 className="w-4 h-4" />,
         onClick: () => {
           setDeletingMemberId(member.id);
@@ -628,7 +634,7 @@ export default function PedigreePage() {
         disabled: member.relation === 'proband',
       },
     ];
-  }, [contextMenu.member, isEditMode, currentPedigree]);
+  }, [contextMenu.member, isEditMode, currentPedigree, t]);
 
   // 筛选家系
   const filteredPedigrees = React.useMemo(() => {
@@ -643,14 +649,12 @@ export default function PedigreePage() {
 
   // 下载模板
   const handleDownloadTemplate = () => {
-    const templateContent = `家系内部编号,批次,样本内部编号1,样本内部编号2,样本内部编号3,临床诊断,备注
-FAM-001,BATCH-2024-001,INT-001,INT-002,,遗传性心肌病待查,家系备注
-FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
+    const templateContent = t("samples.pedigreeInternalIdBatchSampleInternalIda7394e");
     const blob = new Blob(['\ufeff' + templateContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = '家系导入模板.csv';
+    link.download = t("samples.pedigreeImportTemplateCsvd709c6");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -661,7 +665,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
   const columns: Column<PedigreeListItem>[] = [
     {
       id: 'id',
-      header: '家系编号',
+      header: t("samples.pedigreeIdec299d"),
       accessor: (row) => (
         <button
           type="button"
@@ -676,21 +680,21 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
     },
     {
       id: 'internalId',
-      header: '系统编号',
+      header: t("samples.systemId17b196"),
       accessor: (row) => <span className="font-mono text-xs">{row.id.substring(0, 8)}</span>,
       width: 90,
       align: 'center',
     },
     {
       id: 'batch',
-      header: '批次',
+      header: t("samples.batch6b2cf2"),
       accessor: (row) => row.batch || '-',
       width: 120,
       align: 'center',
     },
     {
       id: 'sampleIds',
-      header: '样本编号',
+      header: t("history.sampleId6d686e"),
       accessor: (row) => (
         <div className="text-sm space-y-0.5">
           {row.sampleIds.length > 0 ? (
@@ -712,7 +716,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
     },
     {
       id: 'sampleInternalIds',
-      header: '样本内部编号',
+      header: t("samples.sampleInternalIdf3c5b6"),
       accessor: (row) => (
         <div className="text-sm space-y-0.5">
           {row.sampleInternalIds.length > 0 ? (
@@ -734,13 +738,13 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
     },
     {
       id: 'clinicalDiagnosis',
-      header: '临床诊断',
+      header: t("samples.clinicalDiagnosis654a81"),
       accessor: (row) => row.clinicalDiagnosis || '-',
       width: 140,
     },
     {
       id: 'remark',
-      header: '备注',
+      header: t("admin.notese03614"),
       accessor: (row) => (
         <span className={row.remark ? 'text-fg-default truncate block max-w-[100px]' : 'text-fg-muted'}>
           {row.remark || '-'}
@@ -748,18 +752,18 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
       ),
       width: 100,
     },
-    { id: 'updatedAt', header: '更新时间', accessor: (row) => row.updatedAt && Number.isFinite(Date.parse(row.updatedAt)) ? new Date(row.updatedAt).toLocaleString('zh-CN', { hour12: false }) : '-', width: 150 },
+    { id: 'updatedAt', header: t("pipeline.updatedAt093dea"), accessor: (row) => row.updatedAt && Number.isFinite(Date.parse(row.updatedAt)) ? new Date(row.updatedAt).toLocaleString(t.locale, { hour12: false }) : '-', width: 150 },
     {
       id: 'actions',
-      header: '操作',
+      header: t("admin.actionsf3ea6d"),
       accessor: (row) => (
         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <IconActionButton label="编辑" action="edit" variant="ghost"
+          <IconActionButton label={t("admin.edita7f814")} action="edit" variant="ghost"
             className="p-1.5 rounded text-fg-muted hover:text-accent-fg hover:bg-accent-subtle transition-colors"
             onClick={() => handleOpenEditPedigree(row)}
 
            />
-          <IconActionButton label="删除" action="delete" variant="ghost"
+          <IconActionButton label={t("data.delete3755f5")} action="delete" variant="ghost"
             className="p-1.5 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors"
             onClick={() => handleOpenDeletePedigree(row.id)}
 
@@ -781,10 +785,10 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
         <div className="hidden md:flex w-56 flex-shrink-0 border-r border-border-default bg-canvas-subtle flex-col">
             <div className="px-3 py-2 border-b border-border-default flex items-center gap-2">
               <List className="w-4 h-4 text-fg-muted" />
-              <span className="text-sm font-medium text-fg-default">家系列表</span>
+              <span className="text-sm font-medium text-fg-default">{t("samples.pedigreeList4e74d4")}</span>
             </div>
             <div className="p-2 border-b border-border-default">
-              <Input placeholder="搜索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-3.5 h-3.5" />} className="text-xs" />
+              <Input placeholder={t("history.search16ad6d")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-3.5 h-3.5" />} className="text-xs" />
             </div>
             <div className="flex-1 overflow-auto">
               {filteredPedigrees.map((pedigree) => {
@@ -796,7 +800,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                       <GitBranch className="w-3 h-3 text-fg-muted" />
                       <span className={`truncate text-sm ${isActive ? 'text-accent-fg font-medium' : 'text-fg-default'}`}>{pedigree.internalId}</span>
                     </div>
-                    <div className="text-xs text-fg-muted ml-5 truncate">{pedigree.sampleIds.length} 个样本</div>
+                    <div className="text-xs text-fg-muted ml-5 truncate">{pedigree.sampleIds.length} {t("samples.samples2782fc")}</div>
                   </div>
                 );
               })}
@@ -806,26 +810,26 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
         <div className="flex-1 min-w-0">
           <div className="p-4 md:p-6 h-full overflow-auto yj-page-shell">
             <div className="yj-page-header">
-              <h2 className="yj-page-title">家系管理</h2>
+              <h2 className="yj-page-title">{t("samples.pedigreeManagementb08123")}</h2>
             </div>
             <div className="yj-toolbar-panel">
               <div className="w-full sm:w-72">
-                <Input placeholder="搜索家系编号、内部编号、样本..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
+                <Input placeholder={t("samples.searchPedigreeIdInternalIdOrSample09da28")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button action="download" variant="secondary"  onClick={handleDownloadTemplate}>下载模板</Button>
-                <Button action="add" variant="primary"  onClick={() => setIsNewPedigreeOpen(true)}>新建家系</Button>
+                <Button action="download" variant="secondary"  onClick={handleDownloadTemplate}>{t("samples.downloadTemplatea3afb2")}</Button>
+                <Button action="add" variant="primary"  onClick={() => setIsNewPedigreeOpen(true)}>{t("samples.newPedigreeb7e3c2")}</Button>
               </div>
             </div>
             {error && (
               <div role="alert" className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-                {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>重试读取</ActionButton>
+                {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>{t("billing.retryLoading7b4939")}</ActionButton>
               </div>
             )}
             {listLoading && (
-              <div className="mb-3 text-sm text-fg-muted">加载家系列表...</div>
+              <div className="mb-3 text-sm text-fg-muted">{t("samples.loadingPedigrees3443cb")}</div>
             )}
-            {!listLoading && !(error && pedigrees.length === 0) && <div className="overflow-x-auto [&_table]:min-w-[990px]"><DataTable data={filteredPedigrees} columns={columns} rowKey="id" striped density="compact" /></div>}
+            {!listLoading && !(error && pedigrees.length === 0) && <div className="overflow-x-auto [&_table]:min-w-[990px]"><DataTable data={filteredPedigrees} columns={localizeDisplay(columns, t)} rowKey="id" striped density="compact" /></div>}
           </div>
         </div>
       )}
@@ -834,7 +838,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
       {hasOpenTabs && (
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
           <div className="md:hidden border-b border-border-default p-3">
-            <label htmlFor="pedigree-switch" className="sr-only">切换家系</label>
+            <label htmlFor="pedigree-switch" className="sr-only">{t("samples.switchPedigreedad53f")}</label>
             <select id="pedigree-switch" className="w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm text-fg-default" value={activeTab?.pedigreeId || ''} onChange={(event) => {
               const pedigree = pedigrees.find(item => item.id === event.target.value);
               if (pedigree) handleOpenTab(pedigree);
@@ -847,7 +851,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
             {openTabs.map((tab) => (
               <div key={tab.id} onClick={() => handleSwitchTab(tab.id)} className={`flex items-center gap-2 px-4 py-2 cursor-pointer border-r border-border-muted text-sm whitespace-nowrap transition-colors ${activeTabId === tab.id ? 'bg-canvas-default text-fg-default border-b-2 border-b-accent-emphasis -mb-px' : 'text-fg-muted hover:bg-canvas-inset hover:text-fg-default'}`}>
                 <span>{tab.name}</span>
-                <IconActionButton label="关闭标签" action="close" variant="ghost" onClick={(e) => handleCloseTab(tab.id, e)} className="p-0.5 rounded hover:bg-canvas-inset"  />
+                <IconActionButton label={t("samples.closeTab118f00")} action="close" variant="ghost" onClick={(e) => handleCloseTab(tab.id, e)} className="p-0.5 rounded hover:bg-canvas-inset"  />
               </div>
             ))}
           </div>
@@ -861,7 +865,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                   {currentPedigree.clinicalDiagnosis && (
                     <Tag variant="info">{currentPedigree.clinicalDiagnosis}</Tag>
                   )}
-                  <span className="text-xs text-fg-muted">{currentPedigree.members.length} 位成员</span>
+                  <span className="text-xs text-fg-muted">{currentPedigree.members.length} {t("samples.membersd22661")}</span>
                 </>
               )}
             </div>
@@ -869,16 +873,13 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
               {isEditMode ? (
                 <>
                   <Button action="add" variant="secondary" size="small"  onClick={() => setIsAddMemberOpen(true)}>
-                    添加成员
-                  </Button>
+                    {t("samples.addMemberbd09d5")}</Button>
                   <Button action="edit" variant="primary" size="small"  onClick={() => setIsEditMode(false)}>
-                    完成编辑
-                  </Button>
+                    {t("samples.finishEditingb96ee1")}</Button>
                 </>
               ) : (
                 <Button action="edit" variant="secondary" size="small"  onClick={() => setIsEditMode(true)}>
-                  编辑
-                </Button>
+                  {t("admin.edita7f814")}</Button>
               )}
             </div>
           </div>
@@ -890,7 +891,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
               </div>
             ) : error && !currentPedigree ? (
-              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>重试读取</ActionButton>}</div>
+              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>{t("billing.retryLoading7b4939")}</ActionButton>}</div>
             ) : currentPedigree ? (
               <PedigreeTree
                 members={currentPedigree.members}
@@ -903,8 +904,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
               />
             ) : (
               <div className="flex items-center justify-center h-full text-fg-muted">
-                选择一个家系查看详情
-              </div>
+                {t("samples.selectAPedigreeToViewDetails1831aa")}</div>
             )}
           </div>
         </div>
@@ -980,9 +980,9 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
           setDeletingPedigreeId(null);
         }}
         onConfirm={handleDeletePedigree}
-        title="删除家系"
-        message={`确定要删除家系 ${deletingPedigreeId ? pedigrees.find(p => p.id === deletingPedigreeId)?.internalId || deletingPedigreeId.substring(0, 8) : ''} 吗？此操作不可撤销。`}
-        confirmLabel="删除"
+        title={t("samples.deletePedigreecde175")}
+        message={t("samples.deletePedigreeThisCannotBeUndonef6d818", {p0: String(deletingPedigreeId ? pedigrees.find(p => p.id === deletingPedigreeId)?.internalId || deletingPedigreeId.substring(0, 8) : '')})}
+        confirmLabel={t("data.delete3755f5")}
         confirmVariant="danger"
       />
 
@@ -994,9 +994,9 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
           setDeletingMemberId(null);
         }}
         onConfirm={handleConfirmDeleteMember}
-        title="删除成员"
-        message={`确定要删除成员 ${currentPedigree?.members.find(m => m.id === deletingMemberId)?.name || ''} 吗？此操作将同时清理相关的家庭关系引用。`}
-        confirmLabel="删除"
+        title={t("samples.deleteMembera045fb")}
+        message={t("samples.deleteMemberAssociatedFamilyRelationshipReferencesWill8b4b27", {p0: String(currentPedigree?.members.find(m => m.id === deletingMemberId)?.name || '')})}
+        confirmLabel={t("data.delete3755f5")}
         confirmVariant="danger"
       />
 
@@ -1017,7 +1017,7 @@ FAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,`;
         isOpen={contextMenu.isOpen && isEditMode}
         onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false }))}
         position={contextMenu.position}
-        items={contextMenuItems}
+        items={localizeDisplay(contextMenuItems, t)}
       />
     </div>
   );

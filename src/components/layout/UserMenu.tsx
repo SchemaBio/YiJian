@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
@@ -21,6 +24,7 @@ interface UserData {
 }
 
 export function UserMenu({ collapsed = false }: UserMenuProps) {
+  const t = useText();
   const [open, setOpen] = React.useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -35,13 +39,13 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
     id: user.id,
     username: user.email,
     name: user.name,
-    role: user.systemRole === 'PLATFORM_ADMIN' ? '平台管理员' : '机构用户',
+    role: user.systemRole === 'PLATFORM_ADMIN' ? t("settings.platformAdministrator02926d") : t("settings.organizationUser568bac"),
     avatar: null,
   } : {
     id: '',
     name: '未登录',
     username: '',
-    role: '未登录',
+    role: t("common.notSignedIne8041a"),
     avatar: null,
   };
 
@@ -53,7 +57,7 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
           transition-colors duration-fast hover:bg-[var(--yj-panel-subtle)]
           ${collapsed ? 'justify-center' : 'w-full'}
         `}
-        aria-label="用户菜单"
+        aria-label={t("common.userMenua375a2")}
       >
         <Avatar
           src={displayUser.avatar || undefined}
@@ -99,8 +103,7 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-fg-default transition-colors hover:bg-[var(--yj-panel-subtle)]"
             >
               <User className="h-4 w-4 text-fg-muted" />
-              个人设置
-            </Link>
+              {t("settings.personalSettingsf787ab")}</Link>
           </div>
 
           <div className="p-1.5">
@@ -109,8 +112,7 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger-fg transition-colors hover:bg-danger-subtle"
             >
               <LogOut className="h-4 w-4" />
-              退出登录
-            </button>
+              {t("common.signOut094774")}</button>
           </div>
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>

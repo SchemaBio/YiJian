@@ -1,4 +1,10 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { taskStageText, taskStatusText } from '@/i18n/task-labels';
+import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -16,10 +22,10 @@ interface TaskRuntimeTabProps {
   onResultImportChange?: () => Promise<void>;
 }
 
-function formatTime(value?: string): string {
+function formatTime(value?: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(t.locale, { hour12: false });
 }
 
 function statusVariant(status?: string): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
@@ -30,28 +36,28 @@ function statusVariant(status?: string): 'success' | 'warning' | 'danger' | 'neu
   return 'neutral';
 }
 
-function vmStatusLabel(status?: string): string {
+function vmStatusLabel(status?: string, t: TextTranslator = chineseText): string {
   switch ((status || '').toUpperCase()) {
-    case 'WAITING_CAPACITY': return '等待竞价资源';
-    case 'DISPATCHING': return '云端状态确认中';
-    case 'PENDING': return '实例已申请';
-    case 'RUNNING': return '实例运行中';
-    case 'TERMINATING': return '节点释放中';
+    case 'WAITING_CAPACITY': return t("tasks.awaitingSpotResources320ee1");
+    case 'DISPATCHING': return t("tasks.confirmingCloudStatus02a628");
+    case 'PENDING': return t("tasks.instanceRequested38eb86");
+    case 'RUNNING': return t("tasks.instanceRunning8f237f");
+    case 'TERMINATING': return t("tasks.releasingNode982e21");
     case 'TERMINATED':
-    case 'RECLAIMED': return '节点已释放';
-    case 'LAUNCH_FAILED': return '实例申请失败';
+    case 'RECLAIMED': return t("tasks.nodeReleased3f8287");
+    case 'LAUNCH_FAILED': return t("tasks.instanceAllocationFailedbe487f");
     default: return status || '-';
   }
 }
 
-function livenessLabel(state?: string): string {
+function livenessLabel(state?: string, t: TextTranslator = chineseText): string {
   switch (state) {
-    case 'online': return '在线';
-    case 'delayed': return '延迟';
-    case 'offline': return '离线';
-    case 'legacy/unknown': return '旧版 Agent / 未知';
-    case 'unknown': return '未知';
-    default: return state || '未知';
+    case 'online': return t("tasks.online0373ff");
+    case 'delayed': return t("tasks.delayede9f092");
+    case 'offline': return t("tasks.offline211357");
+    case 'legacy/unknown': return t("tasks.legacyAgentUnknown89b33f");
+    case 'unknown': return t("samples.unknownd9c32a");
+    default: return state || t("samples.unknownd9c32a");
   }
 }
 
@@ -167,6 +173,7 @@ function areTaskProgressResponsesEqual(
 }
 
 export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: TaskRuntimeTabProps) {
+  const t = useText();
   const [progress, setProgress] = React.useState<TaskProgressResponse | null>(null);
   const [logs, setLogs] = React.useState('');
   const [loading, setLoading] = React.useState(true);
@@ -190,16 +197,16 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
           : progressResult.value
       ));
     } else {
-      setError('任务运行状态暂时不可用');
+      setError(t("tasks.taskRuntimeStatusUnavailable1f0b16"));
     }
 
     if (logsResult.status === 'fulfilled') {
       setLogs(logsResult.value);
     } else if (progressResult.status === 'fulfilled') {
-      setError('任务日志暂时不可用');
+      setError(t("tasks.taskLogsUnavailable7acb9f"));
     }
     if (!background) setLoading(false);
-  }, [taskId]);
+  }, [taskId, t]);
 
   React.useEffect(() => {
     void loadRuntime();
@@ -231,7 +238,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
-      setError('无法复制日志，请检查浏览器剪贴板权限');
+      setError(t("tasks.unableToCopyLogsCheckClipboardPermissions7ba8b7"));
     }
   };
 
@@ -244,7 +251,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
       await loadRuntime(true);
       await onResultImportChange?.();
     } catch (cause) {
-      setImportRetryError(cause instanceof Error ? cause.message : '重新导入结果失败');
+      setImportRetryError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToReimportResults4208ff"));
       await loadRuntime(true);
       await onResultImportChange?.();
     } finally {
@@ -258,9 +265,9 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
   const executionPhase = progress?.execution_phase;
   const executionPhaseLabel = executionPhase === 'terminal'
     ? vmStatus === 'LAUNCH_FAILED'
-      ? '未创建计算节点'
+      ? t("tasks.noComputeNodeCreatedacf8b0")
       : ['TERMINATED', 'RECLAIMED'].includes(vmStatus ?? '')
-        ? '节点已释放'
+        ? t("tasks.nodeReleased3f8287")
         : executionPhaseLabels[executionPhase]
     : executionPhaseLabels[executionPhase ?? ''];
   const initializingWithoutProgress = ['bootstrapping', 'diagnostic_hold'].includes(executionPhase ?? '') && (progress?.progress ?? 0) === 0;
@@ -272,8 +279,8 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="yj-section-title">运行状态</h3>
-          <p className="mt-1 text-xs text-fg-muted">任务执行、结果入库与工作流日志</p>
+          <h3 className="yj-section-title">{t("tasks.runtimeStatus2a4080")}</h3>
+          <p className="mt-1 text-xs text-fg-muted">{t("tasks.taskExecutionResultImportAndWorkflowLogsb0a636")}</p>
         </div>
         <Button action="refresh"
           variant="secondary"
@@ -282,8 +289,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
           onClick={() => void loadRuntime()}
           disabled={loading}
         >
-          刷新
-        </Button>
+          {t("admin.refresh38108e")}</Button>
       </div>
 
       {error && (
@@ -296,10 +302,10 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
         <div className="flex items-start gap-2 rounded-md border border-warning-muted bg-warning-subtle px-3 py-2 text-sm text-warning-fg">
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-medium">{vmStatusLabel(vmStatus)}</p>
-            {vmStatus === 'WAITING_CAPACITY' && <p className="mt-1 text-xs">系统会自动重试，不会重复扣除本次任务积分。</p>}
-            {progress?.dispatch_next_retry_at && <p className="mt-1 text-xs">下次重试：{formatTime(progress.dispatch_next_retry_at)}</p>}
-            {progress?.dispatch_retry_deadline_at && <p className="mt-1 text-xs">最晚等待至：{formatTime(progress.dispatch_retry_deadline_at)}</p>}
+            <p className="font-medium">{vmStatusLabel(vmStatus, t)}</p>
+            {vmStatus === 'WAITING_CAPACITY' && <p className="mt-1 text-xs">{t("tasks.theSystemRetriesAutomaticallyWithoutChargingThis2bc5c1")}</p>}
+            {progress?.dispatch_next_retry_at && <p className="mt-1 text-xs">{t("tasks.nextRetry38e73a")}{formatTime(progress.dispatch_next_retry_at, t)}</p>}
+            {progress?.dispatch_retry_deadline_at && <p className="mt-1 text-xs">{t("tasks.waitDeadline799302")}{formatTime(progress.dispatch_retry_deadline_at, t)}</p>}
           </div>
         </div>
       )}
@@ -307,12 +313,12 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
       {canRetryImport && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning-muted bg-warning-subtle px-3 py-3 text-sm text-warning-fg">
           <div>
-            <p className="font-medium">{progress?.result_import_status === 'running' ? '结果导入未结束' : '结构化结果导入失败'}</p>
-            <p className="mt-1 text-xs">将从本次已归档文件恢复导入，不会重新申请计算节点。</p>
+            <p className="font-medium">{progress?.result_import_status === 'running' ? t("tasks.resultImportUnfinisheda0f228") : t("tasks.structuredResultImportFaileda4deee")}</p>
+            <p className="mt-1 text-xs">{t("tasks.importResumesFromArchivedFilesWithoutAllocatingbbfbf8")}</p>
           </div>
           <Button loading={retryingImport} action="refresh" variant="secondary" size="small" onClick={() => void handleRetryImport()} disabled={retryingImport}>
 
-            {retryingImport ? '正在导入' : progress?.result_import_status === 'running' ? '恢复导入' : '重新导入结果'}
+            {retryingImport ? t("tasks.importingc3ddf1") : progress?.result_import_status === 'running' ? t("tasks.resumeImport3a09f5") : t("tasks.reimportResultsf469ba")}
           </Button>
         </div>
       )}
@@ -327,17 +333,17 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
           <Server className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-fg-muted">执行阶段</span>
+              <span className="text-fg-muted">{t("tasks.executionStageb836fa")}</span>
               <Tag variant={executionPhase === 'terminating' || executionPhase === 'diagnostic_hold' ? 'warning' : executionPhase === 'terminal' ? 'neutral' : executionPhase === 'running' || executionPhase === 'archiving' ? 'info' : 'warning'}>
                 {executionPhaseLabel ?? executionPhase}
               </Tag>
-              {progress?.attempt_id && <HoverHint content={progress.attempt_id}><span className="font-mono text-xs text-fg-muted" >attempt: {progress.attempt_id.slice(0, 8)}…</span></HoverHint>}
+              {progress?.attempt_id && <HoverHint content={translateUI(progress.attempt_id, t)}><span className="font-mono text-xs text-fg-muted" > {t("interface.attempt323ccf")} {progress.attempt_id.slice(0, 8)}…</span></HoverHint>}
             </div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
-              {progress?.phase_updated_at && <span>更新时间：{formatTime(progress.phase_updated_at)}</span>}
-	            {progress?.bootstrap_last_heartbeat_at && <span>最近心跳：{formatTime(progress.bootstrap_last_heartbeat_at)}</span>}
-	            {progress?.diagnostic_hold_until && <span className="text-warning-fg">日志保留至：{formatTime(progress.diagnostic_hold_until)}</span>}
-              {progress?.execution_reason_code && <span className="text-danger-fg">{executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code}</span>}
+              {progress?.phase_updated_at && <span>{t("tasks.updatedAt4668a1")}{formatTime(progress.phase_updated_at, t)}</span>}
+	            {progress?.bootstrap_last_heartbeat_at && <span>{t("tasks.lastHeartbeat3b4213")}{formatTime(progress.bootstrap_last_heartbeat_at, t)}</span>}
+	            {progress?.diagnostic_hold_until && <span className="text-warning-fg">{t("tasks.logsRetainedUntil4692f6")}{formatTime(progress.diagnostic_hold_until, t)}</span>}
+              {progress?.execution_reason_code && <span className="text-danger-fg">{translateUI(executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code, t)}</span>}
             </div>
 	          {progress?.diagnostic_summary && <p className="mt-2 rounded-md bg-danger-subtle px-3 py-2 text-xs text-danger-fg">{progress.diagnostic_summary}</p>}
           </div>
@@ -346,19 +352,19 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
 
       <div className="yj-panel overflow-hidden">
         <div className="grid grid-cols-2 divide-x divide-y divide-[var(--yj-border-subtle)] md:grid-cols-5 md:divide-y-0">
-          <RuntimeMetric icon={<Server className="h-4 w-4" />} label="任务状态" value={<Tag variant={statusVariant(progress?.status || initialStatus)}>{progress?.status || initialStatus}</Tag>} />
-          <RuntimeMetric icon={<Server className="h-4 w-4" />} label="竞价实例" value={vmStatusLabel(vmStatus)} />
-          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label="分析进度" value={initializingWithoutProgress || !analysisProgress ? '—' : `${analysisProgress.percent}%`} />
-          <RuntimeMetric icon={<FileText className="h-4 w-4" />} label="结果入库" value={progress?.result_import_status || '-'} />
-          <RuntimeMetric icon={<RefreshCw className="h-4 w-4" />} label="入库尝试" value={String(progress?.result_import_attempts ?? 0)} />
+          <RuntimeMetric icon={<Server className="h-4 w-4" />} label={t("tasks.taskStatusb7d412")} value={<Tag variant={statusVariant(progress?.status || initialStatus)}>{taskStatusText(progress?.status || initialStatus, t)}</Tag>} />
+          <RuntimeMetric icon={<Server className="h-4 w-4" />} label={t("tasks.spotInstancea176b8")} value={vmStatusLabel(vmStatus, t)} />
+          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label={t("tasks.analysisProgressa1cede")} value={initializingWithoutProgress || !analysisProgress ? '—' : `${analysisProgress.percent}%`} />
+          <RuntimeMetric icon={<FileText className="h-4 w-4" />} label={t("tasks.resultImport88c130")} value={taskStatusText(progress?.result_import_status, t)} />
+          <RuntimeMetric icon={<RefreshCw className="h-4 w-4" />} label={t("tasks.importAttemptsdcc827")} value={String(progress?.result_import_attempts ?? 0)} />
         </div>
         <div className="border-t border-[var(--yj-border-subtle)] p-4">
           {!initializingWithoutProgress && analysisProgress && <div className="h-2 overflow-hidden rounded-full bg-canvas-inset">
             <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${analysisProgress.percent}%` }} />
           </div>}
           <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-fg-muted">
-            <span>工作流：{progress?.template || progress?.name || '-'}</span>
-            <span>创建时间：{formatTime(progress?.created_at)}</span>
+            <span>{t("tasks.workflowe83800")}{progress?.template || progress?.name || '-'}</span>
+            <span>{t("tasks.createdAt4c01f3")}{formatTime(progress?.created_at, t)}</span>
           </div>
           {progress?.result_import_error && (
             <p className="mt-3 rounded-md bg-danger-subtle px-3 py-2 text-xs text-danger-fg">{progress.result_import_error}</p>
@@ -370,36 +376,36 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
         <section className="grid gap-3 lg:grid-cols-3">
           <div className="yj-panel p-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-fg-default">分析进度</h3>
+              <h3 className="text-sm font-semibold text-fg-default">{t("tasks.analysisProgressa1cede")}</h3>
               <span className="text-sm font-semibold tabular-nums text-fg-default">{analysisProgress?.percent ?? value}%</span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-canvas-inset">
               <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${analysisProgress?.percent ?? value}%` }} />
             </div>
             {analysisProgress?.active_stages.length ? (
-              <p className="mt-3 text-xs text-fg-muted">正在进行：{analysisProgress.active_stages.map((code) => analysisProgress.stages.find((stage) => stage.code === code)?.label ?? code).join('、')}</p>
+              <p className="mt-3 text-xs text-fg-muted">{t("tasks.inProgressd21970")}{analysisProgress.active_stages.map((code) => (() => { const stage = analysisProgress.stages.find(stage => stage.code === code); return stage ? taskStageText(stage, analysisProgress.profile_version, progress?.template, t) : code; })()).join(t.locale.startsWith('zh') ? '、' : ', ')}</p>
             ) : (
-              <p className="mt-3 text-xs text-fg-muted">{initializingWithoutProgress ? '等待工作流开始' : '当前没有正在运行的分析阶段'}</p>
+              <p className="mt-3 text-xs text-fg-muted">{initializingWithoutProgress ? t("tasks.awaitingWorkflowStarta15e96") : t("tasks.noAnalysisStageCurrentlyRunning60306d")}</p>
             )}
           </div>
 
           <div className="yj-panel p-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-fg-default">计算节点</h3>
-              <Tag variant={livenessVariant(progress?.node_liveness?.state)}>{livenessLabel(progress?.node_liveness?.state)}</Tag>
+              <h3 className="text-sm font-semibold text-fg-default">{t("tasks.computeNodec5c2cb")}</h3>
+              <Tag variant={livenessVariant(progress?.node_liveness?.state)}>{livenessLabel(progress?.node_liveness?.state, t)}</Tag>
             </div>
-            <p className="mt-3 text-xs text-fg-muted">最近节点心跳：{formatTime(progress?.node_liveness?.last_seen_at || progress?.bootstrap_last_heartbeat_at)}</p>
+            <p className="mt-3 text-xs text-fg-muted">{t("tasks.latestNodeHeartbeat8e1517")}{formatTime(progress?.node_liveness?.last_seen_at || progress?.bootstrap_last_heartbeat_at, t)}</p>
           </div>
 
           <div className="yj-panel p-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-fg-default">Sepiida Agent</h3>
-              <Tag variant={livenessVariant(progress?.agent_liveness?.state)}>{livenessLabel(progress?.agent_liveness?.state)}</Tag>
+              <Tag variant={livenessVariant(progress?.agent_liveness?.state)}>{livenessLabel(progress?.agent_liveness?.state, t)}</Tag>
             </div>
-            <p className="mt-3 text-xs text-fg-muted">最近采集：{formatTime(progress?.agent_liveness?.last_collected_at)}</p>
-            <p className="mt-1 text-xs text-fg-muted">最近进度上报：{formatTime(progress?.agent_liveness?.last_progress_push_at)}</p>
+            <p className="mt-3 text-xs text-fg-muted">{t("tasks.lastCollection1a8cca")}{formatTime(progress?.agent_liveness?.last_collected_at, t)}</p>
+            <p className="mt-1 text-xs text-fg-muted">{t("tasks.lastProgressReportc449f8")}{formatTime(progress?.agent_liveness?.last_progress_push_at, t)}</p>
             {progress?.agent_liveness?.collection_status === 'error' && (
-              <p className="mt-2 text-xs text-warning-fg">最近一次采集异常{progress.agent_liveness.error_code ? `（${progress.agent_liveness.error_code}）` : ''}</p>
+              <p className="mt-2 text-xs text-warning-fg">{t("tasks.latestCollectionError402acf")}{progress.agent_liveness.error_code ? `（${progress.agent_liveness.error_code}）` : ''}</p>
             )}
           </div>
         </section>
@@ -407,18 +413,18 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
 
       {analysisProgress?.stages.length ? (
         <section className="yj-panel overflow-hidden">
-          <div className="yj-panel-header"><h3 className="yj-section-title">分析阶段</h3></div>
+          <div className="yj-panel-header"><h3 className="yj-section-title">{t("tasks.analysisStages27e1eb")}</h3></div>
           <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
             {analysisProgress.stages.map((stage) => (
               <div key={stage.code} className="rounded-md border border-border-default p-3">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium text-fg-default">{stage.label}</span>
+                  <span className="font-medium text-fg-default">{taskStageText(stage, analysisProgress.profile_version, progress?.template, t)}</span>
                   <span className="tabular-nums text-fg-muted">{stage.percent}%</span>
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas-inset">
                   <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${stage.percent}%` }} />
                 </div>
-                <p className="mt-2 text-xs text-fg-muted">权重 {stage.weight}% · {stage.status === 'success' ? '完成' : stage.status === 'running' ? '进行中' : '等待中'}</p>
+                <p className="mt-2 text-xs text-fg-muted">{t("tasks.weight5a2757")}{stage.weight}% · {stage.status === 'success' ? t("tasks.done33246f") : stage.status === 'running' ? t("tasks.inProgress6f1972") : t("tasks.waitingbd3488")}</p>
               </div>
             ))}
           </div>
@@ -427,7 +433,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
 
       {taskSteps.length > 0 && (
         <section className="yj-panel overflow-hidden">
-          <div className="yj-panel-header"><h3 className="yj-section-title">工作流步骤</h3></div>
+          <div className="yj-panel-header"><h3 className="yj-section-title">{t("tasks.workflowSteps553bb5")}</h3></div>
           <div className="divide-y divide-[var(--yj-border-subtle)]">
             {taskSteps.map((step) => (
               <div key={step.id || step.name} className="grid grid-cols-[minmax(0,1fr)_110px_180px] items-center gap-3 px-4 py-3 text-sm">
@@ -435,8 +441,8 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
                   <div className="truncate font-medium text-fg-default">{step.name || step.job_name}</div>
                   <div className="truncate text-xs text-fg-muted">{step.job_name || '-'}</div>
                 </div>
-                <Tag variant={statusVariant(step.status)}>{step.status || '-'}</Tag>
-                <div className="text-right text-xs text-fg-muted">{formatTime(step.start_time)}{step.end_time ? ` - ${formatTime(step.end_time)}` : ''}</div>
+                <Tag variant={statusVariant(step.status)}>{taskStatusText(step.status, t)}</Tag>
+                <div className="text-right text-xs text-fg-muted">{formatTime(step.start_time, t)}{step.end_time ? ` - ${formatTime(step.end_time, t)}` : ''}</div>
               </div>
             ))}
           </div>
@@ -446,12 +452,12 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
       <section className="yj-panel overflow-hidden">
         <div className="yj-panel-header">
           <div>
-            <h3 className="yj-section-title">执行日志</h3>
-            <p className="mt-1 text-xs text-fg-muted">最近一次工作流运行输出</p>
+            <h3 className="yj-section-title">{t("tasks.executionLogs5518c2")}</h3>
+            <p className="mt-1 text-xs text-fg-muted">{t("tasks.latestWorkflowOutputdf8dee")}</p>
           </div>
           {logs && (
             <Button action={copied ? 'copied' : 'copy'} variant="secondary" size="small"  onClick={() => void handleCopy()}>
-              {copied ? '已复制' : '复制'}
+              {copied ? t("billing.copiede381a5") : t("tasks.copy4edd1d")}
             </Button>
           )}
         </div>
@@ -460,7 +466,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
         ) : logs ? (
           <pre className="max-h-[520px] overflow-auto bg-[#111714] p-4 text-xs leading-5 text-[#dce8df]">{logs}</pre>
         ) : (
-          <div className="flex min-h-48 items-center justify-center px-6 text-center text-sm text-fg-muted">当前任务暂无执行日志</div>
+          <div className="flex min-h-48 items-center justify-center px-6 text-center text-sm text-fg-muted">{t("tasks.noExecutionLogsForThisTask8cb8bd")}</div>
         )}
       </section>
     </div>

@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -31,11 +38,11 @@ interface CNVSegmentTabProps {
   onFilterChange?: (state: TableFilterState) => void;
 }
 
-function cnvTypeLabel(type: CNVSegment['type']): string {
-  if (type === 'Amplification') return '扩增';
-  if (type === 'Deletion') return '缺失';
-  if (type === 'Normal') return '正常';
-  return '未提供';
+function cnvTypeLabel(type: CNVSegment['type'], t: TextTranslator = chineseText): string {
+  if (type === 'Amplification') return t("history.duplication1aeb54");
+  if (type === 'Deletion') return t("history.deletion2fe9b7");
+  if (type === 'Normal') return t("history.normalf78d03");
+  return t("history.notProvided071fb2");
 }
 
 function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
@@ -50,6 +57,7 @@ export function CNVSegmentTab({
   filterState: externalFilterState,
   onFilterChange
 }: CNVSegmentTabProps) {
+  const t = useText();
   const scopeRef = React.useRef(taskId); scopeRef.current = taskId;
   const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
@@ -148,11 +156,11 @@ export function CNVSegmentTab({
       setResult(prev => prev ? { ...prev, data: prev.data.map(item => item.id === persisted.cnvId ? { ...item, adjustmentVersion: persisted.adjustmentVersion } : item) } : prev);
       setAssessmentPanelOpen(false);
     } catch (err) {
-      setAssessmentError(err instanceof Error ? err.message : '保存 CNV 评估失败');
+      setAssessmentError(err instanceof Error ? errorText(err, t) : t("tasks.unableToSaveCnvAssessment5c60a2"));
     } finally {
       setAssessmentSaving(false);
     }
-  }, [assessmentVariant, saveAssessment, taskId]);
+  }, [assessmentVariant, saveAssessment, taskId, t]);
 
   // 获取CNV的评估结果
   const getAssessmentForCNV = React.useCallback((cnvId: string): CNVAssessment | null => {
@@ -179,7 +187,7 @@ export function CNVSegmentTab({
         });
       } catch (error) {
         if (!controller.signal.aborted) {
-          setRequestError(error instanceof Error ? error.message : '无法加载片段 CNV 结果');
+          setRequestError(error instanceof Error ? errorText(error, t) : t("tasks.unableToLoadSegmentCnvResults0af8ef"));
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -224,7 +232,7 @@ export function CNVSegmentTab({
       await pinVariant(taskId, 'cnv-segment', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '更新置顶状态失败');
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToUpdatePinStatus77c5f1"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -232,7 +240,7 @@ export function CNVSegmentTab({
         return next;
       });
     }
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 处理回报状态变更
   const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
@@ -246,7 +254,7 @@ export function CNVSegmentTab({
       await reportVariant(taskId, 'cnv-segment', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '标记回报失败');
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForReport8d3bd6"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -254,7 +262,7 @@ export function CNVSegmentTab({
         return next;
       });
     }
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: CNVSegment) => {
@@ -296,30 +304,30 @@ export function CNVSegmentTab({
     },
     {
       id: 'chromosome',
-      header: '染色体',
+      header: t("history.chromosome326659"),
       accessor: 'chromosome',
       width: 80,
       sortable: true,
     },
     {
       id: 'startPosition',
-      header: '起始位置',
+      header: t("tasks.startPositione89b02"),
       accessor: (row) => row.startPosition,
       width: 120,
       sortable: true,
     },
     {
       id: 'endPosition',
-      header: '终止位置',
+      header: t("tasks.endPositioncb3b4c"),
       accessor: (row) => row.endPosition,
       width: 120,
     },
     {
       id: 'length',
-      header: '长度',
+      header: t("history.lengtha53949"),
       accessor: (row) => {
-        if (row.length >= 1000000) return `${(row.length / 1000000).toFixed(2)}Mb`;
-        if (row.length >= 1000) return `${(row.length / 1000).toFixed(1)}kb`;
+        if (row.length >= 1000000) return `${formatNumericString((row.length / 1000000).toFixed(2), t.locale)}Mb`;
+        if (row.length >= 1000) return `${formatNumericString((row.length / 1000).toFixed(1), t.locale)}kb`;
         return `${row.length}bp`;
       },
       width: 100,
@@ -327,17 +335,17 @@ export function CNVSegmentTab({
     },
     {
       id: 'iscnCandidate',
-      header: 'ISCN 候选',
-      accessor: row => <HoverHint content="基于 CN 估计取整的候选注释，需确认拷贝状态；坐标为 1-based"><span className="yj-iscn-full block whitespace-normal break-words font-mono text-xs" >{row.iscnCandidate || (row.type === 'Normal' ? '—' : '拷贝状态或带区待确认')}</span></HoverHint>,
+      header: t("tasks.iscnCandidate8351ad"),
+      accessor: row => <HoverHint content={t("tasks.candidateFromRoundedCnEstimateConfirmCopyc6a777")}><span className="yj-iscn-full block whitespace-normal break-words font-mono text-xs" >{row.iscnCandidate || (row.type === 'Normal' ? '—' : t("tasks.copyStateOrCytobandUnconfirmed1ecdb7"))}</span></HoverHint>,
       width: 300,
     },
     {
       id: 'type',
-      header: '类型',
+      header: t("history.typee4e46c"),
       accessor: (row) => {
         return (
           <Tag variant={cnvTypeVariant(row.type)}>
-            {cnvTypeLabel(row.type)}
+            {cnvTypeLabel(row.type, t)}
           </Tag>
         );
       },
@@ -346,15 +354,15 @@ export function CNVSegmentTab({
     },
     {
       id: 'pathogenicity',
-      header: '致病性',
+      header: t("history.pathogenicityfa6024"),
       accessor: (row) => {
         if (row.type === 'Normal' || row.type === 'Unknown') {
-          return <Tag variant="neutral">不适用</Tag>;
+          return <Tag variant="neutral">{t("tasks.notApplicableeec46c")}</Tag>;
         }
         const cachedAssessment = getAssessmentForCNV(row.id);
         // 如果有缓存的评估结果，使用缓存；否则显示默认VUS
-        if (!cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenAssessmentPanel(row); }} className="text-xs text-accent-fg hover:underline">待评估 · 计算器</button>;
-        if(cachedAssessment.assessmentState==='insufficient_evidence')return <HoverHint content={cachedAssessment.autoEvidenceNotes?.join('；')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenAssessmentPanel(row);}} className="text-xs text-fg-muted hover:underline" >证据不足 · 计算器</button></HoverHint>;
+        if (!cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenAssessmentPanel(row); }} className="text-xs text-accent-fg hover:underline">{t("tasks.awaitingAssessmentCalculator7816f6")}</button>;
+        if(cachedAssessment.assessmentState==='insufficient_evidence')return <HoverHint content={cachedAssessment.autoEvidenceNotes?.join('；')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenAssessmentPanel(row);}} className="text-xs text-fg-muted hover:underline" >{t("tasks.insufficientEvidenceCalculatorc6de1e")}</button></HoverHint>;
         const classification = cachedAssessment.classification;
         const score = cachedAssessment?.totalScore ?? 0;
         const isUserModified = cachedAssessment?.isUserModified ?? false;
@@ -373,20 +381,20 @@ export function CNVSegmentTab({
     },
     {
       id: 'copyNumber',
-      header: '拷贝数',
-      accessor: (row) => row.copyNumber ?? '未提供',
+      header: t("history.copyNumber04d1ca"),
+      accessor: (row) => row.copyNumber ?? t("history.notProvided071fb2"),
       width: 80,
     },
     {
       id: 'genes',
-      header: '涉及基因',
+      header: t("history.affectedGenes9fbbad"),
       accessor: (row) => <GeneLinks genes={row.genes} />,
       width: 200,
     },
     {
       id: 'confidence',
-      header: '信号权重',
-      accessor: (row) => <HoverHint content="区段信号权重，不是置信概率，可大于 1"><span>{row.confidence === null ? '未提供' : String(row.confidence)}</span></HoverHint>,
+      header: t("tasks.signalWeight9907ea"),
+      accessor: (row) => <HoverHint content={t("tasks.segmentSignalWeightNotProbabilityMayExceeda9aac9")}><span>{row.confidence === null ? t("history.notProvided071fb2") : String(row.confidence)}</span></HoverHint>,
       width: 80,
       sortable: true,
     },
@@ -400,13 +408,13 @@ export function CNVSegmentTab({
       if (row) clickedRow.current = row;
     }} data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'cnv-segment')} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
+      <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'cnv-segment', t)} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={localizeDisplay(columns, t)} view={tableView} />} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
               className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
-              placeholder="搜索染色体..."
+              placeholder={t("tasks.searchChromosomed961dd")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -420,15 +428,15 @@ export function CNVSegmentTab({
             onChange={(e) => handleTypeFilter(e.target.value)}
             className="px-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default"
           >
-            <option value="">全部类型</option>
-            <option value="Amplification">扩增</option>
-            <option value="Deletion">缺失</option>
-            <option value="Normal">正常</option>
+            <option value="">{t("tasks.allTypesfa6968")}</option>
+            <option value="Amplification">{t("history.duplication1aeb54")}</option>
+            <option value="Deletion">{t("history.deletion2fe9b7")}</option>
+            <option value="Normal">{t("history.normalf78d03")}</option>
           </select>
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-fg-muted">
-          <span>共 {result?.total ?? 0} 条片段CNV</span>
+          <span>{t("history.total497064")}{result?.total ?? 0} {t("tasks.segmentCnvs22a166")}</span>
         </div>
       </div>
       </div>
@@ -436,7 +444,7 @@ export function CNVSegmentTab({
       {requestError ? (
         <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
           {requestError}
-          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</ActionButton>
+          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">{t("pipeline.retrye2d53a")}</ActionButton>
         </div>
       ) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
@@ -448,7 +456,7 @@ export function CNVSegmentTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={result.data}
-            columns={filterableColumns(tableView.apply(columns), result, filterState, setFilterState, 'cnv-segment')}
+            columns={localizeDisplay(filterableColumns(tableView.apply(columns), result, filterState, setFilterState, 'cnv-segment', t), t)}
             rowKey="id"
             striped
             density={tableView.density}
@@ -462,38 +470,34 @@ export function CNVSegmentTab({
           {totalPages > 1 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
-                第 {filterState.page} / {totalPages} 页
-              </div>
+                {t("history.pagef49534")}{filterState.page} / {totalPages} {t("history.labelaf8438")}</div>
               <div className="flex items-center gap-2">
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
-                  上一页
-                </ActionButton>
+                  {t("history.previousb41561")}</ActionButton>
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
-                  下一页
-                </ActionButton>
+                  {t("history.next67a246")}</ActionButton>
               </div>
             </div>
           )}
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无片段CNV变异数据
-        </div>
+          {t("tasks.noSegmentCnvData4914e8")}</div>
       )}
 
       {/* CNV 详情面板 */}
       <CNVDetailPanel
         plotAnchor={plotAnchor}
         onSaveInterpretation={async (variant, interpretation) => {
-          const saved = await saveResultRowAdjustment(taskId, 'cnv-segment', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, '更新 CNV 人工解读');
+          const saved = await saveResultRowAdjustment(taskId, 'cnv-segment', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, t("tasks.updateCnvInterpretationfbe6af"));
           if (scopeRef.current !== taskId) return;
           const changes = { interpretation, adjustmentVersion: saved.adjustment.version };
           setAssessmentCache(current => current[variant.id] ? { ...current, [variant.id]: { ...current[variant.id], adjustmentVersion: saved.adjustment.version } } : current);
@@ -522,7 +526,7 @@ export function CNVSegmentTab({
         </div>
       )}
       {assessmentSaving && (
-        <div className="mt-3 text-sm text-fg-muted">正在保存 CNV 评估…</div>
+        <div className="mt-3 text-sm text-fg-muted">{t("tasks.savingCnvAssessment4161a9")}</div>
       )}
       <CNVAssessmentPanel
         taskId={taskId}

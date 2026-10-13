@@ -13,6 +13,15 @@ API_URL="${YIJIAN_API_URL:-${NEXT_PUBLIC_API_URL:-/api}}"
 BACKEND="${YIJIAN_BACKEND_FLAVOR:-${YIJIAN_BACKEND:-octopus}}"
 SUPPORT_EMAIL="${YIJIAN_SUPPORT_EMAIL:-${NEXT_PUBLIC_SUPPORT_EMAIL:-support@schemabio.com}}"
 PASSWORD_RESET_ENABLED="${YIJIAN_PASSWORD_RESET_ENABLED:-${NEXT_PUBLIC_PASSWORD_RESET_ENABLED:-false}}"
+DEFAULT_LOCALE="${YIJIAN_DEFAULT_LOCALE-${NEXT_PUBLIC_DEFAULT_LOCALE-zh-CN}}"
+case "$DEFAULT_LOCALE" in
+  zh-CN|zh-Hant|en|es-419) ;;
+  *)
+    echo "YIJIAN_DEFAULT_LOCALE must be zh-CN, zh-Hant, en, or es-419" >&2
+    exit 1
+    ;;
+esac
+export DEFAULT_LOCALE
 case "$BACKEND" in
   octopus|squid) ;;
   *)
@@ -30,6 +39,7 @@ const config = {
   SUPPORT_EMAIL: clean(process.env.SUPPORT_EMAIL || 'support@schemabio.com'),
   UPLOAD_ORIGINS: clean(process.env.YIJIAN_UPLOAD_ORIGINS || ''),
   PASSWORD_RESET_ENABLED: clean(process.env.PASSWORD_RESET_ENABLED || 'false'),
+  DEFAULT_LOCALE: process.env.DEFAULT_LOCALE,
 };
 process.stdout.write(`window.__YIJIAN_CONFIG__ = ${JSON.stringify(config, null, 2)};\n`);
 NODE

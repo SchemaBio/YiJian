@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import * as React from 'react';
 import { Send, Loader2, CheckCircle, XCircle } from 'lucide-react';
@@ -54,6 +57,7 @@ function MessageItem({ message }: { message: ConversationMessage }) {
  * AI 助手聊天组件
  */
 export function AssistantChat() {
+  const t = useText();
   const { history, executeCommand, isExecuting } = useAI();
   const [input, setInput] = React.useState('');
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -87,13 +91,12 @@ export function AssistantChat() {
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <p className="text-sm text-fg-muted mb-4">
-              您可以使用自然语言控制页面，例如：
-            </p>
+              {t("assistance.controlThePageWithNaturalLanguageInstructionsb52016")}</p>
             <div className="space-y-2 text-sm">
-              <p className="text-fg-muted">• "点击样本列表"</p>
-              <p className="text-fg-muted">• "新建一个样本"</p>
-              <p className="text-fg-muted">• "跳转到费用中心"</p>
-              <p className="text-fg-muted">• "填写表单"</p>
+              <p className="text-fg-muted">{t("assistance.clickSampleListf55c35")}</p>
+              <p className="text-fg-muted">{t("assistance.createASamplee4def7")}</p>
+              <p className="text-fg-muted">{t("assistance.goToBilling4271fa")}</p>
+              <p className="text-fg-muted">{t("assistance.fillInTheForm749b23")}</p>
             </div>
           </div>
         ) : (
@@ -113,7 +116,7 @@ export function AssistantChat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isExecuting ? '执行中...' : '输入指令...'}
+          placeholder={isExecuting ? t("assistance.executing818330") : t("assistance.enterInstruction7ee3fc")}
           disabled={isExecuting}
           className={`
             flex-1
@@ -139,7 +142,7 @@ export function AssistantChat() {
             disabled:opacity-50 disabled:cursor-not-allowed
             transition-colors
           `}
-          aria-label="发送"
+          aria-label={t("assistance.send1214d6")}
         >
           {isExecuting ? (
             <Loader2 className="w-4 h-4 animate-spin" />

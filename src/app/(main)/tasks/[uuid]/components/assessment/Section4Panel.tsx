@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -31,12 +36,13 @@ function Counter({
   max?: number;
   tooltip?: string;
 }) {
+  const t = useText();
   return (
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center gap-2">
         <span className="text-sm text-fg-default">{label}</span>
         {tooltip && (
-          <Tooltip content={tooltip} placement="right" variant="nav">
+          <Tooltip content={translateUI(tooltip, t)} placement="right" variant="nav">
             <HelpCircle className="w-3 h-3 text-fg-muted" />
           </Tooltip>
         )}
@@ -82,13 +88,14 @@ function ScoreSlider({
   step?: number;
   tooltip?: string;
 }) {
+  const t = useText();
   return (
     <div className="py-2">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-sm text-fg-default">{label}</span>
           {tooltip && (
-            <Tooltip content={tooltip} placement="right" variant="nav">
+            <Tooltip content={translateUI(tooltip, t)} placement="right" variant="nav">
               <HelpCircle className="w-3 h-3 text-fg-muted" />
             </Tooltip>
           )}
@@ -96,7 +103,7 @@ function ScoreSlider({
         <span className={`text-sm font-mono ${
           value > 0 ? 'text-success-fg' : value < 0 ? 'text-danger-fg' : 'text-fg-muted'
         }`}>
-          {value >= 0 ? '+' : ''}{value.toFixed(2)}
+          {value >= 0 ? '+' : ''}{formatNumericString(value.toFixed(2), t.locale)}
         </span>
       </div>
       <input
@@ -109,8 +116,8 @@ function ScoreSlider({
         className="w-full h-2 bg-canvas-inset rounded-lg appearance-none cursor-pointer"
       />
       <div className="flex justify-between text-xs text-fg-muted mt-1">
-        <span>{min.toFixed(2)}</span>
-        <span>{max.toFixed(2)}</span>
+        <span>{formatNumericString(min.toFixed(2), t.locale)}</span>
+        <span>{formatNumericString(max.toFixed(2), t.locale)}</span>
       </div>
     </div>
   );
@@ -120,6 +127,7 @@ function ScoreSlider({
  * Section 4: 文献和数据库证据评估面板
  */
 export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProps) {
+  const t = useText();
   const updateDeNovo = (key: '4A' | '4B' | '4C', field: 'confirmedCount' | 'assumedCount', value: number) => {
     onChange({
       ...criteria,
@@ -147,41 +155,39 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
     <div className="space-y-6">
       {/* De Novo 证据 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">个案证据 - De Novo</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.caseEvidenceDeNovoa769bc")}</h4>
         <div className="space-y-4 pl-2 border-l-2 border-border">
           {/* 4A */}
           <div className="bg-canvas-subtle rounded-lg p-3">
             <div className="text-sm text-fg-default mb-2">
-              4A. 高度特异且独特的表型
-              <span className="text-xs text-fg-muted ml-2">(确认: +0.45, 假定: +0.30)</span>
+              {t("tasks.aHighlySpecificUniquePhenotype5daba7")}<span className="text-xs text-fg-muted ml-2">{t("tasks.confirmedAssumed142898")}</span>
             </div>
             <Counter
-              label="确认的de novo"
+              label={t("tasks.confirmedDeNovo437ef2")}
               value={criteria.deNovo['4A'].confirmedCount}
               onChange={(v) => updateDeNovo('4A', 'confirmedCount', v)}
-              tooltip="经父母验证确认的de novo变异"
+              tooltip={t("tasks.deNovoVariantConfirmedByParentalTesting0faf76")}
             />
             <Counter
-              label="假定的de novo"
+              label={t("tasks.assumedDeNovo6d5bcf")}
               value={criteria.deNovo['4A'].assumedCount}
               onChange={(v) => updateDeNovo('4A', 'assumedCount', v)}
-              tooltip="未经父母验证但假定为de novo的变异"
+              tooltip={t("tasks.assumedDeNovoWithoutParentalConfirmationf03a1a")}
             />
           </div>
 
           {/* 4B */}
           <div className="bg-canvas-subtle rounded-lg p-3">
             <div className="text-sm text-fg-default mb-2">
-              4B. 高度特异但不独特的表型
-              <span className="text-xs text-fg-muted ml-2">(确认: +0.30, 假定: +0.15)</span>
+              {t("tasks.bHighlySpecificButNotUniquePhenotype8f9093")}<span className="text-xs text-fg-muted ml-2">{t("tasks.confirmedAssumed86fc57")}</span>
             </div>
             <Counter
-              label="确认的de novo"
+              label={t("tasks.confirmedDeNovo437ef2")}
               value={criteria.deNovo['4B'].confirmedCount}
               onChange={(v) => updateDeNovo('4B', 'confirmedCount', v)}
             />
             <Counter
-              label="假定的de novo"
+              label={t("tasks.assumedDeNovo6d5bcf")}
               value={criteria.deNovo['4B'].assumedCount}
               onChange={(v) => updateDeNovo('4B', 'assumedCount', v)}
             />
@@ -190,16 +196,15 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
           {/* 4C */}
           <div className="bg-canvas-subtle rounded-lg p-3">
             <div className="text-sm text-fg-default mb-2">
-              4C. 一致但不高度特异的表型
-              <span className="text-xs text-fg-muted ml-2">(确认: +0.15, 假定: +0.10)</span>
+              {t("tasks.cConsistentButNotHighlySpecificPhenotype73977a")}<span className="text-xs text-fg-muted ml-2">{t("tasks.confirmedAssumed867612")}</span>
             </div>
             <Counter
-              label="确认的de novo"
+              label={t("tasks.confirmedDeNovo437ef2")}
               value={criteria.deNovo['4C'].confirmedCount}
               onChange={(v) => updateDeNovo('4C', 'confirmedCount', v)}
             />
             <Counter
-              label="假定的de novo"
+              label={t("tasks.assumedDeNovo6d5bcf")}
               value={criteria.deNovo['4C'].assumedCount}
               onChange={(v) => updateDeNovo('4C', 'assumedCount', v)}
             />
@@ -208,16 +213,15 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
           {/* 4D */}
           <div className="bg-canvas-subtle rounded-lg p-3">
             <div className="text-sm text-fg-default mb-2">
-              4D. 不一致的表型
-              <span className="text-xs text-fg-muted ml-2">(范围: 0 到 -0.30)</span>
+              {t("tasks.dInconsistentPhenotypeae5234")}<span className="text-xs text-fg-muted ml-2">{t("tasks.rangeTo3cdf86")}</span>
             </div>
             <Counter
-              label="病例数"
+              label={t("tasks.caseCountb3165f")}
               value={criteria.deNovo['4D'].count}
               onChange={(v) => updateDeNovo4D(v, criteria.deNovo['4D'].score)}
             />
             <ScoreSlider
-              label="评分"
+              label={t("tasks.score2f5856")}
               value={criteria.deNovo['4D'].score}
               onChange={(v) => updateDeNovo4D(criteria.deNovo['4D'].count, v)}
               min={-0.30}
@@ -229,14 +233,13 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
 
       {/* 未知遗传证据 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">个案证据 - 未知遗传</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.caseEvidenceInheritanceUnknownf4a398")}</h4>
         <div className="bg-canvas-subtle rounded-lg p-3">
           <div className="text-sm text-fg-default mb-2">
-            4E. 高度特异表型，遗传未知
-            <span className="text-xs text-fg-muted ml-2">(每例 +0.10, 最大 +0.30)</span>
+            {t("tasks.eHighlySpecificPhenotypeInheritanceUnknown7f842e")}<span className="text-xs text-fg-muted ml-2">{t("tasks.perCaseMaximum53d67a")}</span>
           </div>
           <Counter
-            label="病例数"
+            label={t("tasks.caseCountb3165f")}
             value={criteria.unknownInheritance['4E'].count}
             onChange={(v) => onChange({
               ...criteria,
@@ -248,39 +251,39 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
 
       {/* 分离证据 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">个案证据 - 家系分离</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.caseEvidenceSegregation140ce0")}</h4>
         <div className="space-y-2">
           <div className="bg-canvas-subtle rounded-lg p-3">
             <Counter
-              label="4F. 观察到 3–4 次分离的独立家系数"
+              label={t("tasks.fIndependentFamiliesWithSegregations3ff206")}
               value={criteria.segregation['4F']}
               onChange={(v) => onChange({
                 ...criteria,
                 segregation: { ...criteria.segregation, '4F': v },
               })}
-              tooltip="每个独立家系 +0.15，分离证据累计最多 +0.45；同一家系不能重复计分"
+              tooltip={t("tasks.perIndependentFamilyMaximumSegregationScoreDo72e2a9")}
             />
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <Counter
-              label="4G. 观察到 5–6 次分离的独立家系数"
+              label={t("tasks.gIndependentFamiliesWithSegregationsfb3c1b")}
               value={criteria.segregation['4G']}
               onChange={(v) => onChange({
                 ...criteria,
                 segregation: { ...criteria.segregation, '4G': v },
               })}
-              tooltip="每次 +0.30"
+              tooltip={t("tasks.each5685b7")}
             />
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <Counter
-              label="4H. 观察到至少 7 次分离的独立家系数"
+              label={t("tasks.hIndependentFamiliesWithAtLeastSegregationsfc2a5d")}
               value={criteria.segregation['4H']}
               onChange={(v) => onChange({
                 ...criteria,
                 segregation: { ...criteria.segregation, '4H': v },
               })}
-              tooltip="每个独立家系 +0.45，分离证据累计最多 +0.45"
+              tooltip={t("tasks.perIndependentFamilyMaximumSegregationScore552c62")}
             />
           </div>
         </div>
@@ -288,12 +291,12 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
 
       {/* 非分离证据 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">个案证据 - 非分离</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.caseEvidenceNonsegregation266807")}</h4>
         <div className="space-y-2">
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <div className="text-sm text-fg-default mb-2">4I. 未在受累家属中发现</div>
+            <div className="text-sm text-fg-default mb-2">{t("tasks.iNotFoundInAffectedRelatives430922")}</div>
             <Counter
-              label="家系数"
+              label={t("tasks.familyCount95d922")}
               value={criteria.nonSegregation['4I'].familyCount}
               onChange={(v) => onChange({
                 ...criteria,
@@ -305,9 +308,9 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
             />
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <div className="text-sm text-fg-default mb-2">4J. 在未受累家属中发现（特异表型）</div>
+            <div className="text-sm text-fg-default mb-2">{t("tasks.jFoundInUnaffectedRelativesSpecificPhenotypeba0a30")}</div>
             <Counter
-              label="家系数"
+              label={t("tasks.familyCount95d922")}
               value={criteria.nonSegregation['4J'].familyCount}
               onChange={(v) => onChange({
                 ...criteria,
@@ -319,9 +322,9 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
             />
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
-            <div className="text-sm text-fg-default mb-2">4K. 在未受累家属中发现（非特异表型）</div>
+            <div className="text-sm text-fg-default mb-2">{t("tasks.kFoundInUnaffectedRelativesNonspecificPhenotype360b6a")}</div>
             <Counter
-              label="家系数"
+              label={t("tasks.familyCount95d922")}
               value={criteria.nonSegregation['4K'].familyCount}
               onChange={(v) => onChange({
                 ...criteria,
@@ -337,11 +340,11 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
 
       {/* 病例对照证据 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">病例对照和人群证据</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.caseControlAndPopulationEvidence6967a1")}</h4>
         <div className="space-y-2">
           <div className="bg-canvas-subtle rounded-lg p-3">
             <ScoreSlider
-              label="4L. 病例中显著增加（特异表型）"
+              label={t("tasks.lSignificantlyEnrichedInCasesSpecificPhenotypef900a9")}
               value={criteria.caseControl['4L'].score}
               onChange={(v) => onChange({
                 ...criteria,
@@ -349,12 +352,12 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
               })}
               min={0}
               max={0.45}
-              tooltip="每项研究 0 到 +0.45"
+              tooltip={t("tasks.toPerStudy118c29")}
             />
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <ScoreSlider
-              label="4M. 病例中显著增加（非特异表型）"
+              label={t("tasks.mSignificantlyEnrichedInCasesNonspecificPhenotypefdcd46")}
               value={criteria.caseControl['4M'].score}
               onChange={(v) => onChange({
                 ...criteria,
@@ -366,7 +369,7 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <ScoreSlider
-              label="4N. 病例与对照无显著差异"
+              label={t("tasks.nNoSignificantCaseControlDifferencec3e4de")}
               value={criteria.caseControl['4N'].score}
               onChange={(v) => onChange({
                 ...criteria,
@@ -378,7 +381,7 @@ export function Section4Panel({ cnvType, criteria, onChange }: Section4PanelProp
           </div>
           <div className="bg-canvas-subtle rounded-lg p-3">
             <ScoreSlider
-              label="4O. 与常见人群变异重叠"
+              label={t("tasks.oOverlapsCommonPopulationVariationf606f1")}
               value={criteria.caseControl['4O'].score}
               onChange={(v) => onChange({
                 ...criteria,

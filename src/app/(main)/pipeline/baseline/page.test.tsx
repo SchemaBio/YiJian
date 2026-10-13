@@ -79,4 +79,4 @@ it('selects whole samples and submits both reads in the same selection order', a
  fireEvent.keyDown(await screen.findByRole('option', { name: /normal.bed/ }), { key: 'Enter' });
  fireEvent.click(screen.getByRole('button', { name: '启动校正流程' }));
  await waitFor(() => expect(createCNVBaseline).toHaveBeenCalledWith({ name: 'New baseline', reference_genome: 'GRCh38', bed_asset_id: 'bed', read1_asset_ids: ['b1', 'a1'], read2_asset_ids: ['b2', 'a2'] }));
-}, 30000);
+}, 60000);

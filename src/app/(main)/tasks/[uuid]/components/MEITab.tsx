@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -61,6 +66,7 @@ export function MEITab({
   filterState: externalFilterState,
   onFilterChange
 }: MEITabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<MEIVariant> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -90,13 +96,13 @@ export function MEITab({
 			await pinVariant(taskId, 'mei', id, checked);
 		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '更新置顶状态失败');
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToUpdatePinStatus77c5f1"));
 		} finally {
 			setPendingVariantIDs((previous) => {
 				const next = new Set(previous); next.delete(id); return next;
 			});
 		}
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 处理回报状态变更
   const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
@@ -110,13 +116,13 @@ export function MEITab({
 			await reportVariant(taskId, 'mei', id, checked);
 		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '标记回报失败');
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToMarkForReport8d3bd6"));
 		} finally {
 			setPendingVariantIDs((previous) => {
 				const next = new Set(previous); next.delete(id); return next;
 			});
 		}
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: MEIVariant) => {
@@ -136,7 +142,7 @@ export function MEITab({
 			const data = await getMEIs(taskId, filterState, controller.signal);
 			if (!controller.signal.aborted) setResult(data);
 		} catch (cause) {
-			if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : '无法加载 MEI 结果');
+			if (!controller.signal.aborted) setError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToLoadMeiResultsabf9a3"));
 		} finally {
 			if (!controller.signal.aborted) setLoading(false);
 		}
@@ -191,7 +197,7 @@ export function MEITab({
     },
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       accessor: (row) => <GeneLinks genes={row.gene} />,
       width: 100,
       align: 'center',
@@ -199,7 +205,7 @@ export function MEITab({
     },
     {
       id: 'position',
-      header: '插入位置',
+      header: t("tasks.insertionPosition54ebf6"),
       accessor: (row) => (
         <PositionLink
           chromosome={row.chromosome}
@@ -213,10 +219,10 @@ export function MEITab({
     },
     {
       id: 'meiType',
-      header: 'MEI类型',
+      header: t("history.meiType05cfc0"),
       accessor: (row) => (
         <span className={`px-2 py-0.5 text-xs rounded border ${MEI_TYPE_COLORS[row.meiType]}`}>
-          {MEI_TYPE_LABELS[row.meiType]}
+          {translateUI(MEI_TYPE_LABELS[row.meiType], t)}
         </span>
       ),
       width: 80,
@@ -224,7 +230,7 @@ export function MEITab({
     },
     {
       id: 'insertionType',
-      header: '插入类型',
+      header: t("tasks.insertionTypeaa636e"),
       accessor: (row) => {
         return MEI_INSERTION_LABELS[row.insertionType];
       },
@@ -233,14 +239,14 @@ export function MEITab({
     },
     {
       id: 'strand',
-      header: '链',
-      accessor: (row) => row.strand === 'Unknown' ? '未提供' : row.strand,
+      header: t("history.strand94d5ad"),
+      accessor: (row) => row.strand === 'Unknown' ? t("history.notProvided071fb2") : row.strand,
       width: 50,
       align: 'center',
     },
     {
       id: 'length',
-      header: '长度',
+      header: t("history.lengtha53949"),
       accessor: (row) => `${row.length} bp`,
       width: 90,
       align: 'center',
@@ -248,16 +254,16 @@ export function MEITab({
     },
     {
       id: 'impact',
-      header: '影响区域',
+      header: t("tasks.affectedRegion38be27"),
       accessor: (row) => row.impact ? IMPACT_LABELS[row.impact as keyof typeof IMPACT_LABELS] || row.impact : '-',
       width: 90,
       align: 'center',
     },
     {
       id: 'zygosity',
-      header: '杂合性',
+      header: t("tasks.zygosity50c147"),
       accessor: (row) => {
-        const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合', Unknown: '未提供' };
+        const labels = { Heterozygous: t("tasks.heterozygous0eee7c"), Homozygous: t("tasks.homozygousf691c3"), Hemizygous: t("tasks.hemizygous75566a"), Unknown: t("history.notProvided071fb2") };
         return labels[row.zygosity];
       },
       width: 80,
@@ -265,7 +271,7 @@ export function MEITab({
     },
     {
       id: 'supportingReads',
-      header: '支持读数',
+      header: t("tasks.supportingReads1addd1"),
       accessor: (row) => `${row.supportingReads}/${row.totalReads}`,
       width: 90,
       align: 'center',
@@ -273,7 +279,7 @@ export function MEITab({
     },
     {
       id: 'frequency',
-      header: '人群频率',
+      header: t("tasks.populationFrequency1705e3"),
       accessor: (row) => formatPopulationFrequency(row.frequency),
       width: 90,
       align: 'center',
@@ -281,11 +287,11 @@ export function MEITab({
     },
     {
       id: 'acmgClassification',
-      header: 'ACMG分类',
+      header: t("history.acmgClassification7c3099"),
       accessor: (row) => {
         if (!row.acmgClassification) return '-';
         const config = ACMG_CONFIG[row.acmgClassification];
-        return <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>;
+        return <Tag variant={config.variant} className="w-20 justify-center">{translateUI(config.label, t)}</Tag>;
       },
       width: 100,
       align: 'center',
@@ -298,7 +304,7 @@ export function MEITab({
   return (
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="mei" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'mei')} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="mei" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'mei', t)} state={filterState} onChange={setFilterState} />
       {/* 工具栏 */}
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -306,7 +312,7 @@ export function MEITab({
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
               className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
-              placeholder="搜索基因、位置..."
+              placeholder={t("tasks.searchGeneOrPosition732ec5")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -318,7 +324,7 @@ export function MEITab({
 
         {/* 统计信息 */}
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-fg-muted">
-          <span>共 {result?.total ?? 0} 条 MEI 变异</span>
+          <span>{t("history.total497064")}{result?.total ?? 0} {t("tasks.meiVariantsb214fc")}</span>
         </div>
       </div>
       </div>
@@ -336,7 +342,7 @@ export function MEITab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
-            columns={filterableColumns(columns, result, filterState, setFilterState, 'mei')}
+            columns={localizeDisplay(filterableColumns(columns, result, filterState, setFilterState, 'mei', t), t)}
             rowKey="id"
             striped
             density="compact"
@@ -355,31 +361,27 @@ export function MEITab({
           {totalPages > 1 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
-                第 {filterState.page} / {totalPages} 页
-              </div>
+                {t("history.pagef49534")}{filterState.page} / {totalPages} {t("history.labelaf8438")}</div>
               <div className="flex items-center gap-2">
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
-                  上一页
-                </ActionButton>
+                  {t("history.previousb41561")}</ActionButton>
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
-                  下一页
-                </ActionButton>
+                  {t("history.next67a246")}</ActionButton>
               </div>
             </div>
           )}
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无 MEI 变异数据
-        </div>
+          {t("tasks.noMeiVariantData0531ba")}</div>
       )}
 		{operationError && (
 			<div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>

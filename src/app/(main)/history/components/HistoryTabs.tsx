@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import type { HistoryTabType } from '../types';
@@ -11,6 +14,7 @@ interface HistoryTabsProps {
 }
 
 export function HistoryTabs({ activeTab, onTabChange, children }: HistoryTabsProps) {
+  const t = useText();
   const tabRefs = React.useRef<Map<HistoryTabType, HTMLButtonElement>>(new Map());
 
   // 键盘导航处理
@@ -52,7 +56,7 @@ export function HistoryTabs({ activeTab, onTabChange, children }: HistoryTabsPro
         <nav
           className="flex gap-1"
           role="tablist"
-          aria-label="历史检出统计标签页"
+          aria-label={t("history.detectionHistoryTabs714510")}
         >
           {HISTORY_TAB_CONFIGS.map((tab, index) => {
             const isActive = activeTab === tab.id;
@@ -78,7 +82,7 @@ export function HistoryTabs({ activeTab, onTabChange, children }: HistoryTabsPro
                   }
                 `}
               >
-                {tab.label}
+                {translateUI(tab.label, t)}
               </button>
             );
           })}

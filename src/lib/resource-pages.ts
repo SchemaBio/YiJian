@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import { api } from './api';
 
 export async function readResourcePages<T>(endpoint: string, params: Record<string,string> = {}, signal?: AbortSignal): Promise<T[]> {
@@ -9,5 +10,5 @@ export async function readResourcePages<T>(endpoint: string, params: Record<stri
     for(const item of items){const id=String((item as {id?:unknown}).id??'');if(id&&!rows.has(id)){rows.set(id,item);added++;}}
     if (Array.isArray(response)||!items.length||!added|| (typeof response.total==='number'&&rows.size>=response.total)) return [...rows.values()];
   }
-  throw new Error('资源列表过大，请缩小搜索范围');
+  throw new LocalizedError("display.resourceListTooLargeNarrowYourSearch889114");
 }

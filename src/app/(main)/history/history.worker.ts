@@ -22,5 +22,5 @@ self.onmessage = (event: MessageEvent<Message>) => {
     else if (message.action === 'clear') engine.clear(message.table);
     else if (message.action === 'sources') result = engine.sources(message.table, message.group, message.includeWithdrawn);
     self.postMessage({ id: message.id, result });
-  } catch { self.postMessage({ id: message.id, error: '浏览器历史统计失败，请重新同步' }); }
+  } catch { self.postMessage({ id: message.id, error: '浏览器历史统计失败，请重新同步', errorKey: '浏览器历史统计失败，请重新同步' }); }
 };

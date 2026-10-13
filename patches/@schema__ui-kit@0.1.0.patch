@@ -1,0 +1,332 @@
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 639bf855536792710d639f2e00c338ff9b2997ff..a942b76c7222bbaee2c983a353ab74ef1f7195b9 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -995,3 +995,5 @@ type ShadowToken = 'small' | 'medium' | 'large' | 'extra-large';
+ type DurationToken = 'fast' | 'normal' | 'slow';
+ 
+ export { type ACMGClassification, type ACMGVariant, type AMPTier, type AMPTierVariant, Avatar, AvatarGroup, type AvatarGroupProps, type AvatarProps, type AvatarSize, type AvatarStatus, type BorderRadiusToken, BottomNav, type BottomNavItem, type BottomNavProps, Breadcrumb, type BreadcrumbItem, type BreadcrumbProps, Button, type ButtonProps, type ButtonSize, type ButtonVariant, Checkbox, type CheckboxProps, type ColorToken, type Column, DataTable, type DataTableProps, Dialog, type DialogProps, type DialogType, type DurationToken, Form, type FormContextValue, FormItem, type FormItemProps, type FormProps, Header, type HeaderProps, Input, type InputProps, type LabelPosition, Modal, ModalBody, type ModalBodyProps, ModalFooter, type ModalFooterProps, ModalHeader, type ModalHeaderProps, type ModalProps, type ModalSize, type Placement, Popover, type PopoverProps, RadioGroup, type RadioGroupProps, type RadioOption, type RowDensity, Select, type SelectOption, type SelectProps, type ShadowToken, Sidebar, SidebarItem, type SidebarItemProps, type SidebarProps, type SortDirection, type SpacingToken, type StatusVariant, Tag, type TagProps, type TagVariant, TextArea, type TextAreaProps, type Theme, type ThemeContextValue, ThemeProvider, type ThemeProviderProps, Tooltip, type TooltipProps, type VariantType, announceToScreenReader, cn, createSkipLink, generateId, getAriaProps, getContrastRatio, getFocusableElements, getVisuallyHiddenStyles, handleGridKeyboardNavigation, handleListKeyboardNavigation, isFocusable, meetsContrastRequirements, prefersHighContrast, prefersReducedMotion, setRovingTabindex, trapFocus, useFormContext, useReducedMotion, useSidebarContext, useTheme };
++
++export declare function UiKitLocaleProvider(props: { translate: (key: string, values?: Record<string, string | number>) => string; children: React$1.ReactNode }): React$1.ReactElement;
+diff --git a/dist/index.js b/dist/index.js
+index d1405fce4076be76a2a7b0478831a61a637b67a7..bfa962b0383a8ae2499eb2aabe7aeaefb47b9ee6 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,6 +1,16 @@
+ // src/components/Button/Button.tsx
+ import * as React from "react";
+ 
++// Optional application-owned translations; existing consumers retain defaults.
++const UiKitTextContext = React.createContext((key, values) => {
++  const labels = {"select":"Select...","search":"Search...","noOptions":"No options found","noData":"No data available","dataTable":"Data table","selectAllRows":"Select all rows","selectRow":"Select row {p0}","expandRow":"Expand row","collapseRow":"Collapse row","mainNavigation":"Main navigation","sidebarNavigation":"Sidebar navigation","expandSidebar":"Expand sidebar","collapseSidebar":"Collapse sidebar","sidebar":"Sidebar","breadcrumb":"Breadcrumb","bottomNavigation":"Bottom navigation","close":"Close","confirm":"Confirm","ok":"OK","submit":"Submit","cancel":"Cancel","userAvatar":"User avatar","moreUsers":"{p0} more users","online":"Online","offline":"Offline","busy":"Busy"};
++  return (labels[key] || key).replace(/\{p0\}/g, () => String(values?.p0 ?? ''));
++});
++function UiKitLocaleProvider({ translate, children }) {
++  return React.createElement(UiKitTextContext.Provider, { value: translate }, children);
++}
++
++
+ // src/utils/cn.ts
+ import { clsx } from "clsx";
+ import { twMerge } from "tailwind-merge";
+@@ -753,12 +763,14 @@ function Select({
+   onChange,
+   multiple = false,
+   searchable = false,
+-  placeholder = "Select...",
++  placeholder: providedPlaceholder,
+   disabled = false,
+   error = false,
+   className,
+   name
+ }) {
++  const kitText = React.useContext(UiKitTextContext);
++  const placeholder = providedPlaceholder ?? kitText("select");
+   const [searchQuery, setSearchQuery] = React4.useState("");
+   const [open, setOpen] = React4.useState(false);
+   const filteredOptions = React4.useMemo(() => {
+@@ -836,7 +848,7 @@ function Select({
+                 type: "text",
+                 value: searchQuery,
+                 onChange: (e) => setSearchQuery(e.target.value),
+-                placeholder: "Search...",
++                placeholder: kitText("search"),
+                 className: cn(
+                   "w-full h-7 px-2",
+                   "text-sm",
+@@ -882,7 +894,7 @@ function Select({
+                 },
+                 String(option.value)
+               )),
+-              filteredOptions.length === 0 && /* @__PURE__ */ jsx6("div", { className: "px-3 py-2 text-sm text-fg-muted", children: "No options found" })
++              filteredOptions.length === 0 && /* @__PURE__ */ jsx6("div", { className: "px-3 py-2 text-sm text-fg-muted", children: kitText("noOptions") })
+             ] })
+           ]
+         }
+@@ -943,7 +955,7 @@ function Select({
+                   type: "text",
+                   value: searchQuery,
+                   onChange: (e) => setSearchQuery(e.target.value),
+-                  placeholder: "Search...",
++                  placeholder: kitText("search"),
+                   className: cn(
+                     "w-full h-7 px-2",
+                     "text-sm",
+@@ -978,7 +990,7 @@ function Select({
+                   },
+                   String(option.value)
+                 )),
+-                filteredOptions.length === 0 && /* @__PURE__ */ jsx6("div", { className: "px-3 py-2 text-sm text-fg-muted", children: "No options found" })
++                filteredOptions.length === 0 && /* @__PURE__ */ jsx6("div", { className: "px-3 py-2 text-sm text-fg-muted", children: kitText("noOptions") })
+               ] })
+             ]
+           }
+@@ -1270,19 +1282,20 @@ var getInitials = (name) => {
+ };
+ var Avatar = React7.forwardRef(
+   ({ src, alt, name, size = "medium", status, className }, ref) => {
++  const kitText = React.useContext(UiKitTextContext);
+     const [imageError, setImageError] = React7.useState(false);
+     React7.useEffect(() => {
+       setImageError(false);
+     }, [src]);
+     const showImage = src && !imageError;
+     const initials = name ? getInitials(name) : "";
+-    const accessibleName = alt || name || "User avatar";
++    const accessibleName = alt || name || kitText("userAvatar");
+     return /* @__PURE__ */ jsxs8(
+       "div",
+       {
+         ref,
+         role: "img",
+-        "aria-label": status ? `${accessibleName} (${statusLabels[status]})` : accessibleName,
++        "aria-label": status ? `${accessibleName} (${kitText(status)})` : accessibleName,
+         className: cn(
+           "relative inline-flex items-center justify-center",
+           "rounded-full",
+@@ -1343,6 +1356,7 @@ var AvatarGroup = ({
+   size = "medium",
+   className
+ }) => {
++  const kitText = React.useContext(UiKitTextContext);
+   const childArray = React8.Children.toArray(children);
+   const totalCount = childArray.length;
+   const showMax = max !== void 0 && max > 0 ? max : totalCount;
+@@ -1385,7 +1399,7 @@ var AvatarGroup = ({
+               overflowSizeStyles[size]
+             ),
+             style: { zIndex: 0 },
+-            "aria-label": `${overflowCount} more users`,
++            "aria-label": kitText("moreUsers", {p0: overflowCount}),
+             children: /* @__PURE__ */ jsxs9("span", { children: [
+               "+",
+               overflowCount
+@@ -1403,6 +1417,7 @@ import * as React9 from "react";
+ import { jsx as jsx12, jsxs as jsxs10 } from "react/jsx-runtime";
+ var Header = React9.forwardRef(
+   ({ logo, navigation, search, userMenu, className, ...props }, ref) => {
++  const kitText = React.useContext(UiKitTextContext);
+     return /* @__PURE__ */ jsxs10(
+       "header",
+       {
+@@ -1418,7 +1433,7 @@ var Header = React9.forwardRef(
+         children: [
+           /* @__PURE__ */ jsx12("div", { className: "flex items-center shrink-0", children: logo }),
+           /* @__PURE__ */ jsxs10("div", { className: "flex items-center flex-1 justify-center gap-4 mx-4", children: [
+-            navigation && /* @__PURE__ */ jsx12("nav", { "aria-label": "Main navigation", className: "flex items-center", children: navigation }),
++            navigation && /* @__PURE__ */ jsx12("nav", { "aria-label": kitText("mainNavigation"), className: "flex items-center", children: navigation }),
+             search && /* @__PURE__ */ jsx12("div", { role: "search", className: "flex items-center", children: search })
+           ] }),
+           /* @__PURE__ */ jsx12("div", { className: "flex items-center shrink-0", children: userMenu })
+@@ -1441,9 +1456,11 @@ var Sidebar = React10.forwardRef(
+     width = 240,
+     collapsedWidth = 64,
+     className,
+-    "aria-label": ariaLabel = "Sidebar navigation",
++    "aria-label": suppliedAriaLabel,
+     ...props
+   }, ref) => {
++  const kitText = React.useContext(UiKitTextContext);
++    const ariaLabel = suppliedAriaLabel ?? kitText("sidebarNavigation");
+     const [internalCollapsed, setInternalCollapsed] = React10.useState(false);
+     const isControlled = controlledCollapsed !== void 0;
+     const collapsed = isControlled ? controlledCollapsed : internalCollapsed;
+@@ -1508,7 +1525,7 @@ var Sidebar = React10.forwardRef(
+                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-emphasis)] focus-visible:ring-offset-2",
+                 "transition-colors duration-[var(--duration-fast,100ms)]"
+               ),
+-              "aria-label": collapsed ? "Expand sidebar" : "Collapse sidebar",
++              "aria-label": kitText(collapsed ? "expandSidebar" : "collapseSidebar"),
+               "aria-expanded": !collapsed,
+               "aria-controls": "sidebar-nav",
+               children: /* @__PURE__ */ jsx13(
+@@ -1539,7 +1556,7 @@ var Sidebar = React10.forwardRef(
+             "nav",
+             {
+               id: "sidebar-nav",
+-              "aria-label": "Sidebar",
++              "aria-label": kitText("sidebar"),
+               className: "flex-1 overflow-y-auto overflow-x-hidden px-2 py-1",
+               children: /* @__PURE__ */ jsx13(SidebarContext.Provider, { value: { collapsed }, children })
+             }
+@@ -1672,6 +1689,7 @@ var DefaultSeparator = () => /* @__PURE__ */ jsx15(
+ );
+ var Breadcrumb = React12.forwardRef(
+   ({ items, separator, className, ...props }, ref) => {
++  const kitText = React.useContext(UiKitTextContext);
+     if (!items || items.length === 0) {
+       return null;
+     }
+@@ -1685,7 +1703,7 @@ var Breadcrumb = React12.forwardRef(
+       "nav",
+       {
+         ref,
+-        "aria-label": "Breadcrumb",
++        "aria-label": kitText("breadcrumb"),
+         className: cn("flex items-center text-sm", className),
+         ...props,
+         children: /* @__PURE__ */ jsx15("ol", { className: "flex items-center list-none p-0 m-0", children: items.map((item, index) => {
+@@ -1732,6 +1750,7 @@ import { Fragment as Fragment3, jsx as jsx16, jsxs as jsxs14 } from "react/jsx-r
+ var MOBILE_BREAKPOINT = 768;
+ var BottomNav = React13.forwardRef(
+   ({ items, maxItems = 5, className, ...props }, ref) => {
++  const kitText = React.useContext(UiKitTextContext);
+     const [isMobile, setIsMobile] = React13.useState(false);
+     React13.useEffect(() => {
+       const checkMobile = () => {
+@@ -1757,7 +1776,7 @@ var BottomNav = React13.forwardRef(
+           className
+         ),
+         role: "navigation",
+-        "aria-label": "Bottom navigation",
++        "aria-label": kitText("bottomNavigation"),
+         ...props,
+         children: displayItems.map((item) => /* @__PURE__ */ jsx16(BottomNavItemComponent, { item }, item.id))
+       }
+@@ -1926,6 +1945,7 @@ var ModalHeader = ({
+   showCloseButton = true,
+   className
+ }) => {
++  const kitText = React.useContext(UiKitTextContext);
+   return /* @__PURE__ */ jsxs16(
+     "div",
+     {
+@@ -1947,7 +1967,7 @@ var ModalHeader = ({
+               "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis",
+               "transition-colors duration-fast"
+             ),
+-            "aria-label": "Close",
++            "aria-label": kitText("close"),
+             children: /* @__PURE__ */ jsx18(CloseIcon2, {})
+           }
+         )
+@@ -2047,6 +2067,7 @@ var Dialog = ({
+   defaultValue = "",
+   className
+ }) => {
++  const kitText = React.useContext(UiKitTextContext);
+   const [inputValue, setInputValue] = React14.useState(defaultValue);
+   const inputId = React14.useMemo(() => generateId("dialog-input"), []);
+   const descriptionId = React14.useMemo(() => generateId("dialog-desc"), []);
+@@ -2076,17 +2097,17 @@ var Dialog = ({
+     if (confirmText) return confirmText;
+     switch (type) {
+       case "confirm":
+-        return "Confirm";
++        return kitText("confirm");
+       case "alert":
+-        return "OK";
++        return kitText("ok");
+       case "prompt":
+-        return "Submit";
++        return kitText("submit");
+       default:
+-        return "OK";
++        return kitText("ok");
+     }
+   };
+   const getCancelText = () => {
+-    return cancelText || "Cancel";
++    return cancelText || kitText("cancel");
+   };
+   return /* @__PURE__ */ jsxs17(
+     Modal,
+@@ -2425,6 +2446,7 @@ function DataTable({
+   onRowDoubleClick,
+   className
+ }) {
++  const kitText = React.useContext(UiKitTextContext);
+   const [internalColumnWidths, setInternalColumnWidths] = React16.useState(
+     /* @__PURE__ */ new Map()
+   );
+@@ -2609,7 +2631,7 @@ function DataTable({
+                 },
+                 className: "p-1 rounded hover:bg-canvas-subtle",
+                 "aria-expanded": isExpanded,
+-                "aria-label": isExpanded ? "Collapse row" : "Expand row",
++                "aria-label": kitText(isExpanded ? "collapseRow" : "expandRow"),
+                 children: /* @__PURE__ */ jsx24(ExpandIcon, { expanded: isExpanded })
+               }
+             ) }),
+@@ -2618,7 +2640,7 @@ function DataTable({
+               {
+                 checked: isSelected,
+                 onChange: (checked) => handleRowSelect(rowId, checked),
+-                "aria-label": `Select row ${rowId}`
++                "aria-label": kitText("selectRow", {p0: rowId})
+               }
+             ) }),
+             leftPinnedColumns.map((col) => renderDataCell(row, col, true)),
+@@ -2682,7 +2704,7 @@ function DataTable({
+               },
+               className: "p-1 rounded hover:bg-canvas-subtle",
+               "aria-expanded": isExpanded,
+-              "aria-label": isExpanded ? "Collapse row" : "Expand row",
++              "aria-label": kitText(isExpanded ? "collapseRow" : "expandRow"),
+               children: /* @__PURE__ */ jsx24(ExpandIcon, { expanded: isExpanded })
+             }
+           ) }),
+@@ -2691,7 +2713,7 @@ function DataTable({
+             {
+               checked: isSelected,
+               onChange: (checked) => handleRowSelect(rowId, checked),
+-              "aria-label": `Select row ${rowId}`
++              "aria-label": kitText("selectRow", {p0: rowId})
+             }
+           ) }),
+           leftPinnedColumns.map((col) => renderDataCell(row, col, true)),
+@@ -2711,7 +2733,7 @@ function DataTable({
+         className
+       ),
+       role: "region",
+-      "aria-label": "Data table",
++      "aria-label": kitText("dataTable"),
+       tabIndex: 0,
+       children: /* @__PURE__ */ jsxs20(
+         "table",
+@@ -2729,7 +2751,7 @@ function DataTable({
+                   checked: allSelected,
+                   indeterminate: isIndeterminate,
+                   onChange: handleSelectAll,
+-                  "aria-label": "Select all rows"
++                  "aria-label": kitText("selectAllRows")
+                 }
+               ) }),
+               selectable && selectionMode === "single" && /* @__PURE__ */ jsx24("th", { className: "w-10 px-2 py-2 border-b border-border-default bg-canvas-subtle" }),
+@@ -2742,7 +2764,7 @@ function DataTable({
+               {
+                 colSpan: visibleColumns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0),
+                 className: "px-4 py-8 text-center text-fg-muted",
+-                children: "No data available"
++                children: kitText("noData")
+               }
+             ) }) : shouldVirtualize ? /* @__PURE__ */ jsx24("tr", { children: /* @__PURE__ */ jsx24(
+               "td",
+@@ -2849,6 +2871,7 @@ function useTheme() {
+   return context;
+ }
+ export {
++  UiKitLocaleProvider,
+   Avatar,
+   AvatarGroup,
+   BottomNav,

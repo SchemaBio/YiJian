@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -17,6 +20,7 @@ export function MEIHistoryTab({
   filterState: externalFilterState,
   onFilterChange
 }: MEIHistoryTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<HistoryTableFilterState>(DEFAULT_HISTORY_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<GroupedMEI> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -42,70 +46,70 @@ export function MEIHistoryTab({
   const columns = [
     {
       id: 'chromosome',
-      header: '染色体',
+      header: t("history.chromosome326659"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => row.chromosome,
     },
     {
       id: 'position',
-      header: '位置',
+      header: t("history.position88c344"),
       width: 100,
       align: 'center' as const,
-      accessor: (row: GroupedMEI) => row.position.toLocaleString(),
+      accessor: (row: GroupedMEI) => row.position.toLocaleString(t.locale),
     },
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => row.gene,
     },
     {
       id: 'meiType',
-      header: 'MEI类型',
+      header: t("history.meiType05cfc0"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => {
         const config = MEI_TYPE_CONFIG[row.meiType];
-        return <Tag variant={config.variant} className="justify-center">{config.label}</Tag>;
+        return <Tag variant={config.variant} className="justify-center">{translateUI(config.label, t)}</Tag>;
       },
     },
     {
       id: 'strand',
-      header: '链',
+      header: t("history.strand94d5ad"),
       width: 50,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => row.strand,
     },
     {
       id: 'length',
-      header: '长度',
+      header: t("history.lengtha53949"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => `${row.length}bp`,
     },
     {
       id: 'impact',
-      header: '影响',
+      header: t("history.impact5be321"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => row.impact || '-',
     },
     {
       id: 'acmgClassification',
-      header: 'ACMG分类',
+      header: t("history.acmgClassification7c3099"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => {
         if (!row.acmgClassification) return '-';
         const config = ACMG_CONFIG[row.acmgClassification];
-        return <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>;
+        return <Tag variant={config.variant} className="w-20 justify-center">{translateUI(config.label, t)}</Tag>;
       },
     },
     {
       id: 'detectionCount',
-      header: '检出次数',
+      header: t("history.detectionCountdf2067"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => (
@@ -116,14 +120,14 @@ export function MEIHistoryTab({
     },
     {
       id: 'firstDetectedAt',
-      header: '首次检出',
+      header: t("history.firstDetected16ef1a"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
-      header: '最后检出',
+      header: t("history.lastDetected4d7fff"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedMEI) => formatLocalDate(row.lastDetectedAt),
@@ -137,12 +141,12 @@ export function MEIHistoryTab({
       filterState={filterState}
       onSearch={(query) => setFilterState({ ...filterState, searchQuery: query, page: 1 })}
       onPageChange={(page) => setFilterState({ ...filterState, page })}
-      searchPlaceholder="搜索基因、染色体..."
-      statsLabel="个MEI位点"
-      columns={columns}
+      searchPlaceholder={t("display.searchGenesOrChromosomesc67277")}
+      statsLabel={t("display.meiLoci69fcc0")}
+      columns={localizeDisplay(columns, t)}
       getGroupId={(row) => row.groupId}
       getRecords={(row) => row.records}
-      emptyMessage="暂无MEI历史检出位点数据"
+      emptyMessage={t("display.noHistoricalMeiFindingsce36e9")}
     />
   );
 }

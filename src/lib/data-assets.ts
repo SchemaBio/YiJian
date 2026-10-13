@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import {
   api, completeMultipartUpload, confirmUpload, initMultipartUpload,
   MULTIPART_PART_SIZE_BYTES, MULTIPART_THRESHOLD_BYTES, presignMultipartParts,
@@ -241,13 +242,13 @@ async function uploadMultipartFile(
         try {
           throwIfAborted(signal);
           let url = urls.get(partNumber);
-          if (!url) throw new Error(`未获取到第 ${partNumber} 个分片的上传地址`);
+          if (!url) throw new LocalizedError("display.uploadUrlForPartPNotReceived02072e", {p0: partNumber});
           // Refresh the URL before every retry.  This also handles a network
           // interruption that outlives the presign TTL.
           if (attempt > 0) {
             const refreshed = await presignMultipartParts(session.file_id, multipart.session_id, [partNumber], { signal });
             url = refreshed.parts.find((part) => part.part_number === partNumber)?.url;
-            if (!url) throw new Error(`未获取到第 ${partNumber} 个分片的重试上传地址`);
+            if (!url) throw new LocalizedError("display.retryUploadUrlForPartPNot8e24d7", {p0: partNumber});
           }
           await limiter.acquire(signal);
           try {
@@ -281,7 +282,7 @@ async function uploadMultipartFile(
           }
         }
       }
-      throw lastError ?? new Error(`第 ${partNumber} 个分片上传失败`);
+      throw lastError ?? new LocalizedError("display.partPUploadFailed2056d8", {p0: partNumber});
     }));
   }
   throwIfAborted(signal);
@@ -340,7 +341,7 @@ export async function uploadDataFiles(
   callbacks?: UploadCallbacks,
   signals?: UploadSignals,
 ): Promise<UploadBatchResult> {
-  if (!read1 && !read2) throw new Error('请至少选择一个文件');
+  if (!read1 && !read2) throw new LocalizedError("common.selectAtLeastOneFile7487f9");
   if (read1 && read2) {
     const job = await requestPairedUploadJob(
       read1,
@@ -352,7 +353,7 @@ export async function uploadDataFiles(
     );
     const first = job.files.find((item) => item.read_type === 'read1');
     const second = job.files.find((item) => item.read_type === 'read2');
-    if (!first || !second) throw new Error('上传任务没有返回完整的 Read1/Read2 文件');
+    if (!first || !second) throw new LocalizedError("display.uploadDidNotReturnCompleteReadReadca5a53");
     const startedFiles: UploadFileProgress[] = [
       { fileId: first.file_id, jobId: first.job_id, fileName: read1.name, fileSize: read1.size, lastModified: read1.lastModified, readType: 'read1', progress: 0, status: 'uploading' },
       { fileId: second.file_id, jobId: second.job_id, fileName: read2.name, fileSize: read2.size, lastModified: read2.lastModified, readType: 'read2', progress: 0, status: 'uploading' },
@@ -441,7 +442,7 @@ export async function resumeDataFiles(
     read1 ? { file: read1, readType: 'read1' as const } : null,
     read2 ? { file: read2, readType: 'read2' as const } : null,
   ].filter(Boolean) as Array<{ file: File; readType: 'read1' | 'read2' }>;
-  if (selected.length === 0) throw new Error('请至少选择一个文件');
+  if (selected.length === 0) throw new LocalizedError("common.selectAtLeastOneFile7487f9");
   // The server-side recovery list is authoritative.  Match every unfinished
   // record to a selected original file, while ignoring an extra file the user
   // may select for a paired upload whose other member already completed.
@@ -449,7 +450,7 @@ export async function resumeDataFiles(
     const selectedFile = selected.find(({ file, readType }) => readType === item.readType && file.name === item.fileName &&
       (item.fileSize === undefined || file.size === item.fileSize) &&
       (item.lastModified === undefined || file.lastModified === item.lastModified));
-    if (!selectedFile) throw new Error(`未找到 ${item.fileName} 的可恢复上传记录`);
+    if (!selectedFile) throw new LocalizedError("display.noResumableUploadRecordFoundForPd2805f", {p0: item.fileName});
     return { file: selectedFile.file, readType: selectedFile.readType, item };
   });
   callbacks?.onStarted?.(entries.map(({ item }) => ({ ...item, progress: item.progress || 0, status: 'uploading' })));
@@ -487,7 +488,7 @@ export async function resumeDataFiles(
           return { fileId: item.fileId, cancelled: false };
         }
         if (remote.provider && remote.provider !== 's3') {
-          throw new Error(`${file.name} 使用本地存储，刷新后无法断点续传，请重新选择并开始上传`);
+          throw new LocalizedError("display.pUsesLocalStorageUploadsCannotResume3ed5fd", {p0: file.name});
         }
         if (file.size >= MULTIPART_THRESHOLD_BYTES) {
           await uploadSessionFile(file, { file_id: item.fileId, upload_url: '', storage_type: 'presigned' }, (bytes) => update(item, file, bytes), globalUploadLimiter, (sessionId, completedParts) => {
@@ -496,7 +497,7 @@ export async function resumeDataFiles(
           return { fileId: item.fileId, cancelled: false };
         }
         const retry = await retryS3Upload(item.fileId, { signal });
-        if (!retry.presigned_url) throw new Error(`未获取到 ${file.name} 的重试上传地址`);
+        if (!retry.presigned_url) throw new LocalizedError("display.retryUploadUrlForPNotReceivededa3da", {p0: file.name});
         await startUpload(item.fileId, { signal });
         await globalUploadLimiter.acquire(signal);
         try {
@@ -525,8 +526,8 @@ export async function uploadBEDFile(
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(signal);
-  if (file.size > 20 * 1024 * 1024) throw new Error('BED 文件不能超过 20MB');
-  if (!/\.bed(?:\.gz)?$/i.test(file.name)) throw new Error('请选择 .bed 或 .bed.gz 文件');
+  if (file.size > 20 * 1024 * 1024) throw new LocalizedError("display.bedFileMustNotExceedMb54531a");
+  if (!/\.bed(?:\.gz)?$/i.test(file.name)) throw new LocalizedError("display.selectABedOrBedGzFile803570");
   const session = await requestPresignedUploadUrl(file.name, file.size, 'bed', referenceGenome, uploadPolicyAcknowledged, undefined, { signal });
   await startUpload(session.file_id, { signal });
   await globalUploadLimiter.acquire(signal);
@@ -555,7 +556,7 @@ export async function retryDataAsset(id: string, file: File, onProgress?: (value
     }, globalUploadLimiter, undefined, signal);
   } else if (remote.provider === 's3') {
     const session = await retryS3Upload(id, { signal });
-    if (!session.presigned_url) throw new Error('未获取到重试上传地址');
+    if (!session.presigned_url) throw new LocalizedError("display.retryUploadUrlNotReceivede6155e");
     await startUpload(id, { signal });
     await globalUploadLimiter.acquire(signal);
     try {
@@ -585,5 +586,5 @@ export function downloadDataAsset(id: string, filename: string) {
   });
 }
 
-export async function listAllBEDAssets(signal?:AbortSignal):Promise<DataAsset[]>{const items:DataAsset[]=[];for(let page=1;page<=10000;page++){const r=await listDataAssets('',{readType:'bed',page,signal});items.push(...r.items);if(items.length>=r.total||r.items.length<100)return items;}throw new Error('BED 列表过大');}
+export async function listAllBEDAssets(signal?:AbortSignal):Promise<DataAsset[]>{const items:DataAsset[]=[];for(let page=1;page<=10000;page++){const r=await listDataAssets('',{readType:'bed',page,signal});items.push(...r.items);if(items.length>=r.total||r.items.length<100)return items;}throw new LocalizedError("display.bedListTooLarge1d72f2");}
 export function validateBEDAsset(id:string):Promise<DataAsset>{return api.post(`/v1/data/assets/${encodeURIComponent(id)}/validate`,{});}

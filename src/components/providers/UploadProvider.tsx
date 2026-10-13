@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 
 import * as React from 'react';
 import {
@@ -95,6 +100,7 @@ function readPersistedUpload(): GlobalUploadState | null {
 }
 
 export function UploadProvider({ children }: { children: React.ReactNode }) {
+  const t = useText();
   // The provider itself is mounted above the route tree, so the in-memory
   // state survives navigation. Keep the initial render identical on the
   // server and browser: reading localStorage from a lazy initializer would
@@ -159,7 +165,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   }, [activeUpload, hydrated, persist]);
 
   const startUpload = React.useCallback(async ({ read1, read2, uploadPolicyAcknowledged, internalId }: StartUploadOptions) => {
-    if (!read1 && !read2) throw new Error('请至少选择一个文件');
+    if (!read1 && !read2) throw new Error(t("common.selectAtLeastOneFile7487f9"));
     const initial: GlobalUploadState = {
       status: 'uploading',
       progress: 0,
@@ -181,7 +187,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
           (item.lastModified === undefined || file.lastModified === item.lastModified);
       }));
     if (previous && previous.files.length > 0 && !canResume) {
-      throw new Error('请选择上次上传的全部未完成原文件（文件名、大小和修改时间必须一致），或先放弃恢复记录');
+      throw new Error(t("common.selectAllOriginalUnfinishedFilesWithMatchingd54e94"));
     }
 
     const controllersByReadType: Partial<Record<UploadReadType, AbortController>> = {};
@@ -298,7 +304,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       if (run.fullCancelRequested || uploadRunRef.current !== run) return;
       if (isUploadCancelled(error)) {
-        updateUploadState((current) => current ? { ...current, status: 'failed' as const, error: '上传已取消' } : null);
+        updateUploadState((current) => current ? { ...current, status: 'failed' as const, error: t("common.uploadCanceled91406f") } : null);
         uploadRunRef.current = null;
         return;
       }
@@ -307,14 +313,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       // before cleaning up its durable multipart sessions.
       run.controllers.forEach((controller) => controller.abort());
       await cleanupMultipartSessions(activeUploadRef.current);
-      const message = error instanceof Error ? error.message : '上传失败';
+      const message = error instanceof Error ? errorText(error, t) : t("data.uploadFaileda6f805");
       updateUploadState((current) => current
         ? { ...current, status: 'failed' as const, error: message, files: current.files.map((file) => ({ ...file, status: file.status === 'completed' ? 'completed' as const : 'failed' as const })) }
         : { ...initial, status: 'failed' as const, error: message });
       uploadRunRef.current = null;
       throw error;
     }
-  }, [cleanupMultipartSessions, updateUploadState]);
+  }, [cleanupMultipartSessions, updateUploadState, t]);
 
   const cancelFile = React.useCallback((fileId: string) => {
     const run = uploadRunRef.current;
@@ -402,7 +408,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         : (typeof error === 'object' && error !== null && 'status' in error ? (error as { status?: unknown }).status : undefined);
       if (status !== 404) {
         await cleanupMultipartSessions(activeUploadRef.current);
-        const message = error instanceof Error ? error.message : '取消上传失败';
+        const message = error instanceof Error ? errorText(error, t) : t("data.unableToCancelUpload7c0a32");
         if (uploadRunRef.current === run) uploadRunRef.current = null;
         updateUploadState((current) => current
           ? { ...current, status: 'failed' as const, error: message, files: current.files.map((file) => ({ ...file, status: file.status === 'completed' ? 'completed' as const : 'failed' as const })) }
@@ -413,7 +419,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     if (uploadRunRef.current === run) uploadRunRef.current = null;
     persist(null);
     updateUploadState(null);
-  }, [cleanupMultipartSessions, persist, updateUploadState]);
+  }, [cleanupMultipartSessions, persist, updateUploadState, t]);
 
   const clearUpload = React.useCallback(() => {
     const run = uploadRunRef.current;

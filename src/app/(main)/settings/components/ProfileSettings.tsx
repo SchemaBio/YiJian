@@ -1,4 +1,10 @@
-﻿'use client';
+'use client';
+﻿
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -9,6 +15,7 @@ import { SupportDialog } from '@/components/support/SupportDialog';
 import { AISettingsPanel } from '@/components/shared/AISettingsPanel';
 import { useAI } from '@/components/providers/AIProvider';
 import type { User, UserOrganizationInfo } from '@/types/user';
+import { LanguageSettings } from './LanguageSettings';
 
 interface ProfileSettingsProps {
   user: User;
@@ -17,18 +24,19 @@ interface ProfileSettingsProps {
   onChangePassword: (oldPassword: string, newPassword: string) => Promise<void>;
 }
 
-function roleLabel(role: User['systemRole']): string {
-  return role === 'PLATFORM_ADMIN' ? '平台管理员' : '机构用户';
+function roleLabel(role: User['systemRole'], t: TextTranslator = chineseText): string {
+  return role === 'PLATFORM_ADMIN' ? t("settings.platformAdministrator02926d") : t("settings.organizationUser568bac");
 }
 
-function formatTime(value?: string): string {
+function formatTime(value?: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('zh-CN', { hour12: false });
+  return date.toLocaleString(t.locale, { hour12: false });
 }
 
 export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePassword }: ProfileSettingsProps) {
+  const t = useText();
   const { config, setConfig } = useAI();
   const [name, setName] = React.useState(user.name);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -48,7 +56,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
   const handleSave = async () => {
     const nextName = name.trim();
     if (!nextName) {
-      setError('姓名不能为空');
+      setError(t("settings.nameCannotBeEmptyb0f813"));
       return;
     }
     setIsSaving(true);
@@ -56,9 +64,9 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
     setMessage(null);
     try {
       await onUpdateProfile({ name: nextName });
-      setMessage('个人资料已保存');
+      setMessage(t("settings.profileSaved4695fe"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '保存个人资料失败');
+      setError(err instanceof Error ? errorText(err, t) : t("settings.unableToSaveProfilece9d35"));
     } finally {
       setIsSaving(false);
     }
@@ -69,15 +77,15 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
     setPasswordMessage(null);
     setPasswordError(null);
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setPasswordError('请填写完整的密码信息');
+      setPasswordError(t("settings.completeAllPasswordFieldsddcb32"));
       return;
     }
     if (newPassword.length < 8) {
-      setPasswordError('新密码至少需要 8 个字符');
+      setPasswordError(t("settings.newPasswordMustHaveAtLeastCharactersb62e70"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('两次输入的新密码不一致');
+      setPasswordError(t("settings.newPasswordsDoNotMatchd0b9c5"));
       return;
     }
     setIsChangingPassword(true);
@@ -86,39 +94,40 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setPasswordMessage('密码已更新，其他登录会话已失效');
+      setPasswordMessage(t("settings.passwordUpdatedOtherSessionsHaveExpired474a27"));
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : '修改密码失败');
+      setPasswordError(err instanceof Error ? errorText(err, t) : t("settings.unableToChangePassword528481"));
     } finally {
       setIsChangingPassword(false);
     }
   };
   return (
     <div className="grid max-w-5xl grid-cols-1 gap-4 lg:grid-cols-2">
+      <LanguageSettings />
       <section className="yj-panel p-5 lg:col-span-2">
         <div className="mb-5 flex items-center gap-2">
           <UserRound className="h-5 w-5 text-accent-fg" />
           <div>
-            <h3 className="text-base font-medium text-fg-default">账号信息</h3>
+            <h3 className="text-base font-medium text-fg-default">{t("settings.accountInformationaf0adf")}</h3>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 lg:grid-cols-3">
-          <FormItem label="姓名" className="col-span-2 md:col-span-1">
-            <Input aria-label="姓名" value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
+          <FormItem label={t("samples.namebe4c26")} className="col-span-2 md:col-span-1">
+            <Input aria-label={t("samples.namebe4c26")} value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
           </FormItem>
-          <ReadOnlyField label="邮箱">{user.email}</ReadOnlyField>
-          <FormItem label="系统角色">
+          <ReadOnlyField label={t("settings.email9ed627")}>{user.email}</ReadOnlyField>
+          <FormItem label={t("settings.systemRole97946d")}>
             <div className="h-10 flex items-center">
-              <Tag variant={user.systemRole === 'PLATFORM_ADMIN' ? 'warning' : 'info'}>{roleLabel(user.systemRole)}</Tag>
+              <Tag variant={user.systemRole === 'PLATFORM_ADMIN' ? 'warning' : 'info'}>{roleLabel(user.systemRole, t)}</Tag>
             </div>
           </FormItem>
-          <FormItem label="账号状态">
+          <FormItem label={t("settings.accountStatus67104f")}>
             <div className="h-10 flex items-center">
-              <Tag variant={user.isActive ? 'success' : 'neutral'}>{user.isActive ? '启用' : '停用'}</Tag>
+              <Tag variant={user.isActive ? 'success' : 'neutral'}>{user.isActive ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}</Tag>
             </div>
           </FormItem>
-          <ReadOnlyField label="注册审批">{user.approvalStatus === 'approved' ? '已通过' : user.approvalStatus === 'pending' ? '待审批' : user.approvalStatus === 'rejected' ? '未通过' : '—'}</ReadOnlyField>
-          <ReadOnlyField label="创建时间">{formatTime(user.createdAt)}</ReadOnlyField>
+          <ReadOnlyField label={t("settings.registrationApproval69b292")}>{user.approvalStatus === 'approved' ? t("settings.approved4b3c96") : user.approvalStatus === 'pending' ? t("settings.awaitingApproval57fce0") : user.approvalStatus === 'rejected' ? t("settings.rejected349c9e") : '—'}</ReadOnlyField>
+          <ReadOnlyField label={t("admin.createdAt84e380")}>{formatTime(user.createdAt, t)}</ReadOnlyField>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--yj-border-subtle)] pt-4">
           <Button action="save"
@@ -128,8 +137,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             onClick={() => void handleSave()}
             disabled={!isDirty || isSaving}
           >
-            保存资料
-          </Button>
+            {t("settings.saveProfile33f24b")}</Button>
           {message && <span role="status" className="text-sm text-success-fg">{message}</span>}
           {error && <span role="alert" className="text-sm text-danger-fg">{error}</span>}
         </div>
@@ -139,12 +147,12 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
         <div className="mb-5 flex items-center gap-2">
           <Building2 className="h-5 w-5 text-accent-fg" />
           <div>
-            <h3 className="text-base font-medium text-fg-default">当前机构</h3>
+            <h3 className="text-base font-medium text-fg-default">{t("settings.currentOrganizationeca974")}</h3>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ReadOnlyField label="机构名称">{currentOrg?.name ?? '—'}</ReadOnlyField>
-          <ReadOnlyField label="机构编号" mono>{currentOrg?.id ?? '—'}</ReadOnlyField>
+          <ReadOnlyField label={t("admin.organizationNamec50f05")}>{currentOrg?.name ?? '—'}</ReadOnlyField>
+          <ReadOnlyField label={t("settings.organizationIdentifierfc5b24")} mono>{currentOrg?.id ?? '—'}</ReadOnlyField>
         </div>
       </section>
 
@@ -154,8 +162,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
         <div className="mb-4 flex items-center gap-2">
           <Bot className="h-5 w-5 text-accent-fg" />
           <div>
-            <h3 className="text-base font-medium text-fg-default">页面助手</h3>
-            <p className="mt-1 text-xs text-fg-muted">开启后将读取当前页面内容并发送至平台 AI 服务。请勿在含患者信息的页面启用。</p>
+            <h3 className="text-base font-medium text-fg-default">{t("settings.pageAssistant5c22ea")}</h3>
+            <p className="mt-1 text-xs text-fg-muted">{t("settings.enablingThisReadsTheCurrentPageAnd2082cd")}</p>
           </div>
         </div>
         <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-default">
@@ -164,32 +172,30 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
             checked={config.aiAssistantEnabled}
             onChange={(event) => setConfig({ aiAssistantEnabled: event.target.checked })}
           />
-          启用页面 AI 助手
-        </label>
+          {t("settings.enablePageAiAssistant5cfc1c")}</label>
       </section>
 
       <section className="yj-panel p-5">
         <div className="mb-4 flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-accent-fg" />
           <div>
-            <h3 className="text-base font-medium text-fg-default">账号安全</h3>
-            <p className="mt-1 text-xs text-fg-muted">使用当前密码验证后设置新密码。</p>
+            <h3 className="text-base font-medium text-fg-default">{t("settings.accountSecurity178774")}</h3>
+            <p className="mt-1 text-xs text-fg-muted">{t("settings.verifyYourCurrentPasswordBeforeSettingA28bc19")}</p>
           </div>
         </div>
         <div className="grid max-w-md grid-cols-1 gap-3">
-          <FormItem label="当前密码">
-            <Input aria-label="当前密码" type="password" value={oldPassword} onChange={(event) => setOldPassword(event.target.value)} disabled={isChangingPassword} autoComplete="current-password" />
+          <FormItem label={t("settings.currentPassword33abf7")}>
+            <Input aria-label={t("settings.currentPassword33abf7")} type="password" value={oldPassword} onChange={(event) => setOldPassword(event.target.value)} disabled={isChangingPassword} autoComplete="current-password" />
           </FormItem>
-          <FormItem label="新密码">
-            <Input aria-label="新密码" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
+          <FormItem label={t("settings.newPasswordd22c9c")}>
+            <Input aria-label={t("settings.newPasswordd22c9c")} type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
           </FormItem>
-          <FormItem label="确认新密码">
-            <Input aria-label="确认新密码" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
+          <FormItem label={t("settings.confirmNewPasswordd4477a")}>
+            <Input aria-label={t("settings.confirmNewPasswordd4477a")} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={isChangingPassword} autoComplete="new-password" />
           </FormItem>
           <div className="flex flex-wrap items-center gap-3">
-            <Button loading={isChangingPassword} loadingLabel="更新中..." variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => void handleChangePassword()} disabled={isChangingPassword}>
-              修改密码
-            </Button>
+            <Button loading={isChangingPassword} loadingLabel={t("settings.updating338df3")} variant="secondary" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => void handleChangePassword()} disabled={isChangingPassword}>
+              {t("settings.changePassword0ae20a")}</Button>
             {passwordMessage && <span role="status" className="text-sm text-success-fg">{passwordMessage}</span>}
             {passwordError && <span role="alert" className="text-sm text-danger-fg">{passwordError}</span>}
           </div>
@@ -200,8 +206,8 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
         <div className="mb-4 flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger-fg" />
           <div>
-            <h3 className="text-base font-medium text-danger-fg">删除账户</h3>
-            <p className="mt-1 text-sm leading-6 text-fg-muted">账户注销可能涉及剩余积分退费，现阶段需由工作人员核对账户、所属机构及积分余额后处理。</p>
+            <h3 className="text-base font-medium text-danger-fg">{t("settings.deleteAccount925984")}</h3>
+            <p className="mt-1 text-sm leading-6 text-fg-muted">{t("settings.accountDeletionMayInvolveUnusedCreditRefundsb290c0")}</p>
           </div>
         </div>
         <SupportDialog trigger="button" context="account" />

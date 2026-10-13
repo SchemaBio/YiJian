@@ -1,7 +1,8 @@
+import { LocalizedError } from '@/i18n/errors';
 /** Frontend boundary only. Wire an implementation here after API alignment. */
 export type AIFeature = 'hpo' | 'acmg' | 'svcv4' | 'cnv_gain' | 'cnv_loss';
 export type AIDeployment = 'saas' | 'opensource';
-export class AIRequestError extends Error {
+export class AIRequestError extends LocalizedError {
   constructor(message: string, public readonly safeToRegenerate: boolean) { super(message); this.name = 'AIRequestError'; }
 }
 export interface AIAssistanceSettings {
@@ -56,8 +57,8 @@ export const AI_NOT_CONNECTED = 'AI 评估服务尚未接入，本次未调用�
 // No speculative URL, credential storage, mock verdict or client-side billing.
 export const pendingAIAssistanceAdapter: AIAssistanceAdapter = {
   async getSettings(deployment) { return { enabled: deployment === 'saas', connected: false, configured: false, keyConfigured: false }; },
-  async saveSettings() { throw new Error('AI 配置服务尚未接入，配置未保存。'); },
-  async generate() { throw new Error(AI_NOT_CONNECTED); },
+  async saveSettings() { throw new LocalizedError("display.aiConfigurationServiceIsNotConnectedSettings42c5e7"); },
+  async generate() { throw new LocalizedError(AI_NOT_CONNECTED); },
 };
 
 export function formatAIInterpretation(result: AIAssistanceResult): string {

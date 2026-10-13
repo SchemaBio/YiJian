@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -29,6 +34,7 @@ export function SNVIndelHistoryTab({
   filterState: externalFilterState,
   onFilterChange
 }: SNVIndelHistoryTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<HistoryTableFilterState>(DEFAULT_HISTORY_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<GroupedSNVIndel> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -54,7 +60,7 @@ export function SNVIndelHistoryTab({
   const columns = [
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       width: 100,
       align: 'center' as const,
       sortable: true,
@@ -78,25 +84,25 @@ export function SNVIndelHistoryTab({
     },
     {
       id: 'transcript',
-      header: '转录本',
+      header: t("history.transcript96b6d7"),
       width: 130,
       align: 'center' as const,
       accessor: (row: GroupedSNVIndel) => row.transcript,
     },
     {
       id: 'acmgClassification',
-      header: 'ACMG分类',
+      header: t("history.acmgClassification7c3099"),
       width: 100,
       align: 'center' as const,
       sortable: true,
       accessor: (row: GroupedSNVIndel) => {
         const config = ACMG_CONFIG[row.acmgClassification];
-        return <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>;
+        return <Tag variant={config.variant} className="w-20 justify-center">{translateUI(config.label, t)}</Tag>;
       },
     },
     {
       id: 'consequence',
-      header: '变异后果',
+      header: t("history.variantConsequence95666e"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedSNVIndel) => CONSEQUENCE_LABELS[row.consequence] || row.consequence,
@@ -106,7 +112,7 @@ export function SNVIndelHistoryTab({
       header: 'gnomAD',
       width: 100,
       align: 'center' as const,
-      accessor: (row: GroupedSNVIndel) => row.gnomadAF !== undefined ? `${(row.gnomadAF * 100).toFixed(4)}%` : '-',
+      accessor: (row: GroupedSNVIndel) => row.gnomadAF !== undefined ? `${formatNumericString((row.gnomadAF * 100).toFixed(4), t.locale)}%` : '-',
     },
     {
       id: 'clinvarId',
@@ -117,7 +123,7 @@ export function SNVIndelHistoryTab({
     },
     {
       id: 'detectionCount',
-      header: '检出次数',
+      header: t("history.detectionCountdf2067"),
       width: 80,
       align: 'center' as const,
       sortable: true,
@@ -129,7 +135,7 @@ export function SNVIndelHistoryTab({
     },
     {
       id: 'firstDetectedAt',
-      header: '首次检出',
+      header: t("history.firstDetected16ef1a"),
       width: 120,
       align: 'center' as const,
       sortable: true,
@@ -137,7 +143,7 @@ export function SNVIndelHistoryTab({
     },
     {
       id: 'lastDetectedAt',
-      header: '最后检出',
+      header: t("history.lastDetected4d7fff"),
       width: 120,
       align: 'center' as const,
       sortable: true,
@@ -152,12 +158,12 @@ export function SNVIndelHistoryTab({
       filterState={filterState}
       onSearch={(query) => setFilterState({ ...filterState, searchQuery: query, page: 1 })}
       onPageChange={(page) => setFilterState({ ...filterState, page })}
-      searchPlaceholder="搜索基因、HGVSc、样本..."
-      statsLabel="个独特位点"
-      columns={columns}
+      searchPlaceholder={t("display.searchGenesHgvscOrSamples0bf430")}
+      statsLabel={t("display.uniqueLoci3f0be5")}
+      columns={localizeDisplay(columns, t)}
       getGroupId={(row) => row.groupId}
       getRecords={(row) => row.records}
-      emptyMessage="暂无SNP/InDel历史检出位点数据"
+      emptyMessage={t("display.noHistoricalSnpIndelFindings1b3e3d")}
     />
   );
 }

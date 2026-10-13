@@ -1,5 +1,10 @@
 'use client';
 
+
+import { useText } from '@/i18n/useText';
+
+
+
 import { memo, type CSSProperties } from 'react';
 
 const TAU = Math.PI * 2;
@@ -303,11 +308,12 @@ const pixelSources = buildPixelSources();
 const octopusTargets = buildOctopusTargets(pixelSources.length);
 
 export const DnaHelix = memo(function DnaHelix() {
+  const t = useText();
   return (
     <div
       className="dna-helix-container group relative w-full h-full overflow-hidden"
       role="img"
-      aria-label="DNA 双螺旋动画，悬停时聚合为章鱼图案"
+      aria-label={t("common.dnaDoubleHelixAnimationFormingAnOctopus877b22")}
       tabIndex={0}
     >
       <style>{`

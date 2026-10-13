@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tooltip } from '@schema/ui-kit';
@@ -88,6 +93,7 @@ function RadioOption({
   onScoreChange?: (score: number) => void;
   range?: { min: number; max: number };
 }) {
+  const t = useText();
   return (
     <div
       className={`
@@ -114,9 +120,9 @@ function RadioOption({
               <span className={`text-xs font-mono ${
                 score > 0 ? 'text-success-fg' : score < 0 ? 'text-danger-fg' : 'text-fg-muted'
               }`}>
-                {score >= 0 ? '+' : ''}{score.toFixed(2)}
+                {score >= 0 ? '+' : ''}{formatNumericString(score.toFixed(2), t.locale)}
               </span>
-              <Tooltip content={description} placement="left" variant="nav">
+              <Tooltip content={translateUI(description, t)} placement="left" variant="nav">
                 <HelpCircle className="w-4 h-4 text-fg-muted" />
               </Tooltip>
             </div>
@@ -138,12 +144,12 @@ function RadioOption({
               className="flex-1 h-2 bg-canvas-inset rounded-lg appearance-none cursor-pointer"
             />
             <span className="text-xs font-mono w-12 text-right">
-              {score >= 0 ? '+' : ''}{score.toFixed(2)}
+              {score >= 0 ? '+' : ''}{formatNumericString(score.toFixed(2), t.locale)}
             </span>
           </div>
           <div className="flex justify-between text-xs text-fg-muted mt-1">
-            <span>{range.min.toFixed(2)}</span>
-            <span>{range.max.toFixed(2)}</span>
+            <span>{formatNumericString(range.min.toFixed(2), t.locale)}</span>
+            <span>{formatNumericString(range.max.toFixed(2), t.locale)}</span>
           </div>
         </div>
       )}
@@ -155,6 +161,7 @@ function RadioOption({
  * Section 2: HI/TS基因/区域重叠评估面板
  */
 export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProps) {
+  const t = useText();
   const isLoss = cnvType === 'Deletion';
 
   if (isLoss) {
@@ -164,7 +171,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
       <div className="space-y-4">
         {/* HI重叠 */}
         <div>
-          <h4 className="text-sm font-medium text-fg-default mb-2">与已建立HI基因/区域的重叠</h4>
+          <h4 className="text-sm font-medium text-fg-default mb-2">{t("tasks.overlapWithEstablishedHiGeneRegiond01505")}</h4>
           <div className="space-y-2">
             {(Object.entries(LOSS_HI_OPTIONS) as [Section2LossHIOption, typeof LOSS_HI_OPTIONS['2A']][]).map(
               ([key, option]) => (
@@ -172,8 +179,8 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
                   key={key}
                   id={`section2-hi-${key}`}
                   name="section2-hi"
-                  label={option.label}
-                  description={option.description}
+                  label={translateUI(option.label, t)}
+                  description={translateUI(option.description, t)}
                   score={lossCriteria.hiOverlap.selected === key ? lossCriteria.hiOverlap.score : option.defaultScore}
                   checked={lossCriteria.hiOverlap.selected === key}
                   onChange={() => onChange({
@@ -194,7 +201,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
 
         {/* 良性区域重叠 */}
         <div>
-          <h4 className="text-sm font-medium text-fg-default mb-2">与已建立良性区域的重叠</h4>
+          <h4 className="text-sm font-medium text-fg-default mb-2">{t("tasks.overlapWithEstablishedBenignRegion311272")}</h4>
           <div className="space-y-2">
             {(Object.entries(LOSS_BENIGN_OPTIONS) as [Section2LossBenignOption, typeof LOSS_BENIGN_OPTIONS['2F']][]).map(
               ([key, option]) => (
@@ -202,8 +209,8 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
                   key={key}
                   id={`section2-benign-${key}`}
                   name="section2-benign"
-                  label={option.label}
-                  description={option.description}
+                  label={translateUI(option.label, t)}
+                  description={translateUI(option.description, t)}
                   score={option.defaultScore}
                   checked={lossCriteria.benignOverlap.selected === key}
                   onChange={() => onChange({
@@ -218,7 +225,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
 
         {/* HI预测器 */}
         <div>
-          <h4 className="text-sm font-medium text-fg-default mb-2">HI预测器</h4>
+          <h4 className="text-sm font-medium text-fg-default mb-2">{t("tasks.hiPredictors35d364")}</h4>
           <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-canvas-subtle cursor-pointer">
             <input
               type="checkbox"
@@ -230,7 +237,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
               className="w-4 h-4 text-accent-fg focus:ring-accent-emphasis"
             />
             <div className="flex-1 flex items-center justify-between">
-              <span className="text-sm text-fg-default">2H. 多个HI预测器建议至少一个基因是HI</span>
+              <span className="text-sm text-fg-default">{t("tasks.hMultipleHiPredictorsSupportAtLeastb6e105")}</span>
               <span className="text-xs font-mono text-success-fg">+0.15</span>
             </div>
           </label>
@@ -246,7 +253,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
     <div className="space-y-4">
       {/* TS重叠 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-2">与已建立TS基因/区域的重叠</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-2">{t("tasks.overlapWithEstablishedTsGeneRegion30eca9")}</h4>
         <div className="space-y-2">
           {(Object.entries(GAIN_TS_OPTIONS) as [Section2GainTSOption, typeof GAIN_TS_OPTIONS['2A']][]).map(
             ([key, option]) => (
@@ -254,8 +261,8 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
                 key={key}
                 id={`section2-ts-${key}`}
                 name="section2-ts"
-                label={option.label}
-                description={option.description}
+                label={translateUI(option.label, t)}
+                description={translateUI(option.description, t)}
                 score={option.defaultScore}
                 checked={gainCriteria.tsOverlap.selected === key}
                 onChange={() => onChange({
@@ -270,7 +277,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
 
       {/* 良性区域重叠 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-2">与已建立良性区域的重叠</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-2">{t("tasks.overlapWithEstablishedBenignRegion311272")}</h4>
         <div className="space-y-2">
           {(Object.entries(GAIN_BENIGN_OPTIONS) as [Section2GainBenignOption, typeof GAIN_BENIGN_OPTIONS['2C']][]).map(
             ([key, option]) => (
@@ -278,8 +285,8 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
                 key={key}
                 id={`section2-benign-${key}`}
                 name="section2-benign"
-                label={option.label}
-                description={option.description}
+                label={translateUI(option.label, t)}
+                description={translateUI(option.description, t)}
                 score={gainCriteria.benignOverlap.selected === key ? gainCriteria.benignOverlap.score : option.defaultScore}
                 checked={gainCriteria.benignOverlap.selected === key}
                 onChange={() => onChange({
@@ -300,7 +307,7 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
 
       {/* HI基因重叠 */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-2">与已建立HI基因的重叠</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-2">{t("tasks.overlapWithEstablishedHiGeneb4e81c")}</h4>
         <div className="space-y-2">
           {(Object.entries(GAIN_HI_OPTIONS) as [Section2GainHIOption, typeof GAIN_HI_OPTIONS['2H']][]).map(
             ([key, option]) => (
@@ -308,8 +315,8 @@ export function Section2Panel({ cnvType, criteria, onChange }: Section2PanelProp
                 key={key}
                 id={`section2-hi-${key}`}
                 name="section2-hi"
-                label={option.label}
-                description={option.description}
+                label={translateUI(option.label, t)}
+                description={translateUI(option.description, t)}
                 score={gainCriteria.hiOverlap.selected === key ? gainCriteria.hiOverlap.score : option.defaultScore}
                 checked={gainCriteria.hiOverlap.selected === key}
                 onChange={() => onChange({

@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -30,6 +33,7 @@ interface RoleTagProps {
  * <RoleTag role="interpreter" />
  */
 export function RoleTag({ role, className }: RoleTagProps) {
+  const t = useText();
   const config = ROLE_CONFIG[role];
   if (!config) {
     return null;
@@ -37,7 +41,7 @@ export function RoleTag({ role, className }: RoleTagProps) {
 
   return (
     <Tag variant={config.variant} className={className}>
-      {config.label}
+      {translateUI(config.label, t)}
     </Tag>
   );
 }
@@ -89,6 +93,7 @@ interface TaskStatusTagProps {
  * <TaskStatusTag status="completed" />
  */
 export function TaskStatusTag({ status, className }: TaskStatusTagProps) {
+  const t = useText();
   const config = TASK_STATUS_CONFIG[status];
   if (!config) {
     return null;
@@ -96,7 +101,7 @@ export function TaskStatusTag({ status, className }: TaskStatusTagProps) {
 
   return (
     <Tag variant={config.variant} className={className}>
-      {config.label}
+      {translateUI(config.label, t)}
     </Tag>
   );
 }

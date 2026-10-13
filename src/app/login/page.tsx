@@ -1,4 +1,8 @@
-﻿'use client';
+'use client';
+﻿
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -13,6 +17,7 @@ import { ApiError } from '@/lib/api';
 import { DnaHelix } from '@/components/DnaHelix';
 
 export default function LoginPage() {
+  const t = useText();
   const router = useRouter();
   const { login, isLoading: authLoading, isAuthenticated } = useAuth();
   const [email, setEmail] = React.useState('');
@@ -44,12 +49,12 @@ export default function LoginPage() {
     setError('');
 
     if (!email || !password) {
-      setError('请输入邮箱和密码');
+      setError(t("auth.enterEmailAndPassword36ec7e"));
       return;
     }
 
     if (privacyConsentRequired && !agreePrivacy) {
-      setError('请阅读并确认已了解隐私政策');
+      setError(t("auth.readAndAcknowledgeThePrivacyPolicy36dcb7"));
       return;
     }
 
@@ -61,9 +66,9 @@ export default function LoginPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         const data = err.data as { error?: string } | null;
-        setError(data?.error || '登录失败，请检查邮箱和密码');
+        setError(data?.error || t("auth.signInFailedCheckEmailAndPassworda5a78d"));
       } else {
-        setError('网络错误，请稍后重试');
+        setError(t("auth.networkErrorRetryLatereb9dcb"));
       }
       setLoading(false);
     }
@@ -85,15 +90,14 @@ export default function LoginPage() {
               <span className="yj-brand-mark"><Image src="/logo.svg" alt="" width={28} height={28} className="object-contain" /></span>
               <span>YiJian</span>
             </div>
-            <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">登录</h1>
-            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">贻鉴 · 遗传病胚系突变分析平台</p>
+            <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">{t("auth.signIn21f1e8")}</h1>
+            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">{t("auth.yijianGermlineAnalysisForInheritedDisorders331105")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form space-y-5">
             {accountDeleted && !error && (
               <div className="rounded-md border border-success-muted bg-success-subtle p-3.5 text-sm text-success-fg">
-                账户已删除，当前会话已安全退出。
-              </div>
+                {t("auth.accountDeletedThisSessionWasSignedOut0d0bfb")}</div>
             )}
             {error && (
               <div role="alert" className="yj-public-alert rounded-xl p-3.5 text-sm">
@@ -103,11 +107,11 @@ export default function LoginPage() {
 
             <Input
               id="email"
-              aria-label="邮箱"
+              aria-label={t("settings.email9ed627")}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="邮箱"
+              placeholder={t("settings.email9ed627")}
               autoComplete="email"
               autoFocus
               className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
@@ -116,11 +120,11 @@ export default function LoginPage() {
             <div className="relative">
               <Input
                 id="password"
-                aria-label="密码"
+                aria-label={t("auth.passwordc839a8")}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="密码"
+                placeholder={t("auth.passwordc839a8")}
                 autoComplete="current-password"
                 className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
               />
@@ -128,7 +132,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted transition-colors hover:text-fg-default"
-                aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                aria-label={showPassword ? t("auth.hidePasswordc97042") : t("auth.showPasswordf60cb7")}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
@@ -142,7 +146,7 @@ export default function LoginPage() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
-                <span className="text-[var(--yj-text-muted)]">记住我</span>
+                <span className="text-[var(--yj-text-muted)]">{t("auth.rememberMeb55c15")}</span>
               </label>
             </div>
 
@@ -155,35 +159,31 @@ export default function LoginPage() {
                   className="mt-0.5 h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
                 <span className="text-sm leading-relaxed text-[var(--yj-text-muted)]">
-                  我已阅读并了解{' '}
+                  {t("auth.iHaveReadAndUnderstood1d26a6")}{' '}
                   <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">
-                    《隐私政策》
-                  </Link>
+                    {t("auth.privacyPolicya09ce1")}</Link>
                 </span>
               </label>
             )}
 
-            <Button loading={loading} loadingLabel="登录中..."
+            <Button loading={loading} loadingLabel={t("auth.signingInec507d")}
               type="submit"
               variant="primary"
               className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
               disabled={loading || (privacyConsentRequired && !agreePrivacy)}
               leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
             >
-              登录
-            </Button>
+              {t("auth.signIn21f1e8")}</Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
-            没有账号？{' '}
+            {t("auth.noAccounte15c6e")}{' '}
             <Link href="/register" className="font-medium text-success-fg hover:underline">
-              注册
-            </Link>
+              {t("auth.registerda0e5f")}</Link>
           </p>
 
           <p className="mt-8 text-center text-xs text-[var(--yj-text-muted)] lg:hidden">
-            © 2024–{new Date().getFullYear()} SchemaBio. All rights reserved.
-          </p>
+            © 2024–{new Date().getFullYear()}  {t("interface.schemabioAllRightsReservedfbafaf")} </p>
         </div>
       </div>
     </div>

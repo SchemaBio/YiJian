@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
@@ -18,11 +23,11 @@ import type { Sample } from './types';
 import { GENDER_CONFIG } from './types';
 import { downloadSampleList } from '@/lib/sample-export';
 
-function formatDateTime(value: string): string {
+function formatDateTime(value: string, t: TextTranslator = chineseText): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value || '-'
-    : date.toLocaleString('zh-CN', { hour12: false });
+    : date.toLocaleString(t.locale, { hour12: false });
 }
 
 function areSamplesEqual(previous: Sample[], next: Sample[]): boolean {
@@ -71,8 +76,9 @@ function uniqueSamplesById(samples: Sample[]): Sample[] {
 }
 
 function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
+  const t = useText();
   if (!hpoTerms || hpoTerms.length === 0) {
-    return <span className="text-xs text-fg-muted">未录入</span>;
+    return <span className="text-xs text-fg-muted">{t("samples.notEnteredd4bcc9")}</span>;
   }
 
   const visibleTerms = hpoTerms.slice(0, 2);
@@ -91,7 +97,7 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
         </div>
       }
     >
-      <div tabIndex={0} role="group" aria-label="HPO 表型详情" className="flex flex-wrap gap-1">
+      <div tabIndex={0} role="group" aria-label={t("samples.hpoPhenotypeDetailsad6278")} className="flex flex-wrap gap-1">
         {visibleTerms.map((term) => (
           <span
             key={term.id}
@@ -111,36 +117,37 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
 }
 
 function MatchedCell({ sample }: { sample: Sample }) {
+  const t = useText();
   const status = {
     matched: {
-      label: '已匹配',
-      detail: sample.matchMode === 'manual' ? '已由用户手动选择 Read1/Read2，自动匹配不会覆盖。' : '系统已按样本内部编号自动匹配 Read1/Read2。',
+      label: t("samples.matched113028"),
+      detail: sample.matchMode === 'manual' ? t("samples.readReadWereSelectedManuallyAutomaticMatching8468aa") : t("samples.readReadWereMatchedAutomaticallyUsingThe469d88"),
       className: 'border-success-muted bg-success-subtle text-success-fg',
       icon: <CheckCircle className="h-3.5 w-3.5" />,
     },
     partial: {
-      label: '部分匹配',
-      detail: '系统只找到 Read1 或 Read2，请补充另一端数据或手动关联。',
+      label: t("samples.partiallyMatched4915a9"),
+      detail: t("samples.onlyReadOrReadWasFoundAdd026051"),
       className: 'border-warning-muted bg-warning-subtle text-warning-fg',
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
     conflict: {
-      label: '匹配冲突',
-      detail: '发现多个同名候选，系统不会自动选择，请手动关联。',
+      label: t("samples.matchingConflict19785d"),
+      detail: t("samples.multipleCandidatesShareThisNameAutomaticSelection208086"),
       className: 'border-danger-muted bg-danger-subtle text-danger-fg',
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
     missing: {
-      label: '文件缺失',
-      detail: '已关联的数据已到期或无法访问，请重新上传并关联。',
+      label: t("data.fileMissingc3b3e1"),
+      detail: t("samples.linkedDataExpiredOrIsInaccessibleUpload5125bc"),
       className: 'border-danger-muted bg-danger-subtle text-danger-fg',
       icon: <XCircle className="h-3.5 w-3.5" />,
     },
     unmatched: {
-      label: sample.autoMatchEnabled ? '待匹配' : '未启用',
+      label: sample.autoMatchEnabled ? t("samples.awaitingMatching638d40") : t("samples.notEnabled8bb38e"),
       detail: sample.autoMatchEnabled
-        ? '系统定时按文件名中的样本编号匹配 Read1/Read2，也可立即手动关联。'
-        : '此样本未启用自动匹配，可手动关联数据。',
+        ? t("samples.theSystemPeriodicallyMatchesReadReadBye48384")
+        : t("samples.automaticMatchingIsDisabledForThisSamplef69a52"),
       className: 'border-border-default bg-canvas-subtle text-fg-muted',
       icon: <XCircle className="h-3.5 w-3.5" />,
     },
@@ -153,10 +160,10 @@ function MatchedCell({ sample }: { sample: Sample }) {
         {sample.matchedPair && <><p><span className="text-fg-muted">R1:</span> {sample.matchedPair.r1Path}</p><p><span className="text-fg-muted">R2:</span> {sample.matchedPair.r2Path}</p></>}
       </div>
     }>
-      <div tabIndex={0} role="group" aria-label="测序数据匹配详情" className="inline-flex flex-col items-center gap-1">
+      <div tabIndex={0} role="group" aria-label={t("samples.sequencingDataMatchingDetails18b064")} className="inline-flex flex-col items-center gap-1">
         <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium ${status.className}`}>
           {status.icon}
-          {status.label}
+          {translateUI(status.label, t)}
         </span>
       </div>
     </HoverHint>
@@ -164,6 +171,7 @@ function MatchedCell({ sample }: { sample: Sample }) {
 }
 
 export default function SamplesPage() {
+  const t = useText();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isNewSampleModalOpen, setIsNewSampleModalOpen] = React.useState(false);
   const [editingSample, setEditingSample] = React.useState<Sample | null>(null);
@@ -202,11 +210,11 @@ export default function SamplesPage() {
       setReadFailed(false);
     } catch (err) {
       setReadFailed(true);
-      setSamplesError(err instanceof Error ? err.message : '样本读取失败');
+      setSamplesError(err instanceof Error ? errorText(err, t) : t("samples.unableToReadSampledeec2e"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     void loadSamples();
@@ -215,13 +223,12 @@ export default function SamplesPage() {
   }, [loadSamples]);
 
   const handleDownloadTemplate = () => {
-    const templateContent = `样本编号,内部编号,性别,样本类型,批次,临床诊断
-S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
+    const templateContent = t("samples.sampleIdInternalIdSexSampleType463874");
     const blob = new Blob(['\ufeff' + templateContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = '样本导入模板.csv';
+    link.download = t("samples.sampleImportTemplateCsvd79af8");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -245,12 +252,12 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       const created = await api.post<unknown>('/v1/samples', samplePayload(data));
       const createdSample = normalizeSample(created);
       if (!createdSample.id) {
-        throw new Error('样本已创建，但服务器未返回样本 ID');
+        throw new Error(t("samples.sampleCreatedButTheServerReturnedNo63d533"));
       }
       setSamples((prev) => uniqueSamplesById([createdSample, ...prev]));
       setSamplesError('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create sample';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToCreateSample8156e2");
       setSamplesError(message);
       throw new Error(message);
     }
@@ -263,7 +270,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       setEditingSample(null);
       setSamplesError('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update sample';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToUpdateSample09681f");
       setSamplesError(message);
       throw new Error(message);
     }
@@ -292,7 +299,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     }
     if (failedTargets.length > 0) {
       setDeleteTargets(failedTargets);
-      const message = `${failedTargets.length} 个样本删除失败，请重试`;
+      const message = t("samples.unableToDeleteSamplesRetryc2e2ec", {p0: String(failedTargets.length)});
       setSamplesError(message);
       throw new Error(message);
     }
@@ -306,7 +313,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
   const columns: Column<Sample>[] = [
     {
       id: 'internalId',
-      header: '内部编号',
+      header: t("data.internalIdabcc9d"),
       accessor: (row) => <HoverText value={row.internalId} className="text-sm font-semibold text-[var(--yj-text-strong)]" />,
       width: 154,
       minWidth: 140,
@@ -322,21 +329,21 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'createdAt',
-      header: '创建时间',
-      accessor: (row) => <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt)}</span>,
+      header: t("admin.createdAt84e380"),
+      accessor: (row) => <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt, t)}</span>,
       width: 156,
       minWidth: 150,
       maxWidth: 190,
     },
     {
       id: 'gender',
-      header: '性别',
+      header: t("samples.sexfe8aa4"),
       accessor: (row) => {
         const gender = GENDER_CONFIG[row.gender];
         return (
           <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium ${gender.color}`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-            {gender.label}
+            {translateUI(gender.label, t)}
           </span>
         );
       },
@@ -347,10 +354,10 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'age',
-      header: '年龄',
+      header: t("samples.age28c02e"),
       accessor: (row) => row.age !== undefined
-        ? <span className="whitespace-nowrap text-sm tabular-nums text-fg-default">{row.age} 岁</span>
-        : <span className="text-xs text-fg-muted">未录入</span>,
+        ? <span className="whitespace-nowrap text-sm tabular-nums text-fg-default">{row.age} {t("samples.yearsb4e3bd")}</span>
+        : <span className="text-xs text-fg-muted">{t("samples.notEnteredd4bcc9")}</span>,
       width: 78,
       minWidth: 72,
       maxWidth: 96,
@@ -358,10 +365,10 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'sampleType',
-      header: '样本类型',
+      header: t("samples.sampleType686c81"),
       accessor: (row) => (
         <span className="inline-flex whitespace-nowrap rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-subtle)] px-2 py-1 text-xs text-fg-default">
-          {row.sampleType}
+          {t(row.sampleType)}
         </span>
       ),
       width: 96,
@@ -371,20 +378,20 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'batch',
-      header: '批次',
+      header: t("samples.batch6b2cf2"),
       accessor: (row) => row.batch
         ? <HoverHint content={row.batch}><span className="block truncate font-mono text-xs text-fg-default" >{row.batch}</span></HoverHint>
-        : <span className="text-xs text-fg-muted">未分配</span>,
+        : <span className="text-xs text-fg-muted">{t("samples.unassigned3bb92e")}</span>,
       width: 132,
       minWidth: 120,
       maxWidth: 190,
     },
     {
       id: 'clinicalDiagnosis',
-      header: '临床诊断',
+      header: t("samples.clinicalDiagnosis654a81"),
       accessor: (row) => (
         <HoverHint content={row.clinicalDiagnosis}><span className={`block max-w-[240px] truncate text-sm ${row.clinicalDiagnosis ? 'text-fg-default' : 'text-fg-muted'}`} >
-          {row.clinicalDiagnosis || '未录入'}
+          {row.clinicalDiagnosis || t("samples.notEnteredd4bcc9")}
         </span></HoverHint>
       ),
       width: 210,
@@ -393,7 +400,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'hpoTerms',
-      header: 'HPO 表型',
+      header: t("samples.hpoPhenotypesaa3ea5"),
       accessor: (row) => <HpoCell hpoTerms={row.hpoTerms} />,
       width: 176,
       minWidth: 160,
@@ -401,7 +408,7 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'matchedPair',
-      header: '测序数据',
+      header: t("samples.sequencingDataef4c3a"),
       accessor: (row) => <MatchedCell sample={row} />,
       width: 126,
       minWidth: 118,
@@ -410,10 +417,10 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'remark',
-      header: '备注',
+      header: t("admin.notese03614"),
       accessor: (row) => (
         <span className={row.remark ? 'block max-w-[180px] truncate text-sm text-fg-default' : 'text-xs text-fg-muted'}>
-          {row.remark || '无'}
+          {row.remark || t("samples.none720777")}
         </span>
       ),
       width: 160,
@@ -422,12 +429,12 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
     },
     {
       id: 'actions',
-      header: '操作',
+      header: t("admin.actionsf3ea6d"),
       accessor: (row) => (
         <TableActions>
-          <TableAction label="关联" leftIcon={<Link2 />} hint={row.matchedPair ? '更新数据关联' : '手动关联数据'} aria-label="关联测序数据" onClick={() => setLinkingSample(row)} />
-          <TableAction action="edit" label="编辑" onClick={() => setEditingSample(row)} />
-          <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleteTargets([row])} />
+          <TableAction label={t("samples.linkdc91aa")} leftIcon={<Link2 />} hint={row.matchedPair ? t("samples.updateDataAssociation3bcbb3") : t("samples.linkDataManuallydb3c91")} aria-label={t("samples.linkSequencingData7a6f18")} onClick={() => setLinkingSample(row)} />
+          <TableAction action="edit" label={t("admin.edita7f814")} onClick={() => setEditingSample(row)} />
+          <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" onClick={() => setDeleteTargets([row])} />
         </TableActions>
       ),
       width: 194,
@@ -443,26 +450,24 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="yj-page-title">
-            样本管理
-          </h2>
+            {t("samples.sampleManagement824d92")}</h2>
           <p className="mt-2 text-sm text-fg-muted">
-            管理样本登记、临床信息和测序数据匹配状态
-          </p>
+            {t("samples.manageSampleRegistrationClinicalInformationAndSequencing452c6a")}</p>
         </div>
         <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:w-auto sm:grid-cols-3">
           <MetricTile
-            label="样本总数"
+            label={t("common.totalSamplesd7dd99")}
             value={hasLoaded ? samples.length : '—'}
             icon={<Database className="h-4 w-4" />}
           />
           <MetricTile
-            label="已匹配"
+            label={t("samples.matched113028")}
             value={hasLoaded ? matchedCount : '—'}
             icon={<FileCheck className="h-4 w-4" />}
             tone="success"
           />
           <MetricTile
-            label="待匹配"
+            label={t("samples.awaitingMatching638d40")}
             value={hasLoaded ? unmatchedCount : '—'}
             icon={<AlertCircle className="h-4 w-4" />}
             tone="warning"
@@ -476,27 +481,26 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             <div className="w-full max-w-[380px]">
               <Input
                 id="samples-search"
-                placeholder="搜索样本编号、内部编号、批次或诊断..."
+                placeholder={t("samples.searchSampleIdInternalIdBatchOr92f74f")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftElement={<Search className="h-4 w-4" />}
               />
             </div>
             <span className="text-sm text-fg-muted">
-              {hasLoaded ? `当前显示 ${filteredSamples.length} / ${samples.length} 条` : '—'}
+              {hasLoaded ? t("samples.showingRecordsfcdf7b", {p0: String(filteredSamples.length), p1: String(samples.length)}) : '—'}
             </span>
             {selectedRows.size > 0 && (
               <span className="whitespace-nowrap rounded-md bg-[var(--yj-sage-subtle)] px-2 py-1 text-xs font-medium text-green-700">
-                已选择 {selectedRows.size} 项
-              </span>
+                {t("samples.selected6b6312")}{selectedRows.size} {t("samples.items12de8e")}</span>
             )}
           </div>
           <div className="yj-toolbar w-full flex-wrap sm:w-auto sm:flex-nowrap">
             <Button action="export" variant="secondary" disabled={readFailed || selectedSamples.length === 0} onClick={() => {
-              try { downloadSampleList(selectedSamples); }
-              catch (cause) { setSamplesError(cause instanceof Error ? cause.message : '导出样本清单失败'); }
+              try { downloadSampleList(selectedSamples, t.locale); }
+              catch (cause) { setSamplesError(cause instanceof Error ? errorText(cause, t) : t("samples.unableToExportSampleListaf8c42")); }
             }}>
-              导出已选样本{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
+              {t("samples.exportSelectedSamples13970e")}{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
             </Button>
             <Button action="delete"
               variant="danger"
@@ -504,23 +508,21 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
               disabled={selectedSamples.length === 0}
               onClick={() => setDeleteTargets(selectedSamples)}
             >
-              批量删除{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
+              {t("samples.deleteSelected362aed")}{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
             </Button>
             <Button action="download"
               variant="secondary"
 
               onClick={handleDownloadTemplate}
             >
-              下载模板
-            </Button>
-            <HoverHint content="刷新"><Button action="refresh" variant="secondary" aria-label="刷新" disabled={loading} onClick={() => void loadSamples()} >刷新</Button></HoverHint>
+              {t("samples.downloadTemplatea3afb2")}</Button>
+            <HoverHint content={t("admin.refresh38108e")}><Button action="refresh" variant="secondary" aria-label={t("admin.refresh38108e")} disabled={loading} onClick={() => void loadSamples()} >{t("admin.refresh38108e")}</Button></HoverHint>
             <Button action="add"
               variant="primary"
 
               onClick={() => setIsNewSampleModalOpen(true)}
             >
-              新建样本
-            </Button>
+              {t("samples.newSample595c27")}</Button>
           </div>
         </div>
 
@@ -528,13 +530,13 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
           {samplesError && (
             <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
               <span>{samplesError}</span>
-              {readFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>重试读取</Button>}
+              {readFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>{t("billing.retryLoading7b4939")}</Button>}
             </div>
           )}
-          {!hasLoaded && loading ? <div className="yj-empty-state text-sm text-fg-muted">正在读取样本</div> : readFailed && samples.length === 0 ? null : filteredSamples.length > 0 ? (
+          {!hasLoaded && loading ? <div className="yj-empty-state text-sm text-fg-muted">{t("samples.loadingSamples20c029")}</div> : readFailed && samples.length === 0 ? null : filteredSamples.length > 0 ? (
             <DataTable
               data={filteredSamples}
-              columns={columns}
+              columns={localizeDisplay(columns, t)}
               rowKey="id"
               selectable
               selectionMode="multiple"
@@ -549,8 +551,8 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
             <div className="yj-empty-state">
               <div>
                 <span className="yj-empty-state-icon"><Database className="h-5 w-5" /></span>
-                <p className="text-sm font-medium text-fg-default">{searchQuery.trim() ? '没有匹配的样本' : '暂无样本'}</p>
-                <p className="mt-1 text-xs text-fg-muted">{searchQuery.trim() ? '调整搜索条件。' : '新建样本以登记临床信息和关联测序数据。'}</p>
+                <p className="text-sm font-medium text-fg-default">{searchQuery.trim() ? t("samples.noMatchingSamples9c4cc2") : t("samples.noSamples5f3ff3")}</p>
+                <p className="mt-1 text-xs text-fg-muted">{searchQuery.trim() ? t("samples.adjustSearchCriteria018995") : t("samples.createASampleToRegisterClinicalInformation03cb00")}</p>
               </div>
             </div>
           )}
@@ -584,11 +586,11 @@ S001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查`;
         onOpenChange={(open) => {
           if (!open) setDeleteTargets([]);
         }}
-        title={deleteTargets.length > 1 ? '批量删除样本' : '删除样本'}
+        title={deleteTargets.length > 1 ? t("samples.deleteMultipleSamplese8bb11") : t("samples.deleteSample09d69a")}
         message={deleteTargets.length > 1
-          ? `确定删除选中的 ${deleteTargets.length} 个样本吗？相关的数据关联也会解除，此操作无法撤销。`
-          : `确定删除样本“${deleteTargets[0]?.internalId ?? ''}”吗？相关的数据关联也会解除，此操作无法撤销。`}
-        confirmLabel={deleteTargets.length > 1 ? `删除 ${deleteTargets.length} 个样本` : '确认删除'}
+          ? t("samples.deleteSelectedSamplesDataAssociationsWillAlsocf4605", {p0: String(deleteTargets.length)})
+          : t("samples.deleteSampleDataAssociationsWillAlsoBe7e9048", {p0: String(deleteTargets[0]?.internalId ?? '')})}
+        confirmLabel={deleteTargets.length > 1 ? t("samples.deleteSamples81c572", {p0: String(deleteTargets.length)}) : t("data.confirmDeletion3c06ab")}
         variant="danger"
         onConfirm={handleDeleteSamples}
       />

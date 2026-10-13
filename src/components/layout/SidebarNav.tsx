@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -22,6 +25,7 @@ interface SidebarNavProps {
  * Supports collapsed mode with icon-only display and tooltips.
  */
 export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
+  const t = useText();
   const pathname = usePathname();
   const { isPlatformAdmin } = useAuth();
 
@@ -74,7 +78,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
         ${collapsed ? 'justify-center' : 'justify-between'}
       `}>
         {collapsed ? (
-          <Tooltip content="展开侧边栏" placement="right" variant="nav">
+          <Tooltip content={t("common.expandSidebar8ab519")} placement="right" variant="nav">
             <button
               className="flex items-center min-w-0 cursor-pointer"
               onClick={() => onCollapsedChange(false)}
@@ -83,7 +87,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
               <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
                 <Image
                   src="/logo.svg"
-                  alt="贻鉴"
+                  alt={t("common.appName")}
                   width={32}
                   height={32}
                   className="object-contain"
@@ -96,22 +100,21 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
             <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
               <Image
                 src="/logo.svg"
-                alt="贻鉴"
+                alt={t("common.appName")}
                 width={32}
                 height={32}
                 className="object-contain"
               />
             </div>
             <span className="ml-2 font-semibold text-[15px] text-fg-default truncate">
-              贻鉴
-            </span>
+              {t("common.appName")}</span>
           </div>
         )}
         {!collapsed && (
           <button
             onClick={() => onCollapsedChange(true)}
             className="p-1.5 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors duration-fast shrink-0"
-            aria-label="折叠侧边栏"
+            aria-label={t("common.collapseSidebar3a90f6")}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -143,7 +146,7 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
           <div className="px-3 mb-1.5">
             <span className="text-[11px] font-medium text-fg-muted uppercase tracking-wider">
               {visibleMainNavItems.find(item => item.href.includes(currentSection))?.label ||
-                (currentSection === 'settings' ? '系统设置' : '子菜单')}
+                (currentSection === 'settings' ? t("common.systemSettingse976ea") : t("common.submenuc1c3c6"))}
             </span>
           </div>
         )}
@@ -174,6 +177,7 @@ interface MainNavItemComponentProps {
 }
 
 function MainNavItemComponent({ item, collapsed, currentPath }: MainNavItemComponentProps) {
+  const t = useText();
   const isActive = isNavItemActive(item.href, currentPath);
   const Icon = item.icon;
 
@@ -193,14 +197,14 @@ function MainNavItemComponent({ item, collapsed, currentPath }: MainNavItemCompo
       aria-current={isActive ? 'page' : undefined}
     >
       {Icon && <Icon className="w-4 h-4 shrink-0" />}
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && <span className="truncate">{translateUI(item.label, t)}</span>}
     </Link>
   );
 
   if (collapsed) {
     return (
       <li>
-        <Tooltip content={item.label} placement="right" variant="nav">
+        <Tooltip content={translateUI(item.label, t)} placement="right" variant="nav">
           {content}
         </Tooltip>
       </li>
@@ -217,6 +221,7 @@ interface SubNavItemComponentProps {
 }
 
 function SubNavItemComponent({ item, collapsed, currentPath }: SubNavItemComponentProps) {
+  const t = useText();
   const router = useRouter();
   const itemSegments = item.href.split('/').filter(Boolean);
   const isSectionRoot = itemSegments.length === 1;
@@ -252,7 +257,7 @@ function SubNavItemComponent({ item, collapsed, currentPath }: SubNavItemCompone
       {Icon && <Icon className="w-4 h-4 shrink-0" />}
       {!collapsed && (
         <>
-          <span className="flex-1 truncate">{item.label}</span>
+          <span className="flex-1 truncate">{translateUI(item.label, t)}</span>
           {item.badge !== undefined && (
             <span className="px-1.5 py-0.5 text-xs rounded-full bg-accent-subtle text-accent-fg">
               {item.badge}
@@ -266,7 +271,7 @@ function SubNavItemComponent({ item, collapsed, currentPath }: SubNavItemCompone
   if (collapsed) {
     return (
       <li>
-        <Tooltip content={item.label} placement="right" variant="nav">
+        <Tooltip content={translateUI(item.label, t)} placement="right" variant="nav">
           {content}
         </Tooltip>
       </li>

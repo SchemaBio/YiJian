@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
@@ -19,17 +26,17 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { useUpload } from '@/components/providers/UploadProvider';
 import { ApiError } from '@/lib/api';
 
-function formatBytes(value: number): string {
+function formatBytes(value: number, t: TextTranslator = chineseText): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
-  return `${(value / 1024 ** index).toFixed(index > 1 ? 1 : 0)} ${units[index]}`;
+  return `${formatNumericString((value / 1024 ** index).toFixed(index > 1 ? 1 : 0), t.locale)} ${units[index]}`;
 }
 
-function formatTime(value?: string): string {
+function formatTime(value?: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(t.locale, { hour12: false });
 }
 
 const statusMeta = {
@@ -42,7 +49,7 @@ const statusMeta = {
   deleted: { label: '已删除', className: 'bg-canvas-subtle text-fg-muted', icon: Trash2 },
 } as const;
 
-function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploading' | 'canceling' | 'cancelled' | 'completed' | 'failed' | 'deleted') {
+function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploading' | 'canceling' | 'cancelled' | 'completed' | 'failed' | 'deleted', t: TextTranslator = chineseText) {
   const meta = statusMeta[asset.status] ?? statusMeta.failed;
   const Icon = meta.icon;
   const isCanceling = liveStatus === 'canceling';
@@ -54,7 +61,7 @@ function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploadin
     <div className="min-w-[112px]">
       <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${isCanceling || isCancelled ? statusMeta.deleting.className : isFailed ? statusMeta.failed.className : isActiveUpload ? statusMeta.uploading.className : meta.className}`}>
         <Icon className={`h-3.5 w-3.5 ${isSpinning ? 'animate-spin' : ''}`} />
-        {isCanceling ? '取消中' : isCancelled ? '已取消' : isFailed ? '失败' : isActiveUpload ? `上传中 ${progress ?? 0}%` : meta.label}
+        {isCanceling ? t("data.canceling733d8c") : isCancelled ? t("admin.canceleda5ffdc") : isFailed ? t("admin.failed3e3c80") : isActiveUpload ? t("data.uploading2c0454", {p0: String(progress ?? 0)}) : meta.label}
       </span>
       {isActiveUpload && <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress ?? 0}%` }} /></div>}
     </div>
@@ -62,6 +69,7 @@ function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploadin
 }
 
 export default function DataCenterPage() {
+  const t = useText();
   const { currentOrg } = useAuth();
   const { activeUpload, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
@@ -126,11 +134,11 @@ export default function DataCenterPage() {
     } catch (err) {
       if (requestId !== loadRequestRef.current) return;
       setLoadFailed(true);
-      setError(err instanceof Error ? err.message : '加载数据资产失败');
+      setError(err instanceof Error ? errorText(err, t) : t("data.unableToLoadDataAssets555043"));
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => { void load(''); }, [load]);
 
@@ -196,7 +204,7 @@ export default function DataCenterPage() {
   const storageQuotaBytes = isSaaS && (currentOrg?.storageQuotaBytes ?? 0) > 0
     ? currentOrg?.storageQuotaBytes ?? null
     : null;
-  const storageQuotaLabel = storageQuotaBytes ? formatBytes(storageQuotaBytes) : '无限制';
+  const storageQuotaLabel = storageQuotaBytes ? formatBytes(storageQuotaBytes, t) : t("data.unlimited725811");
   const storageQuotaReached = storageQuotaBytes !== null && totalBytes >= storageQuotaBytes;
   const storageUsagePercent = storageQuotaBytes === null ? null : (totalBytes / storageQuotaBytes) * 100;
   const storageUsageTone = storageUsagePercent === null
@@ -219,18 +227,18 @@ export default function DataCenterPage() {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '下载失败');
+      setError(err instanceof Error ? errorText(err, t) : t("data.downloadFailede0dab2"));
     }
   };
 
   const handleUpload = async () => {
-    if (!read1 && !read2) { setError('请至少选择一个 Read1 或 Read2 文件'); return; }
-    if (config?.temporary && !uploadPolicyAcknowledged) { setError('请先勾选“我已确认”'); return; }
+    if (!read1 && !read2) { setError(t("data.selectAtLeastOneReadOrReadbc8cd9")); return; }
+    if (config?.temporary && !uploadPolicyAcknowledged) { setError(t("data.selectIConfirmFirst4667d6")); return; }
     const oversizedFile = [read1, read2].find((file) => file && config?.temporary && config.max_file_size_bytes > 0 && file.size > config.max_file_size_bytes);
-    if (oversizedFile) { setError(`${oversizedFile.name} 超过 SaaS 单文件 20 GB 限制`); return; }
+    if (oversizedFile) { setError(t("data.exceedsTheSaasLimitOfGbPer9884ea", {p0: String(oversizedFile.name)})); return; }
     const selectedBytes = (read1?.size ?? 0) + (read2?.size ?? 0);
     if (storageQuotaBytes !== null && totalBytes + selectedBytes > storageQuotaBytes) {
-      setError(`所选文件将超过存储总容量（已用 ${formatBytes(totalBytes)}，总容量 ${formatBytes(storageQuotaBytes)}）`);
+      setError(t("data.selectedFilesExceedStorageCapacityUsedTotald237f7", {p0: String(formatBytes(totalBytes, t)), p1: String(formatBytes(storageQuotaBytes, t))}));
       return;
     }
     setError('');
@@ -243,7 +251,7 @@ export default function DataCenterPage() {
       setUploadPolicyAcknowledged(false);
       await load(search);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '上传失败');
+      setError(err instanceof Error ? errorText(err, t) : t("data.uploadFaileda6f805"));
     }
   };
 
@@ -262,8 +270,8 @@ export default function DataCenterPage() {
       setDeleting(null);
       await load(search);
     } catch (err) {
-      if (liveFile) markFileFailed(deleting.id, err instanceof Error ? err.message : '删除失败');
-      setError(err instanceof Error ? err.message : '删除失败');
+      if (liveFile) markFileFailed(deleting.id, err instanceof Error ? errorText(err, t) : t("data.deleteFailed72250c"));
+      setError(err instanceof Error ? errorText(err, t) : t("data.deleteFailed72250c"));
     }
   };
 
@@ -280,7 +288,7 @@ export default function DataCenterPage() {
       await load(search);
     } catch (err) {
       setCancelUploadConfirmOpen(false);
-      setError(err instanceof Error ? err.message : '取消上传失败');
+      setError(err instanceof Error ? errorText(err, t) : t("data.unableToCancelUpload7c0a32"));
     }
   };
 
@@ -293,7 +301,7 @@ export default function DataCenterPage() {
       setEditing(null);
       await load(search);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新内部编号失败');
+      setError(err instanceof Error ? errorText(err, t) : t("data.unableToUpdateInternalId2dac48"));
     } finally {
       setSavingEdit(false);
     }
@@ -303,13 +311,13 @@ export default function DataCenterPage() {
     const asset = assets.find((item) => item.id === retryAssetIdRef.current);
     if (!asset || !file) return;
     if (file.name !== asset.file_name) {
-      setError(`请选择原文件：${asset.file_name}`);
+      setError(t("data.selectTheOriginalFile8f6960", {p0: String(asset.file_name)}));
       retryAssetIdRef.current = null;
       if (retryInputRef.current) retryInputRef.current.value = '';
       return;
     }
     if (asset.file_size > 0 && file.size !== asset.file_size) {
-      setError(`文件大小不匹配：应为 ${formatBytes(asset.file_size)}`);
+      setError(t("data.fileSizeMismatchExpecteda09d26", {p0: String(formatBytes(asset.file_size, t))}));
       retryAssetIdRef.current = null;
       if (retryInputRef.current) retryInputRef.current.value = '';
       return;
@@ -320,7 +328,7 @@ export default function DataCenterPage() {
       await retryDataAsset(asset.id, file, (value) => setRetryProgress((current) => ({ ...current, [asset.id]: value })));
       await load(search);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '重试上传失败');
+      setError(err instanceof Error ? errorText(err, t) : t("data.uploadRetryFailed61b24c"));
     } finally {
       setRetryingId(null);
       setRetryProgress((current) => { const next = { ...current }; delete next[asset.id]; return next; });
@@ -332,14 +340,14 @@ export default function DataCenterPage() {
   const columns: Column<DataAsset>[] = [
     {
       id: 'file',
-      header: '文件',
+      header: t("data.file49deaf"),
       accessor: (asset) => <HoverText value={asset.file_name} className="font-medium text-fg-default" />,
       width: 260,
       minWidth: 260,
     },
     {
       id: 'internalId',
-      header: '内部编号',
+      header: t("data.internalIdabcc9d"),
       accessor: (asset) => asset.internal_id
         ? <HoverText value={asset.internal_id} className="font-medium text-fg-default" />
         : <span className="text-fg-muted">-</span>,
@@ -363,19 +371,19 @@ export default function DataCenterPage() {
     },
     {
       id: 'size',
-      header: '大小',
-      accessor: (asset) => <span className="tabular-nums text-fg-muted">{formatBytes(asset.file_size)}</span>,
+      header: t("data.sizefd2070"),
+      accessor: (asset) => <span className="tabular-nums text-fg-muted">{formatBytes(asset.file_size, t)}</span>,
       width: 100,
       minWidth: 100,
       align: 'right',
     },
     {
       id: 'provider',
-      header: '存储',
+      header: t("data.storage091ca5"),
       accessor: (asset) => (
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-fg-muted">
           {asset.provider === 's3' ? <Cloud className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}
-          {asset.provider === 's3' ? '对象存储' : '本地'}
+          {asset.provider === 's3' ? t("data.objectStorage0f1b43") : t("data.locale8666c")}
         </span>
       ),
       width: 120,
@@ -383,36 +391,36 @@ export default function DataCenterPage() {
     },
     {
       id: 'status',
-      header: '状态',
-      accessor: (asset) => assetStatus(asset, fileProgress[asset.id] ?? retryProgress[asset.id], fileLiveStatus[asset.id]),
+      header: t("admin.status62e951"),
+      accessor: (asset) => assetStatus(asset, fileProgress[asset.id] ?? retryProgress[asset.id], fileLiveStatus[asset.id], t),
       width: 140,
       minWidth: 140,
     },
     {
       id: 'createdAt',
-      header: '上传时间',
-      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{formatTime(asset.created_at)}</span>,
+      header: t("data.uploadedAt109db2"),
+      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{formatTime(asset.created_at, t)}</span>,
       width: 170,
       minWidth: 170,
     },
     {
       id: 'expiresAt',
-      header: '到期时间',
-      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at) : '永久'}</span>,
+      header: t("data.expiresAt3144a9"),
+      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at, t) : t("data.permanent409752")}</span>,
       width: 170,
       minWidth: 170,
     },
     {
       id: 'actions',
-      header: '操作',
+      header: t("admin.actionsf3ea6d"),
       accessor: (asset) => (
         <TableActions>
-          {config?.download_allowed && <TableAction action="download" label="下载" disabled={asset.status !== 'completed'}
-            hint={asset.status === 'completed' ? '下载文件' : '文件上传完成后可下载'} onClick={() => void handleDownload(asset)} />}
-          {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label="重传" hint="重新上传" aria-label="重新上传"
+          {config?.download_allowed && <TableAction action="download" label={t("data.download2b9d01")} disabled={asset.status !== 'completed'}
+            hint={asset.status === 'completed' ? t("data.downloadFile2922ce") : t("data.downloadAvailableAfterUploadCompletes289170")} onClick={() => void handleDownload(asset)} />}
+          {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label={t("data.reuploadbd40ef")} hint={t("data.uploadAgain53e50e")} aria-label={t("data.uploadAgain53e50e")}
             disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} />}
-          <TableAction action="edit" label="编辑" hint="编辑内部编号" aria-label="编辑内部编号" onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
-          <TableAction action="delete" label="删除" tone="danger" onClick={() => setDeleting(asset)} />
+          <TableAction action="edit" label={t("admin.edita7f814")} hint={t("data.editInternalId05f8a1")} aria-label={t("data.editInternalId05f8a1")} onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
+          <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" onClick={() => setDeleting(asset)} />
         </TableActions>
       ),
       width: 208,
@@ -426,15 +434,15 @@ export default function DataCenterPage() {
     <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h2 className="yj-page-title">数据中心</h2>
-          <p className="mt-2 text-sm text-fg-muted">管理组织内可用于样本匹配和分析的测序数据</p>
+          <h2 className="yj-page-title">{t("data.dataCenter189979")}</h2>
+          <p className="mt-2 text-sm text-fg-muted">{t("data.manageOrganizationSequencingDataForSampleMatching655f38")}</p>
         </div>
         <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:w-auto sm:grid-cols-3">
-          <MetricTile label="数据资产" value={hasLoaded ? assets.length : '—'} icon={<Database className="h-4 w-4" />} />
-          <MetricTile label="可用文件" value={hasLoaded ? readyCount : '—'} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
+          <MetricTile label={t("data.dataAssetsbcb32e")} value={hasLoaded ? assets.length : '—'} icon={<Database className="h-4 w-4" />} />
+          <MetricTile label={t("data.availableFiles98360c")} value={hasLoaded ? readyCount : '—'} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
           <MetricTile
-            label="占用空间 / 总容量"
-            value={hasLoaded ? `${formatBytes(totalBytes)} / ${storageQuotaLabel}` : '—'}
+            label={t("data.usedSpaceCapacity2d423e")}
+            value={hasLoaded ? `${formatBytes(totalBytes, t)} / ${storageQuotaLabel}` : '—'}
             icon={<HardDrive className="h-4 w-4" />}
             tone="info"
             capacityFill={storageUsagePercent !== null && storageUsageTone
@@ -447,52 +455,50 @@ export default function DataCenterPage() {
       {config?.temporary && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
           <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
-          <p className="whitespace-nowrap"><strong className="font-medium">数据仅保留 {config.retention_days} 天</strong><span className="ml-3 text-xs">仅支持上传和删除，文件不可下载；到期后将从对象存储自动删除。单个文件不得超过 20 GB。</span></p>
+          <p className="whitespace-nowrap"><strong className="font-medium">{t("data.dataRetainedFore9bd90")}{config.retention_days} {t("data.daysf8bb05")}</strong><span className="ml-3 text-xs">{t("data.uploadAndDeletionOnlyFilesCannotBeff9045")}</span></p>
         </div>
       )}
 
-      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>重试读取</Button>}</div>}
+      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>{t("billing.retryLoading7b4939")}</Button>}</div>}
 
       {activeUpload?.status === 'needs_file' && !recoveryChecking && (
         <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>{recoveryLookupFailed ? '暂时无法确认部分上传记录的状态，请稍后刷新重试。其余未完成记录仍可选择原文件继续，系统会优先恢复对象存储中已完成的分片。' : '上次上传在浏览器刷新后仍有未完成记录。请选择相同文件后继续，系统会优先恢复对象存储中已完成的分片。'}</span>
+            <span>{recoveryLookupFailed ? t("data.someUploadStatusesCannotBeConfirmedRefresh42ae61") : t("data.someUploadsRemainUnfinishedAfterRefreshingSelecte51a79")}</span>
             <button type="button" className="shrink-0 rounded-md border border-warning-muted px-2.5 py-1 text-xs font-medium text-warning-fg hover:bg-warning-muted/40" onClick={() => clearUpload()}>
-              放弃恢复记录
-            </button>
+              {t("data.discardRecoveryRecord683763")}</button>
           </div>
         </div>
       )}
 
       {storageQuotaReached && (
         <div className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
-          存储总容量已用尽，请删除不再需要的数据，或联系 SaaS 管理员调整容量。
-        </div>
+          {t("data.storageIsFullDeleteUnusedDataOr56d3c8")}</div>
       )}
 
       <div className="yj-panel min-w-0 overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
           <div className="flex min-w-[280px] flex-1 items-center gap-2">
             <div className="w-full max-w-[420px]">
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文件名、内部编号或 UUID" leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("data.searchFilenameInternalIdOrUuid462576")} leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
             </div>
-            <HoverHint content="刷新"><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label="刷新" onClick={() => void load(search)} /></HoverHint>
+            <HoverHint content={t("admin.refresh38108e")}><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label={t("admin.refresh38108e")} onClick={() => void load(search)} /></HoverHint>
           </div>
-          <Button action="upload" variant="primary"  disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? '正在取消…' : uploading ? `查看上传 ${progress}%` : '上传数据'}</Button>
+          <Button action="upload" variant="primary"  disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? t("data.canceling6bc0d6") : uploading ? t("data.viewUpload955ec2", {p0: String(progress)}) : t("data.uploadDatad1b00d")}</Button>
         </div>
 
         {loading ? (
-          <div className="flex h-48 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />正在加载数据资产</div>
+          <div className="flex h-48 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />{t("data.loadingDataAssetsfde260")}</div>
         ) : loadFailed && assets.length === 0 ? null : assets.length > 0 ? (
           <DataTable
             data={assets}
-            columns={columns}
+            columns={localizeDisplay(columns, t)}
             rowKey="id"
             density="compact"
             className="yj-data-table right-pinned-actions-table data-center-table"
           />
         ) : (
-          <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? '没有匹配的数据资产' : '暂无数据资产'}</p></div>
+          <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? t("data.noMatchingDataAssets29b140") : t("data.noDataAssets5862af")}</p></div>
         )}
       </div>
       <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />
@@ -500,68 +506,68 @@ export default function DataCenterPage() {
       <AppModal
         open={uploadOpen}
         size="large"
-        title="上传测序数据"
+        title={t("data.uploadSequencingDataee326e")}
         onOpenChange={(open) => { if (canceling && !open) return; setUploadOpen(open); if (!open && !uploadBusy) setUploadPolicyAcknowledged(false); }}
         footer={
           <>
-            {uploading && <Button action="upload" variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>取消上传</Button>}
-            <Button loading={uploadBusy} loadingLabel="隐藏到数据中心" variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>取消</Button>
-            <Button action="upload" variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? '取消中...' : uploading ? '上传中...' : '开始上传'}</Button>
+            {uploading && <Button action="upload" variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>{t("data.cancelUpload6b9dee")}</Button>}
+            <Button loading={uploadBusy} loadingLabel={t("data.hideInDataCenter16727b")} variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{t("admin.cancel4d0b46")}</Button>
+            <Button action="upload" variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? t("data.cancelingf44a50") : uploading ? t("data.uploadingba72be") : t("data.startUpload456565")}</Button>
           </>
         }
       >
         <div className="space-y-6">
-          {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>上传文件将在 {config.retention_days} 天后自动删除，SaaS 模式不提供下载，单个文件不得超过 20 GB。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已确认" /></div>}
-          {isSaaS && <p className="text-xs text-fg-muted">当前已用 {formatBytes(totalBytes)}，总容量 {storageQuotaLabel}。</p>}
+          {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("data.uploadedFilesAreDeletedAfter56abf0")}{config.retention_days} {t("data.daysSaasDoesNotOfferDownloadsMaximumab8001")}</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label={t("data.iConfirm7bd7e7")} /></div>}
+          {isSaaS && <p className="text-xs text-fg-muted">{t("data.currentlyUseda80723")}{formatBytes(totalBytes, t)}{t("data.totalCapacityd83765")}{storageQuotaLabel}。</p>}
           <section>
-            <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title="测序文件" description="分别选择 Read1 和 Read2；允许暂时只上传其中一个文件。" />
+            <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title={t("data.sequencingFiles55cf00")} description={t("data.selectReadAndReadSeparatelyUploadingJustcdd8fe")} />
             <div className="mb-4">
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号（推荐）</label>
-              <Input value={internalId} disabled={uploadBusy} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder="填写样本中心的内部编号，如 SAMPLE-001" />
-              <p className="mt-1.5 text-xs text-fg-muted">自动匹配将优先使用此编号；未填写时才根据 FASTQ 文件名匹配。</p>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("data.internalIdRecommendedb0481f")}</label>
+              <Input value={internalId} disabled={uploadBusy} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder={t("data.enterTheInternalIdFromSamplesEe7533f")} />
+              <p className="mt-1.5 text-xs text-fg-muted">{t("data.automaticMatchingPrefersThisIdFilenamesAred0991f")}</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><FilePicker label="Read1 文件" accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read1} disabled={uploadBusy} onChange={setRead1} /></div>
-              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label="Read2 文件" accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={uploadBusy} onChange={setRead2} /></div>
+              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><FilePicker label={t("data.readFilese79622")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read1} disabled={uploadBusy} onChange={setRead1} /></div>
+              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label={t("data.readFiles88c0f2")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={uploadBusy} onChange={setRead2} /></div>
             </div>
           </section>
-          {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? '正在取消上传' : '上传进度'} description={canceling ? '正在终止传输并清理对象存储，请稍候。' : '请保持页面打开，文件完成后会自动登记到数据中心。'} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? '取消中' : '正在上传'}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
+          {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? t("data.cancelingUpload5eb505") : t("data.uploadProgress211354")} description={canceling ? t("data.stoppingTransferAndCleaningObjectStoragePlease8085f0") : t("data.keepThisPageOpenCompletedFilesArecc7e43")} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? t("data.canceling733d8c") : t("data.uploadingf8d6e4")}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
         </div>
       </AppModal>
 
       <AppModal
         open={editing !== null}
         size="small"
-        title="编辑内部编号"
+        title={t("data.editInternalId05f8a1")}
         onOpenChange={(open) => { if (!open && !savingEdit) setEditing(null); }}
-        footer={<><Button variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>取消</Button><Button loading={savingEdit} loadingLabel="保存中..." action="save" variant="primary" disabled={savingEdit} onClick={() => void handleEdit()}>保存</Button></>}
+        footer={<><Button variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>{t("admin.cancel4d0b46")}</Button><Button loading={savingEdit} loadingLabel={t("admin.savingd70d42")} action="save" variant="primary" disabled={savingEdit} onClick={() => void handleEdit()}>{t("data.savefadf24")}</Button></>}
       >
         <div className="space-y-3">
           <p className="text-sm text-fg-muted">{editing?.file_name}</p>
-          <label className="block text-xs font-medium text-fg-muted">样本中心内部编号</label>
-          <Input value={editingInternalId} maxLength={100} disabled={savingEdit} onChange={(event) => setEditingInternalId(event.target.value)} placeholder="如 SAMPLE-001" />
-          <p className="text-xs leading-5 text-fg-muted">保存后自动匹配会优先使用该编号；清空后恢复文件名匹配。</p>
+          <label className="block text-xs font-medium text-fg-muted">{t("data.sampleInternalIde68c77")}</label>
+          <Input value={editingInternalId} maxLength={100} disabled={savingEdit} onChange={(event) => setEditingInternalId(event.target.value)} placeholder={t("data.forExampleSample7b660b")} />
+          <p className="text-xs leading-5 text-fg-muted">{t("data.automaticMatchingWillPreferThisIdClear7d750c")}</p>
         </div>
       </AppModal>
 
       <AppModal
         open={cancelUploadConfirmOpen}
         size="small"
-        title="取消整个上传任务"
+        title={t("data.cancelEntireUpload56f75f")}
         onOpenChange={(open) => { if (!canceling) setCancelUploadConfirmOpen(open); }}
-        footer={<><Button action="upload" variant="secondary" disabled={canceling} onClick={() => setCancelUploadConfirmOpen(false)}>继续上传</Button><Button loading={canceling} loadingLabel="取消中..." variant="danger" disabled={canceling} onClick={() => void handleCancelUpload()}>确认取消并删除</Button></>}
+        footer={<><Button action="upload" variant="secondary" disabled={canceling} onClick={() => setCancelUploadConfirmOpen(false)}>{t("data.continueUploadade9a3")}</Button><Button loading={canceling} loadingLabel={t("data.cancelingf44a50")} variant="danger" disabled={canceling} onClick={() => void handleCancelUpload()}>{t("data.confirmCancellationAndDeletiond7ceb6")}</Button></>}
       >
-        <p className="text-sm leading-6 text-fg-muted">将取消整个上传任务并删除该任务中的所有文件（包括已经完成的 Read1/Read2）。此操作无法撤销。</p>
+        <p className="text-sm leading-6 text-fg-muted">{t("data.cancelTheEntireUploadAndDeleteAlla3c6d1")}</p>
       </AppModal>
 
       <AppModal
         open={deleting !== null}
         size="small"
-        title="删除数据资产"
+        title={t("data.deleteDataAsset5e81e5")}
         onOpenChange={(open) => { if (!open) setDeleting(null); }}
-        footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>取消</Button><Button action="delete" variant="danger"  onClick={() => void handleDelete()}>确认删除</Button></>}
+        footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>{t("admin.cancel4d0b46")}</Button><Button action="delete" variant="danger"  onClick={() => void handleDelete()}>{t("data.confirmDeletion3c06ab")}</Button></>}
       >
-        <p className="text-sm leading-6 text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p>
+        <p className="text-sm leading-6 text-fg-muted">{t("data.permanentlyDeletef2b694")}<span className="font-medium text-fg-default">{deleting?.file_name}</span> {t("data.andItsStoredObjectThisCannotBe97aee3")}</p>
       </AppModal>
     </div>
   );

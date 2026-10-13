@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { IconActionButton } from '@/components/shared/ActionButton';
 
 
@@ -21,6 +24,7 @@ interface UUIDCellProps {
  * - MongoDB ObjectId: 前8位
  */
 export function UUIDCell({ uuid, truncateLength = 8 }: UUIDCellProps) {
+  const t = useText();
   const [copied, setCopied] = React.useState(false);
 
   const truncated = uuid.slice(0, truncateLength);
@@ -42,7 +46,7 @@ export function UUIDCell({ uuid, truncateLength = 8 }: UUIDCellProps) {
       <span className="font-mono text-xs text-accent-fg hover:underline cursor-pointer">
         {isTruncated ? truncated : uuid}
       </span>
-      <IconActionButton action={copied ? 'copied' : 'copy'} size="small" label={copied ? '已复制完整 UUID' : '复制完整UUID'} variant="ghost"
+      <IconActionButton action={copied ? 'copied' : 'copy'} size="small" label={copied ? t("samples.fullUuidCopiedc4ecd4") : t("samples.copyFullUuid0a8b07")} variant="ghost"
         onClick={handleCopy}
         className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 rounded hover:bg-canvas-subtle transition-opacity"
       />

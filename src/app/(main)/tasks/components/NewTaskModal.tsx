@@ -1,4 +1,11 @@
 'use client';
+import { LocalizedError } from '@/i18n/errors';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -37,6 +44,7 @@ interface NewTaskModalProps {
 }
 
 export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
+  const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [sampleSearch, setSampleSearch] = React.useState('');
   const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
@@ -80,7 +88,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          setResourceError(err instanceof Error ? err.message : '加载任务资源失败');
+          setResourceError(err instanceof Error ? errorText(err, t) : t("tasks.unableToLoadTaskResources12ee7c"));
         }
       } finally {
         if (!cancelled) setLoadingResources(false);
@@ -113,7 +121,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       value: t.name,
       label: t.displayName && t.displayName !== t.name ? `${t.displayName} (${t.name})` : t.name,
     }));
-  }, [pipelines, templates]);
+  }, [pipelines, templates, t]);
 
   const resolveTemplate = (pipeline: TaskPipelineOption | undefined) => {
     if (pipeline?.template) return pipeline.template;
@@ -148,7 +156,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       .then((estimate) => {
         if (cancelled) return;
         const minutes = Math.max(1, Math.ceil(Number(estimate.estimated_minutes)));
-        if (!Number.isFinite(minutes)) throw new Error('Invalid task estimate');
+        if (!Number.isFinite(minutes)) throw new LocalizedError("interface.invalidTaskEstimateb0d35f", undefined, "Invalid task estimate");
         setEstimatedMinutes(minutes);
         setEstimateStatus('ready');
       })
@@ -205,7 +213,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       });
       handleClose();
     } catch (err) {
-      setResourceError(err instanceof Error ? err.message : '创建任务失败');
+      setResourceError(err instanceof Error ? errorText(err, t) : t("tasks.unableToCreateTaskc0144e"));
     } finally {
       setSubmitting(false);
     }
@@ -227,19 +235,18 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && handleClose()}
-      title="新建分析任务"
+      title={t("tasks.newAnalysisTask1d4697")}
       size="large"
       footer={
         <>
-          <Button variant="secondary" onClick={handleClose} disabled={submitting}>取消</Button>
-          <Button action="add" loading={submitting} loadingLabel="创建中..."
+          <Button variant="secondary" onClick={handleClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
+          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")}
             variant="primary"
             onClick={handleSubmit}
             disabled={loadingResources || submitting || !selectedSample || !selectedPipeline}
 
           >
-            创建任务
-          </Button>
+            {t("tasks.createTaskcf42fd")}</Button>
         </>
       }
     >
@@ -247,8 +254,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         {loadingResources && (
           <div className="flex items-center gap-2 text-sm text-fg-muted">
             <Loader2 className="w-4 h-4 animate-spin" />
-            正在加载样本和流程...
-          </div>
+            {t("tasks.loadingSamplesAndPipelinesfebc8d")}</div>
         )}
         {resourceError && (
           <div className="text-sm text-danger-fg bg-danger-subtle border border-danger-emphasis rounded-md px-3 py-2">
@@ -259,14 +265,14 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         <section>
           <ModalSectionHeading
             icon={<SlidersHorizontal className="h-4 w-4" />}
-            title="任务配置"
-            description="选择待分析样本和分析流程，系统将根据匹配数据估算运行时长"
+            title={t("tasks.taskSettings9323d0")}
+            description={t("tasks.selectASampleAndPipelineRuntimeIs8d0a44")}
           />
           <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">选择样本 *</label>
+          <label className="block text-sm font-medium text-fg-default mb-2">{t("tasks.selectSample47fc82")}</label>
           <div className="relative mb-2">
-            <Input placeholder="搜索样本编号或内部编号..." value={sampleSearch} onChange={(e) => setSampleSearch(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
+            <Input placeholder={t("tasks.searchSampleOrInternalId698a41")} value={sampleSearch} onChange={(e) => setSampleSearch(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
           </div>
           <div className="border border-border rounded-md max-h-40 overflow-y-auto">
             {filteredSamples.map(sample => (
@@ -278,34 +284,34 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
                 <div className="text-sm font-mono">{sample.id.substring(0, 8)}...</div>
                 <div className="text-xs text-fg-muted">
                   {sample.internalId}
-                  {!sample.matchedPair ? ' · 等待测序数据' : ' · R1/R2 已就绪'}
+                  {!sample.matchedPair ? t("tasks.awaitingSequencingData4671bd") : t("tasks.rRReady50a422")}
                 </div>
               </div>
             ))}
             {filteredSamples.length === 0 && (
-              <div className="px-3 py-4 text-center text-sm text-fg-muted">未找到匹配的样本</div>
+              <div className="px-3 py-4 text-center text-sm text-fg-muted">{t("samples.noMatchingSamplesc0d84a")}</div>
             )}
           </div>
           {selectedSample && (
-            <div className="mt-2 text-sm text-accent-fg">已选择: {selectedSample.internalId}</div>
+            <div className="mt-2 text-sm text-accent-fg">{t("tasks.selected34a0eb")}{selectedSample.internalId}</div>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">分析流程 *</label>
-          <Select value={selectedPipeline} onChange={(v) => setSelectedPipeline(Array.isArray(v) ? v[0] : v)} options={pipelineOptions} placeholder="请选择分析流程" />
+          <label className="block text-sm font-medium text-fg-default mb-2">{t("tasks.analysisPipeline22bb4b")}</label>
+          <Select value={selectedPipeline} onChange={(v) => setSelectedPipeline(Array.isArray(v) ? v[0] : v)} options={pipelineOptions} placeholder={t("tasks.selectAnAnalysisPipeline6634d0")} />
         </div>
 
         <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">
-          <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
+          <p className="text-sm font-medium text-fg-default">{t("tasks.estimatedRuntime46b89b")}</p>
           <p className="mt-1 text-xs leading-5 text-fg-muted">
             {estimateStatus === 'loading'
-              ? '正在根据所选输入估算…'
+              ? t("tasks.estimatingFromSelectedInput244ab0")
               : estimateStatus === 'ready'
-                ? `预计 ${estimatedMinutes} 分钟；按样本关联的 R1/R2 数据量计算。`
+                ? t("tasks.estimatedMinutesBasedOnLinkedRR037883", {p0: String(estimatedMinutes)})
                 : estimateStatus === 'fallback'
-                  ? '估算服务暂不可用，暂按基础预估 60 分钟。'
-                  : '选择样本和分析流程后，将按关联的 R1/R2 数据量计算。'}
+                  ? t("tasks.estimationUnavailableUsingTheBasicMinuteEstimatef3a858")
+                  : t("tasks.selectASampleAndPipelineToEstimate04c387")}
           </p>
         </div>
 
@@ -314,25 +320,25 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
-                <div className="text-sm font-medium text-fg-default">预计预扣 {estimatedCredits ?? '--'} 积分</div>
+                <div className="text-sm font-medium text-fg-default">{t("tasks.estimatedReservationaa9641")}{estimatedCredits ?? '--'} {t("billing.creditse6d317")}</div>
                 <div className="text-xs text-fg-muted">
                   {estimateStatus === 'loading'
-                    ? '正在计算预计预扣；最终按实际运行分钟结算'
+                    ? t("tasks.calculatingReservationFinalSettlementUsesActualRuntime65b79b")
                     : estimateStatus === 'ready'
-                      ? `按后端预计 ${estimatedMinutes} 分钟计算；最终按实际运行分钟结算`
+                      ? t("tasks.basedOnTheServerEstimateOfMinutes5ccf25", {p0: String(estimatedMinutes)})
                       : estimateStatus === 'fallback'
-                        ? '暂按基础预估 60 分钟计算；最终按实际运行分钟结算'
-                        : '选择输入和流程后计算预计预扣'}
+                        ? t("tasks.basedOnTheBasicMinuteEstimateFinal595562")
+                        : t("tasks.selectInputAndPipelineToCalculateThe42aed3")}
                 </div>
               </div>
             </div>
             <div className="text-right">
               <div className={insufficientCredits ? 'text-sm font-medium text-danger-fg' : 'text-sm font-medium text-fg-default'}>
-                余额 {billingBalance?.balance ?? '--'}
+                {t("tasks.balance239d15")}{billingBalance?.balance ?? '--'}
               </div>
               <div className="flex items-center justify-end gap-3 text-xs">
-                <Link href="/billing" className="text-accent-fg hover:underline">计费规则</Link>
-                <Link href="/billing/recharge" className="text-accent-fg hover:underline">充值</Link>
+                <Link href="/billing" className="text-accent-fg hover:underline">{t("settings.billingRulesab2727")}</Link>
+                <Link href="/billing/recharge" className="text-accent-fg hover:underline">{t("billing.addCreditsfa03c4")}</Link>
               </div>
             </div>
           </div>
@@ -344,34 +350,34 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<Database className="h-4 w-4" />}
-            title="测序数据"
-            description="任务始终读取样本当前生效的 R1/R2 数据关联"
+            title={t("samples.sequencingDataef4c3a")}
+            description={t("tasks.tasksAlwaysUseTheSampleCurrentEffective938efe")}
           />
           {selectedSample ? (
             <div className={`rounded-md border px-3 py-3 ${selectedSample.matchedPair ? 'border-success-muted bg-success-subtle' : 'border-warning-muted bg-warning-subtle'}`}>
               <div className={`text-sm font-medium ${selectedSample.matchedPair ? 'text-success-fg' : 'text-warning-fg'}`}>
-                {selectedSample.matchedPair ? 'R1/R2 已就绪' : '任务将等待测序数据'}
+                {selectedSample.matchedPair ? t("tasks.rRReady9c9d5e") : t("tasks.taskWillAwaitSequencingDataa6dc7f")}
               </div>
               <div className="mt-1 text-xs leading-5 text-fg-muted">
                 {selectedSample.matchedPair
-                  ? '创建后任务自动开始分析。'
-                  : '样本自动或手动匹配到完整 R1/R2 后，任务会自动开始分析。'}
+                  ? t("tasks.analysisStartsAutomaticallyAfterCreation30cb09")
+                  : t("tasks.analysisStartsWhenACompleteRRc928c2")}
               </div>
             </div>
           ) : (
-            <div className="text-sm text-fg-muted">选择样本后显示数据就绪状态。</div>
+            <div className="text-sm text-fg-muted">{t("tasks.selectASampleToSeeDataReadiness9eb3aa")}</div>
           )}
         </section>
 
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<FileText className="h-4 w-4" />}
-            title="备注"
-            description="补充记录本次分析任务的说明信息"
+            title={t("admin.notese03614")}
+            description={t("tasks.addNotesForThisAnalysisTaskd56408")}
           />
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-fg-muted">备注内容</label>
-          <Input value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="请输入备注信息（可选）" />
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.notes11abee")}</label>
+          <Input value={remark} onChange={(e) => setRemark(e.target.value)} placeholder={t("tasks.enterOptionalNotes168748")} />
         </div>
         </section>
       </div>

@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { getSampleQualityDisplay, getSamplePriorityLabel, formatTurnaroundDays } from '@/lib/sample-display';
 import { HoverHint } from '@/components/shared/HoverHint';
 
@@ -32,48 +35,49 @@ function InfoCard({ title, children, wide = false }: { title: string; children: 
 }
 
 export function SampleInfoTab({ sample }: SampleInfoTabProps) {
+  const t = useText();
   const genderInfo = GENDER_CONFIG[sample.gender];
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <InfoCard title="基本信息" wide>
+      <InfoCard title={t("samples.basicInformationb122f8")} wide>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <InfoItem label="样本编号" value={<span className="font-mono text-xs">{sample.id}</span>} />
-          <InfoItem label="内部编号" value={sample.internalId} />
-          <InfoItem label="性别" value={<span className={genderInfo.color}>{genderInfo.label}</span>} />
-          <InfoItem label="年龄" value={sample.age !== undefined ? `${sample.age}岁` : '-'} />
-          <InfoItem label="样本类型" value={sample.sampleType} />
-          <InfoItem label="批次" value={sample.batch} />
-          <InfoItem label="创建时间" value={formatDateTime(sample.createdAt)} />
-          <InfoItem label="更新时间" value={formatDateTime(sample.updatedAt)} />
+          <InfoItem label={t("history.sampleId6d686e")} value={<span className="font-mono text-xs">{sample.id}</span>} />
+          <InfoItem label={t("data.internalIdabcc9d")} value={sample.internalId} />
+          <InfoItem label={t("samples.sexfe8aa4")} value={<span className={genderInfo.color}>{translateUI(genderInfo.label, t)}</span>} />
+          <InfoItem label={t("samples.age28c02e")} value={sample.age !== undefined ? t("samples.yearse5133f", {p0: String(sample.age)}) : '-'} />
+          <InfoItem label={t("samples.sampleType686c81")} value={t(sample.sampleType)} />
+          <InfoItem label={t("samples.batch6b2cf2")} value={sample.batch} />
+          <InfoItem label={t("admin.createdAt84e380")} value={formatDateTime(sample.createdAt, t.locale)} />
+          <InfoItem label={t("pipeline.updatedAt093dea")} value={formatDateTime(sample.updatedAt, t.locale)} />
         </div>
       </InfoCard>
 
-      <InfoCard title="匹配数据" wide>
+      <InfoCard title={t("common.matchDatab50c4f")} wide>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {sample.matchedPair ? (
             <>
-              <InfoItem label="R1路径" value={<span className="font-mono text-xs break-all">{sample.matchedPair.r1Path}</span>} />
-              <InfoItem label="R2路径" value={<span className="font-mono text-xs break-all">{sample.matchedPair.r2Path}</span>} />
+              <InfoItem label={t("samples.rPath9ad9aa")} value={<span className="font-mono text-xs break-all">{sample.matchedPair.r1Path}</span>} />
+              <InfoItem label={t("samples.rPathecce33")} value={<span className="font-mono text-xs break-all">{sample.matchedPair.r2Path}</span>} />
             </>
           ) : (
-            <InfoItem label="匹配数据" value="暂无匹配数据" />
+            <InfoItem label={t("common.matchDatab50c4f")} value={t("暂无匹配数据")} />
           )}
         </div>
       </InfoCard>
 
-      <InfoCard title="送检信息">
+      <InfoCard title={t("samples.submissionInformation414387")}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {sample.submissionInfo && (
             <>
-              <InfoItem label="送检日期" value={sample.submissionInfo.submissionDate} />
-              <InfoItem label="采样日期" value={sample.submissionInfo.sampleCollectionDate} />
-              <InfoItem label="收样日期" value={sample.submissionInfo.sampleReceiveDate} />
+              <InfoItem label={t("samples.submissionDatefb4db3")} value={sample.submissionInfo.submissionDate} />
+              <InfoItem label={t("samples.collectionDatedee8e7")} value={sample.submissionInfo.sampleCollectionDate} />
+              <InfoItem label={t("samples.receiptDate5abc5a")} value={sample.submissionInfo.sampleReceiveDate} />
               <InfoItem
-                label="样本质量"
+                label={t("samples.sampleQualitye01f54")}
                 value={
-                  <Tag variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality).variant}>
-                    {getSampleQualityDisplay(sample.submissionInfo.sampleQuality).label}
+                  <Tag variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality, t).variant}>
+                    {translateUI(getSampleQualityDisplay(sample.submissionInfo.sampleQuality, t).label, t)}
                   </Tag>
                 }
               />
@@ -82,19 +86,19 @@ export function SampleInfoTab({ sample }: SampleInfoTabProps) {
         </div>
       </InfoCard>
 
-      <InfoCard title="项目信息">
+      <InfoCard title={t("samples.projectInformation4166d1")}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {sample.projectInfo && (
             <>
-              <InfoItem label="项目编号" value={sample.projectInfo.projectId} />
-              <InfoItem label="项目名称" value={sample.projectInfo.projectName} />
-              <InfoItem label="检测Panel" value={sample.projectInfo.panel} />
-              <InfoItem label="承诺周期" value={formatTurnaroundDays(sample.projectInfo.turnaroundDays)} />
+              <InfoItem label={t("samples.projectId1bb19c")} value={sample.projectInfo.projectId} />
+              <InfoItem label={t("samples.projectName3e7255")} value={sample.projectInfo.projectName} />
+              <InfoItem label={t("samples.testingPanelc30b77")} value={sample.projectInfo.panel} />
+              <InfoItem label={t("samples.expectedTurnarounddb3366")} value={formatTurnaroundDays(sample.projectInfo.turnaroundDays, t)} />
               <InfoItem
-                label="优先级"
+                label={t("samples.priority7cabe7")}
                 value={
                   <Tag variant={sample.projectInfo.priority === 'urgent' ? 'danger' : 'neutral'}>
-                    {getSamplePriorityLabel(sample.projectInfo.priority)}
+                    {getSamplePriorityLabel(sample.projectInfo.priority, t)}
                   </Tag>
                 }
               />
@@ -109,20 +113,21 @@ export function SampleInfoTab({ sample }: SampleInfoTabProps) {
 }
 
 export function ClinicalInfoTab({ sample }: SampleInfoTabProps) {
+  const t = useText();
   return (
-      <InfoCard title="临床诊断">
+      <InfoCard title={t("samples.clinicalDiagnosis654a81")}>
         <div className="space-y-3">
           {sample.clinicalDiagnosis && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoItem label="主要诊断" value={sample.clinicalDiagnosis.mainDiagnosis} />
+                <InfoItem label={t("samples.primaryDiagnosisc93efa")} value={sample.clinicalDiagnosis.mainDiagnosis} />
                 {sample.clinicalDiagnosis.onsetAge && (
-                  <InfoItem label="发病年龄" value={sample.clinicalDiagnosis.onsetAge} />
+                  <InfoItem label={t("samples.ageAtOnset4cce4a")} value={sample.clinicalDiagnosis.onsetAge} />
                 )}
               </div>
               {sample.clinicalDiagnosis.symptoms && sample.clinicalDiagnosis.symptoms.length > 0 && (
                 <div>
-                  <span className="text-xs text-fg-muted">症状</span>
+                  <span className="text-xs text-fg-muted">{t("samples.symptoms233c5d")}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {sample.clinicalDiagnosis.symptoms.map((s, i) => (
                       <Tag key={i} variant="neutral">{s}</Tag>
@@ -132,7 +137,7 @@ export function ClinicalInfoTab({ sample }: SampleInfoTabProps) {
               )}
               {sample.clinicalDiagnosis.hpoTerms && sample.clinicalDiagnosis.hpoTerms.length > 0 && (
                 <div>
-                  <span className="text-xs text-fg-muted">HPO术语</span>
+                  <span className="text-xs text-fg-muted">{t("samples.hpoTerms294b0a")}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
                       <HoverHint content={hpo.name} key={i}><Tag key={i} variant="info" className="font-mono" >
@@ -144,7 +149,7 @@ export function ClinicalInfoTab({ sample }: SampleInfoTabProps) {
               )}
               {sample.clinicalDiagnosis.diseaseHistory && (
                 <div>
-                  <span className="text-xs text-fg-muted">病史</span>
+                  <span className="text-xs text-fg-muted">{t("samples.medicalHistoryffc833")}</span>
                   <p className="text-sm text-fg-default mt-1">{sample.clinicalDiagnosis.diseaseHistory}</p>
                 </div>
               )}

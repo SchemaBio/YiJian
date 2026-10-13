@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -17,6 +20,7 @@ interface MobileNavProps {
  * MobileNav provides a full-screen navigation drawer for mobile devices.
  */
 export function MobileNav({ currentSection, onClose }: MobileNavProps) {
+  const t = useText();
   const pathname = usePathname();
   const { isPlatformAdmin } = useAuth();
   const section = getSectionFromPath(pathname);
@@ -35,11 +39,11 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
     <div className="fixed inset-0 z-50 bg-[var(--yj-panel-bg)]">
       {/* Header */}
       <div className="flex items-center justify-between h-12 px-4 border-b border-border">
-        <span className="font-semibold text-fg-default">导航</span>
+        <span className="font-semibold text-fg-default">{t("common.navigationc7ed24")}</span>
         <button
           onClick={onClose}
           className="p-2 rounded-md hover:bg-canvas-subtle"
-          aria-label="关闭导航"
+          aria-label={t("common.closeNavigation3b2508")}
         >
           <X className="w-5 h-5" />
         </button>
@@ -49,7 +53,7 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
       <div className="overflow-y-auto h-[calc(100vh-48px)]">
         {/* Main navigation */}
         <nav className="p-4 border-b border-border">
-          <p className="text-xs text-fg-muted mb-2 uppercase tracking-wider">主导航</p>
+          <p className="text-xs text-fg-muted mb-2 uppercase tracking-wider">{t("common.mainNavigationfb1c7d")}</p>
           <ul className="space-y-1">
             {visibleMainNavItems.map((item) => {
               const isActive = isNavItemActive(item.href, pathname);
@@ -72,7 +76,7 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {Icon && <Icon className="w-5 h-5" />}
-                    {item.label}
+                    {translateUI(item.label, t)}
                   </Link>
                 </li>
               );
@@ -83,7 +87,7 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
         {/* Section navigation */}
         <nav className="p-4">
           <p className="text-xs text-fg-muted mb-2 uppercase tracking-wider">
-            {visibleMainNavItems.find((item) => item.href.includes(section))?.label || '子导航'}
+            {visibleMainNavItems.find((item) => item.href.includes(section))?.label || t("common.sectionNavigation3bc255")}
           </p>
           <ul className="space-y-1">
             {sidebarItems.map((item) => {
@@ -107,7 +111,7 @@ export function MobileNav({ currentSection, onClose }: MobileNavProps) {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {Icon && <Icon className="w-5 h-5" />}
-                    {item.label}
+                    {translateUI(item.label, t)}
                   </Link>
                 </li>
               );

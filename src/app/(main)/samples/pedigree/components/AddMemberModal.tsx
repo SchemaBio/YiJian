@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { localizeDisplay } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -39,6 +44,7 @@ const affectedOptions = Object.entries(AFFECTED_STATUS_CONFIG)
 const NONE_VALUE = '__none__';
 
 export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, defaultFatherId, defaultMotherId, defaultRelation, defaultSpouseId }: AddMemberModalProps) {
+  const t = useText();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState({
@@ -102,7 +108,7 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
         phenotypes: '',
       });
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to add pedigree member');
+      setSubmitError(err instanceof Error ? errorText(err, t) : t("interface.failedToAddPedigreeMember72dac0"));
     } finally {
       setSubmitting(false);
     }
@@ -112,12 +118,12 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
   const femaleMembers = existingMembers.filter(m => m.gender === 'female');
 
   const fatherOptions = [
-    { value: NONE_VALUE, label: '无/未知' },
+    { value: NONE_VALUE, label: t("samples.noneUnknowndfe4f4") },
     ...maleMembers.map(m => ({ value: m.id, label: m.name })),
   ];
 
   const motherOptions = [
-    { value: NONE_VALUE, label: '无/未知' },
+    { value: NONE_VALUE, label: t("samples.noneUnknowndfe4f4") },
     ...femaleMembers.map(m => ({ value: m.id, label: m.name })),
   ];
 
@@ -127,19 +133,18 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
-      title="添加家系成员"
+      title={t("samples.addPedigreeMember03b659")}
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button loading={submitting} loadingLabel="添加中..." action="add"
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
+          <Button loading={submitting} loadingLabel={t("pipeline.addingfd2f5a")} action="add"
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={submitting || !formData.name}
 
           >
-            添加成员
-          </Button>
+            {t("samples.addMemberbd09d5")}</Button>
         </>
       }
     >
@@ -152,21 +157,21 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
         <section>
           <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
-            title="成员信息"
+            title={t("samples.memberInformation0d33c3")}
           />
           <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-fg-muted">姓名 *</label>
-          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入姓名" required />
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.name2b9e1a")}</label>
+          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder={t("samples.enterName675b3e")} required />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">性别 *</label>
-            <Select value={formData.gender} onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)} options={genderOptions} />
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.sex42b5cc")}</label>
+            <Select value={formData.gender} onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)} options={localizeDisplay(genderOptions, t)} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">出生年份</label>
-            <Input type="number" value={formData.birthYear} onChange={(e) => handleChange('birthYear', e.target.value)} placeholder="如 1990" />
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.birthYear72da00")}</label>
+            <Input type="number" value={formData.birthYear} onChange={(e) => handleChange('birthYear', e.target.value)} placeholder={t("samples.forExampleb1ea60")} />
           </div>
         </div>
           </div>
@@ -174,25 +179,25 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<Network className="h-4 w-4" />}
-            title="家系关系"
+            title={t("samples.pedigreeRelationships9c5661")}
           />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">与先证者关系 *</label>
-            <Select value={formData.relation} onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)} options={relationOptions} />
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.relationshipToProbanda3aea6")}</label>
+            <Select value={formData.relation} onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)} options={localizeDisplay(relationOptions, t)} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">患病状态 *</label>
-            <Select value={formData.affectedStatus} onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)} options={affectedOptions} />
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.affectedStatus5332fa")}</label>
+            <Select value={formData.affectedStatus} onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)} options={localizeDisplay(affectedOptions, t)} />
           </div>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">父亲</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.father03cd61")}</label>
             <Select value={formData.fatherId} onChange={(value) => handleChange('fatherId', Array.isArray(value) ? value[0] : value)} options={fatherOptions} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-fg-muted">母亲</label>
+            <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.mother166846")}</label>
             <Select value={formData.motherId} onChange={(value) => handleChange('motherId', Array.isArray(value) ? value[0] : value)} options={motherOptions} />
           </div>
         </div>
@@ -200,11 +205,11 @@ export function AddMemberModal({ isOpen, onClose, onSubmit, existingMembers, def
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<Activity className="h-4 w-4" />}
-            title="表型信息"
+            title={t("samples.phenotypeInformationcae6f2")}
           />
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-fg-muted">表型描述</label>
-          <Input value={formData.phenotypes} onChange={(e) => handleChange('phenotypes', e.target.value)} placeholder="多个表型用逗号分隔" />
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.phenotypeDescriptionfa80fb")}</label>
+          <Input value={formData.phenotypes} onChange={(e) => handleChange('phenotypes', e.target.value)} placeholder={t("samples.separatePhenotypesWithCommase4c276")} />
         </div>
         </section>
       </form>

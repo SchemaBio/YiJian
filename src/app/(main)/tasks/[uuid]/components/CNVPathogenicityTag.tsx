@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag, Tooltip } from '@schema/ui-kit';
@@ -39,6 +42,7 @@ export function CNVPathogenicityTag({
   onClick,
   disabled = false,
 }: CNVPathogenicityTagProps) {
+  const t = useText();
   const variant = getClassificationVariant(classification);
   const label = getClassificationLabel(classification);
   const scoreRange = getClassificationScoreRange(classification);
@@ -47,12 +51,12 @@ export function CNVPathogenicityTag({
 
   const tooltipContent = (
     <div className="text-xs space-y-1">
-      <div>ClinGen {frameworkType} 评估</div>
-      <div>分类: {label}</div>
-      <div>评分: {formattedScore}</div>
-      <div>阈值范围: {scoreRange}</div>
-      {isUserModified && <div className="text-warning-fg">已手动修改</div>}
-      {onClick && !disabled && <div className="text-fg-muted mt-1">点击查看详情</div>}
+      <div>ClinGen {frameworkType} {t("tasks.assessment6c63b7")}</div>
+      <div>{t("tasks.classification2b22a5")}{label}</div>
+      <div>{t("tasks.score771854")}{formattedScore}</div>
+      <div>{t("tasks.thresholdRangec398a6")}{scoreRange}</div>
+      {isUserModified && <div className="text-warning-fg">{t("tasks.manuallyModifiedd03878")}</div>}
+      {onClick && !disabled && <div className="text-fg-muted mt-1">{t("tasks.clickForDetailscdd653")}</div>}
     </div>
   );
 
@@ -64,7 +68,7 @@ export function CNVPathogenicityTag({
   };
 
   return (
-    <Tooltip content={tooltipContent} placement="top" variant="nav">
+    <Tooltip content={translateUI(tooltipContent, t)} placement="top" variant="nav">
       <button
         type="button"
         onClick={handleClick}

@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -9,6 +12,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { AssistantDialog } from './AssistantDialog';
 
 export function AssistantButton() {
+  const t = useText();
   const { isConfigured, isExecuting } = useAI();
   const [isOpen, setIsOpen] = React.useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
@@ -22,7 +26,7 @@ export function AssistantButton() {
 
   return (
     <>
-      <HoverHint content={isConfigured ? 'AI 助手' : '请先配置 AI 服务'}><button
+      <HoverHint content={isConfigured ? t("assistance.aiAssistant5341ec") : t("assistance.configureTheAiServiceFirst4a3222")}><button
         onClick={handleClick}
         className={`
           ${positionStyle}
@@ -32,7 +36,7 @@ export function AssistantButton() {
           transition-all hover:border-accent-muted hover:shadow-[0_10px_28px_rgba(17,19,18,0.12)]
           cursor-pointer focus:outline-none
         `}
-        aria-label="AI 助手"
+        aria-label={t("assistance.aiAssistant5341ec")}
 
       >
         {isExecuting ? (

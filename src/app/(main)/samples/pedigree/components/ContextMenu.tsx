@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 
@@ -19,6 +22,7 @@ interface ContextMenuProps {
 }
 
 export function ContextMenu({ isOpen, onClose, position, items }: ContextMenuProps) {
+  const t = useText();
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   // 点击外部关闭
@@ -120,7 +124,7 @@ export function ContextMenu({ isOpen, onClose, position, items }: ContextMenuPro
             disabled={item.disabled}
           >
             {item.icon && <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>}
-            <span>{item.label}</span>
+            <span>{translateUI(item.label, t)}</span>
           </button>
         );
       })}

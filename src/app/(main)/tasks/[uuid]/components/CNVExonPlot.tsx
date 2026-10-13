@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
@@ -9,6 +16,7 @@ import type {CNVExon} from '../types';
 import {loadCNR,exonSignals,type ExonSignal} from '../utils/cnv-signal';
 
 export function CNVExonPlot({taskId,variant,isOpen,onClose,anchor}:{taskId:string;variant:CNVExon;isOpen:boolean;onClose:()=>void;anchor?:CNVPlotAnchor}) {
+  const t = useText();
   const [signals,setSignals]=React.useState<Map<string,ExonSignal[]>>(new Map());
   const [transcript,setTranscript]=React.useState('');
   const [status,setStatus]=React.useState('');
@@ -24,8 +32,8 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose,anchor}:{taskId:strin
       if(controller.signal.aborted)return;
       const grouped=exonSignals(bins,variant.gene,variant.chromosome);setSignals(grouped);
       setTranscript(grouped.has(variant.transcript)?variant.transcript:grouped.keys().next().value??'');
-      if(!grouped.size)setStatus('CNR 中没有此基因的完整转录本和外显子注释，无法绘制逐外显子 CN；基因汇总记录不能替代外显子信号。');
-    }).catch(error=>{if(!controller.signal.aborted){setLoadFailed(true);setStatus(error instanceof Error?error.message:'外显子信号读取失败');}})
+      if(!grouped.size)setStatus(t("tasks.cnrLacksCompleteTranscriptAndExonAnnotationsf510e2"));
+    }).catch(error=>{if(!controller.signal.aborted){setLoadFailed(true);setStatus(error instanceof Error ? errorText(error, t):t("tasks.unableToReadExonSignaldae769"));}})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return ()=>controller.abort();
   },[taskId,variant.attemptId,variant.gene,variant.chromosome,variant.transcript,isOpen,retry]);
@@ -35,27 +43,27 @@ export function CNVExonPlot({taskId,variant,isOpen,onClose,anchor}:{taskId:strin
   const max=Math.max(4,...rows.map(row=>row.cn))*1.1;
   const y=(cn:number)=>bottom-(cn/max)*(bottom-top);
   const x=(i:number)=>left+(i+0.5)*(width-left-20)/Math.max(1,rows.length);
-  const copy=async()=>{try{await navigator.clipboard.writeText(['基因\t转录本\t外显子\t染色体\t起点(1-based)\t终点\tCN估计\tlog2\tbin数',...rows.map(row=>`${variant.gene}\t${transcript}\t${row.exon}\t${variant.chromosome}\t${row.start+1}\t${row.end}\t${row.cn.toFixed(3)}\t${row.log2.toFixed(3)}\t${row.bins}`)].join('\n'));setCopied('已复制');}catch{setCopied('复制失败，可选择下方表格复制');}};
-  return <CNVPlotWindow anchor={anchor} open={isOpen} onClose={onClose} title={`${variant.gene} · 外显子 CN 分布`}>
+  const copy=async()=>{try{await navigator.clipboard.writeText([t("tasks.geneTtranscriptTexonTchromosomeTstartBasedTendd4a897"),...rows.map(row=>`${variant.gene}\t${transcript}\t${row.exon}\t${variant.chromosome}\t${row.start+1}\t${row.end}\t${row.cn.toFixed(3)}\t${row.log2.toFixed(3)}\t${row.bins}`)].join('\n'));setCopied(t("billing.copiede381a5"));}catch{setCopied(t("tasks.copyFailedSelectTheTableBelowTo92b323"));}};
+  return <CNVPlotWindow anchor={anchor} open={isOpen} onClose={onClose} title={t("tasks.exonCnDistribution2ecb13", {p0: String(variant.gene)})}>
       <div className="min-h-0">
 
-        {loading?<p role="status" className="py-8 text-center text-fg-muted">读取原始 CNR…</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<ActionButton variant="ghost" onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">重新读取</ActionButton></div>:<>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><label className="flex items-center gap-2 text-sm">转录本<select value={transcript} onChange={e=>{setTranscript(e.target.value);setHover(null);}} className="rounded border border-border-default bg-canvas-default px-2 py-1">{[...signals.keys()].map(id=><option key={id}>{id}</option>)}</select></label><ActionButton action="copy" variant="ghost" onClick={copy} className="yj-tool-button">{copied||'复制图表数据'}</ActionButton></div>
-          {transcript!==variant.transcript&&<p className="mb-2 text-xs text-fg-muted">报告转录本 {variant.transcript} 没有对应信号；当前显示所选转录本 {transcript}，未合并其他转录本。</p>}
+        {loading?<p role="status" className="py-8 text-center text-fg-muted">{t("tasks.readingOriginalCnr550c8e")}</p>:status?<div role={loadFailed?'alert':'status'} className={`rounded-md border p-4 text-sm ${loadFailed?'border-danger-muted bg-danger-subtle text-danger-fg':'border-border-default text-fg-muted'}`}>{status}<ActionButton variant="ghost" onClick={()=>setRetry(v=>v+1)} className="yj-tool-button ml-3">{t("tasks.readAgain778497")}</ActionButton></div>:<>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><label className="flex items-center gap-2 text-sm">{t("history.transcript96b6d7")}<select value={transcript} onChange={e=>{setTranscript(e.target.value);setHover(null);}} className="rounded border border-border-default bg-canvas-default px-2 py-1">{[...signals.keys()].map(id=><option key={id}>{id}</option>)}</select></label><ActionButton action="copy" variant="ghost" onClick={copy} className="yj-tool-button">{copied||t("tasks.copyChartData8fefdf")}</ActionButton></div>
+          {transcript!==variant.transcript&&<p className="mb-2 text-xs text-fg-muted">{t("tasks.reportedTranscript69a42f")}{variant.transcript} {t("tasks.hasNoSignalShowingSelectedTranscript2c8e2f")}{transcript}{t("tasks.withoutMergingOtherTranscriptsed1a88")}</p>}
           <div className="overflow-x-auto rounded border border-border-default bg-canvas-subtle">
-            <svg width={width} height={height} role="img" aria-label={`${variant.gene} ${transcript} 的 ${rows.length} 个外显子 CN 分布，完整读数见下方表格`}>
+            <svg width={width} height={height} role="img" aria-label={t("tasks.cnDistributionForExonsOfCompleteReadings5d89a4", {p0: String(variant.gene), p1: String(transcript), p2: String(rows.length)})}>
               {[0,1,2,3,4].filter(n=>n<=max).map(n=><g key={n}><line x1={left} x2={width-15} y1={y(n)} y2={y(n)} stroke={n===2?'var(--color-fg-muted)':'var(--color-border-default)'} strokeDasharray={n===2?'5 4':'2 3'}/><text x={left-8} y={y(n)+4} textAnchor="end" fontSize={11} fill="var(--color-fg-muted)">{n}</text></g>)}
               <text x={7} y={15} fontSize={11} fill="var(--color-fg-muted)">CN</text>
               {rows.map((row,i)=><g key={row.exon} onMouseEnter={()=>setHover(row)} onMouseLeave={()=>setHover(null)}>
-                <HoverHint content={`外显子 ${row.exon} · CN ${row.cn.toFixed(3)} · log2 ${row.log2.toFixed(3)} · ${row.bins} bins`}><circle tabIndex={0} cx={x(i)} cy={y(row.cn)} r={hover===row?6:4.5} onFocus={()=>setHover(row)} onBlur={()=>setHover(null)} fill={row.cn<1.5?'#0284c7':row.cn>2.5?'#d97706':'var(--color-fg-muted)'} opacity={hover===row?1:0.8} /></HoverHint>
+                <HoverHint content={t("tasks.exonCnLogBinsc7fa86", {p0: String(row.exon), p1: String(formatNumericString(row.cn.toFixed(3), t.locale)), p2: String(formatNumericString(row.log2.toFixed(3), t.locale)), p3: String(row.bins)})}><circle tabIndex={0} cx={x(i)} cy={y(row.cn)} r={hover===row?6:4.5} onFocus={()=>setHover(row)} onBlur={()=>setHover(null)} fill={row.cn<1.5?'#0284c7':row.cn>2.5?'#d97706':'var(--color-fg-muted)'} opacity={hover===row?1:0.8} /></HoverHint>
                 <text x={x(i)} y={bottom+17} textAnchor="middle" fontSize={10} fill="var(--color-fg-muted)">{row.exon}</text>
               </g>)}
-              <text x={width/2} y={height-10} textAnchor="middle" fontSize={12} fill="var(--color-fg-muted)">转录本外显子编号</text>
+              <text x={width/2} y={height-10} textAnchor="middle" fontSize={12} fill="var(--color-fg-muted)">{t("tasks.transcriptExonNumber7e61a9")}</text>
             </svg>
           </div>
-          <p className="mt-2 min-h-5 font-mono text-xs">{hover?`外显子 ${hover.exon} · CN ${hover.cn.toFixed(3)} · log2 ${hover.log2.toFixed(3)} · ${hover.bins} bins`:'悬停查看读数；蓝色 CN <1.5，橙色 CN >2.5，灰色为其他读数。'}</p>
-          <p className="my-3 text-xs leading-relaxed text-fg-muted">同一外显子按 CNR weight 聚合 log2；缺少有效 weight 时整组改用 bin 长度加权。CN = 2 × 2^log2，为归一化估计值，未取整。虚线 CN=2 是模型归一化参考；性染色体需结合样本性别及分析校正解释。只绘制有信号的外显子，不补造缺测外显子。</p>
-          <details><summary className="cursor-pointer text-sm text-accent-fg">外显子读数表（可选中复制）</summary><div className="mt-2 max-h-56 overflow-auto"><table className="w-full text-center text-xs"><thead className="sticky top-0 bg-canvas-subtle"><tr>{['外显子','起点(1-based)','终点','CN 估计','log2','bin 数'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.exon} className="border-b border-border-subtle"><td className="p-1.5">{row.exon}</td><td>{row.start+1}</td><td>{row.end}</td><td>{row.cn.toFixed(3)}</td><td>{row.log2.toFixed(3)}</td><td>{row.bins}</td></tr>)}</tbody></table></div></details>
+          <p className="mt-2 min-h-5 font-mono text-xs">{hover?t("tasks.exonCnLogBinsc7fa86", {p0: String(hover.exon), p1: String(formatNumericString(hover.cn.toFixed(3), t.locale)), p2: String(formatNumericString(hover.log2.toFixed(3), t.locale)), p3: String(hover.bins)}):t("tasks.hoverForReadingsBlueCnOrangeCn130783")}</p>
+          <p className="my-3 text-xs leading-relaxed text-fg-muted">{t("tasks.exonLogIsAggregatedByCnrWeight6e5bff")}</p>
+          <details><summary className="cursor-pointer text-sm text-accent-fg">{t("tasks.exonReadingsSelectToCopyfaecf2")}</summary><div className="mt-2 max-h-56 overflow-auto"><table className="w-full text-center text-xs"><thead className="sticky top-0 bg-canvas-subtle"><tr>{[t("history.exonfb0270"),t("tasks.startBased6b4cb3"),t("tasks.enda7fe11"),t("tasks.cnEstimate4d0717"),'log2',t("tasks.binCount4a348a")].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.exon} className="border-b border-border-subtle"><td className="p-1.5">{row.exon}</td><td>{row.start+1}</td><td>{row.end}</td><td>{formatNumericString(row.cn.toFixed(3), t.locale)}</td><td>{formatNumericString(row.log2.toFixed(3), t.locale)}</td><td>{row.bins}</td></tr>)}</tbody></table></div></details>
         </>}
       </div>
   </CNVPlotWindow>;

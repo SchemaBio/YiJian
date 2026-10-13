@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import { ASSESSMENT_PROFILE, type AssessmentContext, type AssessmentRow, type AutomaticAssessment, type Classification, type Disease, type DosageRecord, type Evidence, type Genotype, type Interval, type RowProof } from './types';
 import { createDefaultGainAssessmentCriteria, createDefaultLossAssessmentCriteria } from '@/app/(main)/tasks/[uuid]/types';
 import { calculateLossTotal } from '@/app/(main)/tasks/[uuid]/utils/loss-calculator';
@@ -21,12 +22,12 @@ function index(ctx:AssessmentContext) {
 function cachedMatch(ctx:AssessmentContext,disease:Disease){const cache=index(ctx).matches;let value=cache.get(disease);if(!value){value=phenotypeMatch(ctx,disease);cache.set(disease,value);}return value;}
 export function classifyEvidence(criteria: Evidence[]): {score: number; classification?: Classification} {
   if (!criteria.length) return {score: 0};
-  if (criteria.some(e => !/^(PVS1|PS[1-4]|PM[1-6]|PP[1-5]|BA1|BS[1-4]|BP[1-7])$/.test(e.code) || !(e.strength in points) || (e.strength === 'standalone' && e.code !== 'BA1') || (e.code === 'BA1' && e.strength !== 'standalone'))) throw new Error('证据代码或强度无效');
-  if(criteria.some(e=>e.code.startsWith('B')&&e.strength==='very_strong'))throw new Error('良性证据不支持 Very Strong 强度');
-  if (new Set(criteria.map(x => x.code)).size !== criteria.length) throw new Error('重复证据');
-  if (criteria.some(x => x.code === 'PP3') && criteria.some(x => x.code === 'BP4')) throw new Error('预测证据互斥');
+  if (criteria.some(e => !/^(PVS1|PS[1-4]|PM[1-6]|PP[1-5]|BA1|BS[1-4]|BP[1-7])$/.test(e.code) || !(e.strength in points) || (e.strength === 'standalone' && e.code !== 'BA1') || (e.code === 'BA1' && e.strength !== 'standalone'))) throw new LocalizedError("display.invalidEvidenceCodeOrStrength14f0b9");
+  if(criteria.some(e=>e.code.startsWith('B')&&e.strength==='very_strong'))throw new LocalizedError("display.benignEvidenceDoesNotSupportVeryStrong4bb901");
+  if (new Set(criteria.map(x => x.code)).size !== criteria.length) throw new LocalizedError("display.duplicateEvidencebca3bd");
+  if (criteria.some(x => x.code === 'PP3') && criteria.some(x => x.code === 'BP4')) throw new LocalizedError("display.predictiveEvidenceIsMutuallyExclusive231cd2");
   if (criteria.some(x => x.code === 'BA1')) {
-    if (criteria.length !== 1) throw new Error('BA1 与其他证据冲突');
+    if (criteria.length !== 1) throw new LocalizedError("display.baConflictsWithOtherEvidence8cc057");
     return {score: 0, classification: 'Benign'};
   }
   const score = criteria.reduce((n, e) => n + points[e.strength] * (e.code.startsWith('B') ? -1 : 1), 0);

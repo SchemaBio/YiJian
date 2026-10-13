@@ -1,4 +1,10 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { reportErrorText } from '@/i18n/task-labels';
+
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { useInterpretationReadOnly } from './InterpretationLock';
@@ -15,6 +21,7 @@ interface ReportTabProps {
 }
 
 export function ReportTab({ taskId }: ReportTabProps) {
+  const t = useText();
   const readOnly = useInterpretationReadOnly();
   const requestIds=React.useRef<Record<string,string>>({});
  const [generations,setGenerations]=React.useState<Array<{id:string;state:string;createdAt:string;errorCode:string;contractVersion:string}>>([]);
@@ -26,7 +33,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
    setGenerationError('');
    reportsApi.listGenerations(taskId)
      .then(rows => { if (alive) setGenerations(rows); })
-     .catch(() => { if (alive) setGenerationError('报告生成记录读取失败'); });
+     .catch(() => { if (alive) setGenerationError(t("tasks.unableToReadReportGenerationHistoryf64368")); });
    return () => { alive = false; };
  }, [taskId, generationRetry]);
  const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
@@ -53,7 +60,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
       } catch (error) {
         if (ignore) return;
         setTemplates([]);
-        setTemplateError(error instanceof Error ? error.message : '报告服务加载失败，请稍后重试。');
+        setTemplateError(error instanceof Error ? errorText(error, t) : t("tasks.unableToLoadReportServicesRetryLaterfca497"));
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -87,7 +94,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
       setLastDownloadedFile(download.filename);
       setSelectedTemplate('');
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : `报告 "${template.name}" 生成失败，请稍后重试。`);
+      setErrorMessage(error instanceof Error ? errorText(error, t) : t("tasks.reportGenerationFailedRetryLater521edd", {p0: String(template.name)}));
       setErrorModalOpen(true);
     } finally {
       setGenerationRetry(value => value + 1);
@@ -99,58 +106,56 @@ export function ReportTab({ taskId }: ReportTabProps) {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
-      {generationError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>重试读取记录</ActionButton></div>}
- {generations.length>0&&<div className="yj-panel p-4"><h4 className="mb-3 text-sm font-medium">报告生成记录</h4><div className="overflow-x-auto"><table className="w-full min-w-[440px] text-left text-sm"><thead className="text-xs text-fg-muted"><tr><th className="pb-2 font-medium">时间</th><th className="pb-2 font-medium">报告方式</th><th className="pb-2 font-medium">状态</th></tr></thead><tbody>{generations.map(g=><tr key={g.id} className="border-t border-border-subtle"><td className="py-3 pr-3 whitespace-nowrap">{new Date(g.createdAt).toLocaleString('zh-CN', {hour12:false})}</td><td className="pr-3">{g.contractVersion==='report-snapshot-v2'?'回报快照':'历史记录'}</td><td><Tag variant={g.state==='ready'?'success':g.state==='failed'?'danger':g.state==='generating'?'info':'neutral'}>{({ready:'已生成',generating:'生成中',failed:'失败',unknown:'远端结果待核对',pending:'等待生成'} as Record<string,string>)[g.state]??g.state}</Tag>{g.errorCode&&<span className="ml-2 text-xs text-danger-fg">{g.errorCode}</span>}</td></tr>)}</tbody></table></div></div>}
+      {generationError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>{t("tasks.reloadRecords5dc183")}</ActionButton></div>}
+ {generations.length>0&&<div className="yj-panel p-4"><h4 className="mb-3 text-sm font-medium">{t("tasks.reportGenerationHistorye7923b")}</h4><div className="overflow-x-auto"><table className="w-full min-w-[440px] text-left text-sm"><thead className="text-xs text-fg-muted"><tr><th className="pb-2 font-medium">{t("tasks.time89b4aa")}</th><th className="pb-2 font-medium">{t("tasks.reportMethode5d5cd")}</th><th className="pb-2 font-medium">{t("admin.status62e951")}</th></tr></thead><tbody>{generations.map(g=><tr key={g.id} className="border-t border-border-subtle"><td className="py-3 pr-3 whitespace-nowrap">{new Date(g.createdAt).toLocaleString(t.locale, {hour12:false})}</td><td className="pr-3">{g.contractVersion==='report-snapshot-v2'?t("tasks.reportSnapshotca5ad0"):t("tasks.history19e0e3")}</td><td><Tag variant={g.state==='ready'?'success':g.state==='failed'?'danger':g.state==='generating'?'info':'neutral'}>{({ready:t("tasks.generated79c74f"),generating:t("tasks.generating57c08c"),failed:t("admin.failed3e3c80"),unknown:t("tasks.remoteResultNeedsVerificationb568ae"),pending:t("tasks.awaitingGeneration436346")} as Record<string,string>)[g.state]??g.state}</Tag>{g.errorCode&&<span className="ml-2 text-xs text-danger-fg">{reportErrorText(g.errorCode, t)}</span>}</td></tr>)}</tbody></table></div></div>}
 
       <div className="rounded-xl border border-border-default bg-canvas-default p-5">
         <h4 className="text-sm font-medium text-fg-default mb-3 flex items-center gap-2">
           <FileText className="w-4 h-4" />
-          判读报告生成
-        </h4>
-        <p className="mb-4 text-xs text-fg-muted">回报快照 v2 将已选入回报的位点、最新人工判读与质控固定为本次报告版本。</p>
+          {t("tasks.generateInterpretationReportdd9bec")}</h4>
+        <p className="mb-4 text-xs text-fg-muted">{t("tasks.reportSnapshotVFixesSelectedLociLatest5987ef")}</p>
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="flex-1 min-w-0">
-            <FormItem label="报告服务">
+            <FormItem label={t("pipeline.reportServicea3ff41")}>
               <Select
                 value={selectedTemplate}
                 onChange={(value) => { if (typeof value === 'string') setSelectedTemplate(value); }}
                 options={templateOptions}
-                placeholder={loading ? "正在加载报告服务..." : "请选择报告服务..."}
+                placeholder={loading ? t("tasks.loadingReportServices046fe0") : t("tasks.selectReportService345880")}
               />
             </FormItem>
           </div>
-          <Button loading={generating} loadingLabel="生成中..." action="start"
+          <Button loading={generating} loadingLabel={t("tasks.generating26eab2")} action="start"
             variant="primary"
 
             onClick={handleGenerate}
             disabled={readOnly || loading || !selectedTemplate || generating || templates.length === 0}
           >
-            生成并下载
-          </Button>
+            {t("tasks.generateAndDownloadfcc355")}</Button>
         </div>
-        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>重试</ActionButton></div>}
+        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>{t("pipeline.retrye2d53a")}</ActionButton></div>}
         {generating && (
           <div className="mt-4 rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-muted">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              {generationStage === 'preparing' && '正在准备判读快照...'}
-              {generationStage === 'calling' && '正在生成报告...'}
-              {generationStage === 'downloading' && '报告已生成，正在下载...'}
+              {generationStage === 'preparing' && t("tasks.preparingInterpretationSnapshot549793")}
+              {generationStage === 'calling' && t("tasks.generatingReport8eed21")}
+              {generationStage === 'downloading' && t("tasks.reportGeneratedDownloading430e77")}
             </div>
           </div>
         )}
         {!loading && !templateError && templates.length === 0 && (
-          <div className="mt-4 text-center py-6 text-sm text-fg-muted border border-border rounded-lg">暂无可用报告服务</div>
+          <div className="mt-4 text-center py-6 text-sm text-fg-muted border border-border rounded-lg">{t("tasks.noAvailableReportServicefd09e5")}</div>
         )}
         {lastDownloadedFile && (
           <div className="mt-3 flex items-center gap-2 text-sm text-success-fg">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="truncate">已下载：{lastDownloadedFile}</span>
+            <span className="truncate">{t("tasks.downloaded24be9a")}{lastDownloadedFile}</span>
           </div>
         )}
       </div>
 
-      <AppModal open={errorModalOpen} onOpenChange={setErrorModalOpen} title="报告生成失败" size="small" footer={<Button variant="primary" onClick={() => setErrorModalOpen(false)}>确定</Button>}>
+      <AppModal open={errorModalOpen} onOpenChange={setErrorModalOpen} title={t("tasks.reportGenerationFailed230636")} size="small" footer={<Button variant="primary" onClick={() => setErrorModalOpen(false)}>{t("tasks.okf526c8")}</Button>}>
         <p role="alert" className="break-words text-sm text-danger-fg">{errorMessage}</p>
       </AppModal>
     </div>

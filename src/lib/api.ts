@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import { STORAGE_KEYS } from './storage';
 import { getRuntimeApiBaseUrl, getRuntimeBackendFlavor, getRuntimeCoreApiPrefix, getRuntimeUploadOrigins } from './runtime-config';
 
@@ -541,7 +542,7 @@ export async function requestPresignedUploadUrl(
   }, options);
   const file = job.files?.[0];
   if (!file?.id) {
-    throw new Error('Upload job did not return a file id');
+    throw new LocalizedError("interface.uploadJobDidNotReturnAFileId8e50c7", undefined, "Upload job did not return a file id");
   }
   return {
     job_id: job.id,
@@ -583,7 +584,7 @@ export async function requestPairedUploadJob(r1: File, r2: File, uploadPolicyAck
   const r1File = byReadType.get('read1');
   const r2File = byReadType.get('read2');
   if (!job.id || !r1File?.id || !r2File?.id) {
-    throw new Error('Upload job did not return both R1 and R2 file ids');
+    throw new LocalizedError("interface.uploadJobDidNotReturnBothRAndRFileIdsd45f58", undefined, "Upload job did not return both R1 and R2 file ids");
   }
 
   const normalizeFile = (file: UploadJobFile, readType: 'read1' | 'read2') => ({
@@ -609,7 +610,7 @@ class UploadError extends Error {
 
 function normalizeUploadURL(uploadURL: string): string {
   if (/[\u0000-\u001f]/.test(uploadURL)) {
-    throw new Error('Invalid upload URL');
+    throw new LocalizedError("interface.invalidUploadUrl24ca2f", undefined, "Invalid upload URL");
   }
 
   const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
@@ -619,16 +620,16 @@ function normalizeUploadURL(uploadURL: string): string {
     throw new Error(`Unsupported upload URL scheme: ${url.protocol}`);
   }
   if (url.username || url.password) {
-    throw new Error('Upload URL must not include credentials');
+    throw new LocalizedError("interface.uploadUrlMustNotIncludeCredentials9ad80b", undefined, "Upload URL must not include credentials");
   }
   if (!isLocalUpload && !isAbsoluteHTTPURL(uploadURL)) {
-    throw new Error('Presigned upload URL must be absolute');
+    throw new LocalizedError("interface.presignedUploadUrlMustBeAbsolute12d940", undefined, "Presigned upload URL must be absolute");
   }
   if (!isLocalUpload && isAllowedBackendOrigin(url)) {
-    throw new Error('Refusing to upload to a non-upload backend endpoint');
+    throw new LocalizedError("interface.refusingToUploadToANonUploadBackendEndpoint3972d8", undefined, "Refusing to upload to a non-upload backend endpoint");
   }
   if (!isLocalUpload && !isAllowedPresignedUploadOrigin(url)) {
-    throw new Error('Presigned upload URL host is not allowed');
+    throw new LocalizedError("interface.presignedUploadUrlHostIsNotAllowed78a5f7", undefined, "Presigned upload URL host is not allowed");
   }
   url.hash = '';
   return url.toString();
@@ -682,7 +683,7 @@ function uploadFileOnce(uploadURL: string, file: Blob, onProgress?: (pct: number
       if (xhr.status >= 200 && xhr.status < 300) finish(resolve);
       else finish(() => reject(new UploadError(xhr.status)));
     };
-    xhr.onerror = () => finish(() => reject(new Error('Upload network error')));
+    xhr.onerror = () => finish(() => reject(new LocalizedError("interface.uploadNetworkError209cef", undefined, "Upload network error")));
     xhr.onabort = () => finish(() => reject(new UploadCancelledError()));
     signal?.addEventListener('abort', onAbort, { once: true });
     if (isLocalUpload) {
@@ -753,12 +754,12 @@ export async function uploadPartToCOS(uploadURL: string, part: Blob, onProgress?
       }
       const etag = xhr.getResponseHeader('ETag') || xhr.getResponseHeader('etag');
       if (!etag) {
-        finish(() => reject(new Error('对象存储未返回分片 ETag，请检查 COS CORS 的 expose_headers 配置')));
+        finish(() => reject(new LocalizedError("display.objectStorageDidNotReturnTheParte796b5")));
         return;
       }
       finish(() => resolve(etag));
     };
-    xhr.onerror = () => finish(() => reject(new Error('Upload network error')));
+    xhr.onerror = () => finish(() => reject(new LocalizedError("interface.uploadNetworkError209cef", undefined, "Upload network error")));
     xhr.onabort = () => finish(() => reject(new UploadCancelledError()));
     signal?.addEventListener('abort', onAbort, { once: true });
     xhr.send(part);

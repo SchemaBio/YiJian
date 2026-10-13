@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
 import {assessmentStatus} from '@/lib/assessment/client';
@@ -630,8 +631,8 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
   if (filterState.geneListId) {
     const lists = await getGeneLists();
     const genes = lists.find(list => list.id === filterState.geneListId)?.genes;
-    const current=lists.find(list=>list.id===filterState.geneListId);if(filterState.geneListRevision!==undefined&&current?.revision!==filterState.geneListRevision)throw new Error('基因列表已更新，请刷新基因列表并重新确认筛选');
- if (!genes?.length) throw new Error('所选基因列表不可用，请刷新列表或清除该筛选');
+    const current=lists.find(list=>list.id===filterState.geneListId);if(filterState.geneListRevision!==undefined&&current?.revision!==filterState.geneListRevision)throw new LocalizedError("display.geneListChangedRefreshItAndConfirm38f6ac");
+ if (!genes?.length) throw new LocalizedError("display.selectedGeneListUnavailableRefreshTheList5f7305");
     queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
   }
   const sort = filterState.sortColumn ? parquetColumn(type, filterState.sortColumn) : '';
@@ -710,21 +711,21 @@ export async function getGeneLists():Promise<GeneListOption[]>{return (await lis
 
 export async function pinVariant(taskId: string, type: string, variantId: string, pinned: boolean): Promise<{ pinned: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
-  if (!snapshot) throw new Error('结果版本未知，请刷新检出表后再操作');
+  if (!snapshot) throw new LocalizedError("display.unknownResultVersionRefreshFindingsBeforeContinuing571c3a");
   await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { pinned }, pinned ? '手动置顶' : '取消置顶');
   return { pinned };
 }
 
 export async function reviewVariant(taskId: string, type: string, variantId: string, reviewed: boolean): Promise<{ reviewed: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
-  if (!snapshot) throw new Error('请刷新结果后再保存');
+  if (!snapshot) throw new LocalizedError("display.refreshResultsBeforeSaving87b6ee");
   await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { reviewed }, '更新复核状态');
   return { reviewed };
 }
 
 export async function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
-  if (!snapshot) throw new Error('请刷新结果后再保存');
+  if (!snapshot) throw new LocalizedError("display.refreshResultsBeforeSaving87b6ee");
   const adjustments:Record<string,unknown>={reported};
   // Reporting is an explicit user confirmation. Capture the displayed baseline
   // only for that selected row; automatic pinning alone never writes evidence.
@@ -749,7 +750,7 @@ export async function saveResultRowAdjustment(
   reason = '',
 ): Promise<{ adjustment: { version: number; adjustments: Record<string, unknown> } }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, rowId));
-  if (!snapshot?.attemptId || !snapshot.datasetVersion) throw new Error('结果版本未知，请刷新后再保存');
+  if (!snapshot?.attemptId || !snapshot.datasetVersion) throw new LocalizedError("display.unknownResultVersionRefreshBeforeSavinge77429");
   const changesEvidence=['acmgEvidence','acmgOverride','resetAcmg','cnvAssessment'].some(key=>key in adjustments);
   const existingVersion=snapshot.adjustments?.assessmentVersion;
   const existingEvidence='acmgEvidence' in (snapshot.adjustments??{})||'cnvAssessment' in (snapshot.adjustments??{})||!!snapshot.adjustments?.acmgOverride;

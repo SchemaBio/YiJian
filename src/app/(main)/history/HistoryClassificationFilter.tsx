@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import * as Popover from '@radix-ui/react-popover';
@@ -9,6 +12,7 @@ const options = [{ value: '', label: '全部分类' }, { value: '__missing', lab
   ...Object.entries(CLASS_LABELS).filter(([value]) => value).map(([value, label]) => ({ value, label }))];
 
 export function HistoryClassificationFilter({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const t = useText();
   const [open, setOpen] = React.useState(false);
   const menu = React.useRef<HTMLDivElement>(null);
   const selected = options.find(option => option.value === value) ?? options[0];
@@ -21,15 +25,15 @@ export function HistoryClassificationFilter({ value, onChange }: { value: string
     items[next]?.focus();
   };
   return <Popover.Root open={open} onOpenChange={setOpen}>
-    <Popover.Trigger asChild><button type="button" aria-label="当前分类筛选" className="yj-history-filter-trigger" data-filtered={!!value}>
-      <span>{selected.label}</span><ChevronDown aria-hidden="true" />
+    <Popover.Trigger asChild><button type="button" aria-label={t("history.currentClassificationFilter3bd612")} className="yj-history-filter-trigger" data-filtered={!!value}>
+      <span>{translateUI(selected.label, t)}</span><ChevronDown aria-hidden="true" />
     </button></Popover.Trigger>
     <Popover.Portal><Popover.Content sideOffset={6} align="center" collisionPadding={12} className="yj-history-filter-menu"
       onOpenAutoFocus={event => { event.preventDefault(); menu.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus(); }}>
-      <div ref={menu} role="menu" aria-label="当前分类筛选选项" onKeyDown={moveFocus}>
+      <div ref={menu} role="menu" aria-label={t("history.classificationFilterOptions8d81e6")} onKeyDown={moveFocus}>
         {options.map(option => <button key={option.value} type="button" role="menuitemradio" aria-checked={value === option.value}
           className="yj-history-filter-option" onClick={() => { onChange(option.value); setOpen(false); }}>
-          <span>{option.label}</span>{value === option.value && <Check aria-hidden="true" />}
+          <span>{translateUI(option.label, t)}</span>{value === option.value && <Check aria-hidden="true" />}
         </button>)}
       </div>
     </Popover.Content></Popover.Portal>

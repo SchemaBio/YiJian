@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import * as React from 'react';
 import type { PedigreeMember, AffectedStatus } from '../types';
@@ -132,6 +135,7 @@ function PedigreeSymbol({
 }
 
 export function PedigreeTree({ members, probandId, selectedMemberId, isEditMode, onSelectMember, onContextMenu, onDoubleClick }: PedigreeTreeProps) {
+  const t = useText();
   // 按代分组
   const generations = React.useMemo(() => {
     const genMap = new Map<number, PedigreeMember[]>();
@@ -269,27 +273,27 @@ export function PedigreeTree({ members, probandId, selectedMemberId, isEditMode,
       
       {/* 图例 */}
       <div className="absolute bottom-4 left-4 bg-canvas-subtle rounded-lg p-3 border border-border-default">
-        <div className="text-xs font-medium text-fg-default mb-2">图例</div>
+        <div className="text-xs font-medium text-fg-default mb-2">{t("samples.legendb43dab")}</div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-fg-default bg-canvas-default" />
-            <span className="text-fg-muted">男性</span>
+            <span className="text-fg-muted">{t("samples.malec66e98")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full border-2 border-fg-default bg-canvas-default" />
-            <span className="text-fg-muted">女性</span>
+            <span className="text-fg-muted">{t("samples.female98ef09")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-fg-default bg-fg-default" />
-            <span className="text-fg-muted">患病</span>
+            <span className="text-fg-muted">{t("samples.affected494209")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-fg-default bg-amber-400" />
-            <span className="text-fg-muted">携带者</span>
+            <span className="text-fg-muted">{t("samples.carrier3b84e1")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-success-emphasis" />
-            <span className="text-fg-muted">已采样</span>
+            <span className="text-fg-muted">{t("samples.sampleCollected9ba99b")}</span>
           </div>
         </div>
       </div>

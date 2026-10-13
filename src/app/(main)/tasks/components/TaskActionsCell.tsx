@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import * as React from 'react';
 import { canInterpretTask } from '@/lib/task-interpretation';
 import { TableActions, TableAction } from '@/components/shared/TableActions';
@@ -28,6 +31,7 @@ export function TaskActionsCell({
   onDetails: (task: AnalysisTask) => void;
   isLoading: boolean;
 }) {
+  const t = useText();
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
   // 动态按钮配置：根据状态和进度自动切换
@@ -36,11 +40,11 @@ export function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
-    if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: '完成', action: 'completed' as ButtonAction, onClick: () => onView(task) };
+    if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: t("tasks.done33246f"), action: 'completed' as ButtonAction, onClick: () => onView(task) };
     if (task.executionPhase === 'terminating') return null;
     if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
       return {
-        label: task.status === 'completed' ? '释放节点' : '取消',
+        label: task.status === 'completed' ? t("tasks.releaseNode76fea1") : t("admin.cancel4d0b46"),
         action: 'stop' as ButtonAction,
         onClick: () => onStop(task.id),
       };
@@ -48,35 +52,35 @@ export function TaskActionsCell({
     switch (task.status) {
       case 'waiting_for_data':
         return {
-          label: '等待',
+          label: t("admin.waiting25d23b"),
           action: 'wait' as ButtonAction,
           onClick: undefined,
           disabled: true,
         };
       case 'queued':
         return {
-          label: '启动',
+          label: t("tasks.startebd26d"),
           action: 'start' as ButtonAction,
           onClick: () => onStart(task.id),
         };
       case 'running':
         return {
-          label: '取消',
+          label: t("admin.cancel4d0b46"),
           action: 'stop' as ButtonAction,
           onClick: () => onStop(task.id),
         };
       case 'pending_interpretation':
       case 'completed':
-        if (!canInterpretTask(task)) return { label: '完成', action: 'completed' as ButtonAction, disabled: true };
+        if (!canInterpretTask(task)) return { label: t("tasks.done33246f"), action: 'completed' as ButtonAction, disabled: true };
         return {
-          label: '解读',
+          label: t("tasks.interpret10d345"),
           action: 'interpret' as ButtonAction,
           onClick: () => onView(task),
         };
       case 'cancelled':
       case 'failed':
         return {
-          label: '重试',
+          label: t("pipeline.retrye2d53a"),
           action: 'retry' as ButtonAction,
           onClick: () => onRetry(task.id),
         };
@@ -97,22 +101,22 @@ export function TaskActionsCell({
   return (
     <>
       <TableActions>
-        {primaryAction && <TableAction action={primaryAction.action} label={primaryAction.label}
+        {primaryAction && <TableAction action={primaryAction.action} label={translateUI(primaryAction.label, t)}
           tone={primaryAction.action === 'stop' ? 'danger' : primaryAction.disabled || primaryAction.action === 'completed' ? 'default' : 'primary'}
-          loading={isLoading} loadingLabel="处理中" disabled={isLoading || primaryAction.disabled} onClick={primaryAction.onClick} />}
-        <TableAction action="view" label="详情" disabled={!canInterpretTask(task)} hint={canInterpretTask(task) ? "查看任务详情" : "CNV 校正任务不提供变异解读详情"} aria-label={`查看任务 ${task.internalId || task.id} 详情`} onClick={() => onDetails(task)} />
-        <TableAction action="edit" label="编辑" disabled={!canEdit || isLoading}
-          hint={canEdit ? '编辑任务' : task.interpretationCompletedAt ? '解读已完成，请先取消解读完成' : '请先停止运行中的任务'} onClick={() => onEdit(task)} />
-        <TableAction action="delete" label="删除" tone="danger" disabled={!canDelete || isLoading}
-          hint={canDelete ? '删除任务' : '解读已完成，请先取消解读完成'} onClick={() => setShowDeleteConfirm(true)} />
+          loading={isLoading} loadingLabel={t("tasks.processingfcb979")} disabled={isLoading || primaryAction.disabled} onClick={primaryAction.onClick} />}
+        <TableAction action="view" label={t("tasks.details4f55ee")} disabled={!canInterpretTask(task)} hint={canInterpretTask(task) ? t("tasks.viewTaskDetailsfe0ccc") : t("tasks.cnvCalibrationTasksHaveNoVariantInterpretation699c4f")} aria-label={t("tasks.viewTaskDetailsf20ee8", {p0: String(task.internalId || task.id)})} onClick={() => onDetails(task)} />
+        <TableAction action="edit" label={t("admin.edita7f814")} disabled={!canEdit || isLoading}
+          hint={canEdit ? t("tasks.editTask67659b") : task.interpretationCompletedAt ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : t("tasks.stopTheRunningTaskFirst2d18d7")} onClick={() => onEdit(task)} />
+        <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" disabled={!canDelete || isLoading}
+          hint={canDelete ? t("tasks.deleteTask070581") : t("tasks.interpretationIsCompleteReopenItFirsta9331f")} onClick={() => setShowDeleteConfirm(true)} />
       </TableActions>
 
       <ConfirmDialog
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        title="删除分析任务"
-        message={`确定删除任务 ${task.internalId || task.id}？已产生的运行记录和结果可能无法恢复。`}
-        confirmLabel="确认删除"
+        title={t("tasks.deleteAnalysisTask9b9e33")}
+        message={t("tasks.deleteTaskExecutionRecordsAndResultsMayf27ee3", {p0: String(task.internalId || task.id)})}
+        confirmLabel={t("data.confirmDeletion3c06ab")}
         variant="danger"
         onConfirm={() => onDelete(task.id)}
       />

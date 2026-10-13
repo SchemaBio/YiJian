@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
@@ -12,7 +19,7 @@ import { AppModal, EmptyState, FilePicker, ModalSectionHeading } from '@/compone
 import { Checkbox, DataTable, FormItem, Input, Select, Tag, type Column } from '@schema/ui-kit';
 import { AlertTriangle, FileText, HardDrive, Loader2, Search } from 'lucide-react';
 import { deleteDataAsset, getDataCenterConfig, getUploadStorageStats, listAllBEDAssets, validateBEDAsset, uploadBEDFile, type DataAsset, type DataCenterConfig, type UploadStorageStats } from '@/lib/data-assets';
-import { BUILTIN_BED_ASSETS } from '@/lib/builtin-resources';
+import { BUILTIN_BED_ASSETS, resourceDisplayName } from '@/lib/builtin-resources';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
@@ -23,20 +30,21 @@ const genomeOptions = [
   { value: 'GRCh38', label: 'GRCh38 (hg38)' },
 ];
 
-function formatTime(value: string): string {
+function formatTime(value: string, t: TextTranslator = chineseText): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(t.locale, { hour12: false });
 }
 
-function formatBytes(value: number): string {
+function formatBytes(value: number, t: TextTranslator = chineseText): string {
   if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
-  if (value < 1024 ** 4) return `${(value / 1024 ** 3).toFixed(1)} GB`;
-  return `${(value / 1024 ** 4).toFixed(1)} TB`;
+  if (value < 1024 * 1024) return `${formatNumericString((value / 1024).toFixed(1), t.locale)} KB`;
+  if (value < 1024 * 1024 * 1024) return `${formatNumericString((value / 1024 / 1024).toFixed(1), t.locale)} MB`;
+  if (value < 1024 ** 4) return `${formatNumericString((value / 1024 ** 3).toFixed(1), t.locale)} GB`;
+  return `${formatNumericString((value / 1024 ** 4).toFixed(1), t.locale)} TB`;
 }
 
 function BedFilesPageContent() {
+  const t = useText();
  const [page,setPage]=React.useState(1);
   const { currentOrg } = useAuth();
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -75,12 +83,12 @@ function BedFilesPageContent() {
       setConfig(dataCenterConfig);
       setStorageStats(uploadStorageStats);
     } catch (err) {
-      if(controller.signal.aborted)return;setError(err instanceof Error ? err.message : '加载 BED 文件失败');
+      if(controller.signal.aborted)return;setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToLoadBedFilesf96f3f"));
       setItems([]);
     } finally {
       if(!controller.signal.aborted)setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => { void loadData();return()=>loadController.current?.abort(); }, [loadData]);
  React.useEffect(()=>{if(!items.some(x=>!x.is_builtin&&(x.validation_status==='pending'||x.validation_status==='validating')))return;const t=setInterval(()=>void loadData(),5000);return()=>clearInterval(t)},[items,loadData]);
@@ -110,11 +118,11 @@ function BedFilesPageContent() {
   const handleUpload = async () => {
     if (!file || uploading) return;
     if (config?.temporary && !uploadPolicyAcknowledged) {
-      setUploadError('请先勾选“我已确认”');
+      setUploadError(t("data.selectIConfirmFirst4667d6"));
       return;
     }
     if (storageQuotaBytes !== null && totalStorageBytes + file.size > storageQuotaBytes) {
-      setUploadError(`所选 BED 文件将超过组织存储总容量（已用 ${formatBytes(totalStorageBytes)}，总容量 ${formatBytes(storageQuotaBytes)}）`);
+      setUploadError(t("pipeline.selectedBedFilesExceedOrganizationCapacityUsedcffda8", {p0: String(formatBytes(totalStorageBytes, t)), p1: String(formatBytes(storageQuotaBytes, t))}));
       return;
     }
     setUploading(true);
@@ -129,7 +137,7 @@ function BedFilesPageContent() {
       setUploadPolicyAcknowledged(false);
       await loadData();
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : '上传 BED 文件失败');
+      setUploadError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToUploadBedFile45c01a"));
     } finally {
       setUploading(false);
     }
@@ -144,7 +152,7 @@ function BedFilesPageContent() {
       setDeleting(null);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '删除 BED 文件失败');
+      setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToDeleteBedFile07fdd9"));
       const data=(err as {data?:{references?:{kind:string;id:string;name:string}[]}}).data;setReferences(data?.references??[]);
     } finally {
       setDeleteBusy(false);
@@ -160,7 +168,7 @@ function BedFilesPageContent() {
       await validateBEDAsset(row.id);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '校验失败');
+      setError(err instanceof Error ? errorText(err, t) : t("pipeline.validationFailed2da744"));
     } finally {
       validationBusy.current = false;
       setValidatingId(null);
@@ -169,30 +177,30 @@ function BedFilesPageContent() {
 
   const columns: Column<DataAsset>[] = [
     {
-      id: 'fileName', header: '文件名', width: 280, align: 'left',
-      accessor: (row) => <HoverHint content={row.file_name}><span className="block truncate font-medium text-fg-default" >{row.file_name}{row.is_builtin && <Tag className="ml-2" variant="neutral">内置</Tag>}</span></HoverHint>,
+      id: 'fileName', header: t("pipeline.filename1275f6"), width: 280, align: 'left',
+      accessor: (row) => <HoverHint content={resourceDisplayName(row.id, row.file_name, t)}><span className="block truncate font-medium text-fg-default" >{resourceDisplayName(row.id, row.file_name, t)}{row.is_builtin && <Tag className="ml-2" variant="neutral">{t("pipeline.builtIn09ceea")}</Tag>}</span></HoverHint>,
     },
     {
-      id: 'referenceGenome', header: '参考基因组', width: 130, align: 'center',
+      id: 'referenceGenome', header: t("pipeline.referenceGenome903ba5"), width: 130, align: 'center',
       accessor: (row) => <Tag variant="neutral">{row.reference_genome || '-'}</Tag>,
     },
-    { id: 'size', header: '文件大小', width: 110, align: 'right', accessor: (row) => row.is_builtin ? '-' : formatBytes(row.file_size) },
+    { id: 'size', header: t("pipeline.fileSize2ad8b0"), width: 110, align: 'right', accessor: (row) => row.is_builtin ? '-' : formatBytes(row.file_size, t) },
     {
-      id: 'provider', header: '存储位置', width: 120, align: 'center',
-      accessor: (row) => <span className="inline-flex items-center gap-1.5"><HardDrive className="h-4 w-4 text-fg-muted" />{row.is_builtin ? '系统内置' : row.provider === 's3' ? '对象存储' : '本地存储'}</span>,
+      id: 'provider', header: t("pipeline.storageLocationc445d4"), width: 120, align: 'center',
+      accessor: (row) => <span className="inline-flex items-center gap-1.5"><HardDrive className="h-4 w-4 text-fg-muted" />{row.is_builtin ? t("pipeline.systemBuiltInae8da0") : row.provider === 's3' ? t("data.objectStorage0f1b43") : t("pipeline.localStorage429e2e")}</span>,
     },
     {
-      id: 'status', header: '状态', width: 100, align: 'center',
-      accessor: (row) => row.is_builtin ? <Tag variant="success">可用</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:'可用',invalid:'内容无效',unavailable:'校验暂不可用',validating:'校验中',pending:'待校验'}[row.validation_status??'pending']) : row.status === 'failed' ? '失败' : '上传中'}</Tag>,
+      id: 'status', header: t("admin.status62e951"), width: 100, align: 'center',
+      accessor: (row) => row.is_builtin ? <Tag variant="success">{t("data.availablee91365")}</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:t("data.availablee91365"),invalid:t("pipeline.invalidContent76f2ac"),unavailable:t("pipeline.validationUnavailable6771d1"),validating:t("pipeline.validatingf64375"),pending:t("pipeline.awaitingValidation88a87f")}[row.validation_status??'pending']) : row.status === 'failed' ? t("admin.failed3e3c80") : t("data.uploading6818eb")}</Tag>,
     },
-    { id: 'createdAt', header: '上传时间', width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at) },
-    { id: 'actions', header: '操作', width: 152, minWidth: 152, maxWidth: 152, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
-      ? <span className="text-xs text-fg-muted">只读</span>
+    { id: 'createdAt', header: t("data.uploadedAt109db2"), width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at, t) },
+    { id: 'actions', header: t("admin.actionsf3ea6d"), width: 152, minWidth: 152, maxWidth: 152, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
+      ? <span className="text-xs text-fg-muted">{t("pipeline.readOnlyffc1d0")}</span>
       : <TableActions>
-        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction action="refresh" label="校验"
-          hint={row.validation_status === 'validating' ? '文件正在校验，请稍候' : '重新校验 BED 文件'}
-          loading={validatingId === row.id} loadingLabel="校验中" disabled={validatingId !== null || row.validation_status === 'validating'} onClick={() => void handleValidate(row)} />}
-        <TableAction action="delete" label="删除" tone="danger" aria-label={`删除 ${row.file_name}`} disabled={validatingId === row.id}
+        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction action="refresh" label={t("pipeline.validate20feec")}
+          hint={row.validation_status === 'validating' ? t("pipeline.validatingFilePleaseWait5f67b6") : t("pipeline.revalidateBedFile57c8f7")}
+          loading={validatingId === row.id} loadingLabel={t("pipeline.validatingf64375")} disabled={validatingId !== null || row.validation_status === 'validating'} onClick={() => void handleValidate(row)} />}
+        <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" aria-label={t("pipeline.delete05cefd", {p0: String(row.file_name)})} disabled={validatingId === row.id}
           onClick={() => setDeleting(row)} />
       </TableActions> },
   ];
@@ -201,54 +209,54 @@ function BedFilesPageContent() {
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">BED 文件</h2>
-          <p className="yj-page-subtitle">管理流程可用的捕获区域文件及其参考基因组。</p>
+          <h2 className="yj-page-title">{t("pipeline.bedFiles8ee058")}</h2>
+          <p className="yj-page-subtitle">{t("pipeline.manageCaptureRegionFilesAndReferenceGenomesf3513b")}</p>
         </div>
       </div>
 
       <div className="yj-toolbar-panel">
         <div className="w-full sm:w-72">
-          <Input placeholder="搜索文件名或 UUID..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} />
+          <Input placeholder={t("pipeline.searchFilenameOrUuid7aaf70")} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} leftElement={<Search className="h-4 w-4" />} />
         </div>
-        <Button action="upload" variant="primary" className="shrink-0 whitespace-nowrap"  onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>上传 BED 文件</Button>
+        <Button action="upload" variant="primary" className="shrink-0 whitespace-nowrap"  onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>{t("pipeline.uploadBedFilec83510")}</Button>
       </div>
 
-      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>重试读取</ActionButton></div>}
+      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
 
-      {references.length>0&&<div className="rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm">此 BED 正在被以下资源使用：<ul className="mt-2 space-y-1">{references.map(r=><li key={`${r.kind}:${r.id}`}><a className="text-accent-fg underline" href={r.kind==='task'?`/tasks/${r.id}`:r.kind==='baseline'?'/pipeline/baseline':'/pipeline'}>{r.name||r.id}</a></li>)}</ul></div>}
+      {references.length>0&&<div className="rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm">{t("pipeline.thisBedIsUsedByTheseResourcesb5c494")}<ul className="mt-2 space-y-1">{references.map(r=><li key={`${r.kind}:${r.id}`}><a className="text-accent-fg underline" href={r.kind==='task'?`/tasks/${r.id}`:r.kind==='baseline'?'/pipeline/baseline':'/pipeline'}>{r.name||r.id}</a></li>)}</ul></div>}
       {isLoading ? (
-        <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 BED 文件...</p></div>
+        <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">{t("pipeline.loadingBedFilesa20c0f")}</p></div>
       ) : error && items.length === 0 ? null : filteredFiles.length === 0 ? (
-        <EmptyState className="yj-panel" icon={<FileText />} title={searchQuery.trim() ? "未找到匹配 BED 文件" : "暂无 BED 文件"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "上传 BED 文件后即可在分析流程和 CNV 基线任务中选择。"} />
+        <EmptyState className="yj-panel" icon={<FileText />} title={searchQuery.trim() ? t("pipeline.noMatchingBedFiles4a8e2e") : t("pipeline.noBedFiles415a7a")} description={searchQuery.trim() ? t("pipeline.adjustYourSearchAndRetryf591c7") : t("pipeline.uploadedBedFilesCanBeSelectedIn41c346")} />
       ) : (
-        <DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={columns} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table bed-center-table" />
+        <DataTable data={filteredFiles.slice((page-1)*20,page*20)} columns={localizeDisplay(columns, t)} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table bed-center-table" />
       )}
 
       <ResourcePager page={page} total={filteredFiles.length} onChange={setPage} />
       <AppModal
         open={modalOpen}
         onOpenChange={(open) => !open && closeModal()}
-        title="上传 BED 文件"
+        title={t("pipeline.uploadBedFilec83510")}
         size="medium"
-        footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>取消</Button><Button action="upload" variant="primary" onClick={handleUpload} disabled={!file || uploading || storageQuotaReached || Boolean(config?.temporary && !uploadPolicyAcknowledged)} >{uploading ? `上传中 ${progress}%` : '开始上传'}</Button></>}
+        footer={<><Button variant="secondary" onClick={closeModal} disabled={uploading}>{t("admin.cancel4d0b46")}</Button><Button action="upload" variant="primary" onClick={handleUpload} disabled={!file || uploading || storageQuotaReached || Boolean(config?.temporary && !uploadPolicyAcknowledged)} >{uploading ? t("data.uploading2c0454", {p0: String(progress)}) : t("data.startUpload456565")}</Button></>}
       >
         <div className="space-y-5">
-          <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title="文件信息" description="文件仅适用于所选参考基因组。" />
+          <ModalSectionHeading icon={<FileText className="h-4 w-4" />} title={t("pipeline.fileInformation34f383")} description={t("pipeline.thisFileAppliesOnlyToTheSelected0148af")} />
           {uploadError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{uploadError}</div>}
-          <FormItem label="参考基因组" required>
-            <Select value={referenceGenome} onChange={(value) => setReferenceGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome)} options={genomeOptions} />
+          <FormItem label={t("pipeline.referenceGenome903ba5")} required>
+            <Select value={referenceGenome} onChange={(value) => setReferenceGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome)} options={localizeDisplay(genomeOptions, t)} />
           </FormItem>
-          <FormItem label="BED 文件" required hint="支持 .bed 和 .bed.gz，文件大小不超过 20MB">
+          <FormItem label={t("pipeline.bedFiles8ee058")} required hint={t("pipeline.supportsBedAndBedGzUpTo65773c")}>
             <FilePicker
-              label="BED 文件"
+              label={t("pipeline.bedFiles8ee058")}
               accept=".bed,.bed.gz,application/gzip"
               file={file}
               disabled={uploading}
               onChange={selected => { setFile(selected); setUploadError(''); }}
             />
           </FormItem>
-          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>允许系统长期保存此 BED 文件。我已知晓系统不提供 BED 文件下载；如不再使用，可在 BED 文件管理中手动删除。</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label="我已阅读并同意" /></div>}
-          {storageQuotaBytes !== null && <p className="text-xs text-fg-muted">组织全部数据共用存储容量：已用 {formatBytes(totalStorageBytes)}，总容量 {formatBytes(storageQuotaBytes)}。</p>}
+          {config?.temporary && <div className="space-y-3 rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm text-warning-fg"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("pipeline.iAllowLongTermStorageOfThis37917c")}</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploading} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label={t("pipeline.iHaveReadAndAgree141d8c")} /></div>}
+          {storageQuotaBytes !== null && <p className="text-xs text-fg-muted">{t("pipeline.allOrganizationDataSharesStorageCapacityUsed04200c")}{formatBytes(totalStorageBytes, t)}{t("data.totalCapacityd83765")}{formatBytes(storageQuotaBytes, t)}。</p>}
           {uploading && <div className="h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div>}
         </div>
       </AppModal>
@@ -256,11 +264,11 @@ function BedFilesPageContent() {
       <AppModal
         open={deleting !== null}
         size="small"
-        title="删除 BED 文件"
+        title={t("pipeline.deleteBedFile9a5f7b")}
         onOpenChange={(open) => { if (!open && !deleteBusy) setDeleting(null); }}
-        footer={<><Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleting(null)}>取消</Button><Button action="delete" variant="danger" disabled={deleteBusy} loading={deleteBusy}  onClick={() => void handleDelete()}>确认删除</Button></>}
+        footer={<><Button variant="secondary" disabled={deleteBusy} onClick={() => setDeleting(null)}>{t("admin.cancel4d0b46")}</Button><Button action="delete" variant="danger" disabled={deleteBusy} loading={deleteBusy}  onClick={() => void handleDelete()}>{t("data.confirmDeletion3c06ab")}</Button></>}
       >
-        <p className="text-sm leading-6 text-fg-muted">将永久删除 <span className="font-medium text-fg-default">{deleting?.file_name}</span> 及其存储对象。此操作无法撤销。</p>
+        <p className="text-sm leading-6 text-fg-muted">{t("data.permanentlyDeletef2b694")}<span className="font-medium text-fg-default">{deleting?.file_name}</span> {t("data.andItsStoredObjectThisCannotBe97aee3")}</p>
       </AppModal>
     </PageContent>
   );

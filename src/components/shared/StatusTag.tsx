@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -32,6 +35,7 @@ interface StatusTagProps {
  * <StatusTag status="running" config={statusConfig} />
  */
 export function StatusTag({ status, config, className }: StatusTagProps) {
+  const t = useText();
   const statusConfig = config[status];
   if (!statusConfig) {
     return null;
@@ -39,7 +43,7 @@ export function StatusTag({ status, config, className }: StatusTagProps) {
 
   return (
     <Tag variant={statusConfig.variant} className={className}>
-      {statusConfig.label}
+      {translateUI(statusConfig.label, t)}
     </Tag>
   );
 }

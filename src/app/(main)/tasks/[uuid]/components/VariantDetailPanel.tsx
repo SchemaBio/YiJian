@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 
 import { useInterpretationReadOnly } from './InterpretationLock';
@@ -63,7 +70,8 @@ function InfoItem({ label, value, link }: { label: string; value?: React.ReactNo
 }
 
 function AnnotationField({ label, value }: { label: string; value?: string }) {
-  return <div><dt className="text-xs text-fg-muted">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-fg-default">{value && !['.', '-'].includes(value) ? value : '未提供'}</dd></div>;
+  const t = useText();
+  return <div><dt className="text-xs text-fg-muted">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-fg-default">{value && !['.', '-'].includes(value) ? value : t("history.notProvided071fb2")}</dd></div>;
 }
 
 // 分组标题组件
@@ -93,7 +101,7 @@ function classifyPoints(score: number, count: number): ACMGClassification | unde
   return count ? 'VUS' : undefined;
 }
 
-function adjustmentDiff(beforeJSON: Record<string, unknown> | string, afterJSON: Record<string, unknown> | string): Array<{ key: string; before: string; after: string }> {
+function adjustmentDiff(beforeJSON: Record<string, unknown> | string, afterJSON: Record<string, unknown> | string, t: TextTranslator = chineseText): Array<{ key: string; before: string; after: string }> {
   try {
     const before = (typeof beforeJSON === 'string' ? JSON.parse(beforeJSON || '{}') : beforeJSON) as Record<string, unknown>;
     const after = (typeof afterJSON === 'string' ? JSON.parse(afterJSON || '{}') : afterJSON) as Record<string, unknown>;
@@ -101,8 +109,8 @@ function adjustmentDiff(beforeJSON: Record<string, unknown> | string, afterJSON:
       .filter(key => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
       .map(key => ({
         key,
-        before: before[key] === undefined ? '未设置' : JSON.stringify(before[key]),
-        after: after[key] === undefined ? '未设置' : JSON.stringify(after[key]),
+        before: before[key] === undefined ? t("tasks.notSet55a04b") : JSON.stringify(before[key]),
+        after: after[key] === undefined ? t("tasks.notSet55a04b") : JSON.stringify(after[key]),
       }));
   } catch {
     return [];
@@ -120,6 +128,7 @@ function ACMGPointsEditor({
   onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useText();
   const initialEvidence = variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
   const [evidence, setEvidence] = React.useState<Record<string, ACMGEvidenceEntry>>(() => Object.fromEntries(initialEvidence.map(item => [item.code, item])));
   const [override, setOverride] = React.useState<ACMGClassification | ''>(variant.acmgOverride ?? '');
@@ -145,57 +154,58 @@ function ACMGPointsEditor({
       if (code === 'PP3') delete next.BP4;
       if (code === 'BP4') delete next.PP3;
       const strength = code === 'BA1' ? 'standalone' : (code === 'PVS1' ? 'very_strong' : code.startsWith('P') && code.slice(0, 2) === 'PS' || code.startsWith('B') && code.slice(0, 2) === 'BS' ? 'strong' : code.startsWith('PM') ? 'moderate' : 'supporting');
-      next[code] = { code, strength, source: code === 'PP3' || code === 'BP4' ? 'AlphaMissense' : '人工证据' };
+      next[code] = { code, strength, source: code === 'PP3' || code === 'BP4' ? 'AlphaMissense' : t("tasks.manualEvidencea288d3") };
     }
     return next;
   }); };
 
   const save = async () => {
-    if (override && !overrideReason.trim()) { setError('人工覆写分类必须填写理由'); return; }
-    if (changed && !reason.trim()) { setError('请填写本次调整理由'); return; }
+    if (override && !overrideReason.trim()) { setError(t("tasks.manualClassificationOverrideRequiresAReason4ce506")); return; }
+    if (changed && !reason.trim()) { setError(t("tasks.enterAReasonForThisChange1afb75")); return; }
     setSaving(true); setError('');
     try {
       await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim(), restoreAutomatic);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '保存 ACMG 证据失败');
+      setError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSaveAcmgEvidencedb2f9e"));
     } finally {
       setSaving(false);
     }
   };
 
   return <div className="space-y-4">
-    {renderAIAction && <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">基于当前编辑证据生成</span>{renderAIAction({ evidence: Object.values(evidence), override, overrideReason, score })}</div>}
+    {renderAIAction && <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.generatedFromCurrentEditedEvidence1c1c7c")}</span>{renderAIAction({ evidence: Object.values(evidence), override, overrideReason, score })}</div>}
     <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">自动初评 · {auto?.profile ?? 'acmg-snv-points-v2'}</span><span>自动分类：{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : '证据不足'} · {auto?.score ?? 0} 分</span></div>
-      {auto?.pending?.length ? <p className="mt-1 text-xs text-fg-muted">待确认：{auto.pending.join('；')}</p> : <p className="mt-1 text-xs text-fg-muted">未纳入缺乏当前证据前提的人群、疾病机制、家系或实验室证据。</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{t("tasks.automaticAssessmentc4ff36")}{auto?.profile ?? 'acmg-snv-points-v2'}</span><span>{t("tasks.automaticClassification8daa4b")}{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : t("tasks.insufficientEvidence70568c")} · {auto?.score ?? 0} {t("tasks.pointsdecb3b")}</span></div>
+      {auto?.pending?.length ? <p className="mt-1 text-xs text-fg-muted">{t("tasks.unconfirmed7c7684")}{auto.pending.join('；')}</p> : <p className="mt-1 text-xs text-fg-muted">{t("tasks.populationDiseaseMechanismFamilyAndLaboratoryEvidencebc757f")}</p>}
     </div>
     {POINT_CRITERIA.map(group => <section key={group.title} className="space-y-2">
-      <h5 className="text-sm font-semibold text-fg-default">{group.title}</h5>
+      <h5 className="text-sm font-semibold text-fg-default">{translateUI(group.title, t)}</h5>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {group.items.map(code => {
           const item = evidence[code];
           return <div key={code} className={`flex min-w-0 items-center gap-2 rounded-md border p-2 ${item ? (code.startsWith('B') ? 'border-success-emphasis/40 bg-success-subtle/30' : 'border-danger-emphasis/40 bg-danger-subtle/30') : 'border-border-subtle bg-canvas-default'}`}>
-            <input type="checkbox" checked={Boolean(item)} onChange={event => toggle(code, event.target.checked)} aria-label={`选择 ACMG 证据 ${code}`} />
+            <input type="checkbox" checked={Boolean(item)} onChange={event => toggle(code, event.target.checked)} aria-label={t("tasks.selectAcmgEvidencef17a92", {p0: String(code)})} />
             <span className="w-12 shrink-0 text-xs font-semibold">{code}</span>
-            {item && code !== 'BA1' && <select value={item.strength} onChange={event => { setRestoreAutomatic(false); setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } })); }} aria-label={`${code} 强度`} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
-              {(code === 'PVS1' ? [['very_strong', '非常强']]:[['supporting','支持'],['moderate','中等'],['strong','强'],...(code.startsWith('P') ? [['very_strong','非常强']] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} 分）</option>)}
+            {item && code !== 'BA1' && <select value={item.strength} onChange={event => { setRestoreAutomatic(false); setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } })); }} aria-label={t("tasks.strengthc0b275", {p0: String(code)})} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
+              {(code === 'PVS1' ? [['very_strong', t("tasks.veryStrong103c20")]]:[['supporting',t("tasks.supportinga9aab1")],['moderate',t("tasks.moderate839de2")],['strong',t("tasks.strong275680")],...(code.startsWith('P') ? [['very_strong',t("tasks.veryStrong103c20")]] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} {t("tasks.points505d62")}</option>)}
             </select>}
-            {item && code === 'BA1' && <span className="text-xs text-success-fg">独立良性证据</span>}
+            {item && code === 'BA1' && <span className="text-xs text-success-fg">{t("tasks.independentBenignEvidence8ecbad")}</span>}
           </div>;
         })}
       </div>
     </section>)}
-    <div className="rounded-lg border border-border-subtle bg-canvas-default p-3 text-sm"><div className="flex justify-between"><span>证据积分</span><strong>{score}</strong></div><div className="mt-1 flex justify-between"><span>积分分类</span><strong>{calculated ? ACMG_CONFIG[calculated].label : '证据不足'}</strong></div></div>
-    <div><label className="mb-1 block text-sm font-medium">人工覆写最终分类</label><select value={override} onChange={event => { setRestoreAutomatic(false); setOverride(event.target.value as ACMGClassification | ''); }} className="w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm"><option value="">按证据积分显示</option>{Object.entries(ACMG_CONFIG).map(([key, config]) => <option key={key} value={key}>{config.label}</option>)}</select></div>
-    {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder="人工覆写理由（必填）" className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
-    <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={changed ? '本次证据调整理由（必填）' : '调整理由（如有）'} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
+    <div className="rounded-lg border border-border-subtle bg-canvas-default p-3 text-sm"><div className="flex justify-between"><span>{t("tasks.evidencePoints76bde1")}</span><strong>{score}</strong></div><div className="mt-1 flex justify-between"><span>{t("tasks.pointBasedClassification845a04")}</span><strong>{calculated ? ACMG_CONFIG[calculated].label : t("tasks.insufficientEvidence70568c")}</strong></div></div>
+    <div><label className="mb-1 block text-sm font-medium">{t("tasks.manualFinalClassificationOverridedb887b")}</label><select value={override} onChange={event => { setRestoreAutomatic(false); setOverride(event.target.value as ACMGClassification | ''); }} className="w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm"><option value="">{t("tasks.showByEvidencePoints055e03")}</option>{Object.entries(ACMG_CONFIG).map(([key, config]) => <option key={key} value={key}>{translateUI(config.label, t)}</option>)}</select></div>
+    {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder={t("tasks.overrideReasonRequired0e9c5d")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
+    <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={changed ? t("tasks.evidenceChangeReasonRequired0498e1") : t("tasks.changeReasonIfAny8a124e")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
     {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
-    <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason('恢复当前版本自动初评基线'); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">恢复自动基线后保存</ActionButton>
-    <div className="flex gap-2"><ActionButton loading={saving} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">保存证据与分类</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">取消</ActionButton></div>
+    <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason(t("tasks.restoreCurrentAutomaticAssessmentBaselineffd9de")); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">{t("tasks.restoreAutomaticBaselineAndSave7ecc58")}</ActionButton>
+    <div className="flex gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost" type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveEvidenceAndClassificationd8ed29")}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
   </div>;
 }
 
 export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation,onSaveVersionedAssessment }: VariantDetailPanelProps) {
+  const t = useText();
   const [section, setSection] = React.useState<InspectorSection>('annotation');
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
   const [acmgTab, setAcmgTab] = React.useState<'acmg' | 'svcv4'>('acmg');
@@ -253,7 +263,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const selectVersion=async(version:'legacy'|'svcv4')=>{
     if(readOnly || versionBusy || !onSaveVersionedAssessment)return;
     setVersionBusy(true);setVersionError('');
-    try{await saveVersioned({activeAcmgVersion:version},'');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error?e.message:'切换失败');}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
+    try{await saveVersioned({activeAcmgVersion:version},'');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error ? errorText(e, t):t("tasks.switchFailed9e2fdc"));}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
   };
 
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
@@ -289,7 +299,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
       try {const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
       if (selectedRef.current === variant.id) setAdjustmentHistory(history);}catch{/* Saving succeeded even if history refresh is unavailable. */}
     } catch (cause) {
-      if (selectedRef.current === variant.id) setInterpretationError(cause instanceof Error ? cause.message : '保存人工解读失败');
+      if (selectedRef.current === variant.id) setInterpretationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSaveInterpretation3f40ed"));
     } finally {
       if (selectedRef.current === variant.id) setInterpretationSaving(false);
     }
@@ -297,14 +307,14 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   return (
     <>
-      <WorkspaceInspector label="变异详情" onClose={onClose}>
+      <WorkspaceInspector label={t("tasks.variantDetails7ca440")} onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
-            <h3 className="text-base font-medium text-fg-default">变异详情</h3>
-            {activeConfig ? <Tag variant={activeConfig.variant}>{variant.activeAcmgVersion==='svcv4'&&variant.svcv4Assessment?.result?.vusSubclass?variant.svcv4Assessment.result.vusSubclass:activeConfig.label}</Tag> : <Tag variant="neutral">ACMG 未评定</Tag>}
+            <h3 className="text-base font-medium text-fg-default">{t("tasks.variantDetails7ca440")}</h3>
+            {activeConfig ? <Tag variant={activeConfig.variant}>{translateUI(variant.activeAcmgVersion==='svcv4'&&variant.svcv4Assessment?.result?.vusSubclass?variant.svcv4Assessment.result.vusSubclass:activeConfig.label, t)}</Tag> : <Tag variant="neutral">{t("tasks.acmgNotAssessed1ea79b")}</Tag>}
           </div>
-          <IconActionButton label="关闭" action="close" variant="ghost"
+          <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
 
@@ -312,29 +322,29 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
         </div>
 
         <div className="yj-inspector-summary">
-          <strong className="text-fg-default">{variant.gene || '未提供基因'}</strong> · {variant.chromosome}:{variant.position}<br />
-          {variant.ref} → {variant.alt} · {variant.automaticAcmg?.classificationBasis && variant.automaticAcmg.classificationBasis !== 'acmg_evidence' ? '快速初评 · 待人工复核' : `自动初评 ${variant.automaticAcmg?.score ?? '—'} 分`}
-          <p className="mt-1 text-xs">当前采用：{variant.activeAcmgVersion==='svcv4'?'SVC v4.0（试行／非权威参考）':'ACMG 现版'}</p>
-          {!activeConfig && <p className="mt-1 text-warning-fg">证据不足，当前无法形成 ACMG 分类</p>}
+          <strong className="text-fg-default">{variant.gene || t("tasks.geneNotProvidedac7186")}</strong> · {variant.chromosome}:{variant.position}<br />
+          {variant.ref} → {variant.alt} · {variant.automaticAcmg?.classificationBasis && variant.automaticAcmg.classificationBasis !== 'acmg_evidence' ? t("tasks.quickAssessmentAwaitingManualReview573655") : t("tasks.automaticAssessmentPointsce3c65", {p0: String(variant.automaticAcmg?.score ?? '—')})}
+          <p className="mt-1 text-xs">{t("tasks.currentlyUsing372ce3")}{variant.activeAcmgVersion==='svcv4'?t("tasks.svcVExperimentalNonauthoritativeReference0e7cc1"):t("tasks.currentAcmgEdition8379ee")}</p>
+          {!activeConfig && <p className="mt-1 text-warning-fg">{t("tasks.insufficientEvidenceForAcmgClassification822f20")}</p>}
         </div>
         {/* 内容区域 */}
         <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'acmg', 'interpretation', 'history']} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
           <section hidden={section !== 'interpretation'} >
           {/* 人工解读 */}
-          <SectionTitle icon={MessageSquare} title="人工解读" />
+          <SectionTitle icon={MessageSquare} title={t("tasks.manualInterpretation1fcaef")} />
           <div className="space-y-0">
             <textarea
               readOnly={readOnly}
               value={interpretation}
               onChange={(e) => setInterpretation(e.target.value)}
-              placeholder="请输入您对该变异的解读分析..."
+              placeholder={t("tasks.enterYourInterpretationOfThisVariantee0d51")}
               className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
             />
             <div className="mt-2 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-fg-muted">{interpretation.length} 字</span>
-                <ActionButton loading={interpretationSaving} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">保存人工解读</ActionButton>
+                <span className="text-xs text-fg-muted">{interpretation.length} {t("tasks.characters9f8ba6")}</span>
+                <ActionButton loading={interpretationSaving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost" type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveInterpretationac1ec3")}</ActionButton>
               </div>
               {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
             </div>
@@ -344,10 +354,10 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           <section hidden={section !== 'acmg'}>
             <InspectorTabs id="variant-acmg-calculator" value={acmgTab}
               onChange={value => { if (value === 'acmg' || value === 'svcv4') setAcmgTab(value); }}
-              sections={['acmg', 'svcv4']} labels={{ acmg: '现版', svcv4: 'SVC v4.0版' }} ariaLabel="ACMG 计算器版本" />
+              sections={['acmg', 'svcv4']} labels={{ acmg: t("tasks.currentEdition7b034e"), svcv4: t("tasks.svcV6cd501") }} ariaLabel={t("display.acmgCalculatorVersion6cc1e9")} />
             <div id="variant-acmg-calculator-content" role="tabpanel" aria-labelledby={`variant-acmg-calculator-${acmgTab}`} className="pt-3">
             {!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
-              <ActionButton action="completed" type="button" loading={versionBusy} loadingLabel="切换中…" disabled={(variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4')||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')}>采用{acmgTab==='acmg'?'现版':'SVC v4.0试行'}结果</ActionButton>
+              <ActionButton action="completed" type="button" loading={versionBusy} loadingLabel={t("tasks.switching717bbf")} disabled={(variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4')||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')}>{t("tasks.use365456")}{acmgTab==='acmg'?t("tasks.currentEdition7b034e"):t("tasks.svcVExperimentaldc2093")}{t("tasks.result0a2c91")}</ActionButton>
               {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
             </div>}
               <section hidden={acmgTab !== 'svcv4'}>
@@ -355,14 +365,14 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               </section>
               <section hidden={acmgTab !== 'acmg'}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold">ACMG 现版</span>
+                <span className="text-sm font-semibold">{t("tasks.currentAcmgEdition8379ee")}</span>
                 {!isEditingACMG && <AIAssistanceAction key={`${taskId}/${variant.id}/acmg`} disabled={readOnly} input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride } }} onResult={setAIResult} />}
               </div>
               {aiResult && <AIResultCard result={aiResult} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
               {/* ACMG 分类 */}
               <SectionTitle
                 icon={FileText}
-                title="ACMG 分类"
+                title={t("tasks.acmgClassification52bcef")}
                 action={
                   canEditACMG && !isEditingACMG && (
                     <ActionButton action="edit" variant="ghost"
@@ -370,8 +380,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                       className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
                     >
 
-                      编辑
-                    </ActionButton>
+                      {t("admin.edita7f814")}</ActionButton>
                   )
                 }
               />
@@ -385,13 +394,13 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                   />
                 ) : (
                   <>
-                    <InfoItem label="分类" value={acmgConfig ? <Tag variant={acmgConfig.variant}>{acmgConfig.label}</Tag> : '未评定'} />
-                    <InfoItem label="评估来源" value={variant.acmgAssessmentSource === 'manual_override' ? '人工覆写' : variant.acmgAssessmentSource === 'manual_evidence' ? '已保存证据积分' : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? '快速初评 · ClinVar 参考' : variant.automaticAcmg?.classificationBasis === 'population_screening' ? '快速初评 · gnomAD 频率筛查' : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? '快速初评 · 冲突待复核' : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? '快速初评 · VUS 待复核' : '自动证据积分'} />
+                    <InfoItem label={t("tasks.classification435c52")} value={acmgConfig ? <Tag variant={acmgConfig.variant}>{translateUI(acmgConfig.label, t)}</Tag> : t("tasks.notAssessedd94e42")} />
+                    <InfoItem label={t("tasks.assessmentSource3f01c0")} value={variant.acmgAssessmentSource === 'manual_override' ? t("tasks.manualOverrideef74b5") : variant.acmgAssessmentSource === 'manual_evidence' ? t("tasks.savedEvidencePoints874a14") : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? t("tasks.quickAssessmentClinvarReferenceb1b550") : variant.automaticAcmg?.classificationBasis === 'population_screening' ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f") : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? t("tasks.quickAssessmentConflictNeedsReviewf3c456") : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? t("tasks.quickAssessmentVusNeedsReview79d7da") : t("tasks.automaticEvidencePointsb87a06")} />
                     {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
-                    <InfoItem label="自动证据积分" value={variant.automaticAcmg ? `${variant.automaticAcmg.score} 分` : undefined} />
-                    {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">当前注释不足以形成 ACMG 分类；缺失的人群、疾病机制、家系或实验室证据不会自动补推。</p>}
+                    <InfoItem label={t("tasks.automaticEvidencePointsb87a06")} value={variant.automaticAcmg ? t("tasks.pointsc91542", {p0: String(variant.automaticAcmg.score)}) : undefined} />
+                    {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">{t("tasks.currentAnnotationsCannotEstablishAnAcmgClassification3d8581")}</p>}
                     <InfoItem
-                      label="证据项"
+                      label={t("tasks.evidenceItem13948e")}
                       value={currentCriteria.length ? (
                         <div className="flex flex-wrap gap-1">
                           {currentCriteria.map((c) => (
@@ -411,93 +420,93 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           </section>
           <section hidden={section !== 'evidence'} >
           {/* 测序质量 */}
-          <SectionTitle icon={FileText} title="测序质量" />
+          <SectionTitle icon={FileText} title={t("tasks.sequencingQuality74e3b6")} />
           <div className="space-y-0">
-            <InfoItem label="VAF" value={vaf === undefined || vaf < 0 || vaf > 1 ? '未提供' : `${(vaf * 100).toFixed(1)}%`} />
-            <InfoItem label="QUAL" value={annotation('Quality') ?? '未提供'} />
-            <InfoItem label="FILTER" value={annotation('Filter') ?? '未提供'} />
-            <InfoItem label="DP（覆盖深度）" value={annotation('Depth') ?? '未提供'} />
-            <InfoItem label="AD（等位基因深度）" value={annotation('AD') ?? '未提供'} />
-            <InfoItem label="GQ（基因型质量）" value={annotation('GQ') ?? '未提供'} />
-            <p className="mt-2 text-xs text-fg-muted">数值来自原始注释；QUAL 是位点质量，GQ 是基因型质量，不能相互替代。</p>
+            <InfoItem label="VAF" value={vaf === undefined || vaf < 0 || vaf > 1 ? t("history.notProvided071fb2") : `${formatNumericString((vaf * 100).toFixed(1), t.locale)}%`} />
+            <InfoItem label="QUAL" value={annotation('Quality') ?? t("history.notProvided071fb2")} />
+            <InfoItem label="FILTER" value={annotation('Filter') ?? t("history.notProvided071fb2")} />
+            <InfoItem label={t("tasks.dpReadDepth438651")} value={annotation('Depth') ?? t("history.notProvided071fb2")} />
+            <InfoItem label={t("tasks.adAlleleDepthd2d259")} value={annotation('AD') ?? t("history.notProvided071fb2")} />
+            <InfoItem label={t("tasks.gqGenotypeQualitycc49b1")} value={annotation('GQ') ?? t("history.notProvided071fb2")} />
+            <p className="mt-2 text-xs text-fg-muted">{t("tasks.valuesComeFromOriginalAnnotationsQualIsb4e964")}</p>
           </div>
 
-          <SectionTitle icon={Database} title="ClinVar 注释" />
+          <SectionTitle icon={Database} title={t("tasks.clinvarAnnotations48099f")} />
           <div className="space-y-0">
-            <InfoItem label="临床意义" value={<ClinVarBadge value={annotation('ClinVar_Sig', variant.clinvarSignificance)} />} />
-            <InfoItem label="审核状态" value={annotation('ClinVar_RevStat', variant.clinvarReviewStatus)} />
-            <InfoItem label="审核星级" value={annotation('ClinVar_Star', variant.clinvarStars)} />
-            <InfoItem label="关联疾病" value={annotation('ClinVar_DN', variant.clinvarDisease)} />
+            <InfoItem label={t("tasks.clinicalSignificancecd0866")} value={<ClinVarBadge value={annotation('ClinVar_Sig', variant.clinvarSignificance)} />} />
+            <InfoItem label={t("tasks.reviewStatusa62215")} value={annotation('ClinVar_RevStat', variant.clinvarReviewStatus)} />
+            <InfoItem label={t("tasks.reviewStars29d243")} value={annotation('ClinVar_Star', variant.clinvarStars)} />
+            <InfoItem label={t("history.associatedDiseasea79330")} value={annotation('ClinVar_DN', variant.clinvarDisease)} />
           </div>
 
           {/* 人群频率 */}
-          <SectionTitle icon={Database} title="人群频率" />
+          <SectionTitle icon={Database} title={t("tasks.populationFrequency1705e3")} />
           <div className="space-y-0">
-            <InfoItem label="gnomAD 总体 AF" value={formatPopulationFrequency(annotation('GnomAD_AF', variant.gnomadAF))} />
-            <InfoItem label="gnomAD 东亚 AF" value={formatPopulationFrequency(annotation('GnomAD_AF_EAS', variant.gnomadEasAF))} />
+            <InfoItem label={t("tasks.gnomadOverallAf6abfe1")} value={formatPopulationFrequency(annotation('GnomAD_AF', variant.gnomadAF))} />
+            <InfoItem label={t("tasks.gnomadEastAsianAfe9255d")} value={formatPopulationFrequency(annotation('GnomAD_AF_EAS', variant.gnomadEasAF))} />
             <InfoItem label="VEP MAX_AF" value={formatPopulationFrequency(annotation('MAX_AF', variant.maxAF))} />
             <InfoItem label="gnomAD nhomalt XX" value={annotation('GnomAD_nhomalt_XX', variant.gnomadNhomaltXX)} />
             <InfoItem label="gnomAD nhomalt XY" value={annotation('GnomAD_nhomalt_XY', variant.gnomadNhomaltXY)} />
-            <p className="mt-2 text-xs text-fg-muted">AF 为 0–1 的原始比值；nhomalt 为纯合变异计数。</p>
+            <p className="mt-2 text-xs text-fg-muted">{t("tasks.afIsTheOriginalRatioFromTo137eda")}</p>
           </div>
 
           {/* 功能预测 */}
-          <SectionTitle icon={Dna} title="功能预测" />
+          <SectionTitle icon={Dna} title={t("tasks.functionalPredictions9b8bd4")} />
           <div className="space-y-0">
-            <InfoItem label="Pangolin gain" value={annotation('Pangolin_Gain', variant.pangolinGain)} />
-            <InfoItem label="Pangolin loss" value={annotation('Pangolin_Loss', variant.pangolinLoss)} />
-            <InfoItem label="Pangolin 预测标签" value={annotation('Pangolin_AN', variant.pangolinAnnotation)} />
+            <InfoItem label={t("interface.pangolinGaindcee65")} value={annotation('Pangolin_Gain', variant.pangolinGain)} />
+            <InfoItem label={t("interface.pangolinLoss653f20")} value={annotation('Pangolin_Loss', variant.pangolinLoss)} />
+            <InfoItem label={t("tasks.pangolinPredictionLabel4595a9")} value={annotation('Pangolin_AN', variant.pangolinAnnotation)} />
             <InfoItem label="EVOScore2" value={annotation('EVOScore', variant.evoScore)} />
-            <InfoItem label="EVOScore2 预测标签" value={annotation('EVOScore_AN', variant.evoAnnotation)} />
-            <InfoItem label="AlphaMissense 分数" value={annotation('AlphaMissense_AM', variant.alphaMissenseScore)} />
-            <InfoItem label="AlphaMissense 预测标签" value={annotation('AlphaMissense_AMC', variant.alphaMissenseClass)} />
-            <p className="mt-2 text-xs text-fg-muted">保留流程输出的多值与标签；功能预测标签不是 ACMG 分级。</p>
+            <InfoItem label={t("tasks.evoscorePredictionLabel9c87e9")} value={annotation('EVOScore_AN', variant.evoAnnotation)} />
+            <InfoItem label={t("tasks.alphamissenseScore84aae0")} value={annotation('AlphaMissense_AM', variant.alphaMissenseScore)} />
+            <InfoItem label={t("tasks.alphamissensePredictionLabel5a4a6e")} value={annotation('AlphaMissense_AMC', variant.alphaMissenseClass)} />
+            <p className="mt-2 text-xs text-fg-muted">{t("tasks.workflowMultivaluesAndLabelsArePreservedFunctional8c01b5")}</p>
           </div>
 
           </section>
           <section hidden={section !== 'history'} >
-          <SectionTitle icon={FileText} title="判读变更记录" />
+          <SectionTitle icon={FileText} title={t("tasks.interpretationChangeHistory8ee03f")} />
           <div className="space-y-2">
-            {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">暂无调整记录</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
-              <div className="flex flex-wrap justify-between gap-1 text-xs text-fg-muted"><span>{event.actor || '用户'}</span><time>{event.createdAt ? new Date(event.createdAt).toLocaleString() : ''}</time></div>
-              <p className="mt-1 text-sm text-fg-default">{event.reason || '未填写理由'}</p>
-              {adjustmentDiff(event.before, event.after).map(change => <p key={change.key} className="mt-1 break-words text-xs text-fg-muted"><span className="font-medium">{change.key}：</span>{change.before} → {change.after}</p>)}
+            {adjustmentHistory.length === 0 ? <p className="text-sm text-fg-muted">{t("tasks.noChangesd43ef6")}</p> : adjustmentHistory.map(event => <article key={event.id} className="rounded-md border border-border-subtle bg-canvas-default p-2.5">
+              <div className="flex flex-wrap justify-between gap-1 text-xs text-fg-muted"><span>{event.actor || t("tasks.user9ba763")}</span><time>{event.createdAt ? new Date(event.createdAt).toLocaleString(t.locale) : ''}</time></div>
+              <p className="mt-1 text-sm text-fg-default">{event.reason || t("tasks.noReasonProvidedcb9c56")}</p>
+              {adjustmentDiff(event.before, event.after, t).map(change => <p key={change.key} className="mt-1 break-words text-xs text-fg-muted"><span className="font-medium">{change.key}：</span>{change.before} → {change.after}</p>)}
             </article>)}
           </div>
 
           </section>
           <section hidden={section !== 'annotation'} className="yj-annotation-layout">
             <section aria-labelledby="transcript-heading">
-              <h4 id="transcript-heading" className="yj-annotation-heading">转录本与 HGVS</h4>
+              <h4 id="transcript-heading" className="yj-annotation-heading">{t("tasks.transcriptAndHgvsee0106")}</h4>
               <dl className="yj-annotation-fields">
-                <AnnotationField label="转录本编号" value={annotation('Transcript', variant.transcript)} />
-                <AnnotationField label="外显子编号" value={transcriptInfo.exonNumber} />
-                <AnnotationField label="内含子编号" value={transcriptInfo.intronNumber} />
-                <AnnotationField label="外显子总数" value={transcriptInfo.exonTotal ? `${transcriptInfo.exonTotal}${transcriptInfo.exonTotalDerived ? '（按内含子总数推算）' : ''}` : undefined} />
-                <AnnotationField label="内含子总数" value={transcriptInfo.intronTotal ? `${transcriptInfo.intronTotal}${transcriptInfo.intronTotalDerived ? '（按外显子总数推算）' : ''}` : undefined} />
-                <AnnotationField label="位置原始注释" value={transcriptInfo.location} />
+                <AnnotationField label={t("tasks.transcriptIdd6daab")} value={annotation('Transcript', variant.transcript)} />
+                <AnnotationField label={t("tasks.exonNumber43bc13")} value={transcriptInfo.exonNumber} />
+                <AnnotationField label={t("tasks.intronNumber44f9c7")} value={transcriptInfo.intronNumber} />
+                <AnnotationField label={t("tasks.totalExons0e3eaf")} value={transcriptInfo.exonTotal ? `${transcriptInfo.exonTotal}${transcriptInfo.exonTotalDerived ? t("tasks.inferredFromIntronCount67556c") : ''}` : undefined} />
+                <AnnotationField label={t("tasks.totalIntrons1db3b5")} value={transcriptInfo.intronTotal ? `${transcriptInfo.intronTotal}${transcriptInfo.intronTotalDerived ? t("tasks.inferredFromExonCount252265") : ''}` : undefined} />
+                <AnnotationField label={t("tasks.originalPositionAnnotationae0a50")} value={transcriptInfo.location} />
                 <AnnotationField label="HGVSc" value={annotation('HGVS_c', variant.hgvsc)} />
                 <AnnotationField label="HGVSp" value={annotation('HGVS_p', variant.hgvsp)} />
-                <AnnotationField label="变异后果" value={variant.consequence} />
+                <AnnotationField label={t("history.variantConsequence95666e")} value={variant.consequence} />
               </dl>
             </section>
             <section aria-labelledby="gencc-heading">
-              <h4 id="gencc-heading" className="yj-annotation-heading">GenCC · 基因与疾病关联</h4>
+              <h4 id="gencc-heading" className="yj-annotation-heading">{t("tasks.genccGeneDiseaseAssociation85a5a5")}</h4>
               <dl className="yj-annotation-fields">
-                <AnnotationField label="疾病关联" value={annotation('GenCC_disease_title', variant.diseaseAssociation)} />
-                <AnnotationField label="遗传模式" value={annotation('GenCC_moi_title') || ({ AD: '常染色体显性', AR: '常染色体隐性', XL: 'X 连锁', XLD: 'X 连锁显性', XLR: 'X 连锁隐性' }[variant.inheritanceMode || '']) || annotation('GenCC_moi_curie', variant.inheritanceMode)} />
-                <AnnotationField label="遗传模式标识" value={annotation('GenCC_moi_curie', variant.inheritanceMode)} />
-                <AnnotationField label="疾病标识" value={annotation('GenCC_disease_original_curie')} />
+                <AnnotationField label={t("tasks.diseaseAssociation8e7820")} value={annotation('GenCC_disease_title', variant.diseaseAssociation)} />
+                <AnnotationField label={t("tasks.inheritancePattern5de3fe")} value={annotation('GenCC_moi_title') || ({ AD: t("tasks.autosomalDominant1594de"), AR: t("tasks.autosomalRecessive8973b8"), XL: t("tasks.xLinked48ce00"), XLD: t("tasks.xLinkedDominantbea7f6"), XLR: t("tasks.xLinkedRecessivec385b8") }[variant.inheritanceMode || '']) || annotation('GenCC_moi_curie', variant.inheritanceMode)} />
+                <AnnotationField label={t("tasks.inheritanceIdentifiere42271")} value={annotation('GenCC_moi_curie', variant.inheritanceMode)} />
+                <AnnotationField label={t("tasks.diseaseIdentifier3697b1")} value={annotation('GenCC_disease_original_curie')} />
               </dl>
             </section>
             {(variant.rsId || annotation('HGNC_ID') || annotation('Cytoband')) && <section aria-labelledby="variant-ids-heading">
-              <h4 id="variant-ids-heading" className="yj-annotation-heading">变异标识</h4>
+              <h4 id="variant-ids-heading" className="yj-annotation-heading">{t("tasks.variantIdentifiera3a10c")}</h4>
               {variant.rsId && <InfoItem label="dbSNP" value={variant.rsId} />}
               {annotation('HGNC_ID') && <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />}
-              {annotation('Cytoband') && <InfoItem label="染色体带区" value={annotation('Cytoband')} />}
+              {annotation('Cytoband') && <InfoItem label={t("tasks.cytobandc12b02")} value={annotation('Cytoband')} />}
             </section>}
             <section aria-labelledby="variant-links-heading">
-              <h4 id="variant-links-heading" className="yj-annotation-heading">数据库与判读资源</h4>
+              <h4 id="variant-links-heading" className="yj-annotation-heading">{t("tasks.databasesAndInterpretationResources02d5cc")}</h4>
               <VariantResourceLinks variant={variant} referenceGenome={referenceGenome} />
             </section>
           </section>

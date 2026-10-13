@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -19,11 +24,11 @@ const NUMERIC_OPS = new Set(['gt', 'gte', 'lt', 'lte', 'between']);
 
 type FilterOperator = typeof OPS[number][0];
 
-function label(field: string): string {
+function label(field: string, t: TextTranslator = chineseText): string {
   const common: Record<string, string> = {
-    Chromosome: '染色体', Position: '位置', Gene: '基因', Type: '类型', VAF: 'VAF',
-    GnomAD_AF: 'gnomAD AF', GnomAD_AF_EAS: 'gnomAD 东亚 AF', ClinVar_Sig: 'ClinVar 意义',
-    acmgClassification: 'ACMG 评定', pinned: '置顶', reported: '回报',
+    Chromosome: t("history.chromosome326659"), Position: t("history.position88c344"), Gene: t("history.gene9ef2ed"), Type: t("history.typee4e46c"), VAF: 'VAF',
+    GnomAD_AF: 'gnomAD AF', GnomAD_AF_EAS: t("tasks.gnomadEastAsianAfe9255d"), ClinVar_Sig: t("tasks.clinvarSignificanceeb01c2"),
+    acmgClassification: t("tasks.acmgAssessment6a7cd5"), pinned: t("tasks.pin7bcf18"), reported: t("tasks.report6c4cc0"),
   };
   return common[field] ?? field.replaceAll('_', ' ');
 }
@@ -46,8 +51,9 @@ export function ParquetColumnFilterBar({
   state: TableFilterState;
   onChange: (state: TableFilterState) => void;
 }) {
+  const t = useText();
   const [views,setViews]=React.useState<Array<{name:string;stateJson:string;version:number}>>([]);
-  const fieldLabel = (field: string) => columnLabels?.[field] ?? label(field);
+  const fieldLabel = (field: string) => columnLabels?.[field] ?? label(field, t);
   const [viewName,setViewName]=React.useState('');
   const [selectedView,setSelectedView]=React.useState('');
   const [viewMessage,setViewMessage]=React.useState('');
@@ -61,15 +67,15 @@ export function ParquetColumnFilterBar({
     if(!viewsURL)return;
     const controller=new AbortController();
     setViews([]);setViewName('');setSelectedView('');setViewMessage('');setViewSaving(false);
-    void api.get<typeof views>(viewsURL,{signal:controller.signal}).then(setViews).catch(cause=>{if(!controller.signal.aborted)setViewMessage(cause instanceof Error?cause.message:'方案读取失败');});
+    void api.get<typeof views>(viewsURL,{signal:controller.signal}).then(setViews).catch(cause=>{if(!controller.signal.aborted)setViewMessage(cause instanceof Error ? errorText(cause, t):t("tasks.unableToLoadPreset699c0b"));});
     return()=>controller.abort();
   },[viewsURL]);
   React.useEffect(()=>{
     const changed=(event:Event)=>{
       const detail=(event as CustomEvent).detail;
-      if(detail?.taskId===taskId&&detail?.table===table){setViewMessage('判读修改已同步');changeRef.current({...stateRef.current});}
+      if(detail?.taskId===taskId&&detail?.table===table){setViewMessage(t("tasks.interpretationChangesSynchronized582ca8"));changeRef.current({...stateRef.current});}
     };
-    const failed=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table===table)setViewMessage('修改同步暂时失败，页面保留上次已同步的数据');};
+    const failed=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table===table)setViewMessage(t("tasks.synchronizationFailedTemporarilyShowingLastSynchronizedData6f5786"));};
     window.addEventListener('yijian:result-overlays-synced',changed);
     window.addEventListener('yijian:result-sync-error',failed);
     return()=>{window.removeEventListener('yijian:result-overlays-synced',changed);window.removeEventListener('yijian:result-sync-error',failed);};
@@ -80,11 +86,11 @@ export function ParquetColumnFilterBar({
     try {
       const current=views.find(v=>v.name===viewName.trim());
       await api.put(viewsURL,{name:viewName.trim(),state:{...stateRef.current,page:1},expectedVersion:current?.version??0});
-      const next=await api.get<typeof views>(viewsURL);if(scopeRef.current===scope){setViews(next);setViewMessage('个人筛选方案已保存，可跨设备恢复');}
-    }catch(cause){if(scopeRef.current===scope){setViewMessage(cause instanceof Error?cause.message:'方案保存失败');try{const next=await api.get<typeof views>(viewsURL);if(scopeRef.current===scope)setViews(next);}catch{/* keep current choices */}}}
+      const next=await api.get<typeof views>(viewsURL);if(scopeRef.current===scope){setViews(next);setViewMessage(t("tasks.personalFilterPresetSavedAvailableAcrossDevicese9df2f"));}
+    }catch(cause){if(scopeRef.current===scope){setViewMessage(cause instanceof Error ? errorText(cause, t):t("tasks.unableToSavePreset53b908"));try{const next=await api.get<typeof views>(viewsURL);if(scopeRef.current===scope)setViews(next);}catch{/* keep current choices */}}}
     finally{if(scopeRef.current===scope)setViewSaving(false);}
   };
-  const applyView=()=>{const v=views.find(v=>v.name===selectedView);if(v){try{onChange({...JSON.parse(v.stateJson),page:1});setViewName(v.name);setViewMessage('已恢复个人筛选方案');}catch{setViewMessage('筛选方案无效');}}};
+  const applyView=()=>{const v=views.find(v=>v.name===selectedView);if(v){try{onChange({...JSON.parse(v.stateJson),page:1});setViewName(v.name);setViewMessage(t("tasks.personalFilterPresetRestored3fe5d8"));}catch{setViewMessage(t("tasks.invalidFilterPresetdd7436"));}}};
   const [column, setColumn] = React.useState('');
   const [operator, setOperator] = React.useState<FilterOperator>('contains');
   const [value, setValue] = React.useState('');
@@ -115,39 +121,39 @@ export function ParquetColumnFilterBar({
   return (
     <div className="yj-filter-tools mb-2 flex flex-wrap items-center gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        <ToolbarPopover label="添加筛选" icon={<ListFilter size={14} />}><div className="grid gap-3">
-        <select aria-label="选择筛选列" value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
+        <ToolbarPopover label={t("tasks.addFilter20e774")} icon={<ListFilter size={14} />}><div className="grid gap-3">
+        <select aria-label={t("tasks.selectFilterColumn63f3ff")} value={column} onChange={event => { const next = event.target.value; setColumn(next); if (columnTypes?.[next] === 'boolean' || columnTypes?.[next] === 'enum') setOperator('equals'); else if (NUMERIC_OPS.has(operator) && columnTypes?.[next] !== 'number') setOperator('contains'); }} className="h-8 max-w-[220px] rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {columns.map(item => <option key={item} value={item}>{fieldLabel(item)}</option>)}
         </select>
-        <select aria-label="筛选方式" value={operator} onChange={event => setOperator(event.target.value as FilterOperator)} className="h-8 rounded-md border border-border-default bg-canvas-default px-2 text-sm">
+        <select aria-label={t("tasks.filterMethod3f94ac")} value={operator} onChange={event => setOperator(event.target.value as FilterOperator)} className="h-8 rounded-md border border-border-default bg-canvas-default px-2 text-sm">
           {availableOps.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
         </select>
-        {!isPresence && <input aria-label="筛选值" value={value} onChange={event => setValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') addFilter(); }} placeholder={operator === 'in' ? '逗号分隔多个值' : operator === 'between' ? '最小值,最大值' : '输入匹配值'} className="h-8 min-w-[150px] rounded-md border border-border-default bg-canvas-default px-2 text-sm" />}
-        <button type="button" onClick={addFilter} disabled={!column || (!isPresence && !value.trim()) || (operator === 'between' && value.split(',').length !== 2)} className="h-8 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis disabled:opacity-50">应用</button>
-        {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">清空列筛选</button>}
+        {!isPresence && <input aria-label={t("tasks.filterValue809cd5")} value={value} onChange={event => setValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') addFilter(); }} placeholder={operator === 'in' ? t("tasks.separateMultipleValuesWithCommas19a07b") : operator === 'between' ? t("tasks.minimumMaximumf8c16b") : t("tasks.enterMatchingValue88f822")} className="h-8 min-w-[150px] rounded-md border border-border-default bg-canvas-default px-2 text-sm" />}
+        <button type="button" onClick={addFilter} disabled={!column || (!isPresence && !value.trim()) || (operator === 'between' && value.split(',').length !== 2)} className="h-8 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis disabled:opacity-50">{t("tasks.apply456202")}</button>
+        {filters.length > 0 && <button type="button" onClick={() => onChange({ ...state, columnFilters: [], page: 1 })} className="h-8 rounded-md border border-border-default px-3 text-sm text-fg-muted">{t("tasks.clearColumnFiltersf7f498")}</button>}
         </div></ToolbarPopover>
       </div>
       {viewsURL&&<div className="flex flex-wrap items-center gap-2 text-xs">
 
-        <ToolbarPopover label="筛选视图" icon={<Bookmark size={14} />}><div className="yj-filter-view grid gap-4">
+        <ToolbarPopover label={t("tasks.filterViewc66e4a")} icon={<Bookmark size={14} />}><div className="yj-filter-view grid gap-4">
         <div className="grid gap-2">
-        <span className="text-xs font-medium text-fg-muted">已保存方案</span>
+        <span className="text-xs font-medium text-fg-muted">{t("tasks.savedPresetsf2c1f7")}</span>
         <div className="yj-filter-view-row">
-        <select aria-label="加载个人筛选方案" value={selectedView} className="yj-filter-view-field" onChange={event=>setSelectedView(event.target.value)}>
-          <option value="">选择已保存方案</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
+        <select aria-label={t("tasks.loadPersonalFilterPresetbf4bea")} value={selectedView} className="yj-filter-view-field" onChange={event=>setSelectedView(event.target.value)}>
+          <option value="">{t("tasks.selectSavedPresete82018")}</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
         </select>
-        <ActionButton action="start" disabled={!selectedView} onClick={applyView} className="yj-filter-view-action">应用方案</ActionButton>
+        <ActionButton action="start" disabled={!selectedView} onClick={applyView} className="yj-filter-view-action">{t("tasks.applyPreset34d975")}</ActionButton>
         </div>
         </div>
         <div className="grid gap-2">
-        <span className="text-xs font-medium text-fg-muted">保存当前筛选</span>
+        <span className="text-xs font-medium text-fg-muted">{t("tasks.saveCurrentFiltersb9e931")}</span>
         <div className="yj-filter-view-row">
-        <input aria-label="个人筛选方案名称" value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder="输入方案名称" className="yj-filter-view-field" />
-        <ActionButton loading={viewSaving} loadingLabel="保存中" action="save" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="yj-filter-view-action">保存方案</ActionButton>
+        <input aria-label={t("tasks.personalFilterPresetName6ffe93")} value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder={t("tasks.enterPresetNamed45aa0")} className="yj-filter-view-field" />
+        <ActionButton loading={viewSaving} loadingLabel={t("samples.savinga032e8")} action="save" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="yj-filter-view-action">{t("tasks.savePresetede701")}</ActionButton>
         </div>
         </div>
         <div className="flex justify-end border-t border-border-default pt-3">
-        <ActionButton action="refresh" variant="ghost" type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage('已刷新判读修改');}).catch(cause=>setViewMessage(cause instanceof Error?cause.message:'刷新失败'));}} className="yj-filter-view-action">刷新修改</ActionButton>
+        <ActionButton action="refresh" variant="ghost" type="button" onClick={()=>{void refreshBrowserTable(taskId!,table!).then(()=>{onChange({...stateRef.current});setViewMessage(t("tasks.interpretationChangesRefreshed4e0e04"));}).catch(cause=>setViewMessage(cause instanceof Error ? errorText(cause, t):t("tasks.refreshFailedbe6ff1")));}} className="yj-filter-view-action">{t("tasks.refreshChanges302987")}</ActionButton>
         </div>
         </div></ToolbarPopover>{viewMessage&&<span role="status" className="text-fg-muted">{viewMessage}</span>}
       </div>}
@@ -159,7 +165,7 @@ export function ParquetColumnFilterBar({
             const shown = Array.isArray(filter.value) ? filter.value.join(' / ') : filter.value;
             return <span key={filter.column} className="inline-flex items-center gap-1 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs text-fg-default">
               {fieldLabel(filter.column)} {op}{shown ? ` ${shown}` : ''}
-              <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" aria-label={`移除${fieldLabel(filter.column)}筛选`} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset" />
+              <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" aria-label={t("tasks.removeFiltera4187c", {p0: String(fieldLabel(filter.column))})} onClick={() => removeFilter(filter.column)} className="rounded-full p-0.5 hover:bg-canvas-inset" />
             </span>;
           })}
         </div>

@@ -1,4 +1,5 @@
 'use client';
+import { useText } from '@/i18n/useText';
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,6 +9,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { PermissionsManagement } from '../components/PermissionsManagement';
 
 export default function SettingsPermissionsPage() {
+  const t = useText();
   const router = useRouter();
   const { isLoading, isPlatformAdmin } = useAuth();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
@@ -22,7 +24,7 @@ export default function SettingsPermissionsPage() {
     return (
       <PageContent className="yj-page-shell">
         <div className="yj-empty-state">
-          <p className="text-fg-muted">正在验证权限...</p>
+          <p className="text-fg-muted">{t("settings.checkingPermissions04cb10")}</p>
         </div>
       </PageContent>
     );
@@ -32,7 +34,7 @@ export default function SettingsPermissionsPage() {
     return (
       <PageContent className="yj-page-shell">
         <div className="yj-empty-state">
-          <p className="text-fg-muted">您没有权限访问此页面</p>
+          <p className="text-fg-muted">{t("settings.youDoNotHavePermissionToAccessbed2ab")}</p>
         </div>
       </PageContent>
     );
@@ -42,8 +44,8 @@ export default function SettingsPermissionsPage() {
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">权限管理</h2>
-          <p className="yj-page-subtitle">创建自部署子用户，并管理其角色与账号状态。</p>
+          <h2 className="yj-page-title">{t("settings.permissionse47b7f")}</h2>
+          <p className="yj-page-subtitle">{t("settings.createSelfHostedUsersAndManageTheir8f13a7")}</p>
         </div>
       </div>
       <PermissionsManagement />

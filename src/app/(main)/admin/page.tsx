@@ -1,4 +1,12 @@
-﻿'use client';
+'use client';
+import { formatNumericString } from '@/i18n/format';
+
+﻿
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -29,14 +37,14 @@ import {
   type UpdateAdminOrganizationInput,
 } from '@/lib/admin';
 
-function formatTime(value: string): string {
+function formatTime(value: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('zh-CN', { hour12: false });
+  return date.toLocaleString(t.locale, { hour12: false });
 }
 
-function formatBytes(value: number): string {
+function formatBytes(value: number, t: TextTranslator = chineseText): string {
   if (!Number.isFinite(value) || value <= 0) return '-';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let size = value;
@@ -45,7 +53,7 @@ function formatBytes(value: number): string {
     size /= 1024;
     unit += 1;
   }
-  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+  return `${formatNumericString(size.toFixed(unit === 0 ? 0 : 1), t.locale)} ${units[unit]}`;
 }
 
 function StatCard({ title, value, icon }: { title: string; value: React.ReactNode; icon: React.ReactNode }) {
@@ -112,6 +120,7 @@ const emptyBillingConfig: AdminBillingConfig = {
 };
 
 export default function AdminPage() {
+  const t = useText();
   const { isLoading: authLoading, isPlatformAdmin } = useAuth();
   const [provisionOpen, setProvisionOpen] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats>(emptyStats);
@@ -184,11 +193,11 @@ export default function AdminPage() {
         orgId: prev.orgId || nextOrganizations[0]?.id || '',
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载管理后台数据失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToLoadAdministrationDataaeecf7"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     if (!authLoading && isPlatformAdmin()) {
@@ -220,11 +229,11 @@ export default function AdminPage() {
     const adminName = provisionForm.adminName.trim();
     const maxConcurrentTasks = Number(provisionForm.maxConcurrentTasks);
     if (!name || !slug || !adminEmail || !adminName || !provisionForm.adminPassword) {
-      setError('请填写机构名称、slug、管理员邮箱、姓名和初始密码');
+      setError(t("admin.enterTheOrganizationNameSlugAdministratorEmailb82065"));
       return;
     }
     if (!Number.isInteger(maxConcurrentTasks) || maxConcurrentTasks <= 0) {
-      setError('并发上限必须是大于 0 的整数');
+      setError(t("admin.concurrencyLimitMustBeAPositiveIntegerf8f843"));
       return;
     }
 
@@ -243,7 +252,7 @@ export default function AdminPage() {
         ...(provisionForm.description.trim() ? { description: provisionForm.description.trim() } : {}),
       });
       setProvisionOpen(false);
-      setActionMessage(`已开通机构 ${result.organization.name}，管理员账号 ${result.account.email}`);
+      setActionMessage(t("admin.organizationCreatedAdministratorAccountb0bcd9", {p0: String(result.organization.name), p1: String(result.account.email)}));
       setProvisionForm({
         name: '',
         slug: '',
@@ -255,7 +264,7 @@ export default function AdminPage() {
       });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '开通机构失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToCreateOrganization494525"));
     } finally {
       setIsSavingBilling(false);
     }
@@ -269,15 +278,15 @@ export default function AdminPage() {
     const balanceAlertThreshold = Number(orgForm.balanceAlertThreshold);
     const storageQuotaGb = orgForm.storageQuotaGb.trim() ? Number(orgForm.storageQuotaGb) : 0;
     if (!name) {
-      setError('请填写机构名称');
+      setError(t("admin.enterTheOrganizationNameef51c0"));
       return;
     }
     if (!Number.isInteger(maxConcurrentTasks) || maxConcurrentTasks < 0 || !Number.isInteger(balanceAlertThreshold) || balanceAlertThreshold < 0) {
-      setError('并发上限和余额阈值必须是非负整数');
+      setError(t("admin.concurrencyAndBalanceThresholdsMustBeNonnegative721def"));
       return;
     }
     if (!Number.isFinite(storageQuotaGb) || storageQuotaGb < 0) {
-      setError('存储配额必须是非负数字');
+      setError(t("admin.storageQuotaMustBeANonnegativeNumber7c2795"));
       return;
     }
 
@@ -296,10 +305,10 @@ export default function AdminPage() {
       const updated = await updateAdminOrganization(editingOrg.id, input);
       setOrganizations((prev) => prev.map((org) => (org.id === updated.id ? updated : org)));
       setEditingOrg(null);
-      setActionMessage(`机构 ${updated.name} 已更新`);
+      setActionMessage(t("admin.organizationUpdatedb05d7e", {p0: String(updated.name)}));
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新机构失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToUpdateOrganization1be3f1"));
     } finally {
       setIsSavingBilling(false);
     }
@@ -310,7 +319,7 @@ export default function AdminPage() {
     const orgId = rechargeForm.orgId.trim();
     const amount = Number(rechargeForm.amount);
     if (!orgId || !Number.isInteger(amount) || amount <= 0) {
-      setError('请选择机构并输入大于 0 的整数充值积分');
+      setError(t("admin.selectAnOrganizationAndEnterAPositive7b887d"));
       return;
     }
 
@@ -323,11 +332,11 @@ export default function AdminPage() {
         amount,
         ...(rechargeForm.description.trim() ? { description: rechargeForm.description.trim() } : {}),
       });
-      setActionMessage(`已为机构 ${result.org_id} 充值，当前余额 ${result.balance}`);
+      setActionMessage(t("admin.organizationCreditedCurrentBalancea26e6c", {p0: String(result.org_id), p1: String(result.balance)}));
       setRechargeForm((prev) => ({ ...prev, amount: '', description: '' }));
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '充值失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToAddCredits336ad2"));
     } finally {
       setIsSavingBilling(false);
     }
@@ -339,7 +348,7 @@ export default function AdminPage() {
     const creditRateMultiplier = Number(configForm.creditRateMultiplier);
     const minBalance = Number(configForm.minBalance);
     if (!Number.isInteger(creditsPerMinute) || creditsPerMinute <= 0 || !Number.isFinite(creditRateMultiplier) || creditRateMultiplier <= 0 || !Number.isInteger(minBalance)) {
-      setError('请填写有效的计费配置：每分钟积分为正整数，倍率为正数，最低余额为整数');
+      setError(t("admin.enterValidBillingSettingsPositiveIntegerCredits0ec80e"));
       return;
     }
 
@@ -353,9 +362,9 @@ export default function AdminPage() {
         min_balance: minBalance,
       });
       setBillingConfig(next);
-      setActionMessage('全局计费配置已更新');
+      setActionMessage(t("admin.globalBillingSettingsUpdated6e76fc"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新计费配置失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToUpdateBillingSettings3b50ad"));
     } finally {
       setIsSavingBilling(false);
     }
@@ -381,7 +390,7 @@ export default function AdminPage() {
       });
     } catch (err) {
       setPolicy(null);
-      setError(err instanceof Error ? err.message : '加载机构计费策略失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToLoadOrganizationBillingPolicy40fe81"));
     } finally {
       setIsSavingBilling(false);
     }
@@ -391,7 +400,7 @@ export default function AdminPage() {
     event.preventDefault();
     const orgId = policyOrgId.trim();
     if (!orgId) {
-      setError('请选择机构');
+      setError(t("admin.selectAnOrganizationcd17b7"));
       return;
     }
 
@@ -403,7 +412,7 @@ export default function AdminPage() {
       (creditRateMultiplier !== undefined && (!Number.isFinite(creditRateMultiplier) || creditRateMultiplier <= 0)) ||
       (minBalance !== undefined && !Number.isInteger(minBalance))
     ) {
-      setError('机构计费覆盖值格式不正确');
+      setError(t("admin.invalidOrganizationBillingOverrideValues57c4a2"));
       return;
     }
 
@@ -417,51 +426,50 @@ export default function AdminPage() {
         ...(minBalance === undefined ? { reset_min_balance: true } : { min_balance: minBalance }),
       });
       setPolicy(next);
-      setActionMessage('机构计费策略已更新');
+      setActionMessage(t("admin.organizationBillingPolicyUpdated8a9e34"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新机构计费策略失败');
+      setError(err instanceof Error ? errorText(err, t) : t("admin.unableToUpdateOrganizationBillingPolicy77c1e4"));
     } finally {
       setIsSavingBilling(false);
     }
   };
 
   const alertColumns: Column<BalanceAlert>[] = [
-    { id: 'org_name', header: '机构', accessor: 'org_name', width: 220, align: 'center' },
-    { id: 'balance', header: '余额', accessor: (row) => row.balance, width: 100, align: 'center' },
-    { id: 'threshold', header: '预警阈值', accessor: (row) => row.threshold, width: 120, align: 'center' },
+    { id: 'org_name', header: t("admin.organization5f8fc2"), accessor: 'org_name', width: 220, align: 'center' },
+    { id: 'balance', header: t("admin.balance51cc55"), accessor: (row) => row.balance, width: 100, align: 'center' },
+    { id: 'threshold', header: t("admin.alertThreshold719529"), accessor: (row) => row.threshold, width: 120, align: 'center' },
     {
       id: 'is_active',
-      header: '状态',
-      accessor: (row) => <Tag variant={row.is_active ? 'success' : 'neutral'}>{row.is_active ? '启用' : '停用'}</Tag>,
+      header: t("admin.status62e951"),
+      accessor: (row) => <Tag variant={row.is_active ? 'success' : 'neutral'}>{row.is_active ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}</Tag>,
       width: 100,
       align: 'center',
     },
   ];
 
   const orgColumns: Column<AdminOrganization>[] = [
-    { id: 'name', header: '机构', accessor: 'name', width: 220, align: 'center' },
+    { id: 'name', header: t("admin.organization5f8fc2"), accessor: 'name', width: 220, align: 'center' },
     { id: 'slug', header: 'Slug', accessor: 'slug', width: 160, align: 'center' },
     {
       id: 'is_active',
-      header: '状态',
-      accessor: (row) => <Tag variant={row.is_active ? 'success' : 'neutral'}>{row.is_active ? '启用' : '停用'}</Tag>,
+      header: t("admin.status62e951"),
+      accessor: (row) => <Tag variant={row.is_active ? 'success' : 'neutral'}>{row.is_active ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}</Tag>,
       width: 100,
       align: 'center',
     },
-    { id: 'max_concurrent_tasks', header: '并发上限', accessor: (row) => row.max_concurrent_tasks, width: 110, align: 'center' },
-    { id: 'balance_alert_threshold', header: '余额阈值', accessor: (row) => row.balance_alert_threshold, width: 110, align: 'center' },
-    { id: 'storage_quota_bytes', header: '存储配额', accessor: (row) => formatBytes(row.storage_quota_bytes), width: 120, align: 'center' },
+    { id: 'max_concurrent_tasks', header: t("admin.concurrencyLimit118e6a"), accessor: (row) => row.max_concurrent_tasks, width: 110, align: 'center' },
+    { id: 'balance_alert_threshold', header: t("admin.balanceThresholdcf1126"), accessor: (row) => row.balance_alert_threshold, width: 110, align: 'center' },
+    { id: 'storage_quota_bytes', header: t("admin.storageQuota5960b4"), accessor: (row) => formatBytes(row.storage_quota_bytes, t), width: 120, align: 'center' },
     {
       id: 'actions',
-      header: '操作',
+      header: t("admin.actionsf3ea6d"),
       accessor: (row) => (
         <ActionButton action="edit" variant="ghost"
           className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-accent-fg hover:bg-canvas-subtle"
           onClick={() => openEditOrg(row)}
         >
 
-          编辑
-        </ActionButton>
+          {t("admin.edita7f814")}</ActionButton>
       ),
       width: 90,
       align: 'center',
@@ -469,17 +477,17 @@ export default function AdminPage() {
   ];
 
   const topOrgColumns: Column<AdminStats['top_orgs'][number]>[] = [
-    { id: 'org_name', header: '机构', accessor: 'org_name', width: 200, align: 'center' },
-    { id: 'balance', header: '余额', accessor: (row) => row.balance, width: 100, align: 'center' },
-    { id: 'task_count', header: '任务数', accessor: (row) => row.task_count, width: 100, align: 'center' },
-    { id: 'credits_used_today', header: '今日消耗', accessor: (row) => row.credits_used_today, width: 120, align: 'center' },
+    { id: 'org_name', header: t("admin.organization5f8fc2"), accessor: 'org_name', width: 200, align: 'center' },
+    { id: 'balance', header: t("admin.balance51cc55"), accessor: (row) => row.balance, width: 100, align: 'center' },
+    { id: 'task_count', header: t("admin.taskCountcd75bc"), accessor: (row) => row.task_count, width: 100, align: 'center' },
+    { id: 'credits_used_today', header: t("admin.usageTodayc20f62"), accessor: (row) => row.credits_used_today, width: 120, align: 'center' },
   ];
 
   const taskColumns: Column<AdminStats['recent_tasks'][number]>[] = [
-    { id: 'name', header: '任务', accessor: 'name', width: 240, align: 'center' },
-    { id: 'org_name', header: '机构', accessor: 'org_name', width: 180, align: 'center' },
-    { id: 'status', header: '状态', accessor: (row) => <Tag variant={row.status === 'completed' ? 'success' : row.status === 'failed' ? 'danger' : row.status === 'running' ? 'info' : 'neutral'}>{({completed:'已完成',failed:'失败',running:'运行中',cancelled:'已取消',pending:'等待',queued:'排队中'} as Record<string,string>)[row.status] ?? row.status}</Tag>, width: 100, align: 'center' },
-    { id: 'created_at', header: '创建时间', accessor: (row) => formatTime(row.created_at), width: 180, align: 'center' },
+    { id: 'name', header: t("admin.task3172b3"), accessor: 'name', width: 240, align: 'center' },
+    { id: 'org_name', header: t("admin.organization5f8fc2"), accessor: 'org_name', width: 180, align: 'center' },
+    { id: 'status', header: t("admin.status62e951"), accessor: (row) => <Tag variant={row.status === 'completed' ? 'success' : row.status === 'failed' ? 'danger' : row.status === 'running' ? 'info' : 'neutral'}>{({completed:t("admin.completede99b48"),failed:t("admin.failed3e3c80"),running:t("admin.running594249"),cancelled:t("admin.canceleda5ffdc"),pending:t("admin.waiting25d23b"),queued:t("admin.queued4dcbbc")} as Record<string,string>)[row.status] ?? row.status}</Tag>, width: 100, align: 'center' },
+    { id: 'created_at', header: t("admin.createdAt84e380"), accessor: (row) => formatTime(row.created_at, t), width: 180, align: 'center' },
   ];
 
   if (authLoading || isLoading) {
@@ -487,7 +495,7 @@ export default function AdminPage() {
       <PageContent className="yj-page-shell space-y-4">
         <div className="yj-empty-state">
           <Loader2 className="w-6 h-6 animate-spin text-accent-fg" />
-          <p className="text-fg-muted">正在加载管理后台...</p>
+          <p className="text-fg-muted">{t("admin.loadingAdministration039999")}</p>
         </div>
       </PageContent>
     );
@@ -497,7 +505,7 @@ export default function AdminPage() {
     return (
       <PageContent className="yj-page-shell space-y-4">
         <div className="yj-empty-state">
-          <p className="text-fg-muted">您没有权限访问平台管理后台。</p>
+          <p className="text-fg-muted">{t("admin.youDoNotHavePermissionToAccess7fdc18")}</p>
         </div>
       </PageContent>
     );
@@ -507,14 +515,13 @@ export default function AdminPage() {
     <PageContent className="yj-page-shell space-y-4">
       <div className="yj-page-header flex-col items-start gap-3 sm:flex-row sm:items-center">
         <div>
-          <h2 className="yj-page-title">平台管理后台</h2>
+          <h2 className="yj-page-title">{t("admin.platformAdministrationa475a9")}</h2>
           <p className="yj-page-subtitle">
-            管理机构、任务运行及积分策略。
-          </p>
+            {t("admin.manageOrganizationsRunningTasksAndCreditPolicies300dda")}</p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          <Button action="refresh" variant="secondary" className="yj-tool-button"  onClick={() => void loadData()}>刷新</Button>
-          <Button action="add" variant="primary"  onClick={() => { setError(null); setProvisionOpen(true); }}>开通机构</Button>
+          <Button action="refresh" variant="secondary" className="yj-tool-button"  onClick={() => void loadData()}>{t("admin.refresh38108e")}</Button>
+          <Button action="add" variant="primary"  onClick={() => { setError(null); setProvisionOpen(true); }}>{t("admin.createOrganizationf0a805")}</Button>
         </div>
       </div>
 
@@ -525,10 +532,10 @@ export default function AdminPage() {
       )}
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="机构总数" value={!hasLoaded ? '—' : stats.organizations.total} icon={<Users className="w-6 h-6" />} />
-        <StatCard title="运行中任务" value={!hasLoaded ? '—' : stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
-        <StatCard title="今日消耗积分" value={!hasLoaded ? '—' : stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
-        <StatCard title="低余额机构" value={!hasLoaded ? '—' : stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
+        <StatCard title={t("admin.totalOrganizationsfa16b3")} value={!hasLoaded ? '—' : stats.organizations.total} icon={<Users className="w-6 h-6" />} />
+        <StatCard title={t("admin.runningTasks6706fb")} value={!hasLoaded ? '—' : stats.tasks.running} icon={<BarChart3 className="w-6 h-6" />} />
+        <StatCard title={t("admin.creditsUsedToday470061")} value={!hasLoaded ? '—' : stats.credits.total_consumed_today} icon={<CreditCard className="w-6 h-6" />} />
+        <StatCard title={t("admin.lowBalanceOrganizationsf2bf55")} value={!hasLoaded ? '—' : stats.credits.orgs_low_balance} icon={<AlertTriangle className="w-6 h-6" />} />
       </div>
 
       {actionMessage && (
@@ -541,93 +548,89 @@ export default function AdminPage() {
       <div className="yj-panel p-4">
         <div className="flex items-center gap-2 mb-3">
           <Building2 className="w-4 h-4 text-accent-fg" />
-          <h3 className="text-base font-medium text-fg-default">机构列表</h3>
+          <h3 className="text-base font-medium text-fg-default">{t("admin.organizationsc6d8c4")}</h3>
         </div>
         {organizations.length === 0 ? (
-          <p className="text-sm text-fg-muted">暂无机构数据</p>
+          <p className="text-sm text-fg-muted">{t("admin.noOrganizations8e54aa")}</p>
         ) : (
-          <div className="[&_table]:min-w-[910px]"><DataTable data={organizations} columns={orgColumns} rowKey="id" density="default" striped /></div>
+          <div className="[&_table]:min-w-[910px]"><DataTable data={organizations} columns={localizeDisplay(orgColumns, t)} rowKey="id" density="default" striped /></div>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="yj-panel p-4">
-          <h3 className="text-base font-medium text-fg-default mb-3">余额预警</h3>
+          <h3 className="text-base font-medium text-fg-default mb-3">{t("admin.balanceAlertsd0f155")}</h3>
           {alerts.length === 0 ? (
-            <p className="text-sm text-fg-muted">暂无低余额机构</p>
+            <p className="text-sm text-fg-muted">{t("admin.noLowBalanceOrganizationsdd06a5")}</p>
           ) : (
-            <div className="[&_table]:min-w-[450px]"><DataTable data={alerts} columns={alertColumns} rowKey="org_id" density="default" striped /></div>
+            <div className="[&_table]:min-w-[450px]"><DataTable data={alerts} columns={localizeDisplay(alertColumns, t)} rowKey="org_id" density="default" striped /></div>
           )}
         </div>
         <div className="yj-panel p-4">
-          <h3 className="text-base font-medium text-fg-default mb-3">高消耗机构</h3>
+          <h3 className="text-base font-medium text-fg-default mb-3">{t("admin.highUsageOrganizationsb3ee1e")}</h3>
           {stats.top_orgs.length === 0 ? (
-            <p className="text-sm text-fg-muted">暂无机构消耗数据</p>
+            <p className="text-sm text-fg-muted">{t("admin.noOrganizationUsageData7de821")}</p>
           ) : (
-            <div className="[&_table]:min-w-[450px]"><DataTable data={stats.top_orgs} columns={topOrgColumns} rowKey="org_id" density="default" striped /></div>
+            <div className="[&_table]:min-w-[450px]"><DataTable data={stats.top_orgs} columns={localizeDisplay(topOrgColumns, t)} rowKey="org_id" density="default" striped /></div>
           )}
         </div>
       </div>
 
       <div className="yj-panel p-4">
-        <h3 className="text-base font-medium text-fg-default mb-3">最近任务</h3>
+        <h3 className="text-base font-medium text-fg-default mb-3">{t("admin.recentTasksabc5c3")}</h3>
         {stats.recent_tasks.length === 0 ? (
-          <p className="text-sm text-fg-muted">暂无最近任务</p>
+          <p className="text-sm text-fg-muted">{t("admin.noRecentTasks6e7058")}</p>
         ) : (
-          <div className="[&_table]:min-w-[700px]"><DataTable data={stats.recent_tasks} columns={taskColumns} rowKey="id" density="default" striped /></div>
+          <div className="[&_table]:min-w-[700px]"><DataTable data={stats.recent_tasks} columns={localizeDisplay(taskColumns, t)} rowKey="id" density="default" striped /></div>
         )}
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <form className="yj-panel p-4 space-y-3" onSubmit={submitRecharge}>
           <div>
-            <h3 className="text-base font-medium text-fg-default">机构充值</h3>
-            <p className="text-xs text-fg-muted mt-1">充值完成后立即写入机构余额和费用流水。</p>
+            <h3 className="text-base font-medium text-fg-default">{t("admin.addOrganizationCreditsbb90b7")}</h3>
+            <p className="text-xs text-fg-muted mt-1">{t("admin.creditsAreAddedToTheOrganizationBalance3ef1d0")}</p>
           </div>
           <label className="block text-xs text-fg-muted">
-            机构
-            <select
+            {t("admin.organization5f8fc2")}<select
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               value={rechargeForm.orgId}
               onChange={(e) => setRechargeForm((prev) => ({ ...prev, orgId: e.target.value }))}
             >
-              <option value="">请选择机构</option>
+              <option value="">{t("admin.selectAnOrganizationcd17b7")}</option>
               {organizations.map((org) => (
                 <option key={org.id} value={org.id}>{org.name} ({org.slug})</option>
               ))}
             </select>
           </label>
           <label className="block text-xs text-fg-muted">
-            充值积分
-            <input
+            {t("admin.creditsToAdd3d02b4")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               min={1}
               step={1}
               value={rechargeForm.amount}
               onChange={(e) => setRechargeForm((prev) => ({ ...prev, amount: e.target.value }))}
-              placeholder="例如 1000"
+              placeholder={t("admin.forExample3602a7")}
             />
           </label>
           <label className="block text-xs text-fg-muted">
-            备注
-            <input
+            {t("admin.notese03614")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               value={rechargeForm.description}
               onChange={(e) => setRechargeForm((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="可选"
+              placeholder={t("admin.optional53e328")}
             />
           </label>
-          <Button type="submit" variant="primary" disabled={isSavingBilling}>提交充值</Button>
+          <Button type="submit" variant="primary" disabled={isSavingBilling}>{t("admin.submitCreditAddition0cf1a1")}</Button>
         </form>
 
         <form className="yj-panel p-4 space-y-3" onSubmit={submitBillingConfig}>
           <div>
-            <h3 className="text-base font-medium text-fg-default">全局计费配置</h3>
-            <p className="text-xs text-fg-muted mt-1">当前：{billingConfig.credits_per_minute} 点/分钟，倍率 {billingConfig.credit_rate_multiplier}，最低余额 {billingConfig.min_balance}</p>
+            <h3 className="text-base font-medium text-fg-default">{t("admin.globalBillingSettings1ce7d4")}</h3>
+            <p className="text-xs text-fg-muted mt-1">{t("admin.current23ef9f")}{billingConfig.credits_per_minute} {t("admin.creditsMinuteMultiplier731649")}{billingConfig.credit_rate_multiplier}{t("admin.minimumBalance7994b9")}{billingConfig.min_balance}</p>
           </div>
           <label className="block text-xs text-fg-muted">
-            每分钟积分
-            <input
+            {t("admin.creditsPerMinute9ab621")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               min={1}
@@ -637,8 +640,7 @@ export default function AdminPage() {
             />
           </label>
           <label className="block text-xs text-fg-muted">
-            费率倍率
-            <input
+            {t("admin.rateMultiplier07b006")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               min={0.0001}
@@ -648,8 +650,7 @@ export default function AdminPage() {
             />
           </label>
           <label className="block text-xs text-fg-muted">
-            最低余额
-            <input
+            {t("admin.minimumBalancef76d28")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               step={1}
@@ -657,17 +658,16 @@ export default function AdminPage() {
               onChange={(e) => setConfigForm((prev) => ({ ...prev, minBalance: e.target.value }))}
             />
           </label>
-          <Button action="save" type="submit" variant="secondary" disabled={isSavingBilling}>保存全局配置</Button>
+          <Button action="save" type="submit" variant="secondary" disabled={isSavingBilling}>{t("admin.saveGlobalSettingsa563fe")}</Button>
         </form>
 
         <form className="yj-panel p-4 space-y-3" onSubmit={submitOrgPolicy}>
           <div>
-            <h3 className="text-base font-medium text-fg-default">机构计费覆盖</h3>
-            <p className="text-xs text-fg-muted mt-1">留空并保存后，将恢复使用全局配置。</p>
+            <h3 className="text-base font-medium text-fg-default">{t("admin.organizationBillingOverrides03f013")}</h3>
+            <p className="text-xs text-fg-muted mt-1">{t("admin.leaveBlankAndSaveToRestoreThe4f54a4")}</p>
           </div>
           <label className="block text-xs text-fg-muted">
-            机构
-            <select
+            {t("admin.organization5f8fc2")}<select
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               value={policyOrgId}
               onChange={(e) => {
@@ -675,7 +675,7 @@ export default function AdminPage() {
                 void loadOrgPolicy(e.target.value);
               }}
             >
-              <option value="">请选择机构</option>
+              <option value="">{t("admin.selectAnOrganizationcd17b7")}</option>
               {organizations.map((org) => (
                 <option key={org.id} value={org.id}>{org.name} ({org.slug})</option>
               ))}
@@ -683,65 +683,61 @@ export default function AdminPage() {
           </label>
           {policy && (
             <p className="text-xs text-fg-muted">
-              生效值：{policy.credits_per_minute} 点/分钟，倍率 {policy.credit_rate_multiplier}，最低余额 {policy.min_balance}
+              {t("admin.effectiveValues3f0c90")}{policy.credits_per_minute} {t("admin.creditsMinuteMultiplier731649")}{policy.credit_rate_multiplier}{t("admin.minimumBalance7994b9")}{policy.min_balance}
             </p>
           )}
           <label className="block text-xs text-fg-muted">
-            覆盖每分钟积分
-            <input
+            {t("admin.overrideCreditsPerMinute4c1d9b")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               min={1}
               step={1}
               value={policyForm.creditsPerMinute}
               onChange={(e) => setPolicyForm((prev) => ({ ...prev, creditsPerMinute: e.target.value }))}
-              placeholder="留空继承全局"
+              placeholder={t("admin.leaveBlankToInheritGlobalSettingsd500b4")}
             />
           </label>
           <label className="block text-xs text-fg-muted">
-            覆盖费率倍率
-            <input
+            {t("admin.overrideRateMultiplier039198")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               min={0.0001}
               step="0.0001"
               value={policyForm.creditRateMultiplier}
               onChange={(e) => setPolicyForm((prev) => ({ ...prev, creditRateMultiplier: e.target.value }))}
-              placeholder="留空继承全局"
+              placeholder={t("admin.leaveBlankToInheritGlobalSettingsd500b4")}
             />
           </label>
           <label className="block text-xs text-fg-muted">
-            覆盖最低余额
-            <input
+            {t("admin.overrideMinimumBalance4b85e6")}<input
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               type="number"
               step={1}
               value={policyForm.minBalance}
               onChange={(e) => setPolicyForm((prev) => ({ ...prev, minBalance: e.target.value }))}
-              placeholder="留空继承全局"
+              placeholder={t("admin.leaveBlankToInheritGlobalSettingsd500b4")}
             />
           </label>
-          <Button action="save" type="submit" variant="secondary" disabled={isSavingBilling || !policyOrgId}>保存机构策略</Button>
+          <Button action="save" type="submit" variant="secondary" disabled={isSavingBilling || !policyOrgId}>{t("admin.saveOrganizationPolicy7b1998")}</Button>
         </form>
       </div>
 
       </>}
 
-      <AppModal open={provisionOpen} onOpenChange={(open) => { if (!isSavingBilling) setProvisionOpen(open); }} title="开通机构与管理员账号" size="large" footer={<><Button variant="secondary" onClick={() => setProvisionOpen(false)} disabled={isSavingBilling}>取消</Button><Button loading={isSavingBilling} loadingLabel="开通中..." form="admin-provision" type="submit" variant="primary" disabled={isSavingBilling}>开通机构</Button></>}>
+      <AppModal open={provisionOpen} onOpenChange={(open) => { if (!isSavingBilling) setProvisionOpen(open); }} title={t("admin.createOrganizationAndAdministratorAccount045178")} size="large" footer={<><Button variant="secondary" onClick={() => setProvisionOpen(false)} disabled={isSavingBilling}>{t("admin.cancel4d0b46")}</Button><Button loading={isSavingBilling} loadingLabel={t("admin.creatingc16c57")} form="admin-provision" type="submit" variant="primary" disabled={isSavingBilling}>{t("admin.createOrganizationf0a805")}</Button></>}>
         <form id="admin-provision" className="space-y-4" onSubmit={submitProvisionOrg}>
           {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="机构名称" value={provisionForm.name} onChange={(value) => setProvisionForm((prev) => ({ ...prev, name: value }))} required />
+            <Field label={t("admin.organizationNamec50f05")} value={provisionForm.name} onChange={(value) => setProvisionForm((prev) => ({ ...prev, name: value }))} required />
             <Field label="Slug" value={provisionForm.slug} onChange={(value) => setProvisionForm((prev) => ({ ...prev, slug: value }))} required />
-            <Field label="并发上限" type="number" value={provisionForm.maxConcurrentTasks} onChange={(value) => setProvisionForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} required />
-            <Field label="管理员姓名" value={provisionForm.adminName} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminName: value }))} required />
-            <Field label="管理员邮箱" type="email" value={provisionForm.adminEmail} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminEmail: value }))} required />
-            <Field label="初始密码" type="password" value={provisionForm.adminPassword} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminPassword: value }))} required />
+            <Field label={t("admin.concurrencyLimit118e6a")} type="number" value={provisionForm.maxConcurrentTasks} onChange={(value) => setProvisionForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} required />
+            <Field label={t("admin.administratorNamedf47bf")} value={provisionForm.adminName} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminName: value }))} required />
+            <Field label={t("admin.administratorEmailfbe7f8")} type="email" value={provisionForm.adminEmail} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminEmail: value }))} required />
+            <Field label={t("admin.initialPassword961fcb")} type="password" value={provisionForm.adminPassword} onChange={(value) => setProvisionForm((prev) => ({ ...prev, adminPassword: value }))} required />
           </div>
           <label className="block text-xs text-fg-muted">
-            描述
-            <textarea
+            {t("admin.description412f54")}<textarea
               className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
               value={provisionForm.description}
               onChange={(e) => setProvisionForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -751,19 +747,18 @@ export default function AdminPage() {
 
                 </form>
       </AppModal>
-      <AppModal open={Boolean(editingOrg)} onOpenChange={(open) => { if (!open && !isSavingBilling) setEditingOrg(null); }} title="编辑机构配置" size="large" footer={<><Button variant="secondary" onClick={() => setEditingOrg(null)} disabled={isSavingBilling}>取消</Button><Button loading={isSavingBilling} loadingLabel="保存中..." action="save" form="admin-edit-org" type="submit" variant="primary" disabled={isSavingBilling}>保存机构配置</Button></>}>
+      <AppModal open={Boolean(editingOrg)} onOpenChange={(open) => { if (!open && !isSavingBilling) setEditingOrg(null); }} title={t("admin.editOrganizationSettingsa7d5bc")} size="large" footer={<><Button variant="secondary" onClick={() => setEditingOrg(null)} disabled={isSavingBilling}>{t("admin.cancel4d0b46")}</Button><Button loading={isSavingBilling} loadingLabel={t("admin.savingd70d42")} action="save" form="admin-edit-org" type="submit" variant="primary" disabled={isSavingBilling}>{t("admin.saveOrganizationSettings78fbe5")}</Button></>}>
         <form id="admin-edit-org" className="space-y-4" onSubmit={submitOrgUpdate}>
           {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
-              <div className="text-xs text-fg-muted">当前机构 ID：<span className="font-mono break-all">{editingOrg?.id}</span></div>
+              <div className="text-xs text-fg-muted">{t("admin.currentOrganizationIdff0a93")}<span className="font-mono break-all">{editingOrg?.id}</span></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="机构名称" value={orgForm.name} onChange={(value) => setOrgForm((prev) => ({ ...prev, name: value }))} required />
-                <Field label="并发上限" type="number" value={orgForm.maxConcurrentTasks} onChange={(value) => setOrgForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} />
-                <Field label="余额阈值" type="number" value={orgForm.balanceAlertThreshold} onChange={(value) => setOrgForm((prev) => ({ ...prev, balanceAlertThreshold: value }))} />
-                <Field label="存储配额 GB" type="number" value={orgForm.storageQuotaGb} onChange={(value) => setOrgForm((prev) => ({ ...prev, storageQuotaGb: value }))} />
+                <Field label={t("admin.organizationNamec50f05")} value={orgForm.name} onChange={(value) => setOrgForm((prev) => ({ ...prev, name: value }))} required />
+                <Field label={t("admin.concurrencyLimit118e6a")} type="number" value={orgForm.maxConcurrentTasks} onChange={(value) => setOrgForm((prev) => ({ ...prev, maxConcurrentTasks: value }))} />
+                <Field label={t("admin.balanceThresholdcf1126")} type="number" value={orgForm.balanceAlertThreshold} onChange={(value) => setOrgForm((prev) => ({ ...prev, balanceAlertThreshold: value }))} />
+                <Field label={t("admin.storageQuotaInGb1fe38c")} type="number" value={orgForm.storageQuotaGb} onChange={(value) => setOrgForm((prev) => ({ ...prev, storageQuotaGb: value }))} />
               </div>
               <label className="block text-xs text-fg-muted">
-                描述
-                <textarea
+                {t("admin.description412f54")}<textarea
                   className="mt-1 w-full rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-default"
                   value={orgForm.description}
                   onChange={(e) => setOrgForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -776,8 +771,7 @@ export default function AdminPage() {
                   checked={orgForm.isActive}
                   onChange={(e) => setOrgForm((prev) => ({ ...prev, isActive: e.target.checked }))}
                 />
-                机构启用
-              </label>
+                {t("admin.organizationEnabled7b2c48")}</label>
         </form>
       </AppModal>
     </PageContent>

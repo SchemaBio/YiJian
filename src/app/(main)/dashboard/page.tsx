@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -40,11 +43,11 @@ const EMPTY_TASK_STATS: TaskStatsResponse = {
   window_start: '',
 };
 
-function formatDateTime(value: string): string {
+function formatDateTime(value: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('zh-CN', { hour12: false });
+  return date.toLocaleString(t.locale, { hour12: false });
 }
 
 export default function DashboardPage() {
@@ -53,6 +56,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
+  const t = useText();
   const { user } = useAuth();
   const generation = React.useRef(0);
   const inFlight = React.useRef(false);
@@ -82,25 +86,25 @@ function DashboardPageContent() {
       setStats({ ...EMPTY_STATS, ...dashboardResult.value });
     } else {
       setStats(EMPTY_STATS);
-      failures.push('统计概览');
+      failures.push(t("common.overview630ee6"));
     }
     if (tasksResult.status === 'fulfilled') {
       setTasks(tasksResult.value.items ?? []);
     } else {
       setTasks([]);
-      failures.push('最近任务');
+      failures.push(t("admin.recentTasksabc5c3"));
     }
     if (taskStatsResult.status === 'fulfilled') {
       setTaskStats({ ...EMPTY_TASK_STATS, ...taskStatsResult.value });
     } else {
       setTaskStats(EMPTY_TASK_STATS);
-      failures.push('运行指标');
+      failures.push(t("common.runtimeMetrics63e240"));
     }
-    setError(failures.length > 0 ? `${failures.join('、')}暂时不可用` : '');
+    setError(failures.length > 0 ? t("common.isTemporarilyUnavailableb40caa", {p0: String(failures.join('、'))}) : '');
     setUpdatedAt(new Date().toISOString());
     setLoading(false);
     inFlight.current = false;
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     void loadDashboard();
@@ -148,20 +152,20 @@ function DashboardPageContent() {
   } as const;
 
   const cards = [
-    { title: '样本总数', value: stats.totalSamples, hint: '', icon: Users, href: '/samples', tone: 'neutral' },
-    { title: '待处理', value: stats.pendingTasks, hint: loading || error.includes('统计概览') ? '' : `${stats.waitingDataTasks} 个等待数据`, icon: FlaskConical, href: '/tasks', tone: 'warning' },
-    { title: '运行中', value: stats.runningTasks, hint: '', icon: Clock3, href: '/tasks', tone: 'info' },
-    { title: '已完成', value: stats.completedTasks, hint: '', icon: CheckCircle2, href: '/tasks', tone: 'success' },
-    { title: '失败任务', value: stats.failedTasks, hint: loading || error.includes('运行指标') ? '' : `${taskStats.failed_last_24h} 个发生于 24 小时内`, icon: XCircle, href: '/tasks', tone: 'danger' },
+    { title: t("common.totalSamplesd7dd99"), value: stats.totalSamples, hint: '', icon: Users, href: '/samples', tone: 'neutral' },
+    { title: t("common.pending59a9eb"), value: stats.pendingTasks, hint: loading || error.includes('统计概览') ? '' : t("common.awaitingData424f97", {p0: String(stats.waitingDataTasks)}), icon: FlaskConical, href: '/tasks', tone: 'warning' },
+    { title: t("admin.running594249"), value: stats.runningTasks, hint: '', icon: Clock3, href: '/tasks', tone: 'info' },
+    { title: t("admin.completede99b48"), value: stats.completedTasks, hint: '', icon: CheckCircle2, href: '/tasks', tone: 'success' },
+    { title: t("common.failedTasks174189"), value: stats.failedTasks, hint: loading || error.includes('运行指标') ? '' : t("common.inThePastHours248692", {p0: String(taskStats.failed_last_24h)}), icon: XCircle, href: '/tasks', tone: 'danger' },
   ] as const;
 
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header flex-col items-start gap-3 sm:flex-row sm:items-center">
         <div>
-          <h2 className="yj-page-title">工作台</h2>
+          <h2 className="yj-page-title">{t("common.workspace8483cd")}</h2>
           <p className="yj-page-subtitle">
-            {user?.name?.trim() || user?.email || '当前用户'}{updatedAt && ` · 更新于 ${formatDateTime(updatedAt)}`}
+            {user?.name?.trim() || user?.email || t("common.currentUser16ce12")}{updatedAt && t("common.updatedAt057c4e", {p0: String(formatDateTime(updatedAt, t))})}
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
@@ -171,21 +175,18 @@ function DashboardPageContent() {
             onClick={() => void loadDashboard()}
             disabled={loading}
           >
-            刷新
-          </Button>
+            {t("admin.refresh38108e")}</Button>
           <Link href="/samples" className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3 text-sm font-medium text-fg-default hover:bg-[var(--yj-panel-subtle)]">
-            <Plus className="h-4 w-4" /> 新建样本
-          </Link>
+            <Plus className="h-4 w-4" /> {t("common.newSamplea24694")}</Link>
           <Link href="/tasks/new" className="inline-flex h-9 items-center gap-2 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis hover:opacity-90">
-            <Plus className="h-4 w-4" /> 新建任务
-          </Link>
+            <Plus className="h-4 w-4" /> {t("common.newTask132e02")}</Link>
         </div>
       </div>
 
       {error && (
         <div role="alert" className="mb-4 flex items-center gap-2 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}，请刷新重试。</span>
+          <span>{error}{t("common.refreshToRetryadb3d7")}</span>
         </div>
       )}
 
@@ -209,11 +210,11 @@ function DashboardPageContent() {
       <section className="yj-panel overflow-hidden">
           <div className="yj-panel-header">
             <div>
-              <h3 className="yj-section-title">最近任务</h3>
+              <h3 className="yj-section-title">{t("admin.recentTasksabc5c3")}</h3>
 
             </div>
             <Link href="/tasks" className="flex items-center gap-1 text-sm text-accent-fg hover:underline">
-              查看全部 <ArrowRight className="h-3.5 w-3.5" />
+              {t("common.viewAll594e24")}<ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           {tasks.length > 0 ? (
@@ -222,43 +223,43 @@ function DashboardPageContent() {
                 <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_96px_150px] sm:gap-4">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg-default">{task.internalId || task.sampleId || task.id}</div>
-                    <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt)}</div>
+                    <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt, t)}</div>
                   </div>
                   <span className={`yj-task-state-label ${taskStatusClass(taskDisplayStatus(task))}`} data-status={taskDisplayStatus(task)} data-interpretation-completed={!!task.interpretationCompletedAt}>
-                    <span aria-hidden="true" />{taskStatusConfig[taskDisplayStatus(task)].label}
+                    <span aria-hidden="true" />{translateUI(taskStatusConfig[taskDisplayStatus(task)].label, t)}
                   </span>
                   <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                     {task.status === 'running' && (
                       typeof task.progress === 'number' && Number.isFinite(task.progress) ? (
                         <>
                           <span className="w-8 text-right text-xs font-medium tabular-nums text-fg-default">{Math.min(100, Math.max(0, task.progress))}%</span>
-                          <div role="progressbar" aria-label="任务运行进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.max(0, task.progress))} className="h-1.5 w-[92px] overflow-hidden rounded-full bg-canvas-inset">
+                          <div role="progressbar" aria-label={t("common.taskProgress042f14")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.max(0, task.progress))} className="h-1.5 w-[92px] overflow-hidden rounded-full bg-canvas-inset">
                             <div className="h-full rounded-full bg-accent-emphasis" style={{ width: `${Math.min(100, Math.max(0, task.progress))}%` }} />
                           </div>
                         </>
-                      ) : <span className="text-xs text-fg-muted">进度暂不可用</span>
+                      ) : <span className="text-xs text-fg-muted">{t("common.progressUnavailableb7105e")}</span>
                     )}
                   </div>
                 </Link>
               ))}
             </div>
-          ) : loading ? <p role="status" className="p-8 text-center text-sm text-fg-muted">加载最近任务…</p> : error.includes('最近任务') ? <p className="p-8 text-center text-sm text-fg-muted">最近任务暂不可用</p> : (
+          ) : loading ? <p role="status" className="p-8 text-center text-sm text-fg-muted">{t("common.loadingRecentTasks5d75b5")}</p> : error.includes('最近任务') ? <p className="p-8 text-center text-sm text-fg-muted">{t("common.recentTasksUnavailablee35a5e")}</p> : (
             <EmptyState
               icon={<Database />}
-              title="暂无任务"
-              description="创建任务后可在这里查看运行状态。"
+              title={t("common.noTasks15652e")}
+              description={t("common.createATaskToSeeItsRuntime687814")}
             />
           )}
       </section>
       <aside className="yj-panel overflow-hidden" aria-labelledby="dashboard-attention-title">
-        <div className="yj-panel-header"><h3 id="dashboard-attention-title" className="yj-section-title">待处理事项</h3></div>
+        <div className="yj-panel-header"><h3 id="dashboard-attention-title" className="yj-section-title">{t("common.pendingActions0b0efa")}</h3></div>
         <dl className="divide-y divide-border-default px-4 text-sm">
-          <div className="flex items-center justify-between py-3"><dt>待解读任务</dt><dd className="font-semibold tabular-nums">{loading || error.includes('运行指标') ? '—' : taskStats.status_distribution.pending_interpretation ?? 0}</dd></div>
-          <div className="flex items-center justify-between py-3"><dt>等待测序数据</dt><dd className="font-semibold tabular-nums">{loading || error.includes('统计概览') ? '—' : stats.waitingDataTasks}</dd></div>
-          <div className="flex items-center justify-between py-3"><dt>近 24 小时失败</dt><dd className="font-semibold tabular-nums text-danger-fg">{loading || error.includes('运行指标') ? '—' : taskStats.failed_last_24h}</dd></div>
-          <div className="flex items-center justify-between py-3"><dt>近 7 天导入失败</dt><dd className="font-semibold tabular-nums text-warning-fg">{loading || error.includes('运行指标') ? '—' : taskStats.result_import_failed_last_7d}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>{t("common.tasksAwaitingInterpretation195c3f")}</dt><dd className="font-semibold tabular-nums">{loading || error.includes('运行指标') ? '—' : taskStats.status_distribution.pending_interpretation ?? 0}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>{t("common.awaitingSequencingData844492")}</dt><dd className="font-semibold tabular-nums">{loading || error.includes('统计概览') ? '—' : stats.waitingDataTasks}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>{t("common.failuresInThePastHours598418")}</dt><dd className="font-semibold tabular-nums text-danger-fg">{loading || error.includes('运行指标') ? '—' : taskStats.failed_last_24h}</dd></div>
+          <div className="flex items-center justify-between py-3"><dt>{t("common.importFailuresInThePastDaysfab0c7")}</dt><dd className="font-semibold tabular-nums text-warning-fg">{loading || error.includes('运行指标') ? '—' : taskStats.result_import_failed_last_7d}</dd></div>
         </dl>
-        <div className="flex flex-wrap gap-2 border-t border-border-default p-4"><Link className="yj-tool-button" href="/tasks">管理任务</Link><Link className="yj-tool-button" href="/data">匹配数据</Link></div>
+        <div className="flex flex-wrap gap-2 border-t border-border-default p-4"><Link className="yj-tool-button" href="/tasks">{t("common.manageTasksb1a212")}</Link><Link className="yj-tool-button" href="/data">{t("common.matchDatab50c4f")}</Link></div>
       </aside>
       </div>
     </PageContent>

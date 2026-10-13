@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 
 import { useInterpretationReadOnly } from './InterpretationLock';
@@ -69,18 +72,19 @@ function ScoreSummaryCard({
   isUserModified: boolean;
   insufficient?: boolean;
 }) {
+  const t = useText();
   const variant = insufficient ? 'neutral' : getClassificationVariant(classification);
-  const label = insufficient ? '证据不足' : getClassificationLabel(classification);
+  const label = insufficient ? t("tasks.insufficientEvidence70568c") : getClassificationLabel(classification);
 
   return (
     <div className="bg-canvas-subtle rounded-lg p-4 mb-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Calculator className="w-4 h-4 text-fg-muted" />
-          <span className="text-sm font-medium text-fg-default">评估结果</span>
+          <span className="text-sm font-medium text-fg-default">{t("tasks.assessmentResult9dccae")}</span>
         </div>
         {isUserModified && (
-          <span className="text-xs text-warning-fg">已手动修改</span>
+          <span className="text-xs text-warning-fg">{t("tasks.manuallyModifiedd03878")}</span>
         )}
       </div>
 
@@ -94,7 +98,7 @@ function ScoreSummaryCard({
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs text-fg-muted mb-2">各部分评分</div>
+        <div className="text-xs text-fg-muted mb-2">{t("tasks.sectionScorescbc75f")}</div>
         <ScoreBar label="Section 1" score={sectionScores.section1} />
         <ScoreBar label="Section 2" score={sectionScores.section2} />
         <ScoreBar label="Section 3" score={sectionScores.section3} />
@@ -161,6 +165,7 @@ export function CNVAssessmentPanel({
   onReset,
   onCriteriaChange,
 }: CNVAssessmentPanelProps) {
+  const t = useText();
   const readOnly = useInterpretationReadOnly();
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
   React.useEffect(() => { setAIResult(undefined); }, [taskId, cnv?.id]);
@@ -223,21 +228,20 @@ export function CNVAssessmentPanel({
 
   return (
     <>
-      <WorkspaceInspector label="ClinGen CNV 评估" onClose={onClose}>
+      <WorkspaceInspector label={t("tasks.clingenCnvAssessment0157de")} onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <Calculator className="w-5 h-5 text-fg-muted" />
             <div>
               <h3 className="text-base font-medium text-fg-default">
-                ClinGen CNV {frameworkType} 评估
-              </h3>
+                ClinGen CNV {frameworkType} {t("tasks.assessment6c63b7")}</h3>
               <p className="text-xs text-fg-muted">
                 {cnv.chromosome}:{cnv.startPosition}-{cnv.endPosition}
               </p>
             </div>
           </div>
-          <IconActionButton label="关闭" action="close" variant="ghost"
+          <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
 
@@ -246,9 +250,9 @@ export function CNVAssessmentPanel({
 
         {/* 内容区域 */}
         <fieldset disabled={readOnly} className="yj-inspector-content min-w-0">
-          <p className="mb-3 text-xs text-fg-muted">基于 ACMG/ClinGen 2020 标准；预勾选仅使用已提供证据，评分不是自动确诊。</p>
+          <p className="mb-3 text-xs text-fg-muted">{t("tasks.basedOnAcmgClingenPreselectionUsesProvided16a1ce")}</p>
           {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">AI 辅助判决</span><AIAssistanceAction key={`${taskId}/${cnv.id}`} disabled={readOnly||saving||!taskId} input={{feature:isLoss?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(cnv),calculator:assessment}} onResult={setAIResult} /></div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.aiAssistedAssessment6b72ee")}</span><AIAssistanceAction key={`${taskId}/${cnv.id}`} disabled={readOnly||saving||!taskId} input={{feature:isLoss?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(cnv),calculator:assessment}} onResult={setAIResult} /></div>
           {aiResult && <div className="mb-4"><AIResultCard result={aiResult} /></div>}
           {/* 分数汇总 */}
           <ScoreSummaryCard
@@ -259,13 +263,13 @@ export function CNVAssessmentPanel({
             insufficient={assessment.assessmentState === 'insufficient_evidence'}
           />
 
-          <nav aria-label="评估章节" className="mb-3 flex flex-wrap gap-2">
-            {['基因组内容', '区域重叠', '基因数量', '文献证据', '家族史'].map((label, index) => <a key={label} href={`#cnv-section-${index + 1}`} className="yj-tool-button">{index + 1}. {label}</a>)}
+          <nav aria-label={t("tasks.assessmentSections8c836d")} className="mb-3 flex flex-wrap gap-2">
+            {[t("tasks.genomicContentd5200b"), t("tasks.regionOverlap5aab91"), t("tasks.geneCount236d07"), t("tasks.literatureEvidence2f2a4c"), t("samples.familyHistory35fef1")].map((label, index) => <a key={label} href={`#cnv-section-${index + 1}`} className="yj-tool-button">{index + 1}. {label}</a>)}
           </nav>
           {/* Section 面板 */}
           <div className="space-y-2">
             <AssessmentSection
-              title="Section 1: 基因组内容初始评估"
+              title={t("tasks.sectionInitialGenomicContentAssessment875250")}
               score={assessment.sectionScores.section1}
             >
               <Section1Panel
@@ -276,7 +280,7 @@ export function CNVAssessmentPanel({
             </AssessmentSection>
 
             <AssessmentSection
-              title={`Section 2: ${isLoss ? 'HI' : 'TS/HI'}基因/区域重叠`}
+              title={t("tasks.sectionGeneRegionOverlapa4193a", {p0: String(isLoss ? 'HI' : 'TS/HI')})}
               score={assessment.sectionScores.section2}
             >
               <Section2Panel
@@ -287,7 +291,7 @@ export function CNVAssessmentPanel({
             </AssessmentSection>
 
             <AssessmentSection
-              title="Section 3: 基因数量评估"
+              title={t("tasks.sectionGeneCountAssessment441573")}
               score={assessment.sectionScores.section3}
             >
               <Section3Panel
@@ -298,7 +302,7 @@ export function CNVAssessmentPanel({
             </AssessmentSection>
 
             <AssessmentSection
-              title="Section 4: 文献和数据库证据"
+              title={t("tasks.sectionLiteratureAndDatabaseEvidencecbeccf")}
               score={assessment.sectionScores.section4}
             >
               <Section4Panel
@@ -309,7 +313,7 @@ export function CNVAssessmentPanel({
             </AssessmentSection>
 
             <AssessmentSection
-              title="Section 5: 遗传模式/家族史"
+              title={t("tasks.sectionInheritanceFamilyHistoryd426e7")}
               score={assessment.sectionScores.section5}
             >
               <Section5Panel
@@ -332,18 +336,16 @@ export function CNVAssessmentPanel({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm border border-border rounded-md hover:bg-canvas-inset transition-colors"
               >
 
-                重置
-              </ActionButton>
+                {t("tasks.reset3d8134")}</ActionButton>
             )}
             {onSave && (
-              <ActionButton loading={saving} loadingLabel="保存中…" action="save" variant="ghost"
+              <ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost"
                 disabled={readOnly || saving}
                 onClick={() => onSave(assessment)}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-accent-emphasis text-white rounded-md hover:bg-accent-fg transition-colors"
               >
 
-                保存
-              </ActionButton>
+                {t("data.savefadf24")}</ActionButton>
             )}
           </div>
         </div>

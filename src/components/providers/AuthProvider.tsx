@@ -1,4 +1,6 @@
 'use client';
+import { LocalizedError } from '@/i18n/errors';
+
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, UserOrganizationInfo, OrgRole } from '@/types/user';
@@ -196,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback(async (data: { name: string }): Promise<User> => {
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new LocalizedError("interface.notAuthenticated0c91ac", undefined, "Not authenticated");
     }
     if (DEV_MOCK_AUTH) {
       const nextUser = { ...user, name: data.name, updatedAt: new Date().toISOString() };
@@ -212,7 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = useCallback(async (email: string) => {
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new LocalizedError("interface.notAuthenticated0c91ac", undefined, "Not authenticated");
     }
     if (DEV_MOCK_AUTH) {
       resetSession();
@@ -224,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const changePassword = useCallback(async (oldPassword: string, newPassword: string) => {
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new LocalizedError("interface.notAuthenticated0c91ac", undefined, "Not authenticated");
     }
     if (DEV_MOCK_AUTH) {
       return;

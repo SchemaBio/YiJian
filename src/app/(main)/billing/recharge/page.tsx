@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -15,6 +20,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 const PRESET_CREDITS = [100, 500, 1000, 5000];
 
 export default function RechargePage() {
+  const t = useText();
   const router = useRouter();
   const { user, currentOrg } = useAuth();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
@@ -39,7 +45,7 @@ export default function RechargePage() {
         setBalance(nextBalance);
         setConfig(nextConfig);
       })
-      .catch((err) => { if (active) setLoadError(err instanceof Error ? err.message : '加载充值信息失败'); });
+      .catch((err) => { if (active) setLoadError(err instanceof Error ? errorText(err, t) : t("billing.unableToLoadCreditAdditionInformation21a1a2")); });
     return () => { active = false; };
   }, [isSaaS, router, retry]);
 
@@ -51,11 +57,11 @@ export default function RechargePage() {
 
   const copyRequest = async () => {
     const request = [
-      'SchemaBio SaaS 积分充值申请',
-      `机构：${currentOrg?.name ?? '-'} (${currentOrg?.id ?? '-'})`,
-      `账号：${user?.email ?? '-'}`,
-      `申请积分：${amount}`,
-      `当前余额：${balance?.balance ?? '-'}`,
+      t("billing.schemabioSaasCreditRequest67d08d"),
+      t("billing.organization7d9842", {p0: String(currentOrg?.name ?? '-'), p1: String(currentOrg?.id ?? '-')}),
+      t("billing.accountf0457e", {p0: String(user?.email ?? '-')}),
+      t("billing.requestedCredits04e7bf", {p0: String(amount)}),
+      t("billing.currentBalance080c02", {p0: String(balance?.balance ?? '-')}),
     ].join('\n');
 
     try {
@@ -63,7 +69,7 @@ export default function RechargePage() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('无法复制充值申请，请检查浏览器剪贴板权限');
+      setError(t("billing.unableToCopyTheRequestCheckClipboard9e1894"));
     }
   };
 
@@ -75,17 +81,16 @@ export default function RechargePage() {
         <div>
           <Link href="/billing" className="mb-2 inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg-default">
             <ArrowLeft className="h-4 w-4" />
-            返回费用中心
-          </Link>
+            {t("billing.backToBilling844842")}</Link>
           <div className="flex items-center gap-2">
-            <h2 className="yj-page-title">充值</h2>
-            <Tag variant="warning">人工审核</Tag>
+            <h2 className="yj-page-title">{t("billing.addCreditsfa03c4")}</h2>
+            <Tag variant="warning">{t("billing.manualReview61d90f")}</Tag>
           </div>
-          <p className="yj-page-subtitle">选择积分数量并生成充值申请，平台确认后余额会显示在费用中心。</p>
+          <p className="yj-page-subtitle">{t("billing.chooseACreditAmountAndCreateAb9ec63")}</p>
         </div>
       </div>
 
-      {loadError && <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => setRetry(value => value + 1)}>重试读取</ActionButton></div>}
+      {loadError && <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => setRetry(value => value + 1)}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
       {error && (
         <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
           {error}
@@ -96,7 +101,7 @@ export default function RechargePage() {
         <section className="yj-panel p-5">
           <div className="mb-5 flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-accent-fg" />
-            <h3 className="text-base font-medium text-fg-default">充值积分</h3>
+            <h3 className="text-base font-medium text-fg-default">{t("admin.creditsToAdd3d02b4")}</h3>
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -112,16 +117,15 @@ export default function RechargePage() {
                     : 'border-border-default bg-canvas-default text-fg-default hover:bg-canvas-subtle'
                 }`}
               >
-                {preset} 积分
-              </button>
+                {preset} {t("billing.creditse6d317")}</button>
             ))}
           </div>
 
           <div className="mt-5 max-w-xs">
-            <label htmlFor="recharge-amount" className="mb-2 block text-sm font-medium text-fg-default">自定义数量</label>
+            <label htmlFor="recharge-amount" className="mb-2 block text-sm font-medium text-fg-default">{t("billing.customAmount6dea5d")}</label>
             <Input
               id="recharge-amount"
-              aria-label="自定义积分数量"
+              aria-label={t("billing.customCreditAmountc6dcf8")}
               type="number"
               min="1"
               step="100"
@@ -132,8 +136,8 @@ export default function RechargePage() {
 
           <div className="mt-6 flex flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm text-fg-muted">申请数量</p>
-              <p className="text-2xl font-semibold text-fg-default">{amount} 积分</p>
+              <p className="text-sm text-fg-muted">{t("billing.requestedAmount2e583a")}</p>
+              <p className="text-2xl font-semibold text-fg-default">{amount} {t("billing.creditse6d317")}</p>
             </div>
             <Button action="copy"
               variant="primary"
@@ -141,7 +145,7 @@ export default function RechargePage() {
 
               onClick={() => void copyRequest()}
             >
-              {copied ? '已复制' : '复制充值申请'}
+              {copied ? t("billing.copiede381a5") : t("billing.copyCreditRequeste67917")}
             </Button>
           </div>
         </section>
@@ -150,21 +154,21 @@ export default function RechargePage() {
           <div className="yj-panel p-4">
             <div className="flex items-center gap-2 text-fg-muted">
               <Coins className="h-4 w-4" />
-              <span className="text-sm">当前余额</span>
+              <span className="text-sm">{t("billing.currentBalancef11215")}</span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-fg-default">{balance?.balance ?? '--'} 积分</p>
+            <p className="mt-2 text-2xl font-semibold text-fg-default">{balance?.balance ?? '--'} {t("billing.creditse6d317")}</p>
           </div>
           <div className="yj-panel p-4">
             <div className="flex items-center gap-2 text-fg-muted">
               <Clock3 className="h-4 w-4" />
-              <span className="text-sm">本次充值可运行</span>
+              <span className="text-sm">{t("billing.estimatedRuntimeFromThisAddition05038e")}</span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-fg-default">约 {estimatedMinutes ?? '--'} 分钟</p>
-            <p className="mt-2 text-xs text-fg-muted">默认 60 分钟任务预计预扣 {exampleTaskCost ?? '--'} 积分，最终按实际运行分钟结算</p>
+            <p className="mt-2 text-2xl font-semibold text-fg-default">{t("billing.about91e623")}{estimatedMinutes ?? '--'} {t("billing.minutes5b0acd")}</p>
+            <p className="mt-2 text-xs text-fg-muted">{t("billing.estimatedReservationForAMinuteTask31dcf2")}{exampleTaskCost ?? '--'} {t("billing.creditsFinalBillingUsesActualRuntimea39e18")}</p>
           </div>
           <div className="yj-panel p-4 text-sm text-fg-muted">
-            <p className="font-medium text-fg-default">入账方式</p>
-            <p className="mt-2">平台确认申请后完成入账。费用中心可查看充值流水和最新余额。</p>
+            <p className="font-medium text-fg-default">{t("billing.creditPosting806aed")}</p>
+            <p className="mt-2">{t("billing.creditsArePostedAfterPlatformConfirmationSee40fdf0")}</p>
           </div>
         </aside>
       </div>

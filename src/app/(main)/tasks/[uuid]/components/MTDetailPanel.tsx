@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { IconActionButton } from '@/components/shared/ActionButton';
 
 
@@ -80,6 +85,7 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
 }
 
 export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailPanelProps) {
+  const t = useText();
   const [section, setSection] = React.useState<InspectorSection>('annotation');
   React.useEffect(() => { setSection('annotation'); }, [variant?.id, isOpen]);
   if (!isOpen || !variant) return null;
@@ -87,14 +93,14 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
   const pathogenicityConfig = PATHOGENICITY_CONFIG[variant.pathogenicity];
 
   return (
-    <WorkspaceInspector label="线粒体变异详情" onClose={onClose}>
+    <WorkspaceInspector label={t("tasks.mitochondrialVariantDetails7315db")} onClose={onClose}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h3 className="text-base font-medium text-fg-default">线粒体变异详情</h3>
-            <Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>
+            <h3 className="text-base font-medium text-fg-default">{t("tasks.mitochondrialVariantDetails7315db")}</h3>
+            <Tag variant={pathogenicityConfig.variant}>{translateUI(pathogenicityConfig.label, t)}</Tag>
           </div>
-          <IconActionButton label="关闭" action="close" variant="ghost"
+          <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
 
@@ -105,11 +111,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
         <div id="mt-inspector-content" role="tabpanel" aria-labelledby={`mt-inspector-${section}`} className="yj-inspector-content">
           {section === 'annotation' && <>
           {/* 基本信息 */}
-          <SectionTitle icon={Dna} title="基本信息" />
+          <SectionTitle icon={Dna} title={t("samples.basicInformationb122f8")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
-            <InfoItem label="基因" value={variant.gene} />
+            <InfoItem label={t("history.gene9ef2ed")} value={variant.gene} />
             <InfoItem
-              label="位置"
+              label={t("history.position88c344")}
               value={
                 <button
                   onClick={() => onOpenIGV?.('chrM', variant.position)}
@@ -119,24 +125,24 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
                 </button>
               }
             />
-            <InfoItem label="参考/变异" value={`${variant.ref} > ${variant.alt}`} />
+            <InfoItem label={t("tasks.referenceAlternateabcf6a")} value={`${variant.ref} > ${variant.alt}`} />
             {variant.haplogroup && (
-              <InfoItem label="单倍群" value={variant.haplogroup} />
+              <InfoItem label={t("history.haplogroupd4fd42")} value={variant.haplogroup} />
             )}
           </div>
 
           </>}
           {section === 'evidence' && <>
           {/* 异质性 */}
-          <SectionTitle icon={FileText} title="异质性分析" />
+          <SectionTitle icon={FileText} title={t("tasks.heteroplasmyAnalysisb874d7")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
-            <InfoItem label="异质性比例" value={`${(variant.heteroplasmy * 100).toFixed(1)}%`} />
+            <InfoItem label={t("tasks.heteroplasmyFractionba19ec")} value={`${formatNumericString((variant.heteroplasmy * 100).toFixed(1), t.locale)}%`} />
             <InfoItem
-              label="异质性水平"
+              label={t("tasks.heteroplasmyLevel613cf4")}
               value={
-                variant.heteroplasmy >= 0.8 ? '高异质性 (≥80%)' :
-                variant.heteroplasmy >= 0.4 ? '中等异质性 (40-80%)' :
-                '低异质性 (<40%)'
+                variant.heteroplasmy >= 0.8 ? t("tasks.highHeteroplasmya2ae59") :
+                variant.heteroplasmy >= 0.4 ? t("tasks.moderateHeteroplasmydfccc0") :
+                t("tasks.lowHeteroplasmyd36825")
               }
             />
           </div>
@@ -144,19 +150,19 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           </>}
           {section === 'assessment' && <>
           {/* 致病性评估 */}
-          <SectionTitle icon={Database} title="致病性评估" />
+          <SectionTitle icon={Database} title={t("tasks.pathogenicityAssessment0df423")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
-              label="致病性"
-              value={<Tag variant={pathogenicityConfig.variant}>{pathogenicityConfig.label}</Tag>}
+              label={t("history.pathogenicityfa6024")}
+              value={<Tag variant={pathogenicityConfig.variant}>{translateUI(pathogenicityConfig.label, t)}</Tag>}
             />
-            <InfoItem label="关联疾病" value={variant.associatedDisease} />
+            <InfoItem label={t("history.associatedDiseasea79330")} value={variant.associatedDisease} />
           </div>
 
           </>}
           {section === 'annotation' && <>
           {/* 外部资源 */}
-          <SectionTitle icon={ExternalLink} title="外部资源" />
+          <SectionTitle icon={ExternalLink} title={t("tasks.externalResources227d9d")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
               label="MITOMAP"
@@ -178,29 +184,29 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           </>}
           {section === 'assessment' && <>
           {/* 置顶状态 */}
-          <SectionTitle icon={FileText} title="置顶状态" />
+          <SectionTitle icon={FileText} title={t("tasks.pinStatus129a6b")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
-              label="置顶状态"
+              label={t("tasks.pinStatus129a6b")}
               value={variant.pinned ? (
-                <Tag variant="success">已置顶</Tag>
+                <Tag variant="success">{t("tasks.pinnedd7d970")}</Tag>
               ) : (
-                <Tag variant="neutral">未置顶</Tag>
+                <Tag variant="neutral">{t("tasks.notPinned9065cc")}</Tag>
               )}
             />
 
             <InfoItem
-              label="回报状态"
+              label={t("tasks.reportStatus86bba4")}
               value={variant.reported ? (
-                <Tag variant="info">已回报</Tag>
+                <Tag variant="info">{t("tasks.reported6fb7a5")}</Tag>
               ) : (
-                <Tag variant="neutral">未回报</Tag>
+                <Tag variant="neutral">{t("tasks.notReporteda438d1")}</Tag>
               )}
             />
             {variant.reported && variant.reportedBy && (
               <>
-                <InfoItem label="回报人" value={variant.reportedBy} />
-                <InfoItem label="回报时间" value={variant.reportedAt} />
+                <InfoItem label={t("tasks.reportedBycc3bc9")} value={variant.reportedBy} />
+                <InfoItem label={t("tasks.reportedAt741a21")} value={variant.reportedAt} />
               </>
             )}
           </div>

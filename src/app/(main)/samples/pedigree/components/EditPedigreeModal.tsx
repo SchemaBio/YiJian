@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -32,6 +37,7 @@ export interface EditPedigreeFormData {
 }
 
 export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditPedigreeModalProps) {
+  const t = useText();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<EditPedigreeFormData>({
@@ -148,7 +154,7 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
       onClose();
       setSearchQuery('');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to update pedigree');
+      setSubmitError(err instanceof Error ? errorText(err, t) : t("interface.failedToUpdatePedigree805c6a"));
     } finally {
       setSubmitting(false);
     }
@@ -159,9 +165,9 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
   };
 
   const genderLabels = {
-    male: '男',
-    female: '女',
-    unknown: '未知',
+    male: t("samples.male51625d"),
+    female: t("samples.female26bc84"),
+    unknown: t("samples.unknownd9c32a"),
   };
 
   if (!pedigree) return null;
@@ -170,18 +176,17 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
-      title="编辑家系"
+      title={t("samples.editPedigree58b644")}
       size="medium"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
           <Button action="save"
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={formData.sampleIds.length === 0 || !formData.probandSampleId || submitting}
           >
-            保存
-          </Button>
+            {t("data.savefadf24")}</Button>
         </>
       }
     >
@@ -192,25 +197,25 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
           </div>
         )}
         <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">家系信息</h3>
+          <h3 className="text-sm font-medium text-fg-default mb-3">{t("samples.pedigreeInformatione42ffe")}</h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-fg-muted mb-1">内部编号 *</label>
-              <Input value={formData.internalId} onChange={(e) => handleChange('internalId', e.target.value)} placeholder="如：FAM-001" required />
+              <label className="block text-xs text-fg-muted mb-1">{t("samples.internalIdadcd0f")}</label>
+              <Input value={formData.internalId} onChange={(e) => handleChange('internalId', e.target.value)} placeholder={t("samples.forExampleFam899d92")} required />
             </div>
             <div>
-              <label className="block text-xs text-fg-muted mb-1">批次</label>
-              <Input value={formData.batch} onChange={(e) => handleChange('batch', e.target.value)} placeholder="如：BATCH-2024-001" />
+              <label className="block text-xs text-fg-muted mb-1">{t("samples.batch6b2cf2")}</label>
+              <Input value={formData.batch} onChange={(e) => handleChange('batch', e.target.value)} placeholder={t("samples.forExampleBatch7b91d9")} />
             </div>
             <div>
-              <label className="block text-xs text-fg-muted mb-1">临床诊断</label>
-              <Input value={formData.clinicalDiagnosis} onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)} placeholder="如：遗传性心肌病待查" />
+              <label className="block text-xs text-fg-muted mb-1">{t("samples.clinicalDiagnosis654a81")}</label>
+              <Input value={formData.clinicalDiagnosis} onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)} placeholder={t("samples.forExampleSuspectedHereditaryCardiomyopathybeebec")} />
             </div>
           </div>
         </div>
 
         <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">家系样本 ({formData.sampleIds.length} 个)</h3>
+          <h3 className="text-sm font-medium text-fg-default mb-3">{t("samples.pedigreeSamples10e660")}{formData.sampleIds.length} {t("samples.labelffaa9d")}</h3>
           {formData.sampleIds.length > 0 ? (
             <div className="space-y-2 mb-3">
               {formData.sampleIds.map((sampleId) => {
@@ -223,28 +228,28 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <span className="font-mono text-sm text-fg-default">{sampleId.substring(0, 8)}</span>
                         {sample && <span className="text-fg-muted text-sm">({sample.internalId})</span>}
-                        {isProband && <Tag variant="info">先证者</Tag>}
+                        {isProband && <Tag variant="info">{t("samples.probandc8c1fa")}</Tag>}
                       </div>
                     </div>
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       {!isProband && (
-                        <button type="button" onClick={() => handleSetProband(sampleId)} className="text-xs text-accent-fg hover:underline">设为先证者</button>
+                        <button type="button" onClick={() => handleSetProband(sampleId)} className="text-xs text-accent-fg hover:underline">{t("samples.setAsProband5e864f")}</button>
                       )}
-                      <ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" onClick={() => handleRemoveSample(sampleId)} aria-label={`移除样本 ${sample?.internalId || sampleId}`} className="p-1 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors" />
+                      <ActionButton size="small" iconOnly action="delete" variant="ghost" type="button" onClick={() => handleRemoveSample(sampleId)} aria-label={t("samples.removeSample0cc467", {p0: String(sample?.internalId || sampleId)})} className="p-1 rounded text-fg-muted hover:text-danger-fg hover:bg-danger-subtle transition-colors" />
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="text-sm text-fg-muted mb-3 p-4 bg-canvas-subtle rounded-lg text-center">暂无样本，请从下方添加</div>
+            <div className="text-sm text-fg-muted mb-3 p-4 bg-canvas-subtle rounded-lg text-center">{t("samples.noSamplesAddOneBelow86274a")}</div>
           )}
           <div className="mb-3">
-            <Input placeholder="搜索样本编号、内部编号..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
+            <Input placeholder={t("samples.searchSampleOrInternalId2cb968")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
           </div>
           <div className="border border-border-default rounded-lg max-h-48 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-fg-muted">加载样本列表...</div>
+              <div className="p-4 text-center text-fg-muted">{t("samples.loadingSampleListf00bfb")}</div>
             ) : filteredSamples.length > 0 ? (
               <div className="divide-y divide-border-subtle">
                 {filteredSamples.map((sample) => {
@@ -259,7 +264,7 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <span className="font-mono text-sm text-fg-default">{sample.id.substring(0, 8)}</span>
                             <span className="text-fg-muted text-sm">({sample.internalId})</span>
-                            <Tag variant={sample.gender === 'male' ? 'info' : sample.gender === 'female' ? 'warning' : 'neutral'}>{genderLabels[sample.gender]}</Tag>
+                            <Tag variant={sample.gender === 'male' ? 'info' : sample.gender === 'female' ? 'warning' : 'neutral'}>{translateUI(genderLabels[sample.gender], t)}</Tag>
                           </div>
                         </div>
                       </div>
@@ -268,15 +273,15 @@ export function EditPedigreeModal({ isOpen, onClose, onSubmit, pedigree }: EditP
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-fg-muted">未找到匹配的样本</div>
+              <div className="p-4 text-center text-fg-muted">{t("samples.noMatchingSamplesc0d84a")}</div>
             )}
           </div>
-          <p className="mt-2 text-xs text-fg-muted">点击样本可添加/移除，第一个添加的样本自动设为先证者</p>
+          <p className="mt-2 text-xs text-fg-muted">{t("samples.clickToAddRemoveSamplesTheFirsteae7b9")}</p>
         </div>
 
         <div>
-          <label className="block text-xs text-fg-muted mb-1">备注</label>
-          <TextArea value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder="请输入家系相关备注信息" rows={3} />
+          <label className="block text-xs text-fg-muted mb-1">{t("admin.notese03614")}</label>
+          <TextArea value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder={t("samples.enterPedigreeNotes11f6bb")} rows={3} />
         </div>
       </form>
     </AppModal>

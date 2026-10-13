@@ -50,11 +50,25 @@ docker run -p 3000:3000 \
 运行时入口会生成 `public/runtime-config.js`，因此同一个镜像可以在 Octopus
 和 Squid 两条路线间复用，无需重新构建。
 
+## 界面语言
+
+支持简体中文（`zh-CN`）、通用繁体中文（`zh-Hant`）、英语（`en`）和拉美西班牙语（`es-419`）。
+在“设置 → 个人设置 → 界面语言”选择语言并点击保存。偏好通过当前网站的
+`yijian-locale` Cookie 保存一年，退出登录后保留，不跨设备同步。
+
+Docker 默认语言通过 `YIJIAN_DEFAULT_LOCALE` 配置，未设置时为 `zh-CN`。
+同一镜像支持四种默认语言；修改配置后重建 YiJian 容器即可，无需重建镜像。
+已有浏览器偏好优先于部署默认值，不根据浏览器语言自动选择。
+本地开发使用 `NEXT_PUBLIC_DEFAULT_LOCALE`；生产配置使用 Octopus 或 Squid 的部署入口。
+样本资料、报告正文、AI 输出及原始文件保持原文。
+
 ## 验证
 
 ```sh
+pnpm test
 pnpm typecheck
 pnpm build
+node scripts/check-i18n.cjs
 ```
 
 生产反向代理、TLS 与公网访问控制由部署者管理。路由契约见对应部署目录的

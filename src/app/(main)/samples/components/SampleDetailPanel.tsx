@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel, formatTurnaroundDays } from '@/lib/sample-display';
@@ -80,6 +85,7 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
 
 // HPO术语输入组件
 function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) => void }) {
+  const t = useText();
   const hpoTerms = useHpoTerms();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -93,7 +99,7 @@ function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) =
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Input
-            placeholder="搜索HPO术语（如：HP:0001250 或 癫痫）"
+            placeholder={t("samples.searchHpoTermsEGHpOr746be4")}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -130,6 +136,7 @@ function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) =
 }
 
 export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps) {
+  const t = useText();
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<TabType>('basic');
@@ -149,7 +156,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
         setError('');
       } catch (err) {
         setSample(null);
-        setError(err instanceof Error ? err.message : 'Failed to load sample');
+        setError(err instanceof Error ? errorText(err, t) : t("interface.failedToLoadSample0c1b77"));
       } finally {
         setLoading(false);
       }
@@ -170,7 +177,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
         setIsEditing(false);
         setError('');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save sample');
+        setError(err instanceof Error ? errorText(err, t) : t("interface.failedToSaveSample5561da"));
       }
     }
   };
@@ -193,7 +200,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
   if (!sample) {
     return (
       <div className="flex items-center justify-center py-16 text-fg-muted">
-        {error || '未找到该样本'}
+        {error || t("samples.sampleNotFound73e415")}
       </div>
     );
   }
@@ -206,25 +213,25 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
       case 'basic':
         return (
           <div className="space-y-4">
-            <InfoCard title="基本信息">
+            <InfoCard title={t("samples.basicInformationb122f8")}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <InfoItem label="样本编号" value={<span className="font-mono text-xs">{sample.id}</span>} />
-                <InfoItem label="内部编号" value={sample.internalId} />
-                <InfoItem label="性别" value={<span className={genderInfo.color}>{genderInfo.label}</span>} />
-                <InfoItem label="样本类型" value={sample.sampleType} />
-                <InfoItem label="创建时间" value={sample.createdAt} />
-                <InfoItem label="更新时间" value={sample.updatedAt} />
+                <InfoItem label={t("history.sampleId6d686e")} value={<span className="font-mono text-xs">{sample.id}</span>} />
+                <InfoItem label={t("data.internalIdabcc9d")} value={sample.internalId} />
+                <InfoItem label={t("samples.sexfe8aa4")} value={<span className={genderInfo.color}>{translateUI(genderInfo.label, t)}</span>} />
+                <InfoItem label={t("samples.sampleType686c81")} value={t(sample.sampleType)} />
+                <InfoItem label={t("admin.createdAt84e380")} value={sample.createdAt} />
+                <InfoItem label={t("pipeline.updatedAt093dea")} value={sample.updatedAt} />
               </div>
             </InfoCard>
-            <InfoCard title="匹配数据">
+            <InfoCard title={t("common.matchDatab50c4f")}>
               <div className="grid grid-cols-2 gap-4">
                 {sample.matchedPair ? (
                   <>
-                    <InfoItem label="R1路径" value={<span className="font-mono text-xs break-all">{sample.matchedPair.r1Path}</span>} />
-                    <InfoItem label="R2路径" value={<span className="font-mono text-xs break-all">{sample.matchedPair.r2Path}</span>} />
+                    <InfoItem label={t("samples.rPath9ad9aa")} value={<span className="font-mono text-xs break-all">{sample.matchedPair.r1Path}</span>} />
+                    <InfoItem label={t("samples.rPathecce33")} value={<span className="font-mono text-xs break-all">{sample.matchedPair.r2Path}</span>} />
                   </>
                 ) : (
-                  <InfoItem label="匹配数据" value="暂无匹配数据" />
+                  <InfoItem label={t("common.matchDatab50c4f")} value={t("暂无匹配数据")} />
                 )}
               </div>
             </InfoCard>
@@ -234,7 +241,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
       case 'clinical':
         return (
           <div className="space-y-4">
-            <InfoCard title="诊断信息">
+            <InfoCard title={t("samples.diagnosticInformation0b673e")}>
               <div className="space-y-4">
                 {isEditing ? <AIDiagnosisField key={sampleId} value={editData.clinicalDiagnosis?.mainDiagnosis ?? sample.clinicalDiagnosis.mainDiagnosis}
                   onChange={value => setEditData(previous => ({ ...previous, clinicalDiagnosis: { ...previous.clinicalDiagnosis, mainDiagnosis: value } } as any))}
@@ -242,7 +249,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                     setEditData(previous => ({ ...previous, clinicalDiagnosis: { ...previous.clinicalDiagnosis, hpoTerms: merged } } as any));
                     setSample(previous => previous ? { ...previous, clinicalDiagnosis: { ...previous.clinicalDiagnosis, hpoTerms: merged } } : null);
                   }} /> : <InfoItem
-                  label="主要诊断"
+                  label={t("samples.primaryDiagnosisc93efa")}
                   value={sample.clinicalDiagnosis.mainDiagnosis}
                   isEditing={isEditing}
                   editValue={(editData.clinicalDiagnosis as any)?.mainDiagnosis}
@@ -252,7 +259,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                   } as any))}
                 />}
                 <InfoItem
-                  label="临床症状"
+                  label={t("samples.clinicalSymptoms326950")}
                   value={
                     sample.clinicalDiagnosis.symptoms.length > 0
                       ? sample.clinicalDiagnosis.symptoms.map((s, i) => (
@@ -262,7 +269,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                   }
                 />
                 <InfoItem
-                  label="发病年龄"
+                  label={t("samples.ageAtOnset4cce4a")}
                   value={sample.clinicalDiagnosis.onsetAge}
                   isEditing={isEditing}
                   editValue={(editData.clinicalDiagnosis as any)?.onsetAge}
@@ -274,14 +281,14 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
               </div>
             </InfoCard>
 
-            <InfoCard title="病史描述">
+            <InfoCard title={t("samples.medicalHistoryff3bb9")}>
               <p className="text-sm text-fg-default whitespace-pre-wrap">
-                {sample.clinicalDiagnosis.diseaseHistory || '暂无病史描述'}
+                {sample.clinicalDiagnosis.diseaseHistory || t("samples.noMedicalHistoryDescription739ef8")}
               </p>
             </InfoCard>
 
             {/* HPO术语 */}
-            <InfoCard title="HPO表型术语">
+            <InfoCard title={t("samples.hpoPhenotypeTermsc62e48")}>
               <div className="space-y-3">
                 {sample.clinicalDiagnosis.hpoTerms && sample.clinicalDiagnosis.hpoTerms.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -312,7 +319,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-fg-muted">暂无HPO术语</p>
+                  <p className="text-sm text-fg-muted">{t("samples.noHpoTerms0cc1c0")}</p>
                 )}
                 {isEditing && (
                   <HpoTermInput
@@ -339,16 +346,16 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
 
       case 'submission':
         return (
-          <InfoCard title="送检信息">
+          <InfoCard title={t("samples.submissionInformation414387")}>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <InfoItem label="送检日期" value={sample.submissionInfo.submissionDate} />
-              <InfoItem label="采样日期" value={sample.submissionInfo.sampleCollectionDate} />
-              <InfoItem label="收样日期" value={sample.submissionInfo.sampleReceiveDate} />
+              <InfoItem label={t("samples.submissionDatefb4db3")} value={sample.submissionInfo.submissionDate} />
+              <InfoItem label={t("samples.collectionDatedee8e7")} value={sample.submissionInfo.sampleCollectionDate} />
+              <InfoItem label={t("samples.receiptDate5abc5a")} value={sample.submissionInfo.sampleReceiveDate} />
               <InfoItem
-                label="样本质量"
+                label={t("samples.sampleQualitye01f54")}
                 value={
-                  <Tag variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality).variant}>
-                    {getSampleQualityDisplay(sample.submissionInfo.sampleQuality).label}
+                  <Tag variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality, t).variant}>
+                    {translateUI(getSampleQualityDisplay(sample.submissionInfo.sampleQuality, t).label, t)}
                   </Tag>
                 }
               />
@@ -358,13 +365,13 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
 
       case 'project':
         return (
-          <InfoCard title="项目信息">
+          <InfoCard title={t("samples.projectInformation4166d1")}>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <InfoItem label="项目编号" value={sample.projectInfo.projectId} />
-              <InfoItem label="项目名称" value={sample.projectInfo.projectName} />
-              <InfoItem label="检测Panel" value={sample.projectInfo.panel} />
+              <InfoItem label={t("samples.projectId1bb19c")} value={sample.projectInfo.projectId} />
+              <InfoItem label={t("samples.projectName3e7255")} value={sample.projectInfo.projectName} />
+              <InfoItem label={t("samples.testingPanelc30b77")} value={sample.projectInfo.panel} />
               <InfoItem
-                label="检测项目"
+                label={t("samples.test97879b")}
                 value={
                   sample.projectInfo.testItems.length > 0
                     ? sample.projectInfo.testItems.map((item, i) => (
@@ -373,12 +380,12 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                     : '-'
                 }
               />
-              <InfoItem label="承诺周期" value={formatTurnaroundDays(sample.projectInfo.turnaroundDays)} />
+              <InfoItem label={t("samples.expectedTurnarounddb3366")} value={formatTurnaroundDays(sample.projectInfo.turnaroundDays, t)} />
               <InfoItem
-                label="优先级"
+                label={t("samples.priority7cabe7")}
                 value={
                   <Tag variant={sample.projectInfo.priority === 'urgent' ? 'danger' : 'neutral'}>
-                    {getSamplePriorityLabel(sample.projectInfo.priority)}
+                    {getSamplePriorityLabel(sample.projectInfo.priority, t)}
                   </Tag>
                 }
               />
@@ -389,25 +396,25 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
       case 'family':
         return (
           <div className="space-y-4">
-            <InfoCard title="家族史概况">
+            <InfoCard title={t("samples.familyHistoryOverview911c3c")}>
               <InfoItem
-                label="是否有家族史"
+                label={t("samples.familyHistoryPresentdd7a14")}
                 value={
                   <Tag variant={sample.familyHistory.hasHistory ? 'warning' : 'neutral'}>
-                    {getFamilyHistoryLabel(sample.familyHistory.hasHistory)}
+                    {getFamilyHistoryLabel(sample.familyHistory.hasHistory, t)}
                   </Tag>
                 }
               />
             </InfoCard>
             {sample.familyHistory.hasHistory && sample.familyHistory.affectedMembers && (
-              <InfoCard title="患病亲属">
+              <InfoCard title={t("samples.affectedRelativesc83a79")}>
                 <div className="space-y-3">
                   {sample.familyHistory.affectedMembers.map((member, index) => (
                     <div key={index} className="flex items-center gap-4 p-2 bg-canvas-default rounded">
                       <span className="text-sm font-medium text-fg-default w-16">{member.relation}</span>
                       <span className="text-sm text-fg-default flex-1">{member.condition}</span>
                       {member.onsetAge && (
-                        <span className="text-xs text-fg-muted">发病年龄: {member.onsetAge}</span>
+                        <span className="text-xs text-fg-muted">{t("samples.ageAtOnset6e115d")}{member.onsetAge}</span>
                       )}
                     </div>
                   ))}
@@ -415,7 +422,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
               </InfoCard>
             )}
             {sample.familyHistory.pedigreeNote && (
-              <InfoCard title="家系备注">
+              <InfoCard title={t("samples.pedigreeNotes9c04e4")}>
                 <p className="text-sm text-fg-default">{sample.familyHistory.pedigreeNote}</p>
               </InfoCard>
             )}
@@ -424,7 +431,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
 
       case 'analysis':
         return (
-          <InfoCard title="关联分析任务">
+          <InfoCard title={t("samples.associatedAnalysisTasks91cb8e")}>
             {sample.analysisTasks.length > 0 ? (
               <div className="space-y-2">
                 {sample.analysisTasks.map((task) => (
@@ -437,14 +444,14 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                       task.status === 'completed' ? 'success' :
                       task.status === 'running' ? 'info' : 'neutral'
                     }>
-                      {task.status === 'completed' ? '已完成' :
-                       task.status === 'running' ? '运行中' : task.status}
+                      {task.status === 'completed' ? t("admin.completede99b48") :
+                       task.status === 'running' ? t("admin.running594249") : task.status}
                     </Tag>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-fg-muted">暂无关联的分析任务</p>
+              <p className="text-sm text-fg-muted">{t("samples.noAssociatedAnalysisTasks5fe531")}</p>
             )}
           </InfoCard>
         );
@@ -466,23 +473,20 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">{sample.internalId}</h3>
-            <span className={`text-sm ${genderInfo.color}`}>{genderInfo.label}</span>
-            <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? '已匹配' : '未匹配'}</Tag>
+            <span className={`text-sm ${genderInfo.color}`}>{translateUI(genderInfo.label, t)}</span>
+            <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? t("samples.matched113028") : t("samples.unmatched434b19")}</Tag>
           </div>
           <div className="flex items-center gap-2">
             {isEditing ? (
               <>
                 <Button variant="secondary" size="small" onClick={handleCancelEdit}>
-                  取消
-                </Button>
+                  {t("admin.cancel4d0b46")}</Button>
                 <Button action="save" variant="primary" size="small"  onClick={handleSave}>
-                  保存
-                </Button>
+                  {t("data.savefadf24")}</Button>
               </>
             ) : (
               <Button action="edit" variant="secondary" size="small"  onClick={() => setIsEditing(true)}>
-                编辑
-              </Button>
+                {t("admin.edita7f814")}</Button>
             )}
             {onClose && (
               <ActionButton size="small" iconOnly action="close" variant="ghost"
@@ -493,9 +497,9 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
           </div>
         </div>
         <div className="flex items-center gap-4 text-xs text-fg-muted">
-          <span>样本编号: <span className="font-mono">{sample.id.substring(0, 8)}...</span></span>
-          <span>样本类型: {sample.sampleType}</span>
-          <span>匹配数据: {sample.matchedPair ? '已匹配' : '无'}</span>
+          <span>{t("samples.sampleId22c40c")}<span className="font-mono">{sample.id.substring(0, 8)}...</span></span>
+          <span>{t("samples.sampleTypedf9c6f")}{t(sample.sampleType)}</span>
+          <span>{t("samples.matchedData79747f")}{sample.matchedPair ? t("samples.matched113028") : t("samples.none720777")}</span>
         </div>
       </div>
 
@@ -519,7 +523,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                 `}
               >
                 {tab.icon}
-                {tab.label}
+                {translateUI(tab.label, t)}
               </button>
             );
           })}

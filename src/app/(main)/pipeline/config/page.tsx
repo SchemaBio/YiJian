@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -20,6 +25,7 @@ function uniqueValues(values: string[]): string[] {
 }
 
 export default function PipelineConfigPage() {
+  const t = useText();
   const [pipelines, setPipelines] = React.useState<Pipeline[]>([]);
   const [selectedId, setSelectedId] = React.useState('');
   const [loading, setLoading] = React.useState(true);
@@ -35,11 +41,11 @@ export default function PipelineConfigPage() {
       setHasLoaded(true);
       setSelectedId(current => current && data.some(item => item.id === current) ? current : data[0]?.id ?? '');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载流程配置失败');
+      setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToLoadPipelineSettings1430d3"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     void loadPipelines();
@@ -55,8 +61,8 @@ export default function PipelineConfigPage() {
     <PageContent className="yj-page-shell space-y-4">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">流程配置</h2>
-          <p className="yj-page-subtitle">汇总当前分析流程、参考基因组和资源文件配置。</p>
+          <h2 className="yj-page-title">{t("pipeline.pipelineSettingsbaa6d3")}</h2>
+          <p className="yj-page-subtitle">{t("pipeline.reviewAnalysisPipelinesReferenceGenomesAndResourcef10912")}</p>
         </div>
         <Button action="refresh"
           variant="secondary"
@@ -65,8 +71,7 @@ export default function PipelineConfigPage() {
           onClick={() => void loadPipelines()}
           disabled={loading}
         >
-          刷新
-        </Button>
+          {t("admin.refresh38108e")}</Button>
       </div>
 
       {error && (
@@ -78,19 +83,19 @@ export default function PipelineConfigPage() {
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="yj-panel min-w-0 p-4">
-          <div className="text-xs text-fg-muted">流程总数</div>
+          <div className="text-xs text-fg-muted">{t("pipeline.totalPipelinescb2d36")}</div>
           <div className="mt-2 text-2xl font-semibold text-fg-default">{!hasLoaded ? '—' : pipelines.length}</div>
         </div>
         <div className="yj-panel min-w-0 p-4">
-          <div className="text-xs text-fg-muted">启用流程</div>
+          <div className="text-xs text-fg-muted">{t("pipeline.enabledPipelines80fa57")}</div>
           <div className="mt-2 text-2xl font-semibold text-success-fg">{!hasLoaded ? '—' : activeCount}</div>
         </div>
         <div className="yj-panel min-w-0 p-4">
-          <div className="text-xs text-fg-muted">参考基因组</div>
+          <div className="text-xs text-fg-muted">{t("pipeline.referenceGenome903ba5")}</div>
           <div className="mt-2 break-words text-sm text-fg-default">{!hasLoaded ? '—' : references.join(' / ') || '—'}</div>
         </div>
         <div className="yj-panel min-w-0 p-4">
-          <div className="text-xs text-fg-muted">BED 引用</div>
+          <div className="text-xs text-fg-muted">{t("pipeline.bedReferences6c9e36")}</div>
           <div className="mt-2 text-2xl font-semibold text-fg-default">{!hasLoaded ? '—' : bedFiles.length}</div>
         </div>
       </div>
@@ -104,22 +109,21 @@ export default function PipelineConfigPage() {
           <EmptyState
             className="min-h-[220px]"
             icon={<Settings />}
-            title="暂无流程配置"
-            description="请先在流程列表中创建分析流程。"
+            title={t("pipeline.noPipelineSettings837c2b")}
+            description={t("pipeline.createAnAnalysisPipelineInThePipeline541117")}
           />
         ) : (
           <>
             <section className="space-y-3">
               <h3 className="text-sm font-medium text-fg-default pb-2 border-b border-border flex items-center gap-2">
                 <Settings className="w-4 h-4" />
-                当前流程
-              </h3>
+                {t("pipeline.currentPipelineac8056")}</h3>
               <Select
                 value={selected?.id ?? ''}
                 onChange={(value) => setSelectedId(Array.isArray(value) ? value[0] : value)}
                 options={pipelines.map(item => ({
                   value: item.id,
-                  label: `${item.name} (${item.version || '未标版本'})`,
+                  label: `${item.name} (${item.version || t("pipeline.versionUnspecifiedfb6d6c")})`,
                 }))}
               />
             </section>
@@ -129,22 +133,22 @@ export default function PipelineConfigPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold text-fg-default">{selected.name}</h3>
                   <Tag variant={selected.status === 'active' ? 'success' : 'neutral'}>
-                    {selected.status === 'active' ? '启用' : '停用'}
+                    {selected.status === 'active' ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}
                   </Tag>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  <Info label="流程 ID" value={selected.id} mono />
-                  <Info label="基础流程" value={BASE_TYPE_LABEL[selected.baseType] ?? selected.baseType} />
-                  <Info label="版本" value={selected.version || '-'} />
-                  <Info label="参考基因组" value={selected.referenceGenome || '-'} />
-                  <Info label="BED 文件" value={selected.bedFile || '-'} />
-                  <Info label="CNV 基线" value={selected.cnvBaseline || '未配置'} />
-                  <Info label="创建时间" value={formatTime(selected.createdAt)} />
-                  <Info label="更新时间" value={formatTime(selected.updatedAt)} />
+                  <Info label={t("pipeline.pipelineId8c44a5")} value={selected.id} mono />
+                  <Info label={t("pipeline.basePipeline41689b")} value={translateUI(BASE_TYPE_LABEL[selected.baseType] ?? selected.baseType, t)} />
+                  <Info label={t("pipeline.version989d1a")} value={selected.version || '-'} />
+                  <Info label={t("pipeline.referenceGenome903ba5")} value={selected.referenceGenome || '-'} />
+                  <Info label={t("pipeline.bedFiles8ee058")} value={selected.bedFile || '-'} />
+                  <Info label={t("pipeline.cnvBaselinefd84b0")} value={selected.cnvBaseline || t("pipeline.notConfigured63595e")} />
+                  <Info label={t("admin.createdAt84e380")} value={formatTime(selected.createdAt, t)} />
+                  <Info label={t("pipeline.updatedAt093dea")} value={formatTime(selected.updatedAt, t)} />
                 </div>
                 {selected.description && (
                   <div>
-                    <div className="text-xs text-fg-muted">描述</div>
+                    <div className="text-xs text-fg-muted">{t("admin.description412f54")}</div>
                     <p className="mt-1 text-sm text-fg-default whitespace-pre-wrap">{selected.description}</p>
                   </div>
                 )}
@@ -154,10 +158,9 @@ export default function PipelineConfigPage() {
             {pipelines.length > 1 && <section className="space-y-3">
               <h3 className="text-sm font-medium text-fg-default pb-2 border-b border-border flex items-center gap-2">
                 <Database className="w-4 h-4" />
-                已配置资源引用
-              </h3>
-              <ResourceList title="BED 文件" values={bedFiles} />
-              <ResourceList title="CNV 基线" values={cnvBaselines} emptyText="未配置 CNV 基线" />
+                {t("pipeline.configuredResourceReferencese4443b")}</h3>
+              <ResourceList title={t("pipeline.bedFiles8ee058")} values={bedFiles} />
+              <ResourceList title={t("pipeline.cnvBaselinefd84b0")} values={cnvBaselines} emptyText={t("pipeline.cnvBaselineNotConfigured686b34")} />
             </section>}
 
           </>
@@ -176,7 +179,9 @@ function Info({ label, value, mono = false }: { label: string; value: string; mo
   );
 }
 
-function ResourceList({ title, values, emptyText = '暂无引用' }: { title: string; values: string[]; emptyText?: string }) {
+function ResourceList({ title, values, emptyText: suppliedEmptyText }: { title: string; values: string[]; emptyText?: string }) {
+  const t = useText();
+  const emptyText = suppliedEmptyText ?? t("pipeline.noReferencesea524e");
   return (
     <div>
       <div className="text-xs text-fg-muted mb-2">{title}</div>
@@ -195,8 +200,8 @@ function ResourceList({ title, values, emptyText = '暂无引用' }: { title: st
   );
 }
 
-function formatTime(value: string): string {
+function formatTime(value: string, t: TextTranslator = chineseText): string {
   if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(t.locale, { hour12: false });
 }

@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import { getIGVSession, getIGVTrackURLs } from '../result-api';
 
 export interface CNRBin {
@@ -10,14 +11,14 @@ export const normalizeContig = (value: string) => value.replace(/^chr/i, '').toU
 const cache = new Map<string, CNRBin[]>();
 async function readCNR(url: string, signal: AbortSignal): Promise<CNRBin[]> {
   const response = await fetch(url, {signal, credentials:'omit', referrerPolicy:'no-referrer', cache:'no-store'});
-  if (!response.ok || !response.body) throw new Error('CNR 对象不可读取，请检查授权和 COS 浏览器访问配置');
+  if (!response.ok || !response.body) throw new LocalizedError("display.cnrObjectInaccessibleCheckAuthorizationAndCosf2bd05");
   const reader = response.body.getReader(), decoder = new TextDecoder();
   let text = '', bytes = 0;
   try {
     for (;;) {
       const chunk = await reader.read(); if(chunk.done)break;
       bytes += chunk.value.byteLength;
-      if(bytes > 32*1024*1024)throw new Error('CNR 超过浏览器读取上限（32 MiB）');
+      if(bytes > 32*1024*1024)throw new LocalizedError("display.cnrExceedsTheBrowserReadLimitMib21eeca");
       text += decoder.decode(chunk.value,{stream:true});
     }
     text += decoder.decode();
@@ -25,7 +26,7 @@ async function readCNR(url: string, signal: AbortSignal): Promise<CNRBin[]> {
   const lines=text.split(/\r?\n/).filter(line=>line.trim()&&!line.startsWith('#'));
   const fields=lines.shift()?.split('\t').map(field=>field.toLowerCase())??[];
   const indexes=['chromosome','start','end','log2'].map(field=>fields.indexOf(field));
-  if(indexes.some(index=>index<0))throw new Error('CNR 缺少 chromosome/start/end/log2 列');
+  if(indexes.some(index=>index<0))throw new LocalizedError("display.cnrLacksChromosomeStartEndLogColumnsc1ca11");
   const result:CNRBin[]=[];
   for(const line of lines){
     const parts=line.split('\t');
@@ -36,19 +37,19 @@ async function readCNR(url: string, signal: AbortSignal): Promise<CNRBin[]> {
     const bin={chromosome,start:Number(start),end:Number(end),log2:Number(log2),gene:parts[fields.indexOf('gene')]??'',weight:Number.isFinite(weight)&&weight>0?weight:null};
     if(Number.isSafeInteger(bin.start)&&Number.isSafeInteger(bin.end)&&bin.start>=0&&bin.end>bin.start&&Number.isFinite(bin.log2))result.push(bin);
   }
-  if(!result.length)throw new Error('CNR 没有有效信号');
+  if(!result.length)throw new LocalizedError("display.cnrHasNoValidSignal9044f8");
   return result;
 }
 export async function loadCNR(taskId:string, attemptId:string|undefined, signal:AbortSignal):Promise<CNRBin[]> {
   const session=await getIGVSession(taskId,signal);
-  if(attemptId&&session.executionAttemptId!==attemptId)throw new Error('执行版本已改变，请重新加载结果');
+  if(attemptId&&session.executionAttemptId!==attemptId)throw new LocalizedError("display.executionVersionChangedReloadResultscb30d5");
   const track=session.tracks?.find(track=>track.format==='cnr'&&track.available);
-  if(!track)throw new Error('当前归档未提供原始 CNR，无法生成逐外显子信号');
+  if(!track)throw new LocalizedError("display.archiveLacksRawCnrPerExonSignals87d99d");
   const key=`${taskId}/${session.executionAttemptId}/${session.version}`;
   const cached=cache.get(key);if(cached)return cached;
   const signed=await getIGVTrackURLs(taskId,session.version,[track.id],signal);
   const target=signed.tracks.find(value=>value.id===track.id);
-  if(!target)throw new Error('CNR 读取授权缺失');
+  if(!target)throw new LocalizedError("display.cnrReadAuthorizationMissing38fc8f");
   const bins=await readCNR(target.url,signal);
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
   if(cache.size>=2)cache.delete(cache.keys().next().value!);

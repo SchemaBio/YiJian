@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -27,6 +30,7 @@ const TAB_CONFIGS: { id: TabType; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function SampleDetailPage() {
+  const t = useText();
   const params = useParams();
   const router = useRouter();
 
@@ -69,11 +73,11 @@ export default function SampleDetailPage() {
   if (loadError) {
     return <PageContent className="yj-page-shell">
       <div role="alert" className="yj-panel flex flex-col items-center gap-4 p-8">
-        <h2 className="text-lg font-semibold text-fg-default">加载样本失败</h2>
-        <p className="text-sm text-fg-muted">暂时无法读取样本信息，请重试。</p>
+        <h2 className="text-lg font-semibold text-fg-default">{t("samples.unableToLoadSample068cd1")}</h2>
+        <p className="text-sm text-fg-muted">{t("samples.sampleInformationIsTemporarilyUnavailableRetryceb070")}</p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={handleBack}>返回样本列表</Button>
-          <Button action="retry" variant="primary" onClick={() => setRetryCount(count => count + 1)}>重试</Button>
+          <Button variant="secondary" onClick={handleBack}>{t("samples.backToSampleListefa5cc")}</Button>
+          <Button action="retry" variant="primary" onClick={() => setRetryCount(count => count + 1)}>{t("pipeline.retrye2d53a")}</Button>
         </div>
       </div>
     </PageContent>;
@@ -84,13 +88,12 @@ export default function SampleDetailPage() {
       <PageContent className="yj-page-shell">
         <div className="flex flex-col items-center justify-center py-16">
           <h2 className="text-2xl font-semibold text-fg-default mb-2">404</h2>
-          <p className="text-fg-muted mb-4">未找到该样本</p>
+          <p className="text-fg-muted mb-4">{t("samples.sampleNotFound73e415")}</p>
           <button
             onClick={handleBack}
             className="text-accent-fg hover:underline"
           >
-            返回样本列表
-          </button>
+            {t("samples.backToSampleListefa5cc")}</button>
         </div>
       </PageContent>
     );
@@ -124,15 +127,15 @@ export default function SampleDetailPage() {
       case 'family':
         return (
           <div className="yj-panel p-5">
-            <h4 className="text-sm font-medium text-fg-default mb-3">家族史</h4>
+            <h4 className="text-sm font-medium text-fg-default mb-3">{t("samples.familyHistory35fef1")}</h4>
             <div className="space-y-3">
               <div>
-                <span className="text-xs text-fg-muted">是否有家族史</span>
-                <p className="text-sm text-fg-default">{getFamilyHistoryLabel(sample.familyHistory?.hasHistory)}</p>
+                <span className="text-xs text-fg-muted">{t("samples.familyHistoryPresentdd7a14")}</span>
+                <p className="text-sm text-fg-default">{getFamilyHistoryLabel(sample.familyHistory?.hasHistory, t)}</p>
               </div>
               {sample.familyHistory?.hasHistory && sample.familyHistory.affectedMembers && (
                 <div>
-                  <span className="text-xs text-fg-muted">患病亲属</span>
+                  <span className="text-xs text-fg-muted">{t("samples.affectedRelativesc83a79")}</span>
                   <div className="mt-1 space-y-1">
                     {sample.familyHistory.affectedMembers.map((member, i) => (
                       <div key={i} className="text-sm text-fg-default">
@@ -148,7 +151,7 @@ export default function SampleDetailPage() {
       case 'analysis':
         return (
           <div className="yj-panel p-5">
-            <h4 className="text-sm font-medium text-fg-default mb-3">关联分析任务</h4>
+            <h4 className="text-sm font-medium text-fg-default mb-3">{t("samples.associatedAnalysisTasks91cb8e")}</h4>
             {sample.analysisTasks?.length > 0 ? (
               <div className="space-y-2">
                 {sample.analysisTasks.map((task: { id: string; name: string; status: string; createdAt: string }) => (
@@ -159,16 +162,16 @@ export default function SampleDetailPage() {
                   >
                     <div>
                       <span className="text-sm font-medium text-fg-default">{task.name}</span>
-                      <span className="text-xs text-fg-muted ml-2">{formatDateTime(task.createdAt)}</span>
+                      <span className="text-xs text-fg-muted ml-2">{formatDateTime(task.createdAt, t.locale)}</span>
                     </div>
                     <Tag variant={task.status === 'completed' ? 'success' : task.status === 'running' ? 'info' : 'neutral'}>
-                      {task.status === 'completed' ? '已完成' : task.status === 'running' ? '运行中' : task.status}
+                      {task.status === 'completed' ? t("admin.completede99b48") : task.status === 'running' ? t("admin.running594249") : task.status}
                     </Tag>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-fg-muted">暂无关联的分析任务</p>
+              <p className="text-sm text-fg-muted">{t("samples.noAssociatedAnalysisTasks5fe531")}</p>
             )}
           </div>
         );
@@ -183,29 +186,28 @@ export default function SampleDetailPage() {
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-4">
           <Button variant="ghost" size="small" leftIcon={<ArrowLeft className="w-4 h-4" />} onClick={handleBack}>
-            返回
-          </Button>
+            {t("samples.back11d024")}</Button>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-default">
           <div className="flex flex-wrap items-center gap-3 min-w-0">
             <h2 className="yj-page-title break-all">{sample.internalId}</h2>
-            <span className={`text-sm ${genderInfo.color}`}>{genderInfo.label}</span>
-            <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? '已匹配' : '未匹配'}</Tag>
+            <span className={`text-sm ${genderInfo.color}`}>{translateUI(genderInfo.label, t)}</span>
+            <Tag variant={isMatched ? 'success' : 'warning'}>{isMatched ? t("samples.matched113028") : t("samples.unmatched434b19")}</Tag>
           </div>
 
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-muted mt-2">
-          <span>样本编号: <span className="font-mono break-all">{uuid}</span></span>
-          <span>样本类型: {sample.sampleType}</span>
-          <span>创建时间: {formatDateTime(sample.createdAt)}</span>
+          <span>{t("samples.sampleId22c40c")}<span className="font-mono break-all">{uuid}</span></span>
+          <span>{t("samples.sampleTypedf9c6f")}{t(sample.sampleType)}</span>
+          <span>{t("samples.createdAt685e74")}{formatDateTime(sample.createdAt, t.locale)}</span>
         </div>
       </div>
 
       {/* 标签页导航 */}
       <div className="border-b border-border-default mb-4">
-        <nav className="flex gap-1 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="样本详情标签页">
+        <nav className="flex gap-1 overflow-x-auto overflow-y-hidden" role="tablist" aria-label={t("samples.sampleDetailTabs1215f2")}>
           {TAB_CONFIGS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -223,7 +225,7 @@ export default function SampleDetailPage() {
                 `}
               >
                 {tab.icon}
-                {tab.label}
+                {translateUI(tab.label, t)}
               </button>
             );
           })}

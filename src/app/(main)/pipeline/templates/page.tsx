@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 
@@ -136,6 +141,7 @@ const initialFormData: FormData = {
 };
 
 function ReportTemplatesPageContent() {
+  const t = useText();
  const [page,setPage]=React.useState(1);
   const [templates, setTemplates] = React.useState<ReportTemplate[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -162,11 +168,11 @@ function ReportTemplatesPageContent() {
     } catch (err) {
       if(controller.signal.aborted)return;console.error('加载报告服务失败', err);
       setTemplates([]);
-      setError('加载报告服务失败，请稍后重试');
+      setError(t("pipeline.unableToLoadReportServicesRetryLaterbbab26"));
     } finally {
       if(!controller.signal.aborted)setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     refreshTemplates();return()=>loadController.current?.abort();
@@ -181,20 +187,20 @@ function ReportTemplatesPageContent() {
         t.description.toLowerCase().includes(query) ||
         t.id.toLowerCase().includes(query)
     );
-  }, [templates, searchQuery]);
+  }, [templates, searchQuery, t]);
 
   // 检查名称是否唯一
   const validateName = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError('请输入服务名称');
+      setNameError(t("pipeline.enterServiceNameee1fd0"));
       return false;
     }
     const exists = templates.some(
       (t) => t.name.toLowerCase() === trimmed.toLowerCase() && t.id !== editingId
     );
     if (exists) {
-      setNameError('服务名称已存在');
+      setNameError(t("pipeline.serviceNameAlreadyExists37a043"));
       return false;
     }
     setNameError(null);
@@ -237,7 +243,7 @@ function ReportTemplatesPageContent() {
       setDeleteTarget(null);
     } catch (err) {
       console.error('删除报告服务失败', err);
-      setError(err instanceof Error ? err.message : '删除报告服务失败');
+      setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToDeleteReportServicec9c524"));
     } finally {
       setLoading(false);
     }
@@ -252,7 +258,7 @@ function ReportTemplatesPageContent() {
       setTemplates((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
       console.error('更新报告服务状态失败', err);
-      setError(err instanceof Error ? err.message : '更新报告服务状态失败');
+      setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToUpdateReportServiceStatus5c5023"));
     } finally {
       setStatusUpdatingId(null);
     }
@@ -268,7 +274,7 @@ function ReportTemplatesPageContent() {
 
     try {
       if (!isValidReportEndpoint(endpoint)) {
-        throw new Error('请输入不含访问凭据或片段标识的 HTTPS 报告服务地址');
+        throw new Error(t("pipeline.enterAnHttpsReportUrlWithoutCredentials3c0722"));
       }
       const result = await api.post<{ reachable: boolean; status_code: number;authenticated:boolean;protocol_verified:boolean;head_supported:boolean }>('/v1/report-templates/validate-endpoint', {
         apiEndpoint: endpoint,
@@ -276,10 +282,10 @@ function ReportTemplatesPageContent() {
         ...(formData.apiKey.trim() ? { apiKey: formData.apiKey.trim() } : {}),
       });
       setApiTestResult(result.authenticated?'success':'error');
- setApiTestMessage(result.head_supported?`端点可达，认证通过（HTTP ${result.status_code}）；生成协议需通过实际报告验证。`:'端点可达，但不支持 HEAD；认证和生成协议尚未验证。');
+ setApiTestMessage(result.head_supported?t("pipeline.endpointReachableAuthenticationPassedHttpVerifyGeneration0a121c", {p0: String(result.status_code)}):t("pipeline.endpointReachableButHeadUnsupportedAuthenticationAndcb4347"));
     } catch (err) {
       setApiTestResult('error');
-      setApiTestMessage(err instanceof Error ? err.message : '端点连接失败');
+      setApiTestMessage(err instanceof Error ? errorText(err, t) : t("pipeline.endpointConnectionFailedd43e56"));
     } finally {
       setTestingApi(false);
     }
@@ -289,11 +295,11 @@ function ReportTemplatesPageContent() {
     if (!validateName(formData.name)) return;
     if (!isValidReportEndpoint(formData.apiEndpoint)) {
       setApiTestResult('error');
-      setError('请输入不含访问凭据或片段标识的 HTTPS 报告服务地址。');
+      setError(t("pipeline.enterAnHttpsReportUrlWithoutCredentialsa80c1c"));
       return;
     }
     if (!editingId && !formData.apiKey.trim()) {
-      setError('认证 Key 为必填项，用于报告服务认证。');
+      setError(t("pipeline.anAuthenticationKeyIsRequiredForThe073e58"));
       return;
     }
 
@@ -312,7 +318,7 @@ function ReportTemplatesPageContent() {
       setFormData(initialFormData);
     } catch (err) {
       console.error('保存报告服务失败', err);
-      setError(err instanceof Error ? err.message : '保存报告服务失败，请稍后重试');
+      setError(err instanceof Error ? errorText(err, t) : t("pipeline.unableToSaveReportServiceRetryLaterf1c2e8"));
     } finally {
       setLoading(false);
     }
@@ -322,7 +328,7 @@ function ReportTemplatesPageContent() {
 
     {
       id: 'name',
-      header: '服务名称',
+      header: t("pipeline.serviceNamed82acb"),
       accessor: (row: ReportTemplate) => (
         <div className="flex items-center justify-center gap-2">
           <FileText className="w-4 h-4 text-fg-muted" />
@@ -334,7 +340,7 @@ function ReportTemplatesPageContent() {
     },
     {
       id: 'description',
-      header: '描述',
+      header: t("admin.description412f54"),
       accessor: (row) => (
         <span className="text-fg-muted text-sm">{row.description || '-'}</span>
       ),
@@ -343,7 +349,7 @@ function ReportTemplatesPageContent() {
     },
     {
       id: 'apiEndpoint',
-      header: '服务地址',
+      header: t("pipeline.serviceUrl86e118"),
       accessor: (row) => (
         <HoverHint content={row.apiEndpoint}><span className="text-sm text-fg-muted font-mono truncate block max-w-[250px]" >
           {row.apiEndpoint || '-'}
@@ -354,10 +360,10 @@ function ReportTemplatesPageContent() {
     },
     {
       id: 'credential',
-      header: '访问凭据',
+      header: t("pipeline.credentialsa39c57"),
       accessor: (row) => (
         <Tag variant={row.hasApiKey ? 'success' : 'neutral'}>
-          {row.hasApiKey ? '已配置' : '未配置'}
+          {row.hasApiKey ? t("pipeline.configureddc7cd2") : t("pipeline.notConfigured63595e")}
         </Tag>
       ),
       width: 90,
@@ -365,30 +371,30 @@ function ReportTemplatesPageContent() {
     },
     {
       id: 'status',
-      header: '状态',
+      header: t("admin.status62e951"),
       accessor: (row) => {
         const config = statusConfig[row.status];
-        return <Tag variant={config.variant}>{config.label}</Tag>;
+        return <Tag variant={config.variant}>{translateUI(config.label, t)}</Tag>;
       },
       width: 70,
       align: 'center',
     },
     {
       id: 'updatedAt',
-      header: '更新时间',
-      accessor: (row) => { const date = new Date(row.updatedAt); return !row.updatedAt ? '—' : Number.isNaN(date.getTime()) ? row.updatedAt : date.toLocaleString('zh-CN', { hour12: false }); },
+      header: t("pipeline.updatedAt093dea"),
+      accessor: (row) => { const date = new Date(row.updatedAt); return !row.updatedAt ? '—' : Number.isNaN(date.getTime()) ? row.updatedAt : date.toLocaleString(t.locale, { hour12: false }); },
       width: 140,
       align: 'center',
     },
     {
       id: 'actions',
-      header: '操作',
+      header: t("admin.actionsf3ea6d"),
       accessor: (row: ReportTemplate) => (
         <TableActions>
-          <TableAction label="编辑" action="edit" disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => handleEdit(row)} />
-          <TableAction label={row.status === 'active' ? '停用' : '启用'} leftIcon={row.status === 'active' ? <PowerOff /> : <Power />}
+          <TableAction label={t("admin.edita7f814")} action="edit" disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => handleEdit(row)} />
+          <TableAction label={row.status === 'active' ? t("admin.disabledd989e5") : t("admin.enabledd4e9ca")} leftIcon={row.status === 'active' ? <PowerOff /> : <Power />}
             loading={statusUpdatingId === row.id} disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => void handleToggleStatus(row)} />
-          <TableAction label="删除" action="delete" tone="danger" hint={row.status === 'active' ? '停用后可删除' : '删除报告服务'}
+          <TableAction label={t("data.delete3755f5")} action="delete" tone="danger" hint={row.status === 'active' ? t("pipeline.disableBeforeDeletingfb1c7e") : t("pipeline.deleteReportServicea5699c")}
             disabled={!row.canMaintain || row.status === 'active' || statusUpdatingId !== null} onClick={() => handleDelete(row)} />
         </TableActions>
       ),
@@ -406,40 +412,38 @@ function ReportTemplatesPageContent() {
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
         <div>
-          <h2 className="yj-page-title">报告服务</h2>
-          <p className="yj-page-subtitle">配置报告服务，使用任务结果生成报告。</p>
+          <h2 className="yj-page-title">{t("pipeline.reportServicea3ff41")}</h2>
+          <p className="yj-page-subtitle">{t("pipeline.configureServicesToGenerateReportsFromTask6aac9b")}</p>
         </div>
       </div>
 
       <div className="yj-toolbar-panel">
         <div className="w-full sm:w-64">
           <Input
-            placeholder="搜索报告服务..."
+            placeholder={t("pipeline.searchReportServicesce3464")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             leftElement={<Search className="w-4 h-4" />}
           />
         </div>
         <Button action="add" variant="primary"  onClick={handleAdd}>
-          添加报告服务
-        </Button>
+          {t("pipeline.addReportServicea50cb6")}</Button>
       </div>
 
       {error && (
         <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>重试读取</ActionButton>
+          {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>{t("billing.retryLoading7b4939")}</ActionButton>
         </div>
       )}
 
       {loading ? (
         <div className="flex min-h-64 items-center justify-center text-sm text-fg-muted">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          加载报告服务...
-        </div>
+          {t("pipeline.loadingReportServices67b6c7")}</div>
       ) : filteredTemplates.length > 0 ? (
         <DataTable
           data={filteredTemplates.slice((page-1)*20,page*20)}
-          columns={columns}
+          columns={localizeDisplay(columns, t)}
           rowKey="id"
           density="default"
           className="yj-data-table right-pinned-actions-table report-center-table"
@@ -448,8 +452,8 @@ function ReportTemplatesPageContent() {
         <EmptyState
           className="yj-panel"
           icon={<FileText />}
-          title={searchQuery.trim() ? "未找到匹配报告服务" : "尚未配置报告服务"}
-          description={searchQuery.trim() ? "调整搜索条件后重试。" : "添加带 Bearer Key 认证的服务地址后，可在任务报告页调用。"}
+          title={searchQuery.trim() ? t("pipeline.noMatchingReportServicesd126bf") : t("pipeline.noReportServicesConfiguredbfcc2e")}
+          description={searchQuery.trim() ? t("pipeline.adjustYourSearchAndRetryf591c7") : t("pipeline.addAServiceUrlWithBearerKey83660d")}
         />
       )}
 
@@ -458,20 +462,19 @@ function ReportTemplatesPageContent() {
       <AppModal
         open={isModalOpen}
         onOpenChange={(open) => !loading && setIsModalOpen(open)}
-        title={editingId ? '编辑报告服务' : '添加报告服务'}
+        title={editingId ? t("pipeline.editReportService5ecd35") : t("pipeline.addReportServicea50cb6")}
         size="large"
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsModalOpen(false)} disabled={loading}>
-              取消
-            </Button>
+              {t("admin.cancel4d0b46")}</Button>
             <Button loading={loading} action="save"
               variant="primary"
               onClick={handleSubmit}
               disabled={!isFormValid || loading}
 
             >
-              {loading ? (editingId ? '保存中...' : '创建中...') : (editingId ? '保存' : '创建')}
+              {loading ? (editingId ? t("admin.savingd70d42") : t("pipeline.creating8c6348")) : (editingId ? t("data.savefadf24") : t("pipeline.createfcbd09"))}
             </Button>
           </>
         }
@@ -481,29 +484,29 @@ function ReportTemplatesPageContent() {
             <section>
               <div className="space-y-4">
             <FormItem
-              label="服务名称"
+              label={t("pipeline.serviceNamed82acb")}
               required
               error={nameError || undefined}
             >
               <Input
-                aria-label="服务名称"
+                aria-label={t("pipeline.serviceNamed82acb")}
                 value={formData.name}
                 onChange={(e) => {
                   setFormData((prev) => ({ ...prev, name: e.target.value }));
                   if (nameError) validateName(e.target.value);
                 }}
                 onBlur={() => validateName(formData.name)}
-                placeholder="如 wes-germline-report"
+                placeholder={t("pipeline.forExampleWesGermlineReport004a0a")}
                 error={!!nameError}
               />
             </FormItem>
 
-            <FormItem label="描述">
+            <FormItem label={t("admin.description412f54")}>
               <TextArea
-                aria-label="描述"
+                aria-label={t("admin.description412f54")}
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="输入报告服务用途说明"
+                placeholder={t("pipeline.describeTheReportServicePurpose7b6472")}
                 rows={2}
               />
             </FormItem>
@@ -512,13 +515,13 @@ function ReportTemplatesPageContent() {
             </section>
 
             <section className="border-t border-[var(--yj-border-subtle)] pt-5">
-              <h3 className="mb-3 text-sm font-medium text-fg-default">服务连接</h3>
+              <h3 className="mb-3 text-sm font-medium text-fg-default">{t("pipeline.serviceConnection71203e")}</h3>
               <div className="space-y-4">
 
-            <FormItem label="服务地址" required hint="可预先配置尚未上线的 HTTPS 地址；保存不检查连接，生成报告时才调用。">
+            <FormItem label={t("pipeline.serviceUrl86e118")} required hint={t("pipeline.youMaySaveAnHttpsUrlBefore37e548")}>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
-                  aria-label="服务地址"
+                  aria-label={t("pipeline.serviceUrl86e118")}
                   value={formData.apiEndpoint}
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, apiEndpoint: e.target.value }));
@@ -529,7 +532,7 @@ function ReportTemplatesPageContent() {
                   leftElement={<Link className="w-4 h-4" />}
                   className="min-w-0 flex-1"
                 />
-                <Button loading={testingApi} loadingLabel="测试中..."
+                <Button loading={testingApi} loadingLabel={t("pipeline.testingf43705")}
                   type="button"
                   variant="secondary"
                   size="medium"
@@ -538,8 +541,7 @@ function ReportTemplatesPageContent() {
                   leftIcon={<CheckCircle className="h-4 w-4" />}
                   className="yj-tool-button min-w-[116px] shrink-0 whitespace-nowrap"
                 >
-                  测试连接
-                </Button>
+                  {t("pipeline.testConnection10b7d8")}</Button>
               </div>
               {apiTestResult && (
                 <div className={`flex items-center gap-1 text-sm mt-1 ${apiTestResult === 'success' ? 'text-success-fg' : 'text-danger-fg'}`}>
@@ -559,16 +561,16 @@ function ReportTemplatesPageContent() {
             </FormItem>
 
             <FormItem
-              label="认证 Key"
+              label={t("pipeline.authenticationKey0d400f")}
               required={!editingId}
-              hint={editingId ? '留空表示继续使用已保存的 Key；填写则轮换。Key 不会回显。' : '必填；以 Authorization: Bearer <key> 发送，保存后不会回显。'}
+              hint={editingId ? t("pipeline.leaveBlankToKeepTheSavedKey379a61") : t("pipeline.requiredSentAsAuthorizationBearerKeyIt694927")}
             >
               <Input
                 type="password"
-                aria-label="认证 Key"
+                aria-label={t("pipeline.authenticationKey0d400f")}
                 value={formData.apiKey}
                 onChange={(e) => setFormData((prev) => ({ ...prev, apiKey: e.target.value }))}
-                placeholder={editingId ? '留空以保留现有 Key' : '输入报告服务认证 Key'}
+                placeholder={editingId ? t("pipeline.leaveBlankToKeepExistingKey22d09f") : t("pipeline.enterReportServiceKeyedfa5f")}
                 autoComplete="off"
               />
             </FormItem>
@@ -577,12 +579,12 @@ function ReportTemplatesPageContent() {
             </section>
 
             <div className="rounded-md border border-border-default bg-canvas-subtle p-3 text-xs text-fg-muted">
-              <p className="mb-2 flex items-center gap-1.5 font-medium text-fg-default"><Braces className="h-3.5 w-3.5" />接口约定</p>
+              <p className="mb-2 flex items-center gap-1.5 font-medium text-fg-default"><Braces className="h-3.5 w-3.5" />{t("pipeline.apiContract59c284")}</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>请求方法：POST；Content-Type：application/json</li>
-                <li>认证方式：Authorization: Bearer &lt;你的 Key&gt;</li>
-                <li>任务结果标识位于请求体字段 task_result_uuid</li>
-                <li>端点应直接返回 PDF、DOCX、XLSX 等报告文件</li>
+                <li>{t("pipeline.methodPostContentTypeApplicationJsona3bfc9")}</li>
+                <li>{t("pipeline.authenticationAuthorizationBearerYourKey2957f8")}</li>
+                <li>{t("pipeline.taskResultIdIsInTheTask03cc2f")}</li>
+                <li>{t("pipeline.returnReportFilesSuchAsPdfDocx2e6be6")}</li>
               </ul>
             </div>
 
@@ -591,25 +593,23 @@ function ReportTemplatesPageContent() {
       </AppModal>
 
       {/* 删除确认弹窗 */}
-      <AppModal open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} size="small" title="删除确认" footer={<>
+      <AppModal open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} size="small" title={t("pipeline.confirmDeletion726b6e")} footer={<>
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
-            取消
-          </Button>
+            {t("admin.cancel4d0b46")}</Button>
           <Button action="delete" variant="danger" onClick={confirmDelete}>
-            确认删除
-          </Button>
+            {t("data.confirmDeletion3c06ab")}</Button>
          </>}>
           <div className="flex flex-col items-center text-center py-4">
             <div className="w-12 h-12 rounded-full bg-danger-subtle flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6 text-danger-fg" />
             </div>
-            <p className="text-fg-default mb-2">确定要删除此报告服务吗？</p>
+            <p className="text-fg-default mb-2">{t("pipeline.deleteThisReportServicefa34e4")}</p>
             {deleteTarget && (
               <p className="text-sm text-fg-muted font-mono bg-canvas-subtle px-2 py-1 rounded">
                 {deleteTarget.name}
               </p>
             )}
-            <p className="text-xs text-fg-muted mt-3">此操作不可撤销</p>
+            <p className="text-xs text-fg-muted mt-3">{t("pipeline.thisCannotBeUndone7da32f")}</p>
           </div>
          </AppModal>
     </PageContent>

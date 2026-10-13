@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -37,6 +40,7 @@ interface AcmgTagProps {
  * <AcmgTag classification="VUS" />
  */
 export function AcmgTag({ classification, className }: AcmgTagProps) {
+  const t = useText();
   const config = ACMG_CONFIG[classification];
   if (!config) {
     return null;
@@ -44,7 +48,7 @@ export function AcmgTag({ classification, className }: AcmgTagProps) {
 
   return (
     <Tag variant={config.variant} className={className}>
-      {config.label}
+      {translateUI(config.label, t)}
     </Tag>
   );
 }
@@ -80,6 +84,7 @@ interface MtPathogenicityTagProps {
  * <MtPathogenicityTag pathogenicity="Pathogenic" />
  */
 export function MtPathogenicityTag({ pathogenicity, className }: MtPathogenicityTagProps) {
+  const t = useText();
   const config = MT_PATHOGENICITY_CONFIG[pathogenicity];
   if (!config) {
     return null;
@@ -87,7 +92,7 @@ export function MtPathogenicityTag({ pathogenicity, className }: MtPathogenicity
 
   return (
     <Tag variant={config.variant} className={className}>
-      {config.label}
+      {translateUI(config.label, t)}
     </Tag>
   );
 }
@@ -123,6 +128,7 @@ interface ClinGenTagProps {
  * <ClinGenTag classification="Pathogenic" />
  */
 export function ClinGenTag({ classification, className }: ClinGenTagProps) {
+  const t = useText();
   const config = CLINGEN_CONFIG[classification];
   if (!config) {
     return null;
@@ -130,7 +136,7 @@ export function ClinGenTag({ classification, className }: ClinGenTagProps) {
 
   return (
     <Tag variant={config.variant} className={className}>
-      {config.label}
+      {translateUI(config.label, t)}
     </Tag>
   );
 }

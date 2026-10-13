@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tooltip } from '@schema/ui-kit';
@@ -37,6 +42,7 @@ function RadioOption({
   onScoreChange?: (score: number) => void;
   range?: { min: number; max: number };
 }) {
+  const t = useText();
   return (
     <div
       className={`
@@ -63,9 +69,9 @@ function RadioOption({
               <span className={`text-xs font-mono ${
                 score > 0 ? 'text-success-fg' : score < 0 ? 'text-danger-fg' : 'text-fg-muted'
               }`}>
-                {score >= 0 ? '+' : ''}{score.toFixed(2)}
+                {score >= 0 ? '+' : ''}{formatNumericString(score.toFixed(2), t.locale)}
               </span>
-              <Tooltip content={description} placement="left" variant="nav">
+              <Tooltip content={translateUI(description, t)} placement="left" variant="nav">
                 <HelpCircle className="w-4 h-4 text-fg-muted" />
               </Tooltip>
             </div>
@@ -85,8 +91,8 @@ function RadioOption({
             className="w-full h-2 bg-canvas-inset rounded-lg appearance-none cursor-pointer"
           />
           <div className="flex justify-between text-xs text-fg-muted mt-1">
-            <span>{range.min.toFixed(2)}</span>
-            <span>{range.max.toFixed(2)}</span>
+            <span>{formatNumericString(range.min.toFixed(2), t.locale)}</span>
+            <span>{formatNumericString(range.max.toFixed(2), t.locale)}</span>
           </div>
         </div>
       )}
@@ -98,16 +104,17 @@ function RadioOption({
  * Section 5: 遗传模式/家族史评估面板
  */
 export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProps) {
+  const t = useText();
   return (
     <div className="space-y-6">
       {/* De Novo */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">观察到的CNV是De Novo</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.observedCnvIsDeNovof77383")}</h4>
         <RadioOption
           id="section5-5A"
           name="section5-denovo"
-          label="5A. 使用Section 4的de novo评分"
-          description="使用Section 4 (4A-4D)中的de novo评分类别来确定分数"
+          label={t("tasks.aUseSectionDeNovoScore82fe25")}
+          description={t("tasks.useSectionADDeNovoCategories6af70f")}
           score={criteria.deNovo.score}
           checked={criteria.deNovo.selected === '5A'}
           onChange={() => onChange({
@@ -127,13 +134,13 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
 
       {/* Inherited */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">观察到的CNV是遗传的</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.observedCnvIsInheritedc56d72")}</h4>
         <div className="space-y-2">
           <RadioOption
             id="section5-5B"
             name="section5-inherited"
-            label="5B. 特异表型，无家族史，遗传自未受累父母"
-            description="患者有特异、明确的表型，无家族史，CNV遗传自表面未受累的父母"
+            label={t("tasks.bSpecificPhenotypeNoFamilyHistoryInherited0da759")}
+            description={t("tasks.specificWellDefinedPhenotypeWithoutFamilyHistoryb560fd")}
             score={criteria.inherited.selected === '5B' ? criteria.inherited.score : -0.30}
             checked={criteria.inherited.selected === '5B'}
             onChange={() => onChange({
@@ -152,8 +159,8 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
           <RadioOption
             id="section5-5C"
             name="section5-inherited"
-            label="5C. 非特异表型，无家族史，遗传自未受累父母"
-            description="患者有非特异表型，无家族史，CNV遗传自表面未受累的父母"
+            label={t("tasks.cNonspecificPhenotypeNoFamilyHistoryInherited691994")}
+            description={t("tasks.nonspecificPhenotypeWithoutFamilyHistoryCnvInherited556ec6")}
             score={criteria.inherited.selected === '5C' ? criteria.inherited.score : -0.15}
             checked={criteria.inherited.selected === '5C'}
             onChange={() => onChange({
@@ -172,8 +179,8 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
           <RadioOption
             id="section5-5D"
             name="section5-inherited"
-            label="5D. CNV与家族中一致表型分离"
-            description="使用Section 4 (4F-4H)中的分离评分类别来确定分数"
+            label={t("tasks.dCnvSegregatesWithConsistentFamilyPhenotype6cfc81")}
+            description={t("tasks.useSectionFHSegregationCategoriesTo61cb38")}
             score={criteria.inherited.selected === '5D' ? criteria.inherited.score : 0}
             checked={criteria.inherited.selected === '5D'}
             onChange={() => onChange({
@@ -194,12 +201,12 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
 
       {/* Non-segregation */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">观察到的CNV - 非分离</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("tasks.observedCnvNonsegregationb551de")}</h4>
         <RadioOption
           id="section5-5E"
           name="section5-nonseg"
-          label="5E. 使用Section 4的非分离评分"
-          description="使用Section 4 (4I-4K)中的非分离评分类别来确定分数"
+          label={t("tasks.eUseSectionNonsegregationScore28baf5")}
+          description={t("tasks.useSectionIKNonsegregationCategoriesTo375a7f")}
           score={criteria.nonSegregation.score}
           checked={criteria.nonSegregation.selected === '5E'}
           onChange={() => onChange({
@@ -217,13 +224,13 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
 
       {/* Other */}
       <div>
-        <h4 className="text-sm font-medium text-fg-default mb-3">其他</h4>
+        <h4 className="text-sm font-medium text-fg-default mb-3">{t("samples.other1a26ed")}</h4>
         <div className="space-y-2">
           <RadioOption
             id="section5-5F"
             name="section5-other"
-            label="5F. 遗传信息不可用或无信息"
-            description="遗传信息不可用或无法提供有用信息"
+            label={t("tasks.fInheritanceInformationUnavailableOrUninformative86e37c")}
+            description={t("tasks.inheritanceInformationIsUnavailableOrUninformative11e2e3")}
             score={0}
             checked={criteria.other.selected === '5F'}
             onChange={() => onChange({
@@ -236,8 +243,8 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
           <RadioOption
             id="section5-5G"
             name="section5-other"
-            label="5G. 遗传信息不可用，非特异表型与类似病例一致"
-            description="遗传信息不可用或无信息，患者表型非特异但与类似病例描述一致"
+            label={t("tasks.gInheritanceUnknownNonspecificPhenotypeConsistentWith7e4882")}
+            description={t("tasks.inheritanceUnavailableOrUninformativeNonspecificPhenotypeConsistent225a56")}
             score={criteria.other.selected === '5G' ? criteria.other.score : 0.10}
             checked={criteria.other.selected === '5G'}
             onChange={() => onChange({
@@ -256,8 +263,8 @@ export function Section5Panel({ cnvType, criteria, onChange }: Section5PanelProp
           <RadioOption
             id="section5-5H"
             name="section5-other"
-            label="5H. 遗传信息不可用，高度特异表型与类似病例一致"
-            description="遗传信息不可用或无信息，患者表型高度特异且与类似病例描述一致"
+            label={t("tasks.hInheritanceUnknownHighlySpecificPhenotypeConsistentab0819")}
+            description={t("tasks.inheritanceUnavailableOrUninformativeHighlySpecificPhenotype80def7")}
             score={criteria.other.selected === '5H' ? criteria.other.score : 0.15}
             checked={criteria.other.selected === '5H'}
             onChange={() => onChange({

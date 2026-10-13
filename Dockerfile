@@ -22,6 +22,7 @@ RUN if [ "$NEXT_PUBLIC_DEV_MOCK_AUTH" = "true" ]; then \
 
 # 复制依赖配置
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 
 # 安装依赖
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
@@ -42,6 +43,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV YIJIAN_API_URL=/api
 ENV YIJIAN_BACKEND=octopus
+ENV YIJIAN_DEFAULT_LOCALE=zh-CN
 ENV NEXT_PUBLIC_PASSWORD_HASH_ENABLED=$NEXT_PUBLIC_PASSWORD_HASH_ENABLED
 ENV NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED=$NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED
 

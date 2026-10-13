@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
@@ -30,20 +35,21 @@ const inputClass='w-full rounded-md border border-border-default bg-canvas-defau
 export function EvidenceFields({schema,root=schema,value,onChange,label,disabled=false,depth=0}: {
   schema:EvidenceSchema;root?:EvidenceSchema;value:unknown;onChange:(v:unknown)=>void;label:string;disabled?:boolean;depth?:number;
 }) {
+  const t = useText();
   let resolved=schema;
   if(resolved.anyOf) resolved=resolved.anyOf.find(s=>s.type!=='null')??resolved;
   if(resolved.$ref) resolved=root.$defs?.[resolved.$ref.split('/').at(-1)??'']??resolved;
-  if(depth>12) return <p>此证据嵌套过深，请简化输入。</p>;
-  const title=LABELS[label]??label;
+  if(depth>12) return <p>{t("tasks.evidenceNestingIsTooDeepSimplifyThef2bfec")}</p>;
+  const title=LABELS[label] ? t(LABELS[label]) : label;
   if(resolved.properties) {
     const object=value && typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:undefined;
     return <details className="rounded border border-border-subtle p-2" open={depth===0}>
-      <summary className="cursor-pointer text-sm font-medium">{title}{!object?' · 未提供':''}</summary>
+      <summary className="cursor-pointer text-sm font-medium">{title}{!object?t("tasks.notProvided86bef9"):''}</summary>
       <div className="mt-2 space-y-2">
-        {resolved.description&&<p className="text-xs text-fg-muted">{resolved.description}</p>}
-        {!object?<button type="button" disabled={disabled} onClick={()=>onChange({})} className="text-sm text-accent-fg">录入{title}</button>:<>
-          {Object.entries(resolved.properties).filter(([key])=>key!=='type').map(([key,child])=><EvidenceFields key={key} schema={child} root={root} value={object[key]} label={key} disabled={disabled} depth={depth+1} onChange={v=>{const next={...object};if(v===undefined)delete next[key];else next[key]=v;onChange(next);}} />)}
-          <button type="button" disabled={disabled} onClick={()=>onChange(undefined)} className="text-xs text-fg-muted">清除{title}证据</button>
+        {resolved.description&&<p className="text-xs text-fg-muted">{translateUI(resolved.description, t)}</p>}
+        {!object?<button type="button" disabled={disabled} onClick={()=>onChange({})} className="text-sm text-accent-fg">{t("tasks.enter83f84c")}{title}</button>:<>
+          {Object.entries(resolved.properties).filter(([key])=>key!=='type').map(([key,child])=><EvidenceFields key={key} schema={child} root={root} value={object[key]} label={translateUI(key, t)} disabled={disabled} depth={depth+1} onChange={v=>{const next={...object};if(v===undefined)delete next[key];else next[key]=v;onChange(next);}} />)}
+          <button type="button" disabled={disabled} onClick={()=>onChange(undefined)} className="text-xs text-fg-muted">{t("tasks.clear7b15e5")}{title}{t("tasks.evidence68d4cd")}</button>
         </>}
       </div>
     </details>;
@@ -51,58 +57,59 @@ export function EvidenceFields({schema,root=schema,value,onChange,label,disabled
   if(resolved.type==='array') {
     const list=Array.isArray(value)?value:[];
     return <div className="space-y-2 rounded border border-border-subtle p-2"><div className="text-sm font-medium">{title}</div>
-      {list.map((item,index)=><div key={index} className="space-y-1"><EvidenceFields schema={resolved.items??{type:'string'}} root={root} value={item} label={`${title} ${index+1}`} disabled={disabled} depth={depth+1} onChange={v=>onChange(list.map((old,i)=>i===index?v:old))} /><ActionButton action="delete" variant="ghost" type="button" disabled={disabled} onClick={()=>onChange(list.filter((_,i)=>i!==index))} className="text-xs text-fg-muted">移除此项</ActionButton></div>)}
-      <ActionButton action="add" variant="ghost" type="button" disabled={disabled||list.length>=100} onClick={()=>onChange([...list,resolved.items?.type==='string'?'':{}])} className="text-sm text-accent-fg">添加{title}</ActionButton>
+      {list.map((item,index)=><div key={index} className="space-y-1"><EvidenceFields schema={resolved.items??{type:'string'}} root={root} value={item} label={translateUI(`${title} ${index+1}`, t)} disabled={disabled} depth={depth+1} onChange={v=>onChange(list.map((old,i)=>i===index?v:old))} /><ActionButton action="delete" variant="ghost" type="button" disabled={disabled} onClick={()=>onChange(list.filter((_,i)=>i!==index))} className="text-xs text-fg-muted">{t("tasks.removeItem456b1c")}</ActionButton></div>)}
+      <ActionButton action="add" variant="ghost" type="button" disabled={disabled||list.length>=100} onClick={()=>onChange([...list,resolved.items?.type==='string'?'':{}])} className="text-sm text-accent-fg">{t("pipeline.add94191c")}{title}</ActionButton>
     </div>;
   }
   const choices=resolved.enum??(resolved.type==='boolean'?['true','false']:undefined);
-  return <label className="block space-y-1 text-sm"><span title={resolved.description}>{title}</span>
-    {choices?<select disabled={disabled} aria-label={title} className={inputClass} value={value===undefined||value===null?'':String(value)} onChange={e=>onChange(e.target.value===''?undefined:resolved.type==='boolean'?e.target.value==='true':e.target.value)}><option value="">未提供／待确认</option>{choices.map(v=><option key={v} value={v}>{v==='true'?'是':v==='false'?'否':v}</option>)}</select>:
-      <input disabled={disabled} aria-label={title} className={inputClass} type={resolved.type==='number'||resolved.type==='integer'?'number':'text'} step={resolved.type==='integer'?'1':'any'} value={value===undefined||value===null?'':String(value)} onChange={e=>onChange(e.target.value===''?undefined:resolved.type==='number'||resolved.type==='integer'?Number(e.target.value):e.target.value)} />}
-    {resolved.description&&<span className="block text-xs text-fg-muted">{resolved.description}</span>}
+  return <label className="block space-y-1 text-sm"><span title={translateUI(resolved.description, t)}>{title}</span>
+    {choices?<select disabled={disabled} aria-label={translateUI(title, t)} className={inputClass} value={value===undefined||value===null?'':String(value)} onChange={e=>onChange(e.target.value===''?undefined:resolved.type==='boolean'?e.target.value==='true':e.target.value)}><option value="">{t("tasks.notProvidedUnconfirmed8126ad")}</option>{choices.map(v=><option key={v} value={v}>{v==='true'?t("tasks.yes30160a"):v==='false'?t("tasks.no8bf5c1"):v}</option>)}</select>:
+      <input disabled={disabled} aria-label={translateUI(title, t)} className={inputClass} type={resolved.type==='number'||resolved.type==='integer'?'number':'text'} step={resolved.type==='integer'?'1':'any'} value={value===undefined||value===null?'':String(value)} onChange={e=>onChange(e.target.value===''?undefined:resolved.type==='number'||resolved.type==='integer'?Number(e.target.value):e.target.value)} />}
+    {resolved.description&&<span className="block text-xs text-fg-muted">{translateUI(resolved.description, t)}</span>}
   </label>;
 }
 
 export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,onUseAIInterpretation}: {reference?:string;taskId:string;variant:SNVIndel;readOnly:boolean;onUseAIInterpretation?:(result:AIAssistanceResult)=>void;onSave?:(assessment:SVCv4Assessment,reason:string)=>Promise<void>}) {
+  const t = useText();
   const [aiResult,setAIResult]=React.useState<AIAssistanceResult>();
   const [schema,setSchema]=React.useState<SVCv4Schema>();
   const [draft,setDraft]=React.useState<SVCv4Assessment>(()=>variant.svcv4Assessment??{disease:'',moi:'',inputs:{},confirmed:false});
   const [dirty,setDirty]=React.useState(false),[reason,setReason]=React.useState(''),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
-  React.useEffect(()=>{const controller=new AbortController();void getSVCv4Schema(taskId,controller.signal).then(setSchema).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'新版规则加载失败');});return()=>controller.abort();},[taskId]);
+  React.useEffect(()=>{const controller=new AbortController();void getSVCv4Schema(taskId,controller.signal).then(setSchema).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error ? errorText(e, t):t("tasks.unableToLoadNewRules9e8115"));});return()=>controller.abort();},[taskId]);
   const update=(change:Partial<SVCv4Assessment>)=>{setDraft(old=>({...old,...change,confirmed:false,result:undefined}));setDirty(true);};
   const evidence=(key:string,value:unknown)=>update({inputs:{...draft.inputs,[key]:value}});
-  const calculate=async()=>{setBusy(true);setError('');try{setDraft(await evaluateSVCv4(taskId,{...draft,confirmed:false}));setDirty(false);}catch(e){setError(e instanceof Error?e.message:'计算失败');}finally{setBusy(false);}};
-  const save=async()=>{if(!onSave)return;if(!reason.trim()){setError('请填写本次证据调整理由');return;}setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error?e.message:'保存失败');}finally{setBusy(false);}};
+  const calculate=async()=>{setBusy(true);setError('');try{setDraft(await evaluateSVCv4(taskId,{...draft,confirmed:false}));setDirty(false);}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.calculationFailed95b6cf"));}finally{setBusy(false);}};
+  const save=async()=>{if(!onSave)return;if(!reason.trim()){setError(t("tasks.enterAReasonForThisEvidenceChangea9a698"));return;}setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.saveFailed40525a"));}finally{setBusy(false);}};
   const result=draft.result;
   return <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">SVC v4.0版</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',mode:'experimental',draftAssessment:svcExperimentalInput(draft),taskId,reference,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={setAIResult} /></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.svcV6cd501")}</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',mode:'experimental',draftAssessment:svcExperimentalInput(draft),taskId,reference,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={setAIResult} /></div>
     {aiResult&&<AIResultCard result={aiResult} onUseInterpretation={!readOnly&&onUseAIInterpretation?()=>onUseAIInterpretation(aiResult):undefined} />}
-    <div className="rounded border border-warning-emphasis/40 bg-warning-subtle p-3 text-sm"><strong>SVC v4.0 试行 · 草案／非权威参考实现</strong><p>以具体疾病为单位评定。缺失信息保持待确认，ClinGen CSpec 为权威计分来源。</p>{schema&&<a href={schema.source} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg">规则版本 {schema.revision.slice(0,12)}</a>}</div>
+    <div className="rounded border border-warning-emphasis/40 bg-warning-subtle p-3 text-sm"><strong>{t("tasks.svcVExperimentalDraftNonauthoritativeReferenceImplementationf34d3e")}</strong><p>{t("tasks.assessPerDiseaseMissingInformationStaysUnconfirmed035985")}</p>{schema&&<a href={schema.source} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg">{t("tasks.ruleVersion5cc2ef")}{schema.revision.slice(0,12)}</a>}</div>
     <p className="break-words text-sm">{variant.gene} · {variant.chromosome}:{variant.position} {variant.ref} → {variant.alt} · {variant.transcript}<br />{variant.consequence}</p>
-    <p className="text-xs text-fg-muted">已有注释参考：gnomAD AF {variant.gnomadAF??'未提供'}；东亚 AF {variant.gnomadEasAF??'未提供'}；AlphaMissense {variant.alphaMissenseScore??'未提供'}。AF 不直接作为 FAF 计分，请核验。</p>
-    {!schema&&!error&&<p>加载新版证据表单…</p>}
+    <p className="text-xs text-fg-muted">{t("tasks.existingAnnotationGnomadAf3702da")}{variant.gnomadAF??t("history.notProvided071fb2")}{t("tasks.eastAsianAf54203b")}{variant.gnomadEasAF??t("history.notProvided071fb2")}；AlphaMissense {variant.alphaMissenseScore??t("history.notProvided071fb2")}{t("tasks.afIsNotScoredDirectlyAsFaf309fe1")}</p>
+    {!schema&&!error&&<p>{t("tasks.loadingNewEvidenceFormc89313")}</p>}
     {schema&&<fieldset disabled={readOnly||busy} className="space-y-3">
-      <label className="block text-sm">疾病（名称或 CURIE，人工确认）<input className={inputClass} value={draft.disease} onChange={e=>update({disease:e.target.value})} /></label>
-      {variant.diseaseAssociation&&<p className="text-xs text-fg-muted">注释疾病参考：{variant.diseaseAssociation}</p>}
-      <label className="block text-sm">遗传模式<select className={inputClass} value={draft.moi} onChange={e=>update({moi:e.target.value})}><option value="">待确认</option>{schema.moi.map(v=><option key={v}>{v}</option>)}</select></label>
-      <label className="block text-sm">基因与疾病关联有效性<select className={inputClass} value={draft.geneDiseaseValidity??''} onChange={e=>update({geneDiseaseValidity:e.target.value||null})}><option value="">未提供</option>{schema.geneDiseaseValidity.map(v=><option key={v}>{v}</option>)}</select></label>
-      <label className="block text-sm">变异影响工作流<select className={inputClass} value={draft.inputs.workflow??''} onChange={e=>update({inputs:{...draft.inputs,workflow:e.target.value||undefined,impact:undefined}})}><option value="">未提供／待确认</option>{schema.workflows.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}<option disabled>框内 InDel／非编码工作流暂不支持</option></select></label>
-      {schema.workflows.filter(w=>w.id===draft.inputs.workflow).map(w=><EvidenceFields key={w.id} schema={w.schema} value={draft.inputs.impact} label="变异影响证据" disabled={readOnly||busy} onChange={v=>evidence('impact',v)} />)}
-      <EvidenceFields schema={schema.population} value={draft.inputs.population} label="人群证据" disabled={readOnly||busy} onChange={v=>evidence('population',v)} />
-      <p className="text-xs text-fg-muted">每个无关家系仅录入一个先证者；同一家系成员放在家系证据中。</p>
-      <EvidenceFields schema={{type:'array',items:schema.case}} root={schema.case} value={draft.inputs.cases} label="临床病例" disabled={readOnly||busy} onChange={v=>evidence('cases',v)} />
-      <EvidenceFields schema={schema.caseControl} value={draft.inputs.caseControl} label="病例对照研究" disabled={readOnly||busy} onChange={v=>evidence('caseControl',v)} />
-      <EvidenceFields schema={schema.case} value={draft.inputs.family} label="家系与位点特异性证据" disabled={readOnly||busy} onChange={v=>evidence('family',v)} />
-      <ActionButton loading={busy} loadingLabel="处理中…" action="start" variant="ghost" type="button" onClick={()=>void calculate()} className="rounded border border-border-default px-3 py-2 text-sm">计算新版评定</ActionButton>
+      <label className="block text-sm">{t("tasks.diseaseNameOrCurieManualConfirmation1c578d")}<input className={inputClass} value={draft.disease} onChange={e=>update({disease:e.target.value})} /></label>
+      {variant.diseaseAssociation&&<p className="text-xs text-fg-muted">{t("tasks.annotatedDiseaseReference7dfca4")}{variant.diseaseAssociation}</p>}
+      <label className="block text-sm">{t("tasks.inheritancePattern5de3fe")}<select className={inputClass} value={draft.moi} onChange={e=>update({moi:e.target.value})}><option value="">{t("tasks.awaitingConfirmation27b584")}</option>{schema.moi.map(v=><option key={v}>{v}</option>)}</select></label>
+      <label className="block text-sm">{t("tasks.geneDiseaseValidity2a432a")}<select className={inputClass} value={draft.geneDiseaseValidity??''} onChange={e=>update({geneDiseaseValidity:e.target.value||null})}><option value="">{t("history.notProvided071fb2")}</option>{schema.geneDiseaseValidity.map(v=><option key={v}>{v}</option>)}</select></label>
+      <label className="block text-sm">{t("tasks.variantImpactWorkflow3b5e4e")}<select className={inputClass} value={draft.inputs.workflow??''} onChange={e=>update({inputs:{...draft.inputs,workflow:e.target.value||undefined,impact:undefined}})}><option value="">{t("tasks.notProvidedUnconfirmed8126ad")}</option>{schema.workflows.map(v=><option key={v.id} value={v.id}>{translateUI(v.label, t)}</option>)}<option disabled>{t("tasks.inFrameIndelNoncodingWorkflowsNotSupportede4b680")}</option></select></label>
+      {schema.workflows.filter(w=>w.id===draft.inputs.workflow).map(w=><EvidenceFields key={w.id} schema={w.schema} value={draft.inputs.impact} label={t("tasks.variantImpactEvidence877753")} disabled={readOnly||busy} onChange={v=>evidence('impact',v)} />)}
+      <EvidenceFields schema={schema.population} value={draft.inputs.population} label={t("tasks.populationEvidence778a9e")} disabled={readOnly||busy} onChange={v=>evidence('population',v)} />
+      <p className="text-xs text-fg-muted">{t("tasks.enterOneProbandPerUnrelatedFamilyUse1cb00e")}</p>
+      <EvidenceFields schema={{type:'array',items:schema.case}} root={schema.case} value={draft.inputs.cases} label={t("tasks.clinicalCases880773")} disabled={readOnly||busy} onChange={v=>evidence('cases',v)} />
+      <EvidenceFields schema={schema.caseControl} value={draft.inputs.caseControl} label={t("tasks.caseControlStudiesca91cb")} disabled={readOnly||busy} onChange={v=>evidence('caseControl',v)} />
+      <EvidenceFields schema={schema.case} value={draft.inputs.family} label={t("tasks.familyAndLocusSpecificEvidence2704b8")} disabled={readOnly||busy} onChange={v=>evidence('family',v)} />
+      <ActionButton loading={busy} loadingLabel={t("tasks.processing1cac8a")} action="start" variant="ghost" type="button" onClick={()=>void calculate()} className="rounded border border-border-default px-3 py-2 text-sm">{t("tasks.calculateNewAssessmenteaab6f")}</ActionButton>
     </fieldset>}
     {result&&!dirty&&<div className="space-y-2 rounded border border-border-subtle p-3 text-sm">
-      <strong>{result.classification?ACMG_CONFIG[result.classification].label:'未评定'}{result.vusSubclass?` · ${result.vusSubclass}`:''} · {result.score??'—'} 分</strong>
-      <dl>{Object.entries(result.breakdown).map(([key,value])=><div key={key} className="flex justify-between"><dt>{key}</dt><dd>{value} 分</dd></div>)}</dl>
-      <details><summary>子项分数与计算记录</summary><pre className="overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(result.details,null,2)}</pre></details>
-      <details open><summary>适用性、假设与计算依据</summary><ul className="list-disc space-y-1 pl-4 text-xs">{result.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>
-      <label className="flex items-start gap-2"><input type="checkbox" disabled={readOnly||busy} checked={draft.confirmed} onChange={e=>setDraft(old=>({...old,confirmed:e.target.checked}))} /><span>我已核验疾病、证据适用性及上述草案假设，确认此参考评定。</span></label>
+      <strong>{result.classification?ACMG_CONFIG[result.classification].label:t("tasks.notAssessedd94e42")}{result.vusSubclass?` · ${result.vusSubclass}`:''} · {result.score??'—'} {t("tasks.pointsdecb3b")}</strong>
+      <dl>{Object.entries(result.breakdown).map(([key,value])=><div key={key} className="flex justify-between"><dt>{key}</dt><dd>{value} {t("tasks.pointsdecb3b")}</dd></div>)}</dl>
+      <details><summary>{t("tasks.subscoresAndCalculationHistoryea93e0")}</summary><pre className="overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(result.details,null,2)}</pre></details>
+      <details open><summary>{t("tasks.applicabilityAssumptionsAndCalculationBasis8b88a4")}</summary><ul className="list-disc space-y-1 pl-4 text-xs">{result.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>
+      <label className="flex items-start gap-2"><input type="checkbox" disabled={readOnly||busy} checked={draft.confirmed} onChange={e=>setDraft(old=>({...old,confirmed:e.target.checked}))} /><span>{t("tasks.iVerifiedDiseaseEvidenceApplicabilityAndDraft24409b")}</span></label>
     </div>}
-    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label="新版证据调整理由" placeholder="本次新版证据调整理由（必填）" className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><ActionButton action="save" variant="ghost" type="button" disabled={busy||dirty||!result} onClick={()=>void save()} className="rounded bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">保存新版评定</ActionButton></div>}
+    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label={t("tasks.reasonForNewEvidenceChange2775ba")} placeholder={t("tasks.reasonForThisNewEvidenceChangeRequiredb48796")} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><ActionButton action="save" variant="ghost" type="button" disabled={busy||dirty||!result} onClick={()=>void save()} className="rounded bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveNewAssessment62fa07")}</ActionButton></div>}
     {error&&<p role="alert" className="text-sm text-danger-fg">{error}</p>}
   </div>;
 }

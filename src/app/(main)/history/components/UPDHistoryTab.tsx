@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -23,6 +28,7 @@ export function UPDHistoryTab({
   filterState: externalFilterState,
   onFilterChange
 }: UPDHistoryTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<HistoryTableFilterState>(DEFAULT_HISTORY_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<GroupedUPDRegion> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -46,60 +52,60 @@ export function UPDHistoryTab({
   }, [filterState]);
 
   const formatPosition = (pos: number) => {
-    if (pos >= 1000000) return `${(pos / 1000000).toFixed(2)}Mb`;
-    if (pos >= 1000) return `${(pos / 1000).toFixed(1)}kb`;
+    if (pos >= 1000000) return `${formatNumericString((pos / 1000000).toFixed(2), t.locale)}Mb`;
+    if (pos >= 1000) return `${formatNumericString((pos / 1000).toFixed(1), t.locale)}kb`;
     return `${pos}bp`;
   };
 
   const columns = [
     {
       id: 'chromosome',
-      header: '染色体',
+      header: t("history.chromosome326659"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => row.chromosome,
     },
     {
       id: 'region',
-      header: '区域',
+      header: t("history.region17fc93"),
       width: 180,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => `${formatPosition(row.startPosition)} - ${formatPosition(row.endPosition)}`,
     },
     {
       id: 'length',
-      header: '长度',
+      header: t("history.lengtha53949"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => formatPosition(row.length),
     },
     {
       id: 'type',
-      header: '类型',
+      header: t("history.typee4e46c"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => {
         const config = UPD_TYPE_CONFIG[row.type];
-        return <Tag variant={config.variant} className="justify-center">{config.label}</Tag>;
+        return <Tag variant={config.variant} className="justify-center">{translateUI(config.label, t)}</Tag>;
       },
     },
     {
       id: 'parentOfOrigin',
-      header: '来源亲本',
+      header: t("history.parentOfOrigin5c24cc"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => row.parentOfOrigin ? PARENT_CONFIG[row.parentOfOrigin] : '-',
     },
     {
       id: 'genes',
-      header: '涉及基因',
+      header: t("history.affectedGenes9fbbad"),
       width: 200,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => row.genes.join(', '),
     },
     {
       id: 'detectionCount',
-      header: '检出次数',
+      header: t("history.detectionCountdf2067"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => (
@@ -110,14 +116,14 @@ export function UPDHistoryTab({
     },
     {
       id: 'firstDetectedAt',
-      header: '首次检出',
+      header: t("history.firstDetected16ef1a"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
-      header: '最后检出',
+      header: t("history.lastDetected4d7fff"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedUPDRegion) => formatLocalDate(row.lastDetectedAt),
@@ -131,12 +137,12 @@ export function UPDHistoryTab({
       filterState={filterState}
       onSearch={(query) => setFilterState({ ...filterState, searchQuery: query, page: 1 })}
       onPageChange={(page) => setFilterState({ ...filterState, page })}
-      searchPlaceholder="搜索染色体、基因..."
-      statsLabel="个UPD区域"
-      columns={columns}
+      searchPlaceholder={t("tasks.searchChromosomesOrGenes1bdc34")}
+      statsLabel={t("display.updRegions1c621b")}
+      columns={localizeDisplay(columns, t)}
       getGroupId={(row) => row.groupId}
       getRecords={(row) => row.records}
-      emptyMessage="暂无UPD历史检出位点数据"
+      emptyMessage={t("display.noHistoricalUpdFindings25f35d")}
     />
   );
 }

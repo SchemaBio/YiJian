@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -76,13 +79,14 @@ const executionReasonLabels: Record<string, string> = {
 	AGENT_START_FAILED: 'Sepiida Agent 启动失败',
 };
 
-function formatExecutionTime(value?: string): string {
+function formatExecutionTime(value?: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(t.locale, { hour12: false });
 }
 
 export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
+  const t = useText();
   const [task, setTask] = React.useState<AnalysisTaskDetail | null>(null);
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -136,8 +140,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
   if (!task) {
     return (
       <div className="flex items-center justify-center py-16 text-fg-muted">
-        未找到该任务
-      </div>
+        {t("tasks.taskNotFound549551")}</div>
     );
   }
 
@@ -224,20 +227,20 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
       <div className="mb-4 pb-3 border-b border-border-default">
         <div className="flex items-center gap-3 mb-2">
           <h3 className="text-base font-medium text-fg-default">{task.name}</h3>
-          <Tag variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Tag>
+          <Tag variant={statusInfo.variant} className="text-xs">{translateUI(statusInfo.label, t)}</Tag>
         </div>
 
         {/* 基本信息行 */}
         <div className="flex items-center gap-4 text-xs text-fg-muted mb-2">
-          <span>样本: {task.sampleId}</span>
+          <span>{t("tasks.sample45c5da")}{task.sampleId}</span>
           {sample && (
             <>
-              <span>性别: {GENDER_CONFIG[sample.gender].label}</span>
-              {sample.age !== undefined && <span>年龄: {sample.age}岁</span>}
+              <span>{t("tasks.sex2b89ca")}{translateUI(GENDER_CONFIG[sample.gender].label, t)}</span>
+              {sample.age !== undefined && <span>{t("tasks.age1dcc35")}{sample.age}{t("tasks.years86f133")}</span>}
             </>
           )}
-          <span>流程: {task.pipeline} {task.pipelineVersion}</span>
-          <span>创建: {task.createdAt}</span>
+          <span>{t("tasks.pipelinecc9f77")}{task.pipeline} {task.pipelineVersion}</span>
+          <span>{t("tasks.createdcbd8a8")}{task.createdAt}</span>
         </div>
 
         {executionInfo && (
@@ -245,21 +248,20 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="inline-flex items-center gap-1.5 text-fg-default">
                 <Server className="h-3.5 w-3.5 text-fg-muted" />
-                执行阶段
-                <Tag variant={executionInfo.variant} className="text-xs">{executionInfo.label}</Tag>
+                {t("tasks.executionStageb836fa")}<Tag variant={executionInfo.variant} className="text-xs">{translateUI(executionInfo.label, t)}</Tag>
               </span>
-              {task.attemptId && <HoverHint content={task.attemptId}><span className="font-mono text-fg-muted" >attempt: {task.attemptId.slice(0, 8)}…</span></HoverHint>}
+              {task.attemptId && <HoverHint content={task.attemptId}><span className="font-mono text-fg-muted" > {t("interface.attempt323ccf")} {task.attemptId.slice(0, 8)}…</span></HoverHint>}
               {task.phaseUpdatedAt && (
                 <span className="inline-flex items-center gap-1 text-fg-muted">
-                  <Clock3 className="h-3.5 w-3.5" />更新时间 {formatExecutionTime(task.phaseUpdatedAt)}
+                  <Clock3 className="h-3.5 w-3.5" />{t("tasks.updatedAt052ec7")}{formatExecutionTime(task.phaseUpdatedAt, t)}
                 </span>
               )}
-              {task.dispatchNextRetryAt && <span className="text-fg-muted">下次重试 {formatExecutionTime(task.dispatchNextRetryAt)}</span>}
-              {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">最近心跳：{formatExecutionTime(task.bootstrapLastHeartbeatAt)}</span>}
-              {task.diagnosticHoldUntil && <span className="text-warning-fg">日志保留至：{formatExecutionTime(task.diagnosticHoldUntil)}</span>}
+              {task.dispatchNextRetryAt && <span className="text-fg-muted">{t("tasks.nextRetry23d0ee")}{formatExecutionTime(task.dispatchNextRetryAt, t)}</span>}
+              {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">{t("tasks.lastHeartbeat3b4213")}{formatExecutionTime(task.bootstrapLastHeartbeatAt, t)}</span>}
+              {task.diagnosticHoldUntil && <span className="text-warning-fg">{t("tasks.logsRetainedUntil4692f6")}{formatExecutionTime(task.diagnosticHoldUntil, t)}</span>}
             </div>
             {task.executionReasonCode && (
-              <p className="mt-1 text-danger-fg">{executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode}</p>
+              <p className="mt-1 text-danger-fg">{translateUI(executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode, t)}</p>
             )}
 	          {task.diagnosticSummary && <p className="mt-1 text-xs text-danger-fg">{task.diagnosticSummary}</p>}
           </div>
@@ -270,13 +272,13 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
           <div className="text-xs space-y-1">
             {sample.clinicalDiagnosis?.mainDiagnosis && (
               <div className="flex items-start gap-2">
-                <span className="text-fg-muted shrink-0">临床诊断:</span>
+                <span className="text-fg-muted shrink-0">{t("tasks.clinicalDiagnosis36bb16")}</span>
                 <span className="text-fg-default">{sample.clinicalDiagnosis.mainDiagnosis}</span>
               </div>
             )}
             {sample.clinicalDiagnosis?.symptoms && sample.clinicalDiagnosis.symptoms.length > 0 && (
               <div className="flex items-start gap-2">
-                <span className="text-fg-muted shrink-0">症状:</span>
+                <span className="text-fg-muted shrink-0">{t("tasks.symptoms542372")}</span>
                 <div className="flex flex-wrap gap-1">
                   {sample.clinicalDiagnosis.symptoms.map((s: string, i: number) => (
                     <Tag key={i} variant="neutral" className="text-xs">{s}</Tag>
@@ -298,8 +300,8 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
             )}
             {sample.familyHistory?.hasHistory && (
               <div className="flex items-start gap-2">
-                <span className="text-fg-muted shrink-0">家族史:</span>
-                <span className="text-fg-default">有</span>
+                <span className="text-fg-muted shrink-0">{t("tasks.familyHistoryd63c72")}</span>
+                <span className="text-fg-default">{t("tasks.yesfbd5b7")}</span>
                 {sample.familyHistory.affectedMembers && (
                   <div className="flex flex-wrap gap-1">
                     {sample.familyHistory.affectedMembers.map((member, i) => (
@@ -334,7 +336,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
                   }
                 `}
               >
-                {tab.label}
+                {translateUI(tab.label, t)}
               </button>
             );
           })}

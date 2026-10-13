@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -10,6 +13,7 @@ export type CNVPlotAnchor = Pick<DOMRect, 'top' | 'bottom' | 'left' | 'right'>;
 export function CNVPlotWindow({ open, title, onClose, children, anchor }: {
   open: boolean; title: string; onClose: () => void; children: React.ReactNode; anchor?: CNVPlotAnchor;
 }) {
+  const t = useText();
   const [position, setPosition] = React.useState({ x: 24, y: 96 });
   const [heightLimit, setHeightLimit] = React.useState<number>();
   const ref = React.useRef<HTMLDivElement>(null);
@@ -41,7 +45,7 @@ export function CNVPlotWindow({ open, title, onClose, children, anchor }: {
     <div ref={ref} role="dialog" aria-modal="false" aria-labelledby={titleId}
       className="fixed z-[80] flex max-h-[calc(100dvh-32px)] w-[min(900px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border border-border-default bg-canvas-default shadow-2xl"
       style={{ left: position.x, top: position.y, maxHeight: heightLimit === undefined ? `calc(100dvh - ${position.y + 16}px)` : `min(${heightLimit}px, calc(100dvh - ${position.y + 16}px))` }}>
-      <div tabIndex={0} aria-label="拖动图窗标题，或使用方向键移动" className="flex shrink-0 touch-none cursor-move select-none items-center justify-between gap-3 border-b border-border-default bg-canvas-subtle px-4 py-3"
+      <div tabIndex={0} aria-label={t("tasks.dragThePlotTitleOrUseArrowfb3d50")} className="flex shrink-0 touch-none cursor-move select-none items-center justify-between gap-3 border-b border-border-default bg-canvas-subtle px-4 py-3"
         onPointerDown={event => {
           if (event.button !== 0) return;
           setHeightLimit(undefined);
@@ -61,7 +65,7 @@ export function CNVPlotWindow({ open, title, onClose, children, anchor }: {
         }}>
         <h3 id={titleId} className="min-w-0 text-sm font-semibold">{title}</h3>
         <span onPointerDown={event => event.stopPropagation()}>
-          <IconActionButton action="close" label="关闭图窗" variant="ghost" onClick={onClose} />
+          <IconActionButton action="close" label={t("tasks.closePlotWindow563fdd")} variant="ghost" onClick={onClose} />
         </span>
       </div>
       <div className="min-h-0 overflow-auto p-4">{children}</div>

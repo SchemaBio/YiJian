@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -32,6 +37,7 @@ const pipelineOptions = [
 ];
 
 export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModalProps) {
+  const t = useText();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<EditTaskFormData>({
@@ -65,7 +71,7 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
       await onSubmit(task.id, formData);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '任务更新失败');
+      setSubmitError(err instanceof Error ? errorText(err, t) : t("tasks.unableToUpdateTask64c6e4"));
     } finally {
       setSubmitting(false);
     }
@@ -77,12 +83,12 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
-      title="编辑任务"
+      title={t("tasks.editTask67659b")}
       size="small"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
+          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>{t("data.savefadf24")}</Button>
         </>
       }
     >
@@ -93,15 +99,15 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
           </div>
         )}
         <div>
-          <label className="block text-xs text-fg-muted mb-1">样本编号</label>
+          <label className="block text-xs text-fg-muted mb-1">{t("history.sampleId6d686e")}</label>
           <Input value={task.sampleId} disabled className="bg-canvas-subtle text-fg-muted" />
         </div>
         <div>
-          <label className="block text-xs text-fg-muted mb-1">内部编号 *</label>
-          <Input value={formData.internalId} onChange={(e) => handleChange('internalId', e.target.value)} placeholder="如：INT-001" required />
+          <label className="block text-xs text-fg-muted mb-1">{t("samples.internalIdadcd0f")}</label>
+          <Input value={formData.internalId} onChange={(e) => handleChange('internalId', e.target.value)} placeholder={t("samples.forExampleInt00b6e2")} required />
         </div>
         <div>
-          <label className="block text-xs text-fg-muted mb-1">分析流程 *</label>
+          <label className="block text-xs text-fg-muted mb-1">{t("tasks.analysisPipeline22bb4b")}</label>
           <select
             value={formData.pipeline}
             onChange={(e) => handleChange('pipeline', e.target.value)}
@@ -117,8 +123,8 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
           </select>
         </div>
         <div>
-          <label className="block text-xs text-fg-muted mb-1">备注</label>
-          <Input value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder="可选备注信息" />
+          <label className="block text-xs text-fg-muted mb-1">{t("admin.notese03614")}</label>
+          <Input value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder={t("tasks.optionalNotes6dd2f7")} />
         </div>
       </form>
     </AppModal>

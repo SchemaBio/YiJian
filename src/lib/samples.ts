@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import { api } from './api';
 import type { Sample, SampleDetail } from '@/app/(main)/samples/types';
 import type { DataAsset } from './data-assets';
@@ -153,7 +154,7 @@ export function samplePayload(data: SampleFormPayload) {
   const r1Path = data.r1Path?.trim();
   const r2Path = data.r2Path?.trim();
   if ((r1Path && !r2Path) || (!r1Path && r2Path)) {
-    throw new Error('R1 and R2 FASTQ paths must be provided together');
+    throw new LocalizedError("interface.rAndRFastqPathsMustBeProvidedTogetherddfa6e", undefined, "R1 and R2 FASTQ paths must be provided together");
   }
   return {
     internal_id: data.internalId,
@@ -173,7 +174,7 @@ export function sampleDetailPayload(data: Partial<SampleDetail>) {
   const r1Path = data.matchedPair?.r1Path?.trim();
   const r2Path = data.matchedPair?.r2Path?.trim();
   if ((r1Path && !r2Path) || (!r1Path && r2Path)) {
-    throw new Error('R1 and R2 FASTQ paths must be provided together');
+    throw new LocalizedError("interface.rAndRFastqPathsMustBeProvidedTogetherddfa6e", undefined, "R1 and R2 FASTQ paths must be provided together");
   }
   return {
     internal_id: data.internalId ?? '',
@@ -207,7 +208,7 @@ export async function updateSampleMatchedPair(
   const r1Path = matchedPair.r1Path.trim();
   const r2Path = matchedPair.r2Path.trim();
   if (!r1Path || !r2Path) {
-    throw new Error('Both R1 and R2 FASTQ storage keys are required');
+    throw new LocalizedError("interface.bothRAndRFastqStorageKeysAreRequiredea02a9", undefined, "Both R1 and R2 FASTQ storage keys are required");
   }
   await api.put<unknown>(`/v1/samples/${encodeURIComponent(id)}`, {
     ...(r1Path ? { r1_path: r1Path } : {}),
@@ -216,7 +217,7 @@ export async function updateSampleMatchedPair(
 
   const updated = await getSampleDetail(id);
   if (!updated) {
-    throw new Error('Sample was updated but could not be reloaded');
+    throw new LocalizedError("interface.sampleWasUpdatedButCouldNotBeReloadedafba49", undefined, "Sample was updated but could not be reloaded");
   }
   return updated;
 }
@@ -225,7 +226,7 @@ export async function clearSampleMatchedPair(id: string): Promise<SampleDetail> 
   const response = await api.delete<unknown>(`/v1/samples/${encodeURIComponent(id)}/matched-pair`);
   const detail = normalizeSampleDetail(response);
   if (!detail.id) {
-    throw new Error('Sample match was cleared but the response could not be parsed');
+    throw new LocalizedError("interface.sampleMatchWasClearedButTheResponseCouldNotBeParsedc1780b", undefined, "Sample match was cleared but the response could not be parsed");
   }
   return detail;
 }
@@ -237,7 +238,7 @@ export async function bindSampleMatchedPairFromUploadJob(id: string, uploadJobId
   );
   const detail = normalizeSampleDetail(response);
   if (!detail.id) {
-    throw new Error('Sample match was updated but the response could not be parsed');
+    throw new LocalizedError("interface.sampleMatchWasUpdatedButTheResponseCouldNotBeParsed3a4eeb", undefined, "Sample match was updated but the response could not be parsed");
   }
   return detail;
 }
@@ -248,6 +249,6 @@ export async function bindSampleDataAssets(id: string, read1AssetId: string, rea
     read2_asset_id: read2AssetId,
   });
   const detail = normalizeSampleDetail(response);
-  if (!detail.id) throw new Error('样本数据关联已更新，但无法解析响应');
+  if (!detail.id) throw new LocalizedError("display.sampleDataLinkUpdatedButTheResponse52d3eb");
   return detail;
 }

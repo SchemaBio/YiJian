@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import type { DataAsset } from './data-assets';
 
 export interface CNVSamplePair {
@@ -43,7 +44,7 @@ export function selectedCNVSamplePairs(assets: DataAsset[], ids: string[]): CNVS
   const pairs = new Map(buildCNVSamplePairs(assets).map(pair => [pair.id, pair]));
   return ids.map(id => {
     const pair = pairs.get(id);
-    if (!pair) throw new Error('所选样本数据已不可用，请重新选择完整的样本组。');
+    if (!pair) throw new LocalizedError("display.selectedSampleDataUnavailableSelectAComplete022ad1");
     return pair;
   });
 }

@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -7,6 +10,7 @@ import { BILLING_UPDATED_EVENT, getBillingBalance } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 export function BillingDisplay() {
+  const t = useText();
   const [balance, setBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
 
@@ -47,12 +51,11 @@ export function BillingDisplay() {
     <Link
       href="/billing"
       className="flex h-8 min-w-[112px] items-center justify-center gap-1.5 rounded-md border border-[var(--yj-border-subtle)] px-2.5 text-sm hover:bg-[var(--yj-panel-muted)] transition-colors"
-      aria-label={`费用中心，当前余额 ${balance ?? '--'} 积分`}
+      aria-label={t("billing.billingCenterCurrentBalanceCredits6e9910", {p0: String(balance ?? '--')})}
     >
       <Coins className="w-4 h-4" />
       <span className={isLow ? 'text-danger-fg font-medium' : 'text-fg-default font-medium'}>
-        {balance ?? '--'} 积分
-      </span>
+        {balance ?? '--'} {t("billing.creditse6d317")}</span>
     </Link>
   );
 }

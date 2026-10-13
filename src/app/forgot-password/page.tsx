@@ -1,9 +1,14 @@
-﻿'use client';
+'use client';
+﻿
+import { useText } from '@/i18n/useText';
+
+
 
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function ForgotPasswordPage() {
+  const t = useText();
   return (
     <div className="yj-modern yj-public-shell flex min-h-screen items-center justify-center px-4 py-8 sm:p-8">
       <div className="yj-panel yj-auth-card yj-auth-single">
@@ -14,16 +19,14 @@ export default function ForgotPasswordPage() {
             </span>
             <span>YiJian</span>
           </div>
-          <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">找回密码</h2>
+          <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">{t("auth.recoverPassword86c096")}</h2>
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
-            暂不支持自助找回。请联系平台管理员核验身份后重置密码。
-          </p>
+            {t("auth.selfServiceRecoveryIsUnavailableContactYourca9d22")}</p>
         </div>
 
         <p className="mt-2 text-center text-sm text-[var(--yj-text-muted)]">
           <Link href="/login" className="font-medium text-success-fg hover:underline">
-            返回登录
-          </Link>
+            {t("auth.backToSignInf2fe4e")}</Link>
         </p>
       </div>
     </div>

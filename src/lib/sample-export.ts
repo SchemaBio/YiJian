@@ -1,4 +1,6 @@
 import { GENDER_CONFIG, type Sample } from '@/app/(main)/samples/types';
+import { defaultLocale, type Locale } from '@/i18n/locales';
+import { createTextTranslator } from '@/i18n/text';
 
 const MATCH_LABELS: Record<Sample['matchStatus'], string> = {
   unmatched: '未匹配', partial: '部分匹配', conflict: '匹配冲突', matched: '已匹配', missing: '文件缺失',
@@ -11,9 +13,10 @@ function csvCell(value: string | number | undefined): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-export function sampleListCSV(samples: readonly Sample[]): string {
+export function sampleListCSV(samples: readonly Sample[], locale: Locale = defaultLocale): string {
+  const t = createTextTranslator(locale);
   const rows: Array<Array<string | number | undefined>> = [
-    ['样本编号', '内部编号', '性别', '年龄', '样本类型', '批次', '临床诊断', 'HPO 表型', '数据匹配状态', 'Read1', 'Read2', '备注', '创建时间', '更新时间'],
+    ['样本编号', '内部编号', '性别', '年龄', '样本类型', '批次', '临床诊断', 'HPO 表型', '数据匹配状态', 'Read1', 'Read2', '备注', '创建时间', '更新时间'].map(label => t(label)),
     ...samples.map(sample => [
       sample.id, sample.internalId, GENDER_CONFIG[sample.gender].label, sample.age, sample.sampleType, sample.batch,
       sample.clinicalDiagnosis, sample.hpoTerms.map(term => `${term.id} ${term.name}`.trim()).join('; '),
@@ -24,14 +27,14 @@ export function sampleListCSV(samples: readonly Sample[]): string {
   return '\ufeff' + rows.map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
 
-export function downloadSampleList(samples: readonly Sample[]): void {
+export function downloadSampleList(samples: readonly Sample[], locale: Locale = defaultLocale): void {
   if (samples.length === 0) return;
-  const blob = new Blob([sampleListCSV(samples)], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob([sampleListCSV(samples, locale)], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   try {
     link.href = url;
-    link.download = '样本清单.csv';
+    link.download = createTextTranslator(locale)('样本清单.csv');
     document.body.appendChild(link);
     link.click();
   } finally {

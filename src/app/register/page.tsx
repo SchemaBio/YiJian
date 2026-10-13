@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -15,6 +18,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 const ORG_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
 
 export default function RegisterPage() {
+  const t = useText();
   const router = useRouter();
   const [form, setForm] = React.useState({
     email: '',
@@ -43,17 +47,17 @@ export default function RegisterPage() {
     const orgSlug = form.orgSlug.trim().toLowerCase();
 
     if (!email || !password || !name || (requireOrgFields && (!orgName || !orgSlug))) {
-      setError('请填写所有必填字段');
+      setError(t("auth.completeAllRequiredFields61d4e1"));
       return;
     }
 
     if (password.length < 8) {
-      setError('密码至少需要 8 位');
+      setError(t("auth.passwordMustHaveAtLeastCharactersb6a69b"));
       return;
     }
 
     if (orgSlug && !ORG_SLUG_PATTERN.test(orgSlug)) {
-      setError('机构标识需为 3-64 位小写字母、数字或连字符，并以字母或数字开头和结尾');
+      setError(t("auth.organizationSlugMustBeLowercaseLettersDigitsdff5c0"));
       return;
     }
 
@@ -76,10 +80,10 @@ export default function RegisterPage() {
       router.push('/dashboard');
     } catch (err) {
       if (err instanceof ApiError) {
-        const msg = (err.data as any)?.error || (err.data as any)?.message || '注册失败';
+        const msg = (err.data as any)?.error || (err.data as any)?.message || t("auth.registrationFaileda1d7fb");
         setError(String(msg));
       } else {
-        setError('网络错误，请稍后重试');
+        setError(t("auth.networkErrorRetryLatereb9dcb"));
       }
       setLoading(false);
     }
@@ -95,9 +99,9 @@ export default function RegisterPage() {
             </span>
             <span>YiJian</span>
           </div>
-          <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">创建账号</h2>
+          <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">{t("auth.createAccount4742b5")}</h2>
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
-            {requireOrgFields ? '创建团队账号，提交后等待管理员审批。' : '创建账号，开始使用贻鉴。'}
+            {requireOrgFields ? t("auth.createATeamAccountAdministratorApprovalIsf98187") : t("auth.createAnAccountToStartUsingYijian2be3bc")}
           </p>
         </div>
 
@@ -110,73 +114,71 @@ export default function RegisterPage() {
 
           <Input
             id="register-name"
-            aria-label="姓名"
+            aria-label={t("samples.namebe4c26")}
             type="text"
             value={form.name}
             onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="姓名 *"
+            placeholder={t("samples.name2b9e1a")}
             autoComplete="name"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-email"
-            aria-label="邮箱"
+            aria-label={t("settings.email9ed627")}
             type="email"
             value={form.email}
             onChange={(e) => handleChange('email', e.target.value)}
-            placeholder="邮箱 *"
+            placeholder={t("auth.emailf1f231")}
             autoComplete="email"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-password"
-            aria-label="密码（至少 8 位）"
+            aria-label={t("auth.passwordAtLeastCharacters692b63")}
             type="password"
             value={form.password}
             onChange={(e) => handleChange('password', e.target.value)}
-            placeholder="密码（至少 8 位）*"
+            placeholder={t("auth.passwordAtLeastCharacters8adf42")}
             autoComplete="new-password"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-org-name"
-            aria-label="团队/机构名称"
+            aria-label={t("auth.teamOrganizationNamea2fbbb")}
             type="text"
             value={form.orgName}
             onChange={(e) => handleChange('orgName', e.target.value)}
-            placeholder={requireOrgFields ? '团队/机构名称 *' : '团队/机构名称（选填）'}
+            placeholder={requireOrgFields ? t("auth.teamOrganizationName265315") : t("auth.teamOrganizationNameOptionalfc3dfe")}
             autoComplete="organization"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-org-slug"
-            aria-label="机构标识"
+            aria-label={t("auth.organizationSlugc4ef74")}
             type="text"
             value={form.orgSlug}
             onChange={(e) => handleChange('orgSlug', e.target.value)}
-            placeholder={requireOrgFields ? '机构标识（如 my-lab）*' : '机构标识（选填）'}
+            placeholder={requireOrgFields ? t("auth.organizationSlugEGMyLab16fa51") : t("auth.organizationSlugOptional2da1c3")}
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
-          <Button loading={loading} loadingLabel="注册中..."
+          <Button loading={loading} loadingLabel={t("auth.registeringed5c1a")}
             type="submit"
             variant="primary"
             className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
             disabled={loading}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
-            注册
-          </Button>
+            {t("auth.registerda0e5f")}</Button>
 
           <p className="text-center text-sm text-fg-muted">
-            已有账号？{' '}
+            {t("auth.alreadyHaveAnAccountc9bc5e")}{' '}
             <Link href="/login" className="font-medium text-success-fg hover:underline">
-              登录
-            </Link>
+              {t("auth.signIn21f1e8")}</Link>
           </p>
         </form>
       </div>

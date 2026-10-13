@@ -1,4 +1,10 @@
-﻿'use client';
+'use client';
+﻿
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -22,40 +28,41 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { MetricTile } from '@/components/shared';
 import { SupportDialog } from '@/components/support/SupportDialog';
 
-function formatTime(value: string): string {
+function formatTime(value: string, t: TextTranslator = chineseText): string {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('zh-CN', { hour12: false });
+  return date.toLocaleString(t.locale, { hour12: false });
 }
 
-function transactionLabel(type: string): string {
+function transactionLabel(type: string, t: TextTranslator = chineseText): string {
   switch (type) {
     case 'recharge':
-      return '充值';
+      return t("billing.addCreditsfa03c4");
     case 'pre_deduction':
-      return '预扣费';
+      return t("settings.reservedCharge813760");
     case 'deduction':
-      return '扣费';
+      return t("settings.chargeb04d6f");
     case 'refund':
-      return '退款';
+      return t("settings.refundb82ef8");
     case 'failure_refund':
-      return '失败退还';
+      return t("settings.failureRefund390d28");
     case 'adjust':
-      return '调整';
+      return t("settings.adjustment0a4d26");
     case 'download':
-      return '下载扣费';
+      return t("settings.downloadChargef8580c");
     default:
       return type || '-';
   }
 }
 
-function formatCredits(value: number | null | undefined): string {
+function formatCredits(value: number | null | undefined, t: TextTranslator = chineseText): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '--';
-  return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+  return value.toLocaleString(t.locale, { maximumFractionDigits: 2 });
 }
 
 export default function BillingSettingsPage() {
+  const t = useText();
   const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [balance, setBalance] = React.useState<BillingBalance | null>(null);
@@ -83,7 +90,7 @@ export default function BillingSettingsPage() {
       setTotal(nextTransactions.total ?? 0);
       setPage(nextTransactions.page ?? nextPage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载计费数据失败');
+      setError(err instanceof Error ? errorText(err, t) : t("settings.unableToLoadBillingData56a0f8"));
       setBalance(null);
       setConfig(null);
       setTransactions([]);
@@ -91,7 +98,7 @@ export default function BillingSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page]);
+  }, [page, t]);
 
   React.useEffect(() => {
     if (!isSaaS) {
@@ -106,22 +113,22 @@ export default function BillingSettingsPage() {
   const columns: Column<BillingTransaction>[] = [
     {
       id: 'type',
-      header: '类型',
-      accessor: (row) => <span className="yj-transaction-tag" data-type={row.type}>{transactionLabel(row.type)}</span>,
+      header: t("history.typee4e46c"),
+      accessor: (row) => <span className="yj-transaction-tag" data-type={row.type}>{transactionLabel(row.type, t)}</span>,
       width: 110,
       align: 'center',
     },
     {
       id: 'amount',
-      header: '积分变动',
-      accessor: (row) => <span className={`font-medium tabular-nums ${row.amount >= 0 ? 'text-success-fg' : 'text-warning-fg'}`}>{row.amount > 0 ? '+' : ''}{formatCredits(row.amount)}</span>,
+      header: t("settings.creditChange01fe0c"),
+      accessor: (row) => <span className={`font-medium tabular-nums ${row.amount >= 0 ? 'text-success-fg' : 'text-warning-fg'}`}>{row.amount > 0 ? '+' : ''}{formatCredits(row.amount, t)}</span>,
       width: 120,
       align: 'center',
     },
-    { id: 'balance_after', header: '变动后积分', accessor: (row) => <span className="tabular-nums">{formatCredits(row.balance_after)}</span>, width: 120, align: 'center' },
+    { id: 'balance_after', header: t("settings.balanceAfterChanged3fbfc"), accessor: (row) => <span className="tabular-nums">{formatCredits(row.balance_after, t)}</span>, width: 120, align: 'center' },
     {
       id: 'reference_id',
-      header: '关联任务',
+      header: t("settings.associatedTask766b4b"),
       accessor: (row) => (row.related_task_id || (row.reference_id && row.billing_basis !== 'ai_assistance')) ? (
         <Link href={`/tasks/${encodeURIComponent(row.related_task_id || billingReferenceTaskId(row.reference_id!))}`} className="whitespace-nowrap font-mono text-xs text-accent-fg hover:underline">
           {row.related_task_id || billingReferenceTaskId(row.reference_id!)}
@@ -130,8 +137,8 @@ export default function BillingSettingsPage() {
       width: 300,
       align: 'center',
     },
-    { id: 'description', header: '说明', accessor: (row) => row.description || '-', width: 260, align: 'center' },
-    { id: 'created_at', header: '发生时间', accessor: (row) => formatTime(row.created_at), width: 180, align: 'center' },
+    { id: 'description', header: t("settings.details26670d"), accessor: (row) => row.description || '-', width: 260, align: 'center' },
+    { id: 'created_at', header: t("settings.occurredAt51f85a"), accessor: (row) => formatTime(row.created_at, t), width: 180, align: 'center' },
   ];
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -151,10 +158,9 @@ export default function BillingSettingsPage() {
     <PageContent className="yj-page-shell">
       <div className="yj-page-header flex-wrap gap-4">
         <div className="min-w-0">
-          <h2 className="yj-page-title">费用中心</h2>
+          <h2 className="yj-page-title">{t("settings.billingCenterfad652")}</h2>
           <p className="yj-page-subtitle">
-            查看组织积分余额、任务费率与收支记录。
-          </p>
+            {t("settings.viewOrganizationCreditsTaskRatesAndTransactionsd2bfc2")}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <SupportDialog trigger="button" context="billing" />
@@ -165,15 +171,13 @@ export default function BillingSettingsPage() {
             onClick={() => void loadData(page)}
             disabled={isLoading}
           >
-            刷新
-          </Button>
+            {t("admin.refresh38108e")}</Button>
           <Link
             href="/billing/recharge"
             className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent-emphasis px-4 text-sm text-fg-on-emphasis hover:opacity-90"
           >
             <CreditCard className="w-4 h-4" />
-            充值
-          </Link>
+            {t("billing.addCreditsfa03c4")}</Link>
         </div>
       </div>
 
@@ -186,11 +190,11 @@ export default function BillingSettingsPage() {
 
 
 
-        <section aria-label="费用概览" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          <MetricTile label="当前积分" value={formatCredits(balance?.balance)} icon={<Coins className="h-4 w-4" />} tone="success" />
-          <MetricTile label="可运行时长" value={availableMinutes === null ? '--' : `${availableMinutes} 分钟`} icon={<Clock3 className="h-4 w-4" />} tone="info" />
-          <MetricTile label="每分钟积分" value={formatCredits(creditsPerMinute)} icon={<Gauge className="h-4 w-4" />} />
-          <MetricTile label="下载单价" value={config?.download_credits == null ? '--' : `${formatCredits(config.download_credits)} 积分 / 次`} icon={<CreditCard className="h-4 w-4" />} />
+        <section aria-label={t("settings.billingOverview5589cd")} className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <MetricTile label={t("settings.currentCredits97193d")} value={formatCredits(balance?.balance, t)} icon={<Coins className="h-4 w-4" />} tone="success" />
+          <MetricTile label={t("settings.availableRuntime6381fd")} value={availableMinutes === null ? '--' : t("settings.minutes121a50", {p0: String(availableMinutes)})} icon={<Clock3 className="h-4 w-4" />} tone="info" />
+          <MetricTile label={t("admin.creditsPerMinute9ab621")} value={formatCredits(creditsPerMinute, t)} icon={<Gauge className="h-4 w-4" />} />
+          <MetricTile label={t("settings.downloadRate17eab2")} value={config?.download_credits == null ? '--' : t("settings.creditsDownloadb1ee07", {p0: String(formatCredits(config.download_credits, t))})} icon={<CreditCard className="h-4 w-4" />} />
         </section>
 
 
@@ -198,21 +202,21 @@ export default function BillingSettingsPage() {
         <section className="yj-panel overflow-hidden" aria-labelledby="billing-details-title">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--yj-border-subtle)] px-5 py-4">
             <div>
-              <h3 id="billing-details-title" className="text-base font-medium text-fg-default">积分明细</h3>
-              <p className="mt-1 text-xs text-fg-muted">任务预扣、结算、退款与充值流水</p>
+              <h3 id="billing-details-title" className="text-base font-medium text-fg-default">{t("settings.creditTransactions282a0a")}</h3>
+              <p className="mt-1 text-xs text-fg-muted">{t("settings.taskReservationsSettlementRefundsAndCreditAdditionsac62c0")}</p>
             </div>
-            <span className="shrink-0 text-xs text-fg-muted">共 {error || isLoading ? '—' : total} 条</span>
+            <span className="shrink-0 text-xs text-fg-muted">{t("history.total497064")}{error || isLoading ? '—' : total} {t("history.recordseb8c2d")}</span>
           </div>
           <div className="min-w-0 overflow-x-auto">
             {isLoading && transactions.length === 0 ? (
               <div className="yj-empty-state py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-accent-fg" />
-                <p className="text-fg-muted">正在加载交易记录...</p>
+                <p className="text-fg-muted">{t("settings.loadingTransactions882d8f")}</p>
               </div>
-            ) : error ? <p className="px-5 py-10 text-center text-sm text-fg-muted">交易记录暂不可用</p> : transactions.length === 0 ? (
-              <p className="px-5 py-10 text-center text-sm text-fg-muted">暂无交易记录</p>
+            ) : error ? <p className="px-5 py-10 text-center text-sm text-fg-muted">{t("settings.transactionsUnavailable023134")}</p> : transactions.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-fg-muted">{t("settings.noTransactionsfe493e")}</p>
             ) : (
-              <div className="min-w-[900px]"><DataTable data={transactions} columns={columns} rowKey="id" density="default" striped /></div>
+              <div className="min-w-[900px]"><DataTable data={transactions} columns={localizeDisplay(columns, t)} rowKey="id" density="default" striped /></div>
             )}
           </div>
           {!error && totalPages > 1 && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--yj-border-subtle)] px-5 py-4">
@@ -221,55 +225,51 @@ export default function BillingSettingsPage() {
               disabled={page <= 1 || isLoading}
               onClick={() => void loadData(page - 1)}
             >
-              上一页
-            </Button>
-            <span className="px-1 text-sm text-fg-muted">第 {page} / {totalPages} 页</span>
+              {t("history.previousb41561")}</Button>
+            <span className="px-1 text-sm text-fg-muted">{t("history.pagef49534")}{page} / {totalPages} {t("history.labelaf8438")}</span>
             <Button
               variant="secondary"
               disabled={page >= totalPages || isLoading}
               onClick={() => void loadData(page + 1)}
             >
-              下一页
-            </Button>
+              {t("history.next67a246")}</Button>
           </div>}
         </section>
         <section className="yj-panel px-5 py-5" aria-labelledby="billing-rules-title">
           <div className="mb-5 flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-accent-fg" />
-            <h3 id="billing-rules-title" className="text-sm font-medium text-fg-default">计费规则</h3>
+            <h3 id="billing-rules-title" className="text-sm font-medium text-fg-default">{t("settings.billingRulesab2727")}</h3>
           </div>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-border-default">
             <div className="min-w-0 lg:pr-6">
-              <p className="text-xs text-fg-muted">基础费率</p>
-              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.credits_per_minute)} <span className="whitespace-nowrap text-xs font-normal text-fg-muted">积分 / 分钟</span></p>
+              <p className="text-xs text-fg-muted">{t("settings.baseRateeae98b")}</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.credits_per_minute, t)} <span className="whitespace-nowrap text-xs font-normal text-fg-muted">{t("settings.creditsMinutedcbb84")}</span></p>
             </div>
             <div className="min-w-0 border-t border-border-default pt-5 lg:border-t-0 lg:px-6 lg:pt-0">
-              <p className="text-xs text-fg-muted">计费倍率</p>
-              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.credit_rate_multiplier)}x</p>
+              <p className="text-xs text-fg-muted">{t("settings.billingMultiplier04bece")}</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.credit_rate_multiplier, t)}x</p>
             </div>
             <div className="min-w-0 border-t border-border-default pt-5 lg:border-t-0 lg:pl-6 lg:pt-0">
-              <p className="text-xs text-fg-muted">最低保留积分</p>
-              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.min_balance)}</p>
-              <p className="mt-2 text-xs leading-5 text-fg-muted">预扣后低于此值时不能启动任务</p>
+              <p className="text-xs text-fg-muted">{t("settings.minimumRetainedCredits18c7ea")}</p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-fg-default">{formatCredits(config?.min_balance, t)}</p>
+              <p className="mt-2 text-xs leading-5 text-fg-muted">{t("settings.tasksCannotStartIfTheBalanceAfterd07f6e")}</p>
             </div>
           </div>
           <div className="mt-5 border-t border-border-default pt-5">
-            <p className="text-xs font-medium text-fg-default">积分计算公式</p>
+            <p className="text-xs font-medium text-fg-default">{t("settings.creditCalculation7583a8")}</p>
             <div className="mt-3 space-y-2 text-sm leading-6 text-fg-muted">
               <p>
-                每分钟消耗积分 = 每分钟基础积分 × 计费倍率
-                {config && (
+                {t("settings.creditsPerMinuteBaseCreditsPerMinuteba42eb")}{config && (
                   <span className="ml-2 tabular-nums text-fg-default">
-                    （当前：{formatCredits(config.credits_per_minute)} × {formatCredits(config.credit_rate_multiplier)} = {formatCredits(creditsPerMinute)} 积分 / 分钟）
-                  </span>
+                    {t("settings.current21ddbc")}{formatCredits(config.credits_per_minute, t)} × {formatCredits(config.credit_rate_multiplier, t)} = {formatCredits(creditsPerMinute, t)} {t("settings.creditsMinutefd06c7")}</span>
                 )}
               </p>
-              <p>任务启动或重试时先按预估运行时间预扣，最终按实际计费分钟结算。</p>
-              <p>按时长计费的云计算任务，从节点申请成功开始，到节点确认释放为止计费，包含数据盘挂载、数据库下载及解压、输入下载、Agent 启动和分析运行；计费分钟数向上取整，不足 1 分钟按 1 分钟。</p>
-              <p>节点成功启动后开始计费，初始化、计算、归档及诊断保留期间均计入占用时长，节点确认释放后统一结算。节点尚未启动就取消或失败，退回预扣积分。</p>
-              <p>下载结果或报告按 {formatCredits(config?.download_credits)} 积分 / 次计费。</p>
-              <p>CNV 基线任务按输入数据量计费，当前单价为 {formatCredits(config?.cnv_baseline_credits_per_gib)} 积分 / GiB。</p>
-              <p className="text-xs text-fg-muted">预扣不是最终扣费，差额会在任务终态结算；账单明细会显示预扣、扣费、退款和下载流水。</p>
+              <p>{t("settings.taskStartsAndRetriesReserveCreditsBasedecddd9")}</p>
+              <p>{t("settings.timeBasedCloudBillingRunsFromSuccessful8b3bb0")}</p>
+              <p>{t("settings.billingStartsWhenTheNodeStartsAnd410661")}</p>
+              <p>{t("settings.resultsAndReportDownloadsCostcf694d")}{formatCredits(config?.download_credits, t)} {t("settings.creditsEach31033b")}</p>
+              <p>{t("settings.cnvBaselineTasksAreBilledByInputfac0fc")}{formatCredits(config?.cnv_baseline_credits_per_gib, t)} {t("settings.creditsGibac5f8a")}</p>
+              <p className="text-xs text-fg-muted">{t("settings.reservationsAreNotFinalChargesDifferencesSettleb226d9")}</p>
             </div>
           </div>
         </section>

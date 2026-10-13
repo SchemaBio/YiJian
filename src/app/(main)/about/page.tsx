@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import Image from 'next/image';
 import { ExternalLink } from 'lucide-react';
@@ -127,6 +130,7 @@ function LicenseBadge({ license }: { license: string }) {
 }
 
 export default function AboutPage() {
+  const t = useText();
   // 按类别分组
   const groupedLibraries = openSourceLibraries.reduce((acc, lib) => {
     if (!acc[lib.category]) acc[lib.category] = [];
@@ -134,7 +138,7 @@ export default function AboutPage() {
     return acc;
   }, {} as Record<string, OpenSourceLibrary[]>);
 
-  const categoryOrder = ['核心框架', '样式与UI', '生物信息学', '工具库', '开发工具'];
+  const categoryOrder = [t("about.coreFrameworks661227"), t("about.stylesAndUi887da0"), t("about.bioinformaticse61d5c"), t("about.utilitiesb60aef"), t("about.developmentToolsac1367")];
 
   return (
     <PageContent className="yj-page-shell">
@@ -144,23 +148,21 @@ export default function AboutPage() {
           <div className="w-12 h-12 flex shrink-0 items-center justify-center overflow-hidden">
             <Image
               src="/logo.svg"
-              alt="贻鉴"
+              alt={t("common.appName")}
               width={48}
               height={48}
               className="object-contain"
             />
           </div>
-          <div><h1 className="yj-page-title mb-1">开源软件声明</h1>
-          <p className="text-sm text-fg-muted">依赖组件、版本约束及许可证</p></div>
+          <div><h1 className="yj-page-title mb-1">{t("about.openSourceSoftwareNotices356ef8")}</h1>
+          <p className="text-sm text-fg-muted">{t("about.dependenciesVersionConstraintsAndLicenses25ed5e")}</p></div>
         </div>
 
         {/* Apache 2.0 许可证说明 */}
         <div className="mb-4 yj-panel p-5">
-          <h2 className="text-sm font-medium text-fg-default mb-2">本项目许可证</h2>
+          <h2 className="text-sm font-medium text-fg-default mb-2">{t("about.projectLicense541cb1")}</h2>
           <p className="text-sm text-fg-muted leading-relaxed">
-            贻鉴 采用 <span className="font-medium text-fg-default">Apache License 2.0</span> 开源协议发布。
-            您可以自由使用、修改和分发本软件，但需保留原作者的版权声明和许可证文本。
-          </p>
+            {t("about.yijianIsReleasedUnderThec970e2")}<span className="font-medium text-fg-default">Apache License 2.0</span> {t("about.openSourceLicenseYouMayUseModify2b84e6")}</p>
         </div>
 
         {/* 第三方开源库 */}
@@ -182,11 +184,11 @@ export default function AboutPage() {
                           <span className="font-medium text-fg-default">{lib.name}</span>
                           <LicenseBadge license={lib.license} />
                         </div>
-                        <p className="text-sm text-fg-muted leading-relaxed">{lib.description}</p>
+                        <p className="text-sm text-fg-muted leading-relaxed">{translateUI(lib.description, t)}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <span className="text-xs text-fg-muted font-mono">{lib.version}</span>
-                        {lib.name === 'Lucide' && <a href="/licenses/lucide.txt" target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg hover:underline">版权与许可全文</a>}
+                        {lib.name === 'Lucide' && <a href="/licenses/lucide.txt" target="_blank" rel="noopener noreferrer" className="text-xs text-accent-fg hover:underline">{t("about.fullCopyrightAndLicenseTextb2a167")}</a>}
                         <a
                           href={lib.url}
                           target="_blank"
@@ -194,8 +196,7 @@ export default function AboutPage() {
                           className="inline-flex items-center gap-1 text-xs text-accent-fg hover:underline"
                         >
                           <ExternalLink className="w-3 h-3" />
-                          官网
-                        </a>
+                          {t("about.website7c6748")}</a>
                       </div>
                     </div>
                   ))}
@@ -207,30 +208,28 @@ export default function AboutPage() {
 
         {/* 许可证说明 */}
         <section className="mt-6 yj-panel p-5">
-          <h2 className="text-sm font-medium text-fg-default mb-3">许可证类型说明</h2>
+          <h2 className="text-sm font-medium text-fg-default mb-3">{t("about.licenseTypesa9437c")}</h2>
           <div className="space-y-2 text-sm text-fg-muted">
             <div className="flex items-start gap-2">
               <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium border shrink-0 ${licenseColors['MIT']}`}>MIT</span>
-              <p>最宽松的开源许可证，允许任意使用、修改和分发，仅需保留版权声明</p>
+              <p>{t("about.permissiveLicenseAllowingUseModificationAndDistributionbfc8a2")}</p>
             </div>
             <div className="flex items-start gap-2">
               <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium border shrink-0 ${licenseColors['Apache-2.0']}`}>Apache-2.0</span>
-              <p>类似 MIT，但提供专利授权保护，需保留版权、专利、商标声明</p>
+              <p>{t("about.similarToMitWithPatentProtectionRetaind5cbe8")}</p>
             </div>
             <div className="flex items-start gap-2">
               <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium border shrink-0 ${licenseColors['ISC']}`}>ISC</span>
-              <p>功能上与 MIT 类似，但文本更简洁</p>
+              <p>{t("about.similarToMitWithShorterWordingdfd1c5")}</p>
             </div>
           </div>
         </section>
 
         {/* 致谢 */}
         <section className="mt-6 yj-panel p-5">
-          <h2 className="text-sm font-medium text-fg-default mb-2">致谢</h2>
+          <h2 className="text-sm font-medium text-fg-default mb-2">{t("about.acknowledgments4a19ec")}</h2>
           <p className="text-sm text-fg-muted leading-relaxed">
-            感谢以上开源社区的贡献者们，他们的工作使本项目得以实现。
-            我们尊重并遵守各开源项目的许可证要求。
-          </p>
+            {t("about.weThankTheOpenSourceContributorsWhose516c48")}</p>
         </section>
       </div>
     </PageContent>

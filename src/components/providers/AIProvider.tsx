@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { AIConfig, ConversationMessage } from '@/types/ai';
@@ -63,6 +68,9 @@ function clearLegacyAIHistory() {
 }
 
 export function AIProvider({ children }: { children: React.ReactNode }) {
+  const t = useText();
+  const textRef = useRef(t);
+  textRef.current = t;
   const [config, setConfigState] = useState<AIConfig>(DEFAULT_AI_CONFIG);
   const [history, setHistory] = useState<ConversationMessage[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -96,7 +104,10 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     agentRef.current = isEnabled ? createPageAgent(config) : null;
+    return () => agentRef.current?.reset();
   }, [config, isEnabled]);
+
+  useEffect(() => { agentRef.current?.setLocale(t.locale); }, [t, config, isEnabled]);
 
   const setConfig = useCallback((partialConfig: Partial<AIConfig>) => {
     setConfigState(prev => normalizeStoredConfig({ ...prev, ...partialConfig }));
@@ -137,22 +148,24 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     setIsExecuting(true);
     try {
       const result = await agentRef.current.execute(trimmedCommand);
+      const currentText = textRef.current;
       setHistory(prev => prev.map(msg => (
         msg.id === assistantMessage.id
           ? {
               ...msg,
-              content: result.success ? `已执行：${trimmedCommand}` : `执行失败：${result.error}`,
+              content: result.success ? currentText("assistance.executed3c6dd3", {p0: String(trimmedCommand)}) : currentText("assistance.executionFailedb8c659", {p0: result.errorKey ? currentText(result.errorKey) : String(result.error)}),
               status: result.success ? 'completed' : 'error',
               actionResult: result.result,
             }
           : msg
       )));
     } catch (error) {
+      const currentText = textRef.current;
       setHistory(prev => prev.map(msg => (
         msg.id === assistantMessage.id
           ? {
               ...msg,
-              content: `执行出错：${error instanceof Error ? error.message : '未知错误'}`,
+              content: currentText("assistance.executionError37b495", {p0: String(error instanceof Error ? errorText(error, currentText) : currentText("display.unknownError5f76ed"))}),
               status: 'error',
             }
           : msg
@@ -160,7 +173,7 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsExecuting(false);
     }
-  }, [addMessage, isExecuting]);
+  }, [addMessage, isExecuting, t]);
 
   const value: AIContextType = {
     config,

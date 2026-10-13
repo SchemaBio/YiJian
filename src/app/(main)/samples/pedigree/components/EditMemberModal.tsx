@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { localizeDisplay } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -33,6 +38,7 @@ const affectedOptions = Object.entries(AFFECTED_STATUS_CONFIG)
 const NONE_VALUE = '__none__';
 
 export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMembers }: EditMemberModalProps) {
+  const t = useText();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState({
@@ -105,7 +111,7 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
       });
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '家系成员更新失败');
+      setSubmitError(err instanceof Error ? errorText(err, t) : t("samples.unableToUpdatePedigreeMember58c875"));
     } finally {
       setSubmitting(false);
     }
@@ -127,12 +133,12 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
   const femaleMembers = existingMembers.filter(m => m.gender === 'female' && !excludeIds.includes(m.id));
 
   const fatherOptions = [
-    { value: NONE_VALUE, label: '无/未知' },
+    { value: NONE_VALUE, label: t("samples.noneUnknowndfe4f4") },
     ...maleMembers.map(m => ({ value: m.id, label: m.name })),
   ];
 
   const motherOptions = [
-    { value: NONE_VALUE, label: '无/未知' },
+    { value: NONE_VALUE, label: t("samples.noneUnknowndfe4f4") },
     ...femaleMembers.map(m => ({ value: m.id, label: m.name })),
   ];
 
@@ -143,8 +149,8 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
   );
 
   const spouseOptions = [
-    { value: NONE_VALUE, label: '选择配偶...' },
-    ...spouseCandidates.map(m => ({ value: m.id, label: `${m.name} (${m.gender === 'male' ? '男' : m.gender === 'female' ? '女' : '未知'})` })),
+    { value: NONE_VALUE, label: t("samples.selectSpousefd701e") },
+    ...spouseCandidates.map(m => ({ value: m.id, label: `${m.name} (${m.gender === 'male' ? t("samples.male51625d") : m.gender === 'female' ? t("samples.female26bc84") : t("samples.unknownd9c32a")})` })),
   ];
 
   if (!member) return null;
@@ -153,12 +159,12 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
-      title="编辑成员信息"
+      title={t("samples.editMemberInformation399978")}
       size="small"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>取消</Button>
-          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>保存修改</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
+          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>{t("samples.saveChanges60b4ae")}</Button>
         </>
       }
     >
@@ -169,41 +175,41 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
           </div>
         )}
         <div>
-          <label className="block text-xs text-fg-muted mb-1">姓名 *</label>
-          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="请输入姓名" required />
+          <label className="block text-xs text-fg-muted mb-1">{t("samples.name2b9e1a")}</label>
+          <Input value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder={t("samples.enterName675b3e")} required />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-fg-muted mb-1">性别 *</label>
-            <Select value={formData.gender} onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)} options={genderOptions} />
+            <label className="block text-xs text-fg-muted mb-1">{t("samples.sex42b5cc")}</label>
+            <Select value={formData.gender} onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)} options={localizeDisplay(genderOptions, t)} />
           </div>
           <div>
-            <label className="block text-xs text-fg-muted mb-1">出生年份</label>
-            <Input type="number" value={formData.birthYear} onChange={(e) => handleChange('birthYear', e.target.value)} placeholder="如 1990" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-fg-muted mb-1">与先证者关系 *</label>
-            <Select value={formData.relation} onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)} options={relationOptions} />
-          </div>
-          <div>
-            <label className="block text-xs text-fg-muted mb-1">患病状态 *</label>
-            <Select value={formData.affectedStatus} onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)} options={affectedOptions} />
+            <label className="block text-xs text-fg-muted mb-1">{t("samples.birthYear72da00")}</label>
+            <Input type="number" value={formData.birthYear} onChange={(e) => handleChange('birthYear', e.target.value)} placeholder={t("samples.forExampleb1ea60")} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-fg-muted mb-1">父亲</label>
+            <label className="block text-xs text-fg-muted mb-1">{t("samples.relationshipToProbanda3aea6")}</label>
+            <Select value={formData.relation} onChange={(value) => handleChange('relation', Array.isArray(value) ? value[0] : value)} options={localizeDisplay(relationOptions, t)} />
+          </div>
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">{t("samples.affectedStatus5332fa")}</label>
+            <Select value={formData.affectedStatus} onChange={(value) => handleChange('affectedStatus', Array.isArray(value) ? value[0] : value)} options={localizeDisplay(affectedOptions, t)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">{t("samples.father03cd61")}</label>
             <Select value={formData.fatherId} onChange={(value) => handleChange('fatherId', Array.isArray(value) ? value[0] : value)} options={fatherOptions} />
           </div>
           <div>
-            <label className="block text-xs text-fg-muted mb-1">母亲</label>
+            <label className="block text-xs text-fg-muted mb-1">{t("samples.mother166846")}</label>
             <Select value={formData.motherId} onChange={(value) => handleChange('motherId', Array.isArray(value) ? value[0] : value)} options={motherOptions} />
           </div>
         </div>
         <div>
-          <label className="block text-xs text-fg-muted mb-1">配偶</label>
+          <label className="block text-xs text-fg-muted mb-1">{t("samples.spouse38ef0f")}</label>
           <div className="flex flex-wrap gap-1 mb-2">
             {formData.spouseIds.map(sid => {
               const spouse = existingMembers.find(m => m.id === sid);
@@ -213,24 +219,24 @@ export function EditMemberModal({ isOpen, onClose, onSubmit, member, existingMem
             })}
           </div>
           {spouseCandidates.length > 0 && (
-            <Select value="" placeholder="选择配偶" onChange={(value) => addSpouse(Array.isArray(value) ? value[0] : value)} options={spouseOptions} />
+            <Select value="" placeholder={t("samples.selectSpouse50709c")} onChange={(value) => addSpouse(Array.isArray(value) ? value[0] : value)} options={spouseOptions} />
           )}
         </div>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={formData.isDeceased} onChange={(e) => handleChange('isDeceased', e.target.checked)} className="w-4 h-4 rounded border-border-default" />
-            <span className="text-sm text-fg-default">已故</span>
+            <span className="text-sm text-fg-default">{t("samples.deceased03d11d")}</span>
           </label>
           {formData.isDeceased && (
             <div>
-              <label className="block text-xs text-fg-muted mb-1">去世年份</label>
-              <Input type="number" value={formData.deceasedYear} onChange={(e) => handleChange('deceasedYear', e.target.value)} placeholder="如 2020" />
+              <label className="block text-xs text-fg-muted mb-1">{t("samples.yearOfDeath157868")}</label>
+              <Input type="number" value={formData.deceasedYear} onChange={(e) => handleChange('deceasedYear', e.target.value)} placeholder={t("samples.forExample9d5092")} />
             </div>
           )}
         </div>
         <div>
-          <label className="block text-xs text-fg-muted mb-1">表型描述</label>
-          <Input value={formData.phenotypes} onChange={(e) => handleChange('phenotypes', e.target.value)} placeholder="多个表型用逗号分隔" />
+          <label className="block text-xs text-fg-muted mb-1">{t("samples.phenotypeDescriptionfa80fb")}</label>
+          <Input value={formData.phenotypes} onChange={(e) => handleChange('phenotypes', e.target.value)} placeholder={t("samples.separatePhenotypesWithCommase4c276")} />
         </div>
       </form>
     </AppModal>

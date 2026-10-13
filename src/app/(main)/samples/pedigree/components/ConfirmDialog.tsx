@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { ConfirmDialog as SharedConfirmDialog } from '@/components/shared';
@@ -20,17 +23,19 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmLabel = '确认',
+  confirmLabel: suppliedConfirmLabel,
   confirmVariant = 'danger',
   loading = false,
 }: ConfirmDialogProps) {
+  const t = useText();
+  const confirmLabel = suppliedConfirmLabel ?? t("samples.confirmb56d9a");
   return (
     <SharedConfirmDialog
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
-      title={title}
+      title={translateUI(title, t)}
       message={message}
-      confirmLabel={loading ? '处理中...' : confirmLabel}
+      confirmLabel={loading ? t("samples.processingdde1db") : confirmLabel}
       onConfirm={onConfirm}
       variant={confirmVariant === 'danger' ? 'danger' : 'info'}
     />

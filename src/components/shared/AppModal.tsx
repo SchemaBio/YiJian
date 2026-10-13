@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -81,6 +86,7 @@ export function AppModal({
   footer,
   className,
 }: AppModalProps) {
+  const t = useText();
   return (
     <Modal
       open={open}
@@ -96,7 +102,7 @@ export function AppModal({
       <ModalHeader showCloseButton={false} className="pr-16">
         {title}
       </ModalHeader>
-      {showCloseButton && <div className="absolute right-4 top-4"><Button action="close" iconOnly aria-label="关闭弹窗" variant="ghost" onClick={() => onOpenChange(false)} /></div>}
+      {showCloseButton && <div className="absolute right-4 top-4"><Button action="close" iconOnly aria-label={t("common.closeDialog81f18d")} variant="ghost" onClick={() => onOpenChange(false)} /></div>}
       <ModalBody>
         {children}
       </ModalBody>
@@ -147,11 +153,14 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   message,
-  confirmLabel = '确认',
-  cancelLabel = '取消',
+  confirmLabel: suppliedConfirmLabel,
+  cancelLabel: suppliedCancelLabel,
   onConfirm,
   variant = 'info',
 }: ConfirmDialogProps) {
+  const t = useText();
+  const cancelLabel = suppliedCancelLabel ?? t("admin.cancel4d0b46");
+  const confirmLabel = suppliedConfirmLabel ?? t("samples.confirmb56d9a");
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState('');
 
@@ -170,7 +179,7 @@ export function ConfirmDialog({
       await onConfirm();
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '操作失败，请稍后重试');
+      setError(err instanceof Error ? errorText(err, t) : t("common.operationFailedRetryLater891d39"));
     } finally {
       setPending(false);
     }
@@ -185,7 +194,7 @@ export function ConfirmDialog({
         if (pending && !nextOpen) return;
         onOpenChange(nextOpen);
       }}
-      title={title}
+      title={translateUI(title, t)}
       size="small"
       footer={
         <>
@@ -199,7 +208,7 @@ export function ConfirmDialog({
           <Button
             action={variant === 'danger' && /删除/.test(confirmLabel) ? 'delete' : undefined}
             loading={pending}
-            loadingLabel="处理中..."
+            loadingLabel={t("samples.processingdde1db")}
             variant={buttonVariant}
             disabled={pending}
             onClick={handleConfirm}

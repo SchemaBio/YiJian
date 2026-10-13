@@ -1,14 +1,19 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 
-export function AssetMultiSelect({ label, options, value, onChange, onOpenChange, disabled = false, unit = '个文件' }: {
+export function AssetMultiSelect({ label, options, value, onChange, onOpenChange, disabled = false, unit: suppliedUnit }: {
   label: string; options: { value: string; label: string; description?: string }[]; value: string[]; unit?: string;
   onChange: (value: string[]) => void; onOpenChange?: (open: boolean) => void; disabled?: boolean;
 }) {
+  const t = useText();
+  const unit = suppliedUnit ?? t("pipeline.files621862");
   const root = React.useRef<HTMLDivElement>(null);
   const trigger = React.useRef<HTMLButtonElement>(null);
   const [open, setOpen] = React.useState(false);
@@ -32,14 +37,14 @@ export function AssetMultiSelect({ label, options, value, onChange, onOpenChange
   const selected = value.map(id => options.find(option => option.value === id)?.label || id);
   const filtered = options.filter(option => `${option.label} ${option.description || ''}`.toLowerCase().includes(search.trim().toLowerCase()));
   return <div ref={root} className="relative" onBlur={event => { if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-    <HoverHint content={selected.join('\n')}><button ref={trigger} type="button" aria-label={`选择${label}`} aria-expanded={open} aria-controls={listID} disabled={disabled} onClick={() => { setOpen(!open); setSearch(''); }}  className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-default px-3 py-2 text-left text-sm disabled:opacity-50">
-      <span className="min-w-0 truncate">{selected.length ? `已选择 ${selected.length} ${unit} · ${selected.join('、')}` : `选择${label}`}</span><ChevronDown size={15} className="shrink-0" />
+    <HoverHint content={selected.join('\n')}><button ref={trigger} type="button" aria-label={t("pipeline.select9dd365", {p0: String(label)})} aria-expanded={open} aria-controls={listID} disabled={disabled} onClick={() => { setOpen(!open); setSearch(''); }}  className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-default px-3 py-2 text-left text-sm disabled:opacity-50">
+      <span className="min-w-0 truncate">{selected.length ? t("pipeline.selected7142ae", {p0: String(selected.length), p1: String(unit), p2: String(selected.join('、'))}) : t("pipeline.select9dd365", {p0: String(label)})}</span><ChevronDown size={15} className="shrink-0" />
     </button></HoverHint>
     {open && <div id={listID} className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border-default shadow-lg" style={{ backgroundColor: 'var(--yj-panel-bg, #fff)' }}>
-      <div className="border-b border-border-default p-2"><input autoFocus aria-label={`搜索${label}`} value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索名称或编号" className="h-8 w-full rounded border border-border-default bg-canvas-subtle px-2 text-sm" /></div>
-      <div className="max-h-56 overflow-y-auto p-1" role="group" aria-label={`${label}可选项`}>
+      <div className="border-b border-border-default p-2"><input autoFocus aria-label={t("pipeline.searchc32673", {p0: String(label)})} value={search} onChange={event => setSearch(event.target.value)} placeholder={t("pipeline.searchNameOrId3d8484")} className="h-8 w-full rounded border border-border-default bg-canvas-subtle px-2 text-sm" /></div>
+      <div className="max-h-56 overflow-y-auto p-1" role="group" aria-label={t("pipeline.optionsbabdbc", {p0: String(label)})}>
         {filtered.map(option => <button key={option.value} type="button" role="checkbox" aria-checked={value.includes(option.value)} onClick={() => onChange(value.includes(option.value) ? value.filter(id => id !== option.value) : [...value, option.value])} className={`flex w-full items-start gap-2 rounded px-2 py-2 text-left text-sm hover:bg-canvas-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-emphasis ${value.includes(option.value) ? 'bg-accent-subtle' : ''}`}><span aria-hidden="true" className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${value.includes(option.value) ? 'border-accent-emphasis bg-accent-emphasis text-white' : 'border-border-default'}`}>{value.includes(option.value) && <Check size={12} />}</span><span className="min-w-0 flex-1 break-all">{option.label}{option.description && <span className="mt-1 block whitespace-pre-line text-xs leading-5 text-fg-muted">{option.description}</span>}</span></button>)}
-        {!filtered.length && <p className="p-3 text-xs text-fg-muted">没有匹配的可选项</p>}
+        {!filtered.length && <p className="p-3 text-xs text-fg-muted">{t("pipeline.noMatchingOptions33a635")}</p>}
       </div>
     </div>}
   </div>;

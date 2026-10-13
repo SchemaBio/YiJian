@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 import { canInterpretTask } from '@/lib/task-interpretation';
 import { ActionButton } from '@/components/shared/ActionButton';
 
@@ -31,6 +36,7 @@ import {
 } from './components';
 
 export default function AnalysisDetailPage() {
+  const t = useText();
   const params = useParams();
   const router = useRouter();
 
@@ -75,7 +81,7 @@ export default function AnalysisDetailPage() {
         const [sampleData, contextData] = await Promise.all([
           tasksApi.getSample(uuid).catch(() => null),
 			getResultContext(uuid, controller.signal).catch(cause => {
-				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
+				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToReadResultContext16d461"));
 				return null;
 			}),
         ]);
@@ -108,7 +114,7 @@ export default function AnalysisDetailPage() {
 				setResultContext(next);
 				setResultContextError(null);
 			} catch (cause) {
-				if (!disposed) setResultContextError(cause instanceof Error ? cause.message : '无法读取结果上下文');
+				if (!disposed) setResultContextError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToReadResultContext16d461"));
 			} finally {
 				requestInFlight = false;
 			}
@@ -129,7 +135,7 @@ export default function AnalysisDetailPage() {
 				setResultContext(next);
 				setResultContextError(null);
 			}).catch(cause => {
-				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? cause.message : '无法刷新结果统计');
+				if (!controller.signal.aborted) setResultContextError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToRefreshResultStatistics149dd2"));
 			}).finally(()=>{refreshing=false;});
 		};
 		window.addEventListener('yijian:result-adjustment-saved', refreshAfterAdjustment);
@@ -167,7 +173,7 @@ export default function AnalysisDetailPage() {
     try {
       const next = await tasksApi.setInterpretationCompleted(uuid, !task.interpretationCompletedAt, task.attemptId || uuid);
       setTask(next);
-    } catch (cause) { setCompletionError(cause instanceof Error ? cause.message : '解读状态更新失败'); }
+    } catch (cause) { setCompletionError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToUpdateInterpretationStatus664ece")); }
     finally { completionPendingRef.current = false; setCompletionSaving(false); }
   };
   React.useEffect(() => {
@@ -190,13 +196,12 @@ export default function AnalysisDetailPage() {
       <PageContent>
         <div className="flex flex-col items-center justify-center py-16">
           <h2 className="text-2xl font-semibold text-fg-default mb-2">404</h2>
-          <p className="text-fg-muted mb-4">未找到该分析任务</p>
+          <p className="text-fg-muted mb-4">{t("tasks.analysisTaskNotFoundc133f8")}</p>
           <button
             onClick={handleBack}
             className="text-accent-fg hover:underline"
           >
-            返回任务列表
-          </button>
+            {t("tasks.backToTaskListcd3b22")}</button>
         </div>
       </PageContent>
     );
@@ -309,8 +314,8 @@ export default function AnalysisDetailPage() {
     <PageContent padded={false} className="h-full min-h-0 !overflow-hidden flex flex-col">
       <div className="shrink-0 border-b border-border-subtle bg-canvas-default px-3 pt-2 md:px-4">
       {/* 任务信息头部 */}
-      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel="保存中…" variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? '取消解读完成' : '解读完成'}</ActionButton>} />
-      {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">解读已完成，当前为只读。取消解读完成后可继续编辑。</p>}
+      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel={t("tasks.saving6644f0")} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? t("tasks.reopenInterpretatione505bc") : t("tasks.interpretationCompletec29533")}</ActionButton>} />
+      {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">{t("tasks.interpretationIsCompleteAndReadOnlyReopen89d694")}</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
       {sample && <SampleSummaryCard sample={sample} />}
 
@@ -332,10 +337,11 @@ export default function AnalysisDetailPage() {
 }
 
 function ResultContextUnavailable({ message }: { message: string | null }) {
+  const t = useText();
   return (
     <div className="rounded-xl border border-border-default bg-canvas-default p-8 text-center">
-      <h2 className="font-semibold text-fg-default">结果上下文尚不可用</h2>
-      <p className="mt-2 text-sm text-fg-muted">{message || '任务结果尚未完成结构化导入。'}</p>
+      <h2 className="font-semibold text-fg-default">{t("tasks.resultContextUnavailablefd880e")}</h2>
+      <p className="mt-2 text-sm text-fg-muted">{message || t("tasks.structuredImportOfTaskResultsIsIncomplete9ca7c6")}</p>
     </div>
   );
 }

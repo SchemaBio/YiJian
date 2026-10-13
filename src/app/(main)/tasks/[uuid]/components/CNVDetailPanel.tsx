@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, type TextTranslator } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 import { IconActionButton } from '@/components/shared/ActionButton';
@@ -53,11 +60,11 @@ function ensemblRegionURL(chromosome: string, startPosition: number, endPosition
   return `https://www.ensembl.org/Homo_sapiens/Location/View?r=${encodeURIComponent(region)}`;
 }
 
-function cnvTypeLabel(type: CNVSegment['type']): string {
-  if (type === 'Amplification') return '扩增';
-  if (type === 'Deletion') return '缺失';
-  if (type === 'Normal') return '正常';
-  return '未提供';
+function cnvTypeLabel(type: CNVSegment['type'], t: TextTranslator = chineseText): string {
+  if (type === 'Amplification') return t("history.duplication1aeb54");
+  if (type === 'Deletion') return t("history.deletion2fe9b7");
+  if (type === 'Normal') return t("history.normalf78d03");
+  return t("history.notProvided071fb2");
 }
 
 function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
@@ -108,9 +115,9 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
 }
 
 // 格式化长度显示
-function formatLength(length: number): string {
-  if (length >= 1000000) return `${(length / 1000000).toFixed(2)} Mb`;
-  if (length >= 1000) return `${(length / 1000).toFixed(1)} kb`;
+function formatLength(length: number, t: TextTranslator = chineseText): string {
+  if (length >= 1000000) return `${formatNumericString((length / 1000000).toFixed(2), t.locale)} Mb`;
+  if (length >= 1000) return `${formatNumericString((length / 1000).toFixed(1), t.locale)} kb`;
   return `${length} bp`;
 }
 
@@ -120,6 +127,7 @@ function isCNVExon(variant: CNVSegment | CNVExon): variant is CNVExon {
 }
 
 export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenceId, taskId, plotAnchor, onOpenAssessment, onSaveInterpretation }: CNVDetailPanelProps) {
+  const t = useText();
   const [section, setSection] = React.useState<InspectorSection>('annotation');
   const readOnly = useInterpretationReadOnly();
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
@@ -136,25 +144,25 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
   const exonRatio = isExon ? variant.ratio : null;
   const showPlot = variantType === 'segment' && Boolean(taskId);
   const typeVariant = cnvTypeVariant(variant.type);
-  const typeLabel = cnvTypeLabel(variant.type);
+  const typeLabel = cnvTypeLabel(variant.type, t);
   const externalReference = ucscDatabase(referenceId);
 
   return (
     <>
-      {isOpen && <WorkspaceInspector label="变异详情" onClose={onClose} nonModal>
+      {isOpen && <WorkspaceInspector label={t("tasks.variantDetails7ca440")} onClose={onClose} nonModal>
         {/* 头部 */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">
-              {variantType === 'exon' ? 'CNV外显子详情' : 'CNV区域详情'}
+              {variantType === 'exon' ? t("tasks.exonCnvDetails317773") : t("tasks.regionCnvDetails47f31b")}
             </h3>
             <Tag variant={typeVariant}>
               {typeLabel}
             </Tag>
           </div>
           <div className="ml-auto flex items-center gap-2">
-          {taskId && <ActionButton action="view" size="small" variant="secondary" className="shrink-0" onClick={() => setPlotOpen(true)}>{isExon ? '外显子 CN 分布图' : '区域信号图'}</ActionButton>}
-          <IconActionButton label="关闭" action="close" variant="ghost"
+          {taskId && <ActionButton action="view" size="small" variant="secondary" className="shrink-0" onClick={() => setPlotOpen(true)}>{isExon ? t("tasks.exonCnDistribution991e77") : t("tasks.regionSignalPlot630d9d")}</ActionButton>}
+          <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
 
@@ -164,61 +172,61 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
 
         <div className="yj-inspector-summary">
           <strong className="text-fg-default">{variant.chromosome}:{variant.startPosition}–{variant.endPosition}</strong>
-          <p className="mt-1">{variant.assessment?.assessmentState === 'insufficient_evidence' ? '证据不足' : variant.assessment ? getClassificationLabel(variant.assessment.classification) : '尚未评定'} · {variant.assessment ? `${formatScore(variant.assessment.totalScore)} 分` : '—'}</p>
+          <p className="mt-1">{variant.assessment?.assessmentState === 'insufficient_evidence' ? t("tasks.insufficientEvidence70568c") : variant.assessment ? getClassificationLabel(variant.assessment.classification) : t("tasks.notAssessed88f079")} · {variant.assessment ? t("tasks.pointsc91542", {p0: String(formatScore(variant.assessment.totalScore))}) : '—'}</p>
         </div>
         {/* 内容区域 */}
         <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'assessment', 'interpretation', 'history']} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
           <section hidden={section !== 'interpretation'} className="space-y-3">
-            <h4 className="text-sm font-semibold">人工解读</h4>
-            <textarea aria-label="CNV 人工解读" readOnly={readOnly} value={interpretation} onChange={event => setInterpretation(event.target.value)} placeholder="请输入您对该 CNV 的解读分析…" className="min-h-32 w-full resize-y rounded-md border border-border-default bg-canvas-default p-3 text-sm" />
-            <div className="flex items-center justify-between gap-2"><span className="text-xs text-fg-muted">{interpretation.length} 字</span><ActionButton loading={saving} loadingLabel="保存中…" action="save" variant="ghost" type="button" disabled={readOnly || saving || !onSaveInterpretation || interpretation === savedInterpretation} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
+            <h4 className="text-sm font-semibold">{t("tasks.manualInterpretation1fcaef")}</h4>
+            <textarea aria-label={t("tasks.manualCnvInterpretation348a96")} readOnly={readOnly} value={interpretation} onChange={event => setInterpretation(event.target.value)} placeholder={t("tasks.enterYourInterpretationOfThisCnv6b6b17")} className="min-h-32 w-full resize-y rounded-md border border-border-default bg-canvas-default p-3 text-sm" />
+            <div className="flex items-center justify-between gap-2"><span className="text-xs text-fg-muted">{interpretation.length} {t("tasks.characters9f8ba6")}</span><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost" type="button" disabled={readOnly || saving || !onSaveInterpretation || interpretation === savedInterpretation} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40 disabled:opacity-40" onClick={async () => {
               if (!onSaveInterpretation) return;
               setSaving(true); setSaveError(''); const originalScope = scope; const draft = interpretation;
               try { await onSaveInterpretation(variant, draft); if (scopeRef.current === originalScope) setSavedInterpretation(draft); }
-              catch (cause) { if (scopeRef.current === originalScope) setSaveError(cause instanceof Error ? cause.message : '保存失败'); }
+              catch (cause) { if (scopeRef.current === originalScope) setSaveError(cause instanceof Error ? errorText(cause, t) : t("tasks.saveFailed40525a")); }
               finally { if (scopeRef.current === originalScope) setSaving(false); }
-            }}>保存人工解读</ActionButton></div>
+            }}>{t("tasks.saveInterpretationac1ec3")}</ActionButton></div>
             {saveError && <p role="alert" className="text-sm text-danger-fg">{saveError}</p>}
           </section>
           <section hidden={section !== 'history'}>
             <ResultChangeHistory taskId={taskId} table={variantType === 'exon' ? 'cnv-exon' : 'cnv-segment'} rowId={variant.id} active={section === 'history'} revision={variant.adjustmentVersion} />
           </section>
           <section hidden={section !== 'assessment'} >
-          {(variant.type === 'Deletion' || variant.type === 'Amplification') && <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 评估</span><AIAssistanceAction key={scope} disabled={readOnly || !taskId} input={{feature:variant.type === 'Deletion'?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(variant),calculator:variant.assessment}} onResult={setAIResult} /></div>}
+          {(variant.type === 'Deletion' || variant.type === 'Amplification') && <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} {t("tasks.assessment6c63b7")}</span><AIAssistanceAction key={scope} disabled={readOnly || !taskId} input={{feature:variant.type === 'Deletion'?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(variant),calculator:variant.assessment}} onResult={setAIResult} /></div>}
           {aiResult && <div className="mb-4"><AIResultCard result={aiResult} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} /></div>}
           <div className="mb-3 flex flex-wrap gap-2">
-            {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} 计算器</button>}
+            {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} {t("tasks.calculatoraf747d")}</button>}
 
           </div>
           </section>
           <section hidden={section !== 'annotation'} >
           {(variant.type === 'Amplification' || variant.type === 'Deletion') && <div className="mt-4 rounded-lg border border-border-default p-3">
-            <h4 className="mb-2 text-sm font-medium">ISCN 候选注释</h4>
-            <p className="select-text break-words font-mono text-sm">{variant.iscnCandidate || '无法生成：拷贝状态、参考版本或染色体带区待确认'}</p>
-            <p className="mt-2 text-xs leading-relaxed text-fg-muted">基于测序 CN 估计取整；x 表示候选拷贝状态。坐标由 BED 转为 1-based。需要确认准确拷贝数后用于回报，尤其是性染色体及嵌合事件。</p>
-            {variant.annotationValues?.ISCN && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">工作流原始注释（保留原值）</summary><p className="mt-1 select-text break-words font-mono">{variant.annotationValues.ISCN}</p></details>}
+            <h4 className="mb-2 text-sm font-medium">{t("tasks.candidateIscnAnnotation38e32d")}</h4>
+            <p className="select-text break-words font-mono text-sm">{variant.iscnCandidate || t("tasks.cannotGenerateConfirmCopyStateReferenceVersionb03eb9")}</p>
+            <p className="mt-2 text-xs leading-relaxed text-fg-muted">{t("tasks.roundedSequencingCnEstimateXDenotesCandidate64f8d8")}</p>
+            {variant.annotationValues?.ISCN && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">{t("tasks.originalWorkflowAnnotationUnchangedca650c")}</summary><p className="mt-1 select-text break-words font-mono">{variant.annotationValues.ISCN}</p></details>}
           </div>}
           </section>
           <section hidden={section !== 'evidence'} >
           {/* CNV 特征 */}
-          <SectionTitle icon={FileText} title="CNV 特征" />
+          <SectionTitle icon={FileText} title={t("tasks.cnvFeaturesc60b58")} />
           <div className="space-y-0">
             <InfoItem
-              label="类型"
+              label={t("history.typee4e46c")}
               value={
                 <Tag variant={typeVariant}>
                   {typeLabel}
                 </Tag>
               }
             />
-            <InfoItem label="拷贝数" value={variant.copyNumber} />
-            <InfoItem label="Copy ratio" value={variant.copyRatio === null ? undefined : variant.copyRatio.toFixed(3)} />
-            <InfoItem label="片段 Log2 ratio" value={variant.log2Ratio === null ? undefined : variant.log2Ratio.toFixed(3)} />
+            <InfoItem label={t("history.copyNumber04d1ca")} value={variant.copyNumber} />
+            <InfoItem label={t("interface.copyRatio111a27")} value={variant.copyRatio === null ? undefined : formatNumericString(variant.copyRatio.toFixed(3), t.locale)} />
+            <InfoItem label={t("tasks.segmentLogRatio9322a9")} value={variant.log2Ratio === null ? undefined : formatNumericString(variant.log2Ratio.toFixed(3), t.locale)} />
             {isExon && (
-              <InfoItem label="外显子比值" value={exonRatio === null ? undefined : exonRatio.toFixed(2)} />
+              <InfoItem label={t("tasks.exonRatiof1ba01")} value={exonRatio === null ? undefined : formatNumericString(exonRatio.toFixed(2), t.locale)} />
             )}
-            <InfoItem label={isExon ? "置信度" : "信号权重"} value={isExon ? ({HIGH:"高",MEDIUM:"中",LOW:"低"}[variant.confidenceLabel ?? ""] ?? variant.confidenceLabel) : variant.confidence ?? undefined} />
+            <InfoItem label={isExon ? t("history.confidenceb78c2d") : t("tasks.signalWeight9907ea")} value={isExon ? ({HIGH:t("tasks.highb096b3"),MEDIUM:t("tasks.medium086907"),LOW:t("tasks.lowb9ee25")}[variant.confidenceLabel ?? ""] ?? variant.confidenceLabel) : variant.confidence ?? undefined} />
           </div>
 
           </section>
@@ -226,7 +234,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           {/* 涉及基因 (仅 Segment) */}
           {!isExon && (variant as CNVSegment).genes.length > 0 && (
             <>
-              <SectionTitle icon={Database} title="涉及基因" />
+              <SectionTitle icon={Database} title={t("history.affectedGenes9fbbad")} />
               <div className="space-y-0">
                 <div className="flex flex-wrap gap-2">
                   {(variant as CNVSegment).genes.map((gene) => (
@@ -247,13 +255,13 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           )}
 
           {/* 基因组位置链接 */}
-          <SectionTitle icon={MapPin} title="外部资源" />
+          <SectionTitle icon={MapPin} title={t("tasks.externalResources227d9d")} />
           <div className="space-y-0">
             {externalReference ? (
               <>
                 <InfoItem
                   label="UCSC Genome Browser"
-                  value={`查看（${externalReference}）`}
+                  value={t("tasks.view7ea73e", {p0: String(externalReference)})}
                   link={ucscRegionURL(externalReference, variant.chromosome, variant.startPosition, variant.endPosition)}
                 />
                 <InfoItem
@@ -263,7 +271,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
                 />
               </>
             ) : (
-              <InfoItem label="外部资源" value="未提供任务参考版本" />
+              <InfoItem label={t("tasks.externalResources227d9d")} value="未提供任务参考版本" />
             )}
             {isExon && (
               <InfoItem
@@ -277,29 +285,29 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           </section>
           <section hidden={section !== 'assessment'} >
           {/* 置顶状态 */}
-          <SectionTitle icon={FileText} title="置顶状态" />
+          <SectionTitle icon={FileText} title={t("tasks.pinStatus129a6b")} />
           <div className="space-y-0">
             <InfoItem
-              label="置顶状态"
+              label={t("tasks.pinStatus129a6b")}
               value={variant.pinned ? (
-                <Tag variant="success">已置顶</Tag>
+                <Tag variant="success">{t("tasks.pinnedd7d970")}</Tag>
               ) : (
-                <Tag variant="neutral">未置顶</Tag>
+                <Tag variant="neutral">{t("tasks.notPinned9065cc")}</Tag>
               )}
             />
 
             <InfoItem
-              label="回报状态"
+              label={t("tasks.reportStatus86bba4")}
               value={variant.reported ? (
-                <Tag variant="info">已回报</Tag>
+                <Tag variant="info">{t("tasks.reported6fb7a5")}</Tag>
               ) : (
-                <Tag variant="neutral">未回报</Tag>
+                <Tag variant="neutral">{t("tasks.notReporteda438d1")}</Tag>
               )}
             />
             {variant.reported && variant.reportedBy && (
               <>
-                <InfoItem label="回报人" value={variant.reportedBy} />
-                <InfoItem label="回报时间" value={variant.reportedAt} />
+                <InfoItem label={t("tasks.reportedBycc3bc9")} value={variant.reportedBy} />
+                <InfoItem label={t("tasks.reportedAt741a21")} value={variant.reportedAt} />
               </>
             )}
           </div>

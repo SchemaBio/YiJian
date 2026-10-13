@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -35,6 +42,7 @@ export function SNVIndelTab({
   filterState: externalFilterState,
   onFilterChange
 }: SNVIndelTabProps) {
+  const t = useText();
   const tableView = useTableView();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<SNVIndel> | null>(null);
@@ -99,11 +107,11 @@ export function SNVIndelTab({
 		setOperationError(null);
 		void pinVariant(taskId, 'snv-indel', id, checked).catch(cause => {
 			setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '置顶状态保存失败');
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSavePinStatus87ecc4"));
 		}).finally(() => setPendingVariants(previous => {
 			const next = new Set(previous); next.delete(id); return next;
 		}));
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 处理回报状态变更
   const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
@@ -115,11 +123,11 @@ export function SNVIndelTab({
 		setOperationError(null);
 		void reportVariant(taskId, 'snv-indel', id, checked).catch(cause => {
 			setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? cause.message : '回报标记保存失败');
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSaveReportSelection594b1f"));
 		}).finally(() => setPendingVariants(previous => {
 			const next = new Set(previous); next.delete(id); return next;
 		}));
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: SNVIndel) => {
@@ -139,7 +147,7 @@ export function SNVIndelTab({
   // 加载基因列表
   React.useEffect(() => {
     async function loadGeneLists() {
-      try{const lists=await getGeneLists();setGeneLists(lists)}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}
+      try{const lists=await getGeneLists();setGeneLists(lists)}catch(e){setRequestError(e instanceof Error ? errorText(e, t):t("tasks.unableToLoadGeneListsa25a82"))}
     }
     loadGeneLists();
   }, []);
@@ -154,7 +162,7 @@ export function SNVIndelTab({
 			const data = await getSNVIndels(taskId, filterState, controller.signal);
 			if (!controller.signal.aborted) setResult(data);
 		} catch (cause) {
-			if (!controller.signal.aborted) setRequestError(cause instanceof Error ? cause.message : '无法加载 SNP / InDel 结果');
+			if (!controller.signal.aborted) setRequestError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToLoadSnpIndelResultsbf689c"));
 		} finally {
 			if (!controller.signal.aborted) setLoading(false);
 		}
@@ -279,7 +287,7 @@ export function SNVIndelTab({
     },
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       accessor: (row) => <GeneLinks genes={row.gene} annotationValues={row.annotationValues} />,
       width: 100,
       align: 'center',
@@ -287,7 +295,7 @@ export function SNVIndelTab({
     },
     {
       id: 'position',
-      header: '变异位置',
+      header: t("tasks.variantPosition9e0b4c"),
       accessor: (row) => (
         <PositionLink
           chromosome={row.chromosome}
@@ -301,7 +309,7 @@ export function SNVIndelTab({
     },
     {
       id: 'change',
-      header: '参考/变异',
+      header: t("tasks.referenceAlternateabcf6a"),
       accessor: (row) => <span className="block w-[116px] max-w-full whitespace-normal break-all text-center leading-5">{row.ref}&gt;{row.alt}</span>,
       width: 140,
       minWidth: 140,
@@ -310,22 +318,22 @@ export function SNVIndelTab({
     },
     {
       id: 'variantType',
-      header: '变异类型',
+      header: t("history.variantType6c1aef"),
       accessor: (row) => {
-        const typeLabels = { SNV: 'SNP', Insertion: '插入', Deletion: '缺失', Complex: '复杂' };
+        const typeLabels = { SNV: 'SNP', Insertion: t("tasks.insertion022bf3"), Deletion: t("history.deletion2fe9b7"), Complex: t("tasks.complex2415d7") };
         const variants: Record<SNVIndel['variantType'], 'neutral' | 'info' | 'warning'> = { SNV: 'neutral', Insertion: 'info', Deletion: 'warning', Complex: 'neutral' };
         return row.variantType === 'SNV'
           ? <span className="inline-flex rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200">SNP</span>
-          : <Tag variant={variants[row.variantType]}>{typeLabels[row.variantType]}</Tag>;
+          : <Tag variant={variants[row.variantType]}>{translateUI(typeLabels[row.variantType], t)}</Tag>;
       },
       width: 80,
       align: 'center',
     },
     {
       id: 'zygosity',
-      header: '杂合性',
+      header: t("tasks.zygosity50c147"),
       accessor: (row) => {
-        const labels = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合', Unknown: '未提供' };
+        const labels = { Heterozygous: t("tasks.heterozygous0eee7c"), Homozygous: t("tasks.homozygousf691c3"), Hemizygous: t("tasks.hemizygous75566a"), Unknown: t("history.notProvided071fb2") };
         const colors = {
           Heterozygous: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
           Homozygous: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200',
@@ -340,42 +348,42 @@ export function SNVIndelTab({
     {
       id: 'alleleFrequency',
       header: 'VAF',
-      accessor: (row) => <span className="font-mono tabular-nums text-accent-fg">{(row.alleleFrequency * 100).toFixed(1)}%</span>,
+      accessor: (row) => <span className="font-mono tabular-nums text-accent-fg">{formatNumericString((row.alleleFrequency * 100).toFixed(1), t.locale)}%</span>,
       width: 80,
       align: 'center',
       sortable: true,
     },
     {
       id: 'depth',
-      header: '深度',
+      header: t("tasks.deptha1128a"),
       accessor: (row) => `${row.depth}X`,
       width: 70,
       align: 'center',
       sortable: true,
     },
     {
-      id: 'gnomadAF', header: 'gnomAD 总体 AF',
+      id: 'gnomadAF', header: t("tasks.gnomadOverallAf6abfe1"),
       accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF', row.gnomadAF)),
       width: 130, align: 'center', sortable: true,
     },
     {
-      id: 'gnomadEasAF', header: 'gnomAD 东亚 AF',
+      id: 'gnomadEasAF', header: t("tasks.gnomadEastAsianAfe9255d"),
       accessor: row => formatPopulationFrequency(sourceAnnotation(row, 'GnomAD_AF_EAS', row.gnomadEasAF)),
       width: 130, align: 'center', sortable: true,
     },
     {
-      id: 'clinvarSignificance', header: 'ClinVar 临床意义',
+      id: 'clinvarSignificance', header: t("tasks.clinvarClinicalSignificance8d0200"),
       accessor: row => <ClinVarBadge value={sourceAnnotation(row, 'ClinVar_Sig', row.clinvarSignificance)} />,
       width: 240, minWidth: 200, maxWidth: 360, sortable: true,
     },
     {
       id: 'acmgClassification',
-      header: 'ACMG 评定',
+      header: t("tasks.acmgAssessment6a7cd5"),
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
           return config
-          ? <HoverHint content={row.activeAcmgVersion==='svcv4'?'SVC v4.0 草案／非权威参考评定':row.acmgAssessmentSource === 'manual_override' ? '人工覆写分类' : row.acmgAssessmentSource === 'manual_evidence' ? '根据已保存的 ACMG 证据计算' : `${row.automaticAcmg?.classificationBasis && row.automaticAcmg.classificationBasis !== 'acmg_evidence' ? '快速初评（人工复核）' : '自动初评'}${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span className="inline-flex flex-col items-center gap-1"><Tag variant={config.variant} className="justify-center">{row.activeAcmgVersion==='svcv4'&&row.acmgVusSubclass?row.acmgVusSubclass:config.label}</Tag><span className="text-xs text-fg-muted">{row.activeAcmgVersion==='svcv4'?'v4.0 试行':row.acmgAssessmentSource==='automatic'&&row.automaticAcmg?.classificationBasis&&row.automaticAcmg.classificationBasis!=='acmg_evidence'?'快速初评':'现版'}</span></span></HoverHint>
-          : <HoverHint content={row.automaticAcmg?.pending?.join('；') || '当前数据没有足够的自动评估证据'}><span ><Tag variant="neutral" className="w-20 justify-center">证据不足</Tag></span></HoverHint>;
+          ? <HoverHint content={row.activeAcmgVersion==='svcv4'?t("tasks.svcVDraftNonauthoritativeReferenceAssessment3fe575"):row.acmgAssessmentSource === 'manual_override' ? t("tasks.manualClassificationOverride467829") : row.acmgAssessmentSource === 'manual_evidence' ? t("tasks.calculatedFromSavedAcmgEvidence1b9d08") : `${row.automaticAcmg?.classificationBasis && row.automaticAcmg.classificationBasis !== 'acmg_evidence' ? t("tasks.quickAssessmentManualReview10d3bd") : t("tasks.automaticInitialAssessmentecbbfb")}${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span className="inline-flex flex-col items-center gap-1"><Tag variant={config.variant} className="justify-center">{translateUI(row.activeAcmgVersion==='svcv4'&&row.acmgVusSubclass?row.acmgVusSubclass:config.label, t)}</Tag><span className="text-xs text-fg-muted">{row.activeAcmgVersion==='svcv4'?t("tasks.vExperimental7c90f7"):row.acmgAssessmentSource==='automatic'&&row.automaticAcmg?.classificationBasis&&row.automaticAcmg.classificationBasis!=='acmg_evidence'?t("tasks.quickAssessment6445dc"):t("tasks.currentEdition7b034e")}</span></span></HoverHint>
+          : <HoverHint content={row.automaticAcmg?.pending?.join('；') || t("tasks.insufficientEvidenceForAutomaticAssessmentef8b34")}><span ><Tag variant="neutral" className="w-20 justify-center">{t("tasks.insufficientEvidence70568c")}</Tag></span></HoverHint>;
       },
       width: 100,
       align: 'center',
@@ -383,28 +391,28 @@ export function SNVIndelTab({
     },
     {
       id: 'transcript',
-      header: '转录本',
+      header: t("history.transcript96b6d7"),
       accessor: 'transcript',
       width: 130,
       align: 'center',
     },
     {
       id: 'transcriptLocation',
-      header: '外显子/内含子',
+      header: t("tasks.exonIntron580be3"),
       accessor: row => transcriptLocation(row).label,
       width: 130,
       align: 'center',
     },
     {
       id: 'hgvsc',
-      header: 'cDNA变化',
+      header: t("tasks.cdnaChange1ae093"),
       accessor: 'hgvsc',
       width: 150,
       align: 'center',
     },
     {
       id: 'hgvsp',
-      header: '蛋白质变化',
+      header: t("tasks.proteinChange085fb7"),
       accessor: 'hgvsp',
       width: 150,
       align: 'center',
@@ -417,7 +425,7 @@ export function SNVIndelTab({
   return (
     <div data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'snv-indel')} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={columns} view={tableView} />} />
+      <ParquetColumnFilterBar taskId={taskId} table="snv-indel" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'snv-indel', t)} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={localizeDisplay(columns, t)} view={tableView} />} />
       {/* 工具栏 */}
       <div className="yj-variant-controls-row">
         <div className="flex flex-wrap items-center gap-2">
@@ -425,7 +433,7 @@ export function SNVIndelTab({
           <div className="w-52 shrink-0">
             <Input
               className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
-              placeholder="搜索基因、位置..."
+              placeholder={t("tasks.searchGeneOrPosition732ec5")}
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -440,7 +448,7 @@ export function SNVIndelTab({
               onChange={(e) => handleGeneListFilter(e.target.value)}
               className="pl-9 pr-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default min-w-[180px] appearance-none cursor-pointer"
             >
-              <option value="">全部基因</option>
+              <option value="">{t("tasks.allGenes2c428c")}</option>
               {geneLists.map((list) => (
                 <option key={list.id} value={list.id}>
                   {list.name} ({list.geneCount})
@@ -449,7 +457,7 @@ export function SNVIndelTab({
             </select>
           </div>
 
-          <ActionButton action="refresh" iconOnly aria-label="刷新基因列表" variant="ghost" className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error('所选基因列表已删除，请清除筛选');setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error?e.message:'加载基因列表失败')}}}>刷新基因列表</ActionButton>
+          <ActionButton action="refresh" iconOnly aria-label={t("tasks.refreshGeneLists40c56c")} variant="ghost" className="yj-tool-button shrink-0" type="button" onClick={async()=>{try{const lists=await getGeneLists();setGeneLists(lists);const selected=lists.find(x=>x.id===filterState.geneListId);if(filterState.geneListId&&!selected)throw new Error(t("tasks.selectedGeneListWasDeletedClearTheb1908d"));setFilterState({...filterState,geneListRevision:selected?.revision,page:1})}catch(e){setRequestError(e instanceof Error ? errorText(e, t):t("tasks.unableToLoadGeneListsa25a82"))}}}>{t("tasks.refreshGeneLists40c56c")}</ActionButton>
 
           {/* ACMG筛选 */}
           <select
@@ -457,9 +465,9 @@ export function SNVIndelTab({
             onChange={(e) => handleACMGFilter(e.target.value as ACMGClassification | '')}
             className="px-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default"
           >
-            <option value="">ACMG 评定（全部）</option>
+            <option value="">{t("tasks.acmgAssessmentAll2ecd48")}</option>
             {Object.entries(ACMG_CONFIG).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
+              <option key={key} value={key}>{translateUI(config.label, t)}</option>
             ))}
           </select>
         </div>
@@ -468,10 +476,10 @@ export function SNVIndelTab({
         <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted">
           {selectedGeneList && (
             <span className="text-accent-fg">
-              已筛选: {selectedGeneList.name}
+              {t("tasks.filtered27ef08")}{selectedGeneList.name}
             </span>
           )}
-      <span>共 {result?.total ?? 0} 条 SNP/InDel</span>
+      <span>{t("history.total497064")}{result?.total ?? 0} {t("tasks.snpIndelVariants5dd28f")}</span>
         </div>
       </div>
       </div>
@@ -490,7 +498,7 @@ export function SNVIndelTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
-            columns={filterableColumns(tableView.apply(columns), result, filterState, setFilterState, 'snv-indel')}
+            columns={localizeDisplay(filterableColumns(tableView.apply(columns), result, filterState, setFilterState, 'snv-indel', t), t)}
             rowKey="id"
             striped
             density={tableView.density}
@@ -505,31 +513,27 @@ export function SNVIndelTab({
           {totalPages > 1 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
-                第 {filterState.page} / {totalPages} 页
-              </div>
+                {t("history.pagef49534")}{filterState.page} / {totalPages} {t("history.labelaf8438")}</div>
               <div className="flex items-center gap-2">
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
-                  上一页
-                </ActionButton>
+                  {t("history.previousb41561")}</ActionButton>
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
-                  下一页
-                </ActionButton>
+                  {t("history.next67a246")}</ActionButton>
               </div>
             </div>
           )}
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无SNP/InDel变异数据
-        </div>
+          {t("tasks.noSnpIndelVariantData798100")}</div>
       )}
 
       {/* IGV 查看器 */}

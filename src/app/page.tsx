@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,6 +11,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
  * Root page - redirects based on auth status
  */
 export default function HomePage() {
+  const t = useText();
   const router = useRouter();
   const { isLoading, isAuthenticated } = useAuth();
 
@@ -23,7 +27,7 @@ export default function HomePage() {
   // 显示加载状态
   return (
     <div className="yj-modern yj-public-shell flex items-center justify-center">
-      <div className="yj-public-spinner" role="status" aria-label="正在加载" />
+      <div className="yj-public-spinner" role="status" aria-label={t("common.loading3667cb")} />
     </div>
   );
 }

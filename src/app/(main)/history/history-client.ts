@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import { api } from '@/lib/api';
 import type { HistoryTask, HistoryType, ReportRow } from './history-engine';
 
@@ -23,12 +24,12 @@ export class HistoryWorkerClient {
   private requests = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   constructor() {
     this.worker = new Worker(new URL('./history.worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = (event: MessageEvent<{ id: number; result: unknown; error?: string }>) => {
+    this.worker.onmessage = (event: MessageEvent<{ id: number; result: unknown; error?: string; errorKey?: string }>) => {
       const request = this.requests.get(event.data.id); if (!request) return;
       clearTimeout(request.timer); this.requests.delete(event.data.id);
-      if (event.data.error) request.reject(new Error(event.data.error)); else request.resolve(event.data.result);
+      if (event.data.error) request.reject(event.data.errorKey ? new LocalizedError(event.data.errorKey) : new Error(event.data.error)); else request.resolve(event.data.result);
     };
-    this.worker.onerror = () => this.fail(new Error('浏览器统计组件加载失败，请刷新页面'));
+    this.worker.onerror = () => this.fail(new LocalizedError("display.browserStatisticsFailedToLoadRefreshThe986a37"));
   }
   private fail(error: Error) {
     this.failure = error;
@@ -39,10 +40,10 @@ export class HistoryWorkerClient {
     if (this.failure) return Promise.reject(this.failure);
     const id = ++this.sequence;
     return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => { this.requests.delete(id); reject(new Error('浏览器统计超时，请重新同步')); }, 30000);
+      const timer = setTimeout(() => { this.requests.delete(id); reject(new LocalizedError("display.browserStatisticsTimedOutSynchronizeAgain10233e")); }, 30000);
       this.requests.set(id, { resolve: value => resolve(value as T), reject, timer });
       this.worker.postMessage({ ...message, id });
     });
   }
-  dispose() { this.worker.terminate(); this.fail(new Error('历史页面已关闭')); }
+  dispose() { this.worker.terminate(); this.fail(new LocalizedError("display.historyPageClosed616cf7")); }
 }

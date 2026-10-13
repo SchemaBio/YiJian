@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Button as KitButton, type ButtonProps } from '@schema/ui-kit';
@@ -40,12 +43,13 @@ export interface IconActionButtonProps extends Omit<ActionButtonProps, 'iconOnly
   hint?: React.ReactNode;
 }
 export const IconActionButton = React.forwardRef<HTMLButtonElement, IconActionButtonProps>(function IconActionButton({ label, hint, ...props }, ref) {
+  const t = useText();
   const descriptionID = React.useId();
   // Keep the structure stable when loading: focus, refs and popover anchors survive.
   // The wrapper exposes disabled reasons on hover; the description is also readable
   // without requiring a screen-reader user to open the visual tooltip.
-  return <HoverHint content={hint ?? label}><span className="yj-icon-button-hint">
-    <ActionButton {...props} ref={ref} iconOnly aria-label={label} aria-describedby={[props['aria-describedby'], descriptionID].filter(Boolean).join(' ')} />
+  return <HoverHint content={translateUI(hint ?? label, t)}><span className="yj-icon-button-hint">
+    <ActionButton {...props} ref={ref} iconOnly aria-label={translateUI(label, t)} aria-describedby={[props['aria-describedby'], descriptionID].filter(Boolean).join(' ')} />
     <span id={descriptionID} className="sr-only">{hint ?? label}</span>
   </span></HoverHint>;
 });

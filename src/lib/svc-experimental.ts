@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 import type { SVCv4Assessment } from './svcv4';
 export const SVC_EXPERIMENTAL_COMMIT = 'ef66faff51a265fef7b5c4e6439905f3aa540c46';
 export function svcExperimentalInput(draft: SVCv4Assessment): Record<string, unknown> {
@@ -16,6 +17,6 @@ export function svcExperimentalInput(draft: SVCv4Assessment): Record<string, unk
 // Upstream spans count Unicode characters; browser selections count UTF-16.
 export function unicodeSpanToUTF16(text: string, start: number, end: number): [number, number] {
   const points = Array.from(text);
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > points.length) throw new Error('无效的文本跨度');
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > points.length) throw new LocalizedError("display.invalidTextSpan0f3165");
   return [points.slice(0, start).join('').length, points.slice(0, end).join('').length];
 }

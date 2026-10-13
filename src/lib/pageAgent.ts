@@ -1,9 +1,13 @@
+
+import { LocalizedError } from '@/i18n/errors';
 /**
  * Page Agent Wrapper
  * LLM calls are proxied through the backend (no API key on frontend).
  */
 import type { AIConfig } from '@/types/ai';
 import { getRuntimeApiBaseUrl } from './runtime-config';
+import type { Locale } from '@/i18n/locales';
+import type { PageAgentLocale } from './page-agent-locale';
 
 let PageAgentClass: typeof import('page-agent').PageAgent | null = null;
 
@@ -48,7 +52,7 @@ function assertAIProxyRequest(input: RequestInfo | URL): void {
   const isProxyPath = requestURL.pathname === proxyPath || requestURL.pathname.startsWith(`${proxyPath}/`);
 
   if (requestURL.origin !== proxyURL.origin || !isProxyPath) {
-    throw new Error('AI proxy request blocked: unexpected destination');
+    throw new LocalizedError("interface.aiProxyRequestBlockedUnexpectedDestination52d288", undefined, "AI proxy request blocked: unexpected destination");
   }
 }
 
@@ -111,6 +115,8 @@ export class PageAgentWrapper {
   private agent: import('page-agent').PageAgent | null = null;
   private config: AIConfig;
   private initialized = false;
+  private locale: Locale = 'zh-CN';
+  private panelLocale?: PageAgentLocale;
 
   constructor(config: AIConfig) {
     this.config = config;
@@ -121,15 +127,18 @@ export class PageAgentWrapper {
 
     try {
       const PageAgent = await loadPageAgent();
+      const { PageAgentLocale } = await import('./page-agent-locale');
+      this.panelLocale = new PageAgentLocale(this.locale);
       const baseURL = getProxyBaseURL();
 
-      this.agent = new PageAgent({
+      this.agent = this.panelLocale.construct(() => new PageAgent({
         model: this.config.openaiModel || 'gpt-4o',
         baseURL,
         apiKey: '', // real LLM key is added by Squid; frontend authenticates via cookies
         customFetch: squidAIProxyFetch,
         language: 'zh-CN',
-      });
+      }));
+      this.panelLocale.attach(this.agent.panel.wrapper);
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize PageAgent:', error);
@@ -137,12 +146,17 @@ export class PageAgentWrapper {
     }
   }
 
-  async execute(command: string): Promise<{ success: boolean; result?: string; error?: string }> {
+  setLocale(locale: Locale): void {
+    this.locale = locale;
+    this.panelLocale?.setLocale(locale);
+  }
+
+  async execute(command: string): Promise<{ success: boolean; result?: string; error?: string; errorKey?: string }> {
     try {
       await this.init();
 
       if (!this.agent) {
-        return { success: false, error: 'PageAgent 未初始化' };
+        return { success: false, errorKey: 'display.pageagentNotInitialized85fc1b' };
       }
 
       const result = await this.agent.execute(command);
@@ -154,11 +168,14 @@ export class PageAgentWrapper {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       console.error('PageAgent execution error:', errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, error: errorMessage,
+        errorKey: error instanceof LocalizedError ? error.messageKey : error instanceof Error ? undefined : 'display.unknownError5f76ed' };
     }
   }
 
   reset(): void {
+    this.panelLocale?.dispose();
+    this.agent?.panel.dispose();
     this.agent = null;
     this.initialized = false;
   }

@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { localizeDisplay } from '@/i18n/text';
+
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -42,6 +47,7 @@ const sampleTypeOptions = [
 ];
 
 export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProps) {
+  const t = useText();
   const hpoTerms = useHpoTerms(isOpen);
   const [formData, setFormData] = React.useState<NewSampleFormData>({
     internalId: '',
@@ -75,7 +81,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     setSubmitError('');
 
     if (!formData.internalId.trim()) {
-      setSubmitError('请填写内部编号');
+      setSubmitError(t("samples.enterInternalIdbb323e"));
       return;
     }
 
@@ -100,7 +106,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
       });
       setHpoSearchQuery('');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '创建样本失败，请稍后重试');
+      setSubmitError(err instanceof Error ? errorText(err, t) : t("samples.unableToCreateSampleRetryLater8a8aa1"));
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -129,17 +135,15 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && !submittingRef.current && onClose()}
-      title="新建样本"
+      title={t("samples.newSample595c27")}
       size="large"
       className="!fixed !left-1/2 !right-auto !top-1/2 !bottom-auto !m-0 !max-h-[calc(100vh-2rem)] !w-[min(920px,calc(100vw-2rem))] !max-w-[920px] !-translate-x-1/2 !-translate-y-1/2"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
-            取消
-          </Button>
-          <Button action="add" loading={submitting} loadingLabel="创建中..." variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
-            创建样本
-          </Button>
+            {t("admin.cancel4d0b46")}</Button>
+          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")} variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
+            {t("samples.createSample6b316d")}</Button>
         </>
       }
     >
@@ -153,44 +157,44 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         <section>
           <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
-            title="基本信息"
+            title={t("samples.basicInformationb122f8")}
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号 *</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.internalIdadcd0f")}</label>
               <Input
                 value={formData.internalId}
                 onChange={(e) => handleChange('internalId', e.target.value)}
-                placeholder="如：INT-001"
+                placeholder={t("samples.forExampleInt00b6e2")}
                 required
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">批次</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.batch6b2cf2")}</label>
               <Input
                 value={formData.batch}
                 onChange={(e) => handleChange('batch', e.target.value)}
-                placeholder="如：BATCH-2026-001"
+                placeholder={t("samples.forExampleBatch5e3179")}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">样本类型 *</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.sampleType74e156")}</label>
               <Select
                 value={formData.sampleType}
                 onChange={(value) => handleChange('sampleType', Array.isArray(value) ? value[0] : value)}
-                options={sampleTypeOptions}
+                options={localizeDisplay(sampleTypeOptions, t)}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">性别</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.sexfe8aa4")}</label>
               <Select
                 value={formData.gender}
                 onChange={(value) => handleChange('gender', Array.isArray(value) ? value[0] : value)}
-                options={genderOptions}
+                options={localizeDisplay(genderOptions, t)}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">年龄</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.age28c02e")}</label>
               <Input
                 type="number"
                 min="0"
@@ -200,7 +204,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                   ...prev,
                   age: e.target.value ? parseInt(e.target.value, 10) : undefined
                 }))}
-                placeholder="如：35"
+                placeholder={t("samples.forExamplec25a84")}
               />
             </div>
           </div>
@@ -209,14 +213,14 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<Stethoscope className="h-4 w-4" />}
-            title="临床信息"
+            title={t("samples.clinicalInformation88e3af")}
           />
           <div className="space-y-4">
             <AIDiagnosisField key={`new-${isOpen}`} value={formData.clinicalDiagnosis}
               disabled={submitting} onChange={value => handleChange('clinicalDiagnosis', value)}
               onTerms={terms => setFormData(previous => ({ ...previous, hpoTerms: [...previous.hpoTerms, ...terms.filter(term => !previous.hpoTerms.some(old => old.id === term.id))] }))} />
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">HPO 表型术语</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.hpoPhenotypeTermsc1115e")}</label>
               {formData.hpoTerms.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.hpoTerms.map((term) => (
@@ -230,7 +234,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
                         type="button"
                         onClick={() => removeHpoTerm(term.id)}
                         className="ml-1 text-accent-fg hover:text-danger-fg"
-                        aria-label={`移除 ${term.name}`}
+                        aria-label={t("samples.remove40a0d2", {p0: String(term.name)})}
                        />
                     </div>
                   ))}
@@ -238,7 +242,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
               )}
               <div className="relative">
                 <Input
-                  placeholder="搜索HPO术语（如：HP:0001250 或 癫痫）"
+                  placeholder={t("samples.searchHpoTermsEGHpOr746be4")}
                   value={hpoSearchQuery}
                   onChange={(e) => {
                     setHpoSearchQuery(e.target.value);
@@ -270,12 +274,12 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<FileText className="h-4 w-4" />}
-            title="备注"
+            title={t("admin.notese03614")}
           />
           <TextArea
             value={formData.remark}
             onChange={(e) => handleChange('remark', e.target.value)}
-            placeholder="请输入备注信息"
+            placeholder={t("samples.enterNotesacc063")}
             rows={2}
           />
         </section>

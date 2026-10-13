@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
@@ -87,7 +90,7 @@ const defaultSubPageMap: Record<string, string> = {
 /**
  * Generate breadcrumbs from pathname
  */
-function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
+function getBreadcrumbs(pathname: string, t: TextTranslator = chineseText): BreadcrumbItem[] {
   const segments = pathname.split('/').filter(Boolean);
   if (segments.length === 0) return [];
 
@@ -99,18 +102,18 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     // Find label from navigation config or path label map
     const navItem = mainNavItems.find(item => item.href === `/${segment}`);
     const detailLabel = currentPath.startsWith('/tasks/') && segment !== 'new'
-      ? '任务解读'
+      ? t("common.taskInterpretation3d0bb1")
       : currentPath.startsWith('/samples/') && !pathLabelMap[segment]
-        ? '样本详情'
+        ? t("tasks.sampleDetailsb6d180")
         : undefined;
     const label = detailLabel || navItem?.label || pathLabelMap[segment] || segment;
-    items.push({ label, href: currentPath });
+    items.push({ label: t(label), href: currentPath });
   }
 
   // 如果是一级路径，添加默认子页面标签
   const defaultSubPage = defaultSubPageMap[pathname];
   if (defaultSubPage) {
-    items.push({ label: defaultSubPage });
+    items.push({ label: t(defaultSubPage) });
   }
 
   // Last item should not have href (current page)
@@ -132,6 +135,7 @@ function shouldMountAIAssistant(pathname: string, isEnabled: boolean): boolean {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const t = useText();
   const pathname = usePathname();
   const fixedTaskWorkspace = /^\/tasks\/[^/]+$/.test(pathname) || pathname === '/history';
   const { isEnabled: aiAssistantEnabled } = useAI();
@@ -161,7 +165,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [pathname]);
 
   // Generate breadcrumbs from pathname
-  const breadcrumbs = React.useMemo(() => getBreadcrumbs(pathname), [pathname]);
+  const breadcrumbs = React.useMemo(() => getBreadcrumbs(pathname, t), [pathname, t]);
 
   if (isMobile) {
     return (
@@ -169,8 +173,8 @@ export function AppShell({ children }: AppShellProps) {
         {/* Mobile Header */}
         <header className="h-14 flex items-center justify-between px-4 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)]">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="贻鉴" width={30} height={30} />
-            <span className="font-semibold text-fg-default">贻鉴</span>
+            <Image src="/logo.svg" alt={t("common.appName")} width={30} height={30} />
+            <span className="font-semibold text-fg-default">{t("common.appName")}</span>
           </div>
           <div className="flex items-center gap-1">
             <BillingDisplay />
@@ -178,7 +182,7 @@ export function AppShell({ children }: AppShellProps) {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-md hover:bg-canvas-inset"
-              aria-label={mobileMenuOpen ? '关闭菜单' : '打开菜单'}
+              aria-label={mobileMenuOpen ? t("common.closeMenu82baef") : t("common.openMenu065c3a")}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -210,7 +214,7 @@ export function AppShell({ children }: AppShellProps) {
         <header className="h-14 flex items-center justify-between px-5 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] shrink-0">
           {/* Left: Breadcrumbs */}
           <div className="flex-1 min-w-0">
-            {breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} />}
+            {breadcrumbs.length > 0 && <Breadcrumb items={localizeDisplay(breadcrumbs, t)} />}
           </div>
 
           {/* Right: Settings + About */}
@@ -220,21 +224,21 @@ export function AppShell({ children }: AppShellProps) {
             <Link
               href="/settings"
               className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
-              aria-label="系统设置"
+              aria-label={t("common.systemSettingse976ea")}
             >
               <Settings className="w-5 h-5" />
             </Link>
             <Link
               href="/about"
               className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
-              aria-label="关于"
+              aria-label={t("common.aboutbed172")}
             >
               <Info className="w-5 h-5" />
             </Link>
             <Link
               href="/privacy"
               className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
-              aria-label="隐私协议"
+              aria-label={t("common.privacyNotice9877b3")}
             >
               <Shield className="w-5 h-5" />
             </Link>

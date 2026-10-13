@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleListCSV } from './sample-export';
 import type { Sample } from '@/app/(main)/samples/types';
+import { locales } from '@/i18n/locales';
 
 const sample: Sample = {
   id: 'sample-1', internalId: '编号甲', gender: 'female', age: 0, sampleType: '全血', batch: '批次1',
@@ -10,6 +11,13 @@ const sample: Sample = {
 };
 
 describe('sample list CSV', () => {
+  it.each(locales)('localizes %s headers while preserving all business rows', locale => {
+    const baseline = sampleListCSV([sample]);
+    const localized = sampleListCSV([sample], locale);
+    expect(localized.slice(localized.indexOf('\r\n'))).toBe(baseline.slice(baseline.indexOf('\r\n')));
+    if (locale === 'en') expect(localized.split('\r\n')[0]).toContain('Sample ID');
+    if (locale === 'es-419') expect(localized.split('\r\n')[0]).toContain('muestra');
+  });
   it('preserves Chinese, multiline fields, zero age and multi-value HPO terms', () => {
     const csv = sampleListCSV([sample]);
     expect(csv.startsWith('\ufeff')).toBe(true);

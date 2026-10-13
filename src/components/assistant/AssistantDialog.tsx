@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 
 import { HoverHint } from '@/components/shared/HoverHint';
@@ -21,6 +24,7 @@ interface AssistantDialogProps {
  * 展开后显示聊天界面
  */
 export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
+  const t = useText();
   const { isEnabled, isConfigured, clearHistory } = useAI();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const dialogRef = React.useRef<HTMLDivElement>(null);
@@ -61,7 +65,7 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
 
   // 清空历史
   const handleClearHistory = () => {
-    if (confirm('确定要清空对话历史吗？')) {
+    if (confirm(t("assistance.clearConversationHistory25fd8c"))) {
       clearHistory();
     }
   };
@@ -83,10 +87,10 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
-          <img src="/mascot.png" alt="小墨" className="w-5 h-5 object-contain" />
-          <span className="font-medium text-fg-default">小墨</span>
+          <img src="/mascot.png" alt={t("assistance.xiaomo31ed60")} className="w-5 h-5 object-contain" />
+          <span className="font-medium text-fg-default">{t("assistance.xiaomo31ed60")}</span>
         </div>
-        <IconActionButton label="关闭" action="close" variant="ghost"
+        <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
           onClick={onClose}
           className="p-1 rounded hover:bg-canvas-subtle text-fg-muted hover:text-fg-default transition-colors"
 
@@ -100,8 +104,7 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
           <div className="flex flex-col items-center justify-center h-full p-4 text-center">
             <AlertCircle className="w-8 h-8 text-fg-muted mb-2" />
             <p className="text-sm text-fg-muted mb-4">
-              请先配置 AI 服务
-            </p>
+              {t("assistance.configureTheAiServiceFirst4a3222")}</p>
             {!isSaaS && (
               <Link
                 href="/admin"
@@ -109,17 +112,15 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
                 className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent-emphasis text-white hover:opacity-90 transition-colors"
               >
                 <Settings className="w-4 h-4" />
-                前往配置
-              </Link>
+                {t("assistance.configure776cc3")}</Link>
             )}
           </div>
         ) : !isEnabled ? (
           // 已禁用提示
           <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-            <img src="/mascot.png" alt="小墨" className="w-8 h-8 object-contain mb-2" />
+            <img src="/mascot.png" alt={t("assistance.xiaomo31ed60")} className="w-8 h-8 object-contain mb-2" />
             <p className="text-sm text-fg-muted mb-4">
-              小墨已禁用
-            </p>
+              {t("assistance.xiaomoDisabled8ff96c")}</p>
             {!isSaaS && (
               <Link
                 href="/admin"
@@ -127,8 +128,7 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
                 className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-500 text-white hover:opacity-80 transition-colors"
               >
                 <Settings className="w-4 h-4" />
-                前往设置
-              </Link>
+                {t("assistance.goToSettings9ea2c9")}</Link>
             )}
           </div>
         ) : (
@@ -141,16 +141,14 @@ export function AssistantDialog({ onClose, isMobile }: AssistantDialogProps) {
       {isConfigured && isEnabled && (
         <div className="flex items-center justify-between px-4 py-2 border-t border-border shrink-0">
           <span className="text-xs text-fg-muted">
-            输入自然语言指令控制页面
-          </span>
-          <HoverHint content="清空历史"><ActionButton action="delete" variant="ghost"
+            {t("assistance.enterNaturalLanguageInstructionsToControlThec3e72d")}</span>
+          <HoverHint content={t("assistance.clearHistory578bbc")}><ActionButton action="delete" variant="ghost"
             onClick={handleClearHistory}
             className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-subtle rounded transition-colors"
 
           >
 
-            清空
-          </ActionButton></HoverHint>
+            {t("assistance.clear84fcd7")}</ActionButton></HoverHint>
         </div>
       )}
     </div>

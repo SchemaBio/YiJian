@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -37,6 +42,7 @@ export function STRTab({
   filterState: externalFilterState,
   onFilterChange
 }: STRTabProps) {
+  const t = useText();
   const [igvState, setIGVState] = React.useState<{ chromosome: string; position: number; endPosition?: number } | null>(null);
   React.useEffect(() => setIGVState(null), [taskId]);
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
@@ -66,7 +72,7 @@ export function STRTab({
         if (!controller.signal.aborted) setResult(data);
       } catch (error) {
         if (!controller.signal.aborted) {
-          setRequestError(error instanceof Error ? error.message : '无法加载动态突变结果');
+          setRequestError(error instanceof Error ? errorText(error, t) : t("tasks.unableToLoadRepeatExpansionResultscec5d5"));
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -111,7 +117,7 @@ export function STRTab({
       await pinVariant(taskId, 'str', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '更新置顶状态失败');
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToUpdatePinStatus77c5f1"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -119,7 +125,7 @@ export function STRTab({
         return next;
       });
     }
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 处理回报状态变更
   const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
@@ -133,7 +139,7 @@ export function STRTab({
       await reportVariant(taskId, 'str', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '标记回报失败');
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForReport8d3bd6"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -141,7 +147,7 @@ export function STRTab({
         return next;
       });
     }
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: STR) => {
@@ -185,46 +191,46 @@ export function STRTab({
     },
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       accessor: (row) => <GeneLinks genes={row.gene} />,
       width: 100,
       sortable: true,
     },
     {
       id: 'locus',
-      header: '位点',
+      header: t("history.locus6a6cc9"),
       accessor: row => {
         const coordinates = parseSTRLocus(row.locus);
-        return coordinates ? <PositionLink chromosome={coordinates.chromosome} position={coordinates.position} label={row.locus} onClick={() => setIGVState(coordinates)} /> : row.locus;
+        return coordinates ? <PositionLink chromosome={coordinates.chromosome} position={coordinates.position} label={translateUI(row.locus, t)} onClick={() => setIGVState(coordinates)} /> : row.locus;
       },
       width: 100,
       sortable: true,
     },
     {
       id: 'repeatUnit',
-      header: '重复单元',
+      header: t("history.repeatUnit61e6fe"),
       accessor: 'repeatUnit',
       width: 100,
     },
     {
       id: 'repeatCount',
-      header: '重复次数',
+      header: t("history.repeatCountbfcb1f"),
       accessor: (row) => row.repeatCount,
       width: 100,
       sortable: true,
     },
     {
       id: 'normalRange',
-      header: '正常范围',
+      header: t("history.normalRangecc88cc"),
       accessor: (row) => `${row.normalRangeMin}-${row.normalRangeMax}`,
       width: 100,
     },
     {
       id: 'status',
-      header: '状态',
+      header: t("admin.status62e951"),
       accessor: (row) => {
         const config = STR_STATUS_CONFIG[row.status];
-        return <Tag variant={config.variant}>{config.label}</Tag>;
+        return <Tag variant={config.variant}>{translateUI(config.label, t)}</Tag>;
       },
       width: 100,
       sortable: true,
@@ -236,13 +242,13 @@ export function STRTab({
   return (
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="str" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'str')} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="str" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'str', t)} state={filterState} onChange={setFilterState} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
               className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
-              placeholder="搜索基因、位点..."
+              placeholder={t("tasks.searchGenesOrLoci3f8752")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -256,15 +262,15 @@ export function STRTab({
             onChange={(e) => handleStatusFilter(e.target.value)}
             className="px-3 py-1.5 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default"
           >
-            <option value="">全部状态</option>
+            <option value="">{t("tasks.allStatuses1a4c26")}</option>
             {Object.entries(STR_STATUS_CONFIG).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
+              <option key={key} value={key}>{translateUI(config.label, t)}</option>
             ))}
           </select>
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-fg-muted">
-          <span>共 {result?.total ?? 0} 条动态突变</span>
+          <span>{t("history.total497064")}{result?.total ?? 0} {t("tasks.repeatExpansions368fd0")}</span>
         </div>
       </div>
       </div>
@@ -272,7 +278,7 @@ export function STRTab({
       {requestError ? (
         <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
           {requestError}
-          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</ActionButton>
+          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">{t("pipeline.retrye2d53a")}</ActionButton>
         </div>
       ) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
@@ -284,7 +290,7 @@ export function STRTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
-            columns={filterableColumns(columns, result, filterState, setFilterState, 'str')}
+            columns={localizeDisplay(filterableColumns(columns, result, filterState, setFilterState, 'str', t), t)}
             rowKey="id"
             striped
             density="compact"
@@ -296,31 +302,27 @@ export function STRTab({
           {totalPages > 1 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
-                第 {filterState.page} / {totalPages} 页
-              </div>
+                {t("history.pagef49534")}{filterState.page} / {totalPages} {t("history.labelaf8438")}</div>
               <div className="flex items-center gap-2">
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
-                  上一页
-                </ActionButton>
+                  {t("history.previousb41561")}</ActionButton>
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
-                  下一页
-                </ActionButton>
+                  {t("history.next67a246")}</ActionButton>
               </div>
             </div>
           )}
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无动态突变数据
-        </div>
+          {t("tasks.noRepeatExpansionData3d089a")}</div>
       )}
       {operationError && (
         <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">

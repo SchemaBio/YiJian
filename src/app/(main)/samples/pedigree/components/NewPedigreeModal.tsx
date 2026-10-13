@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -29,6 +34,7 @@ export interface NewPedigreeFormData {
 }
 
 export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModalProps) {
+  const t = useText();
   const [formData, setFormData] = React.useState<NewPedigreeFormData>({
     internalId: '',
     clinicalDiagnosis: '',
@@ -95,7 +101,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
       });
       setSearchQuery('');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to create pedigree');
+      setSubmitError(err instanceof Error ? errorText(err, t) : t("interface.failedToCreatePedigree3cd41b"));
     } finally {
       setSubmitting(false);
     }
@@ -104,30 +110,28 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
   const selectedSample = samples.find(s => s.id === formData.probandSampleId);
 
   const genderLabels = {
-    male: '男',
-    female: '女',
-    unknown: '未知',
+    male: t("samples.male51625d"),
+    female: t("samples.female26bc84"),
+    unknown: t("samples.unknownd9c32a"),
   };
 
   return (
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && !submitting && onClose()}
-      title="新建家系"
+      title={t("samples.newPedigreeb7e3c2")}
       size="large"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
-            取消
-          </Button>
-          <Button action="add" loading={submitting} loadingLabel="创建中..."
+            {t("admin.cancel4d0b46")}</Button>
+          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")}
             variant="primary"
             onClick={(e: React.MouseEvent) => handleSubmit(e)}
             disabled={!formData.probandSampleId || submitting}
 
           >
-            创建家系
-          </Button>
+            {t("samples.createPedigreec15037")}</Button>
         </>
       }
     >
@@ -140,32 +144,32 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
         <section>
           <ModalSectionHeading
             icon={<Users className="h-4 w-4" />}
-            title="家系信息"
+            title={t("samples.pedigreeInformatione42ffe")}
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">内部编号 *</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.internalIdadcd0f")}</label>
               <Input
                 value={formData.internalId}
                 onChange={(e) => handleChange('internalId', e.target.value)}
-                placeholder="如：FAM-001"
+                placeholder={t("samples.forExampleFam899d92")}
                 required
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">批次</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.batch6b2cf2")}</label>
               <Input
                 value={formData.batch}
                 onChange={(e) => handleChange('batch', e.target.value)}
-                placeholder="如：BATCH-2024-001"
+                placeholder={t("samples.forExampleBatch7b91d9")}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-fg-muted">临床诊断</label>
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.clinicalDiagnosis654a81")}</label>
               <Input
                 value={formData.clinicalDiagnosis}
                 onChange={(e) => handleChange('clinicalDiagnosis', e.target.value)}
-                placeholder="如：遗传性心肌病待查"
+                placeholder={t("samples.forExampleSuspectedHereditaryCardiomyopathybeebec")}
               />
             </div>
           </div>
@@ -174,15 +178,15 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
-            title="先证者样本"
-            description="从当前组织的样本中选择一位先证者"
+            title={t("samples.probandSample30fd56")}
+            description={t("samples.selectAProbandFromCurrentOrganizationSamplese48deb")}
           />
           {selectedSample && (
-            <div className="mb-3 text-xs font-medium text-success-fg">已选择：{selectedSample.internalId}</div>
+            <div className="mb-3 text-xs font-medium text-success-fg">{t("samples.selected9c5605")}{selectedSample.internalId}</div>
           )}
           <div className="mb-3">
             <Input
-              placeholder="搜索样本编号、内部编号..."
+              placeholder={t("samples.searchSampleOrInternalId2cb968")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -192,8 +196,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
             {loading ? (
               <div className="flex items-center justify-center gap-2 p-8 text-center text-fg-muted">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                加载样本列表...
-              </div>
+                {t("samples.loadingSampleListf00bfb")}</div>
             ) : filteredSamples.length > 0 ? (
               <div className="divide-y divide-border-default">
                 {filteredSamples.map((sample) => {
@@ -224,7 +227,7 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
                                 ({sample.internalId})
                               </span>
                               <Tag variant={sample.gender === 'male' ? 'info' : sample.gender === 'female' ? 'warning' : 'neutral'}>
-                                {genderLabels[sample.gender]}
+                                {translateUI(genderLabels[sample.gender], t)}
                               </Tag>
                             </div>
                           </div>
@@ -236,25 +239,23 @@ export function NewPedigreeModal({ isOpen, onClose, onSubmit }: NewPedigreeModal
               </div>
             ) : (
               <div className="p-8 text-center text-fg-muted">
-                未找到匹配的样本
-              </div>
+                {t("samples.noMatchingSamplesc0d84a")}</div>
             )}
           </div>
           <p className="mt-2 text-xs text-fg-muted">
-            提示：先证者样本必须已存在于样本管理中
-          </p>
+            {t("samples.theProbandSampleMustAlreadyExistIn02b7fe")}</p>
         </section>
 
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<FileText className="h-4 w-4" />}
-            title="备注"
+            title={t("admin.notese03614")}
           />
-          <label className="mb-1.5 block text-xs font-medium text-fg-muted">备注内容</label>
+          <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("samples.notes11abee")}</label>
           <TextArea
             value={formData.remark}
             onChange={(e) => handleChange('remark', e.target.value)}
-            placeholder="请输入家系相关备注信息"
+            placeholder={t("samples.enterPedigreeNotes11f6bb")}
             rows={3}
           />
         </section>

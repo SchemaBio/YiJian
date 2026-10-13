@@ -1,4 +1,6 @@
 'use client';
+import { LocalizedError } from '@/i18n/errors';
+
 import { api, ApiError } from './api';
 import {assessmentStatus,assessTask, clearAssessments, invalidateAssessment, reassessTask} from './assessment/client';
 import type {AssessmentContext, AssessmentRow, ResultTable} from './assessment/types';
@@ -85,34 +87,34 @@ class BrowserTable {
         try {
             const url = this.info[kind];
             if (!url)
-                throw new Error('数据读取授权缺失');
+                throw new LocalizedError("display.dataReadAuthorizationMissing4cec0d");
             // COS GET signatures do not authorize HEAD. Explicit GET avoids the
             // remote filesystem's HEAD probe and downloads compressed Parquet once.
             const response = await fetch(url, { credentials: 'omit', signal: controller.signal });
             if ((response.status === 401 || response.status === 403) && retry) {
                 const next = await api.get<DatasetInfo>(this.base() + '/browser');
                 if (next.dataset.dataVersion !== this.info.dataset.dataVersion || next.dataset.executionAttemptId !== this.info.dataset.executionAttemptId)
-                    throw new Error('结果数据集已更新，请刷新页面');
+                    throw new LocalizedError("display.resultDatasetChangedRefreshThePage50375a");
                 this.info = next;
                 return this.binary(kind, false);
             }
             if (!response.ok)
-                throw new Error('对象存储读取失败，请检查授权与 CORS');
+                throw new LocalizedError("display.objectStorageReadFailedCheckAuthorizationAnd137f52");
             if (Number(response.headers.get('Content-Length')) > 128 * 1024 * 1024)
-                throw new Error('数据文件超过本地读取限额，请缩小数据集或使用内存更充足的浏览器');
+                throw new LocalizedError("display.dataFileExceedsTheLocalReadLimitbd1994");
             const buffer = await response.arrayBuffer();
             if (buffer.byteLength > 128 * 1024 * 1024)
-                throw new Error('数据文件超过本地读取限额，请缩小数据集或使用内存更充足的浏览器');
+                throw new LocalizedError("display.dataFileExceedsTheLocalReadLimitbd1994");
             if (kind === 'url') {
                 const digest = await crypto.subtle.digest('SHA-256', buffer);
                 const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
                 if (hash !== this.info.dataset.objectSha256)
-                    throw new Error('Parquet 内容校验失败');
+                    throw new LocalizedError("display.parquetContentValidationFailedb3729e");
             }
             if (kind === 'automaticUrl' && this.info.automaticEncoding === 'gzip') {
                 const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'));
                 const decoded = await new Response(stream).arrayBuffer();
-                if (decoded.byteLength > 128 * 1024 * 1024) throw new Error('自动评估基线超过本地读取限额');
+                if (decoded.byteLength > 128 * 1024 * 1024) throw new LocalizedError("display.automaticAssessmentBaselineExceedsTheLocalRead39a910");
                 return new Uint8Array(decoded);
             }
             return new Uint8Array(buffer);
@@ -179,7 +181,7 @@ class BrowserTable {
             await this.db.dropFile('result.parquet');
             const count = Number((await this.rows('SELECT count(*) AS n FROM source'))[0].n);
             if (count !== this.info.dataset.rows || (this.info.dataset.expectedRows !== undefined && count !== this.info.dataset.expectedRows))
-                throw new Error('Parquet 行数校验失败，请联系管理员恢复数据集');
+                throw new LocalizedError("display.parquetRowCountValidationFailedContactThe9f4807");
             this.raw = (await this.rows('DESCRIBE source')).map(row => String(row.column_name)).filter(s => s !== 'file_row_number' && s !== '__row_id');
             // Interval length is displayed from endpoints. Register the same
             // expression locally so its header filters the displayed value.
@@ -208,7 +210,7 @@ class BrowserTable {
             const baseline=evaluated.filter(row=>row.table===this.table);
             // Cancellation leaves the validated source and saved adjustments readable.
             // No partial automatic baseline is published or applied.
-            if(assessmentStatus(this.task)?.state!=='cancelled' && baseline.length!==count)throw new Error('全量初评与当前数据集不一致，请刷新结果');
+            if(assessmentStatus(this.task)?.state!=='cancelled' && baseline.length!==count)throw new LocalizedError("display.fullAssessmentDoesNotMatchTheCurrentf2f88b");
             for(let offset=0;offset<baseline.length;offset+=2000){
                 await this.db.registerFileBuffer('automatic.jsonl',new TextEncoder().encode(baseline.slice(offset,offset+2000).map(row=>JSON.stringify(row)).join('\n')));
                 await this.conn.query("INSERT INTO automatic SELECT rowId, assessment FROM read_json('automatic.jsonl',columns={rowId:'VARCHAR',assessment:'JSON'},format='newline_delimited')");
@@ -230,17 +232,17 @@ class BrowserTable {
     }
     private async readAssessmentRows(context:AssessmentContext,table:ResultTable,consume:(rows:AssessmentRow[])=>Promise<void>,signal:AbortSignal) {
         const combined=AbortSignal.any([signal,this.lifecycle.signal]);
-        if(context.attemptId!==this.info.dataset.executionAttemptId)throw new Error('评估执行批次不匹配');
+        if(context.attemptId!==this.info.dataset.executionAttemptId)throw new LocalizedError("display.assessmentExecutionBatchMismatchd36b23");
         let relation='source',temporary=false,assessmentFile:string|undefined;
         try {
         if(table!==this.table){
             const info=await api.get<DatasetInfo>(`/v1/tasks/${encodeURIComponent(this.task)}/results/tables/${table}/browser`,{signal:combined});
-            if(info.dataset.executionAttemptId!==context.attemptId)throw new Error('评估执行批次发生变化');
+            if(info.dataset.executionAttemptId!==context.attemptId)throw new LocalizedError("display.assessmentExecutionBatchChangedefccd8");
             const response=await fetch(info.url,{credentials:'omit',signal:combined});
-            if(!response.ok || Number(response.headers.get('Content-Length'))>128*1024*1024)throw new Error('评估数据读取失败');
-            const buffer=await response.arrayBuffer();if(buffer.byteLength>128*1024*1024)throw new Error('评估文件超过限额');
+            if(!response.ok || Number(response.headers.get('Content-Length'))>128*1024*1024)throw new LocalizedError("display.assessmentDataReadFailed63f79b");
+            const buffer=await response.arrayBuffer();if(buffer.byteLength>128*1024*1024)throw new LocalizedError("display.assessmentFileExceedsTheLimitc7b88b");
             const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer)),b=>b.toString(16).padStart(2,'0')).join('');
-            if(hash!==info.dataset.objectSha256)throw new Error('评估数据内容校验失败');
+            if(hash!==info.dataset.objectSha256)throw new LocalizedError("display.assessmentDataContentValidationFailed3689eb");
             // DuckDB retains external file/page metadata after dropFile(). A
             // reused path can read the previous dataset's compressed pages.
             assessmentFile=`assessment-${table}-${info.dataset.objectSha256}.parquet`;
@@ -249,7 +251,7 @@ class BrowserTable {
             await this.conn.query(`CREATE TEMP TABLE assessment_source AS SELECT *,sha256(${literal(seed)}||CAST(file_row_number AS VARCHAR)) AS __row_id FROM read_parquet(${literal(assessmentFile)},file_row_number=true)`);
             relation='assessment_source';temporary=true;
             const count=Number((await this.rows('SELECT count(*) AS n FROM assessment_source'))[0].n);
-            if(count!==info.dataset.rows || (info.dataset.expectedRows!==undefined&&count!==info.dataset.expectedRows))throw new Error('评估数据行数校验失败');
+            if(count!==info.dataset.rows || (info.dataset.expectedRows!==undefined&&count!==info.dataset.expectedRows))throw new LocalizedError("display.assessmentRowCountValidationFailedce2e06");
         }
             // One Arrow stream with backpressure replaces repeated full-table
             // sorts/OFFSET scans. Ordinal hashes already fix each row's identity.
@@ -262,7 +264,7 @@ class BrowserTable {
     }
     private serialize<T>(fn: () => Promise<T>): Promise<T> {
         const result = this.queue.then(() => { if (this.disposed)
-            throw new Error('本地查询已关闭'); return fn(); });
+            throw new LocalizedError("display.localQueryClosedae53f4"); return fn(); });
         this.queue = result.catch(() => undefined);
         return result;
     }
@@ -431,7 +433,7 @@ class BrowserTable {
 }
 async function session(task: string, table: string) {
     if (typeof Worker === 'undefined')
-        throw new Error('当前浏览器不支持本地分析，请使用支持 WebAssembly 和 Worker 的浏览器');
+        throw new LocalizedError("display.thisBrowserDoesNotSupportLocalAnalysis21f658");
     const key = task + '/' + table;
     let record = sessions.get(key);
     if (!record) {

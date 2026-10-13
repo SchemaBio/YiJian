@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -25,6 +30,7 @@ export function MTHistoryTab({
   filterState: externalFilterState,
   onFilterChange
 }: MTHistoryTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<HistoryTableFilterState>(DEFAULT_HISTORY_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<GroupedMTVariant> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -50,64 +56,64 @@ export function MTHistoryTab({
   const columns = [
     {
       id: 'position',
-      header: '位置',
+      header: t("history.position88c344"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => row.position,
     },
     {
       id: 'change',
-      header: '变异',
+      header: t("history.variant5fdfca"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => `${row.ref}>${row.alt}`,
     },
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => row.gene,
     },
     {
       id: 'heteroplasmy',
-      header: '异质性',
+      header: t("history.heteroplasmye05e78"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => {
         if (row.minHeteroplasmy === row.maxHeteroplasmy) {
-          return `${(row.minHeteroplasmy * 100).toFixed(1)}%`;
+          return `${formatNumericString((row.minHeteroplasmy * 100).toFixed(1), t.locale)}%`;
         }
-        return `${(row.minHeteroplasmy * 100).toFixed(1)}% - ${(row.maxHeteroplasmy * 100).toFixed(1)}%`;
+        return `${formatNumericString((row.minHeteroplasmy * 100).toFixed(1), t.locale)}% - ${formatNumericString((row.maxHeteroplasmy * 100).toFixed(1), t.locale)}%`;
       },
     },
     {
       id: 'pathogenicity',
-      header: '致病性',
+      header: t("history.pathogenicityfa6024"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => {
         const config = MT_PATHOGENICITY_CONFIG[row.pathogenicity];
-        return <Tag variant={config.variant} className="w-20 justify-center">{config.label}</Tag>;
+        return <Tag variant={config.variant} className="w-20 justify-center">{translateUI(config.label, t)}</Tag>;
       },
     },
     {
       id: 'associatedDisease',
-      header: '关联疾病',
+      header: t("history.associatedDiseasea79330"),
       width: 180,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => row.associatedDisease,
     },
     {
       id: 'haplogroup',
-      header: '单倍群',
+      header: t("history.haplogroupd4fd42"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => row.haplogroup || '-',
     },
     {
       id: 'detectionCount',
-      header: '检出次数',
+      header: t("history.detectionCountdf2067"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => (
@@ -118,14 +124,14 @@ export function MTHistoryTab({
     },
     {
       id: 'firstDetectedAt',
-      header: '首次检出',
+      header: t("history.firstDetected16ef1a"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
-      header: '最后检出',
+      header: t("history.lastDetected4d7fff"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedMTVariant) => formatLocalDate(row.lastDetectedAt),
@@ -139,12 +145,12 @@ export function MTHistoryTab({
       filterState={filterState}
       onSearch={(query) => setFilterState({ ...filterState, searchQuery: query, page: 1 })}
       onPageChange={(page) => setFilterState({ ...filterState, page })}
-      searchPlaceholder="搜索基因、疾病..."
-      statsLabel="个线粒体变异"
-      columns={columns}
+      searchPlaceholder={t("tasks.searchGeneOrDisease26b2d3")}
+      statsLabel={t("display.mitochondrialVariants6e494d")}
+      columns={localizeDisplay(columns, t)}
       getGroupId={(row) => row.groupId}
       getRecords={(row) => row.records}
-      emptyMessage="暂无线粒体变异历史检出位点数据"
+      emptyMessage={t("display.noHistoricalMitochondrialFindings41a3fd")}
     />
   );
 }

@@ -1,3 +1,5 @@
+import { resolveLocale, type Locale } from '@/i18n/locales';
+
 declare global {
   interface Window {
     __YIJIAN_CONFIG__?: {
@@ -6,6 +8,7 @@ declare global {
       SUPPORT_EMAIL?: string;
       UPLOAD_ORIGINS?: string;
       PASSWORD_RESET_ENABLED?: string;
+      DEFAULT_LOCALE?: Locale;
     };
   }
 }
@@ -139,3 +142,10 @@ export function getRuntimeSupportEmail(): string {
 }
 
 export {};
+
+export function getRuntimeDefaultLocale(): Locale {
+  const value = typeof window !== 'undefined'
+    ? window.__YIJIAN_CONFIG__?.DEFAULT_LOCALE ?? process.env.NEXT_PUBLIC_DEFAULT_LOCALE
+    : process.env.YIJIAN_DEFAULT_LOCALE ?? process.env.NEXT_PUBLIC_DEFAULT_LOCALE;
+  return resolveLocale(undefined, value);
+}

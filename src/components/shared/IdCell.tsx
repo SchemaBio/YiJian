@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+import { translateUI } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tooltip } from '@schema/ui-kit';
@@ -19,8 +22,9 @@ interface HoverTextProps {
 
 /** Truncated text with the same styled hover card used for UUIDs. */
 export function HoverText({ value, className = '' }: HoverTextProps) {
+  const t = useText();
   return (
-    <Tooltip content={value} placement="top" variant="nav">
+    <Tooltip content={translateUI(value, t)} placement="top" variant="nav">
       <span className={`block truncate ${className}`}>{value}</span>
     </Tooltip>
   );
@@ -34,6 +38,7 @@ export function HoverText({ value, className = '' }: HoverTextProps) {
  * <IdCell id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
  */
 export function IdCell({ id, truncateLength = 8, full = false }: IdCellProps) {
+  const t = useText();
   const [copyStatus, setCopyStatus] = React.useState<'idle' | 'copied' | 'failed'>('idle');
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -48,10 +53,10 @@ export function IdCell({ id, truncateLength = 8, full = false }: IdCellProps) {
   };
 
   return (
-    <Tooltip content={copyStatus === 'copied' ? '已复制任务编号' : copyStatus === 'failed' ? '复制失败，请检查剪贴板权限' : id} placement="top" variant="nav">
+    <Tooltip content={copyStatus === 'copied' ? t("common.taskIdCopiedd2e79a") : copyStatus === 'failed' ? t("common.copyFailedCheckClipboardPermissionsa47e63") : id} placement="top" variant="nav">
       <button
         type="button"
-        aria-label={copyStatus === 'copied' ? '已复制编号' : copyStatus === 'failed' ? '复制失败' : '复制编号'}
+        aria-label={copyStatus === 'copied' ? t("common.idCopied7aaff6") : copyStatus === 'failed' ? t("common.copyFailedf2c6b5") : t("common.copyIdc6c5ce")}
         className={`whitespace-nowrap font-mono text-xs cursor-pointer ${copyStatus === 'copied' ? 'text-green-600' : copyStatus === 'failed' ? 'text-danger-fg' : 'text-accent-fg hover:underline'}`}
         onClick={handleClick}
       >

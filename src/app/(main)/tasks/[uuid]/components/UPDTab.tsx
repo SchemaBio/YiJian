@@ -1,4 +1,11 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -34,6 +41,7 @@ export function UPDTab({
   filterState: externalFilterState,
   onFilterChange
 }: UPDTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<TableFilterState>(DEFAULT_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<UPDRegion> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -61,7 +69,7 @@ export function UPDTab({
         if (!controller.signal.aborted) setResult(data);
       } catch (error) {
         if (!controller.signal.aborted) {
-          setRequestError(error instanceof Error ? error.message : '无法加载 UPD 区域');
+          setRequestError(error instanceof Error ? errorText(error, t) : t("tasks.unableToLoadUpdRegions7b3250"));
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -96,7 +104,7 @@ export function UPDTab({
       await pinVariant(taskId, 'upd', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '更新置顶状态失败');
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToUpdatePinStatus77c5f1"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -104,7 +112,7 @@ export function UPDTab({
         return next;
       });
     }
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 处理回报状态变更
   const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
@@ -118,7 +126,7 @@ export function UPDTab({
       await reportVariant(taskId, 'upd', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? error.message : '标记回报失败');
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForReport8d3bd6"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -126,7 +134,7 @@ export function UPDTab({
         return next;
       });
     }
-  }, [taskId]);
+  }, [taskId, t]);
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: UPDRegion) => {
@@ -170,30 +178,30 @@ export function UPDTab({
     },
     {
       id: 'chromosome',
-      header: '染色体',
+      header: t("history.chromosome326659"),
       accessor: 'chromosome',
       width: 80,
       sortable: true,
     },
     {
       id: 'startPosition',
-      header: '起始位置',
+      header: t("tasks.startPositione89b02"),
       accessor: (row) => row.startPosition,
       width: 120,
       sortable: true,
     },
     {
       id: 'endPosition',
-      header: '终止位置',
+      header: t("tasks.endPositioncb3b4c"),
       accessor: (row) => row.endPosition,
       width: 120,
     },
     {
       id: 'length',
-      header: '长度',
+      header: t("history.lengtha53949"),
       accessor: (row) => {
-        if (row.length >= 1000000) return `${(row.length / 1000000).toFixed(2)}Mb`;
-        if (row.length >= 1000) return `${(row.length / 1000).toFixed(1)}kb`;
+        if (row.length >= 1000000) return `${formatNumericString((row.length / 1000000).toFixed(2), t.locale)}Mb`;
+        if (row.length >= 1000) return `${formatNumericString((row.length / 1000).toFixed(1), t.locale)}kb`;
         return `${row.length}bp`;
       },
       width: 100,
@@ -201,25 +209,25 @@ export function UPDTab({
     },
     {
       id: 'type',
-      header: '类型',
+      header: t("history.typee4e46c"),
       accessor: (row) => {
         const config = UPD_TYPE_CONFIG[row.type];
-        return <Tag variant={config.variant}>{config.label}</Tag>;
+        return <Tag variant={config.variant}>{translateUI(config.label, t)}</Tag>;
       },
       width: 100,
       sortable: true,
     },
     {
       id: 'genes',
-      header: '涉及基因',
+      header: t("history.affectedGenes9fbbad"),
       accessor: (row) => <GeneLinks genes={row.genes} />,
       width: 200,
     },
     {
       id: 'parentOfOrigin',
-      header: '亲本来源',
+      header: t("tasks.parentOfOrigin808f6f"),
       accessor: (row) => {
-        const labels = { Maternal: '母源', Paternal: '父源', Unknown: '未知' };
+        const labels = { Maternal: t("tasks.maternal7a353e"), Paternal: t("tasks.paternal9d5a70"), Unknown: t("samples.unknownd9c32a") };
         return row.parentOfOrigin ? labels[row.parentOfOrigin] : '-';
       },
       width: 80,
@@ -231,13 +239,13 @@ export function UPDTab({
   return (
     <div className="variant-tab-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="yj-variant-toolbar">
-      <ParquetColumnFilterBar taskId={taskId} table="upd" columns={result?.columns ?? []} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'upd')} state={filterState} onChange={setFilterState} />
+      <ParquetColumnFilterBar taskId={taskId} table="upd" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'upd', t)} state={filterState} onChange={setFilterState} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="w-52 max-w-full shrink-0 sm:w-64">
             <Input
               className="yj-variant-search [&_input]:min-w-0 [&_input]:w-0"
-              placeholder="搜索染色体..."
+              placeholder={t("tasks.searchChromosomed961dd")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               leftElement={<Search className="w-4 h-4" />}
@@ -249,7 +257,7 @@ export function UPDTab({
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-fg-muted">
-          <span>共 {result?.total ?? 0} 条UPD区域</span>
+          <span>{t("history.total497064")}{result?.total ?? 0} {t("tasks.updRegionsaa1daa")}</span>
         </div>
       </div>
       </div>
@@ -257,7 +265,7 @@ export function UPDTab({
       {requestError ? (
         <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
           {requestError}
-          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">重试</ActionButton>
+          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">{t("pipeline.retrye2d53a")}</ActionButton>
         </div>
       ) : loading && !result ? (
         <div className="flex items-center justify-center py-12">
@@ -269,7 +277,7 @@ export function UPDTab({
             className="variant-results-table min-h-0 flex-1"
             stickyHeader
             data={sortedData}
-            columns={filterableColumns(columns, result, filterState, setFilterState, 'upd')}
+            columns={localizeDisplay(filterableColumns(columns, result, filterState, setFilterState, 'upd', t), t)}
             rowKey="id"
             striped
             density="compact"
@@ -281,31 +289,27 @@ export function UPDTab({
           {totalPages > 1 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 mt-2">
               <div className="text-sm text-fg-muted">
-                第 {filterState.page} / {totalPages} 页
-              </div>
+                {t("history.pagef49534")}{filterState.page} / {totalPages} {t("history.labelaf8438")}</div>
               <div className="flex items-center gap-2">
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page - 1 })}
                   disabled={filterState.page <= 1}
                   className="yj-tool-button"
                 >
-                  上一页
-                </ActionButton>
+                  {t("history.previousb41561")}</ActionButton>
                 <ActionButton variant="ghost"
                   onClick={() => setFilterState({ ...filterState, page: filterState.page + 1 })}
                   disabled={filterState.page >= totalPages}
                   className="yj-tool-button"
                 >
-                  下一页
-                </ActionButton>
+                  {t("history.next67a246")}</ActionButton>
               </div>
             </div>
           )}
         </>
       ) : (
         <div className="text-center py-12 text-fg-muted">
-          暂无UPD区域数据
-        </div>
+          {t("tasks.noUpdRegionDatae755f0")}</div>
       )}
       {operationError && (
         <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{operationError}</div>

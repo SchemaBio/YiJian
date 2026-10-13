@@ -1,4 +1,9 @@
 'use client';
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+
 import { canInterpretTask } from '@/lib/task-interpretation';
 import { TaskActionsCell } from './components/TaskActionsCell';
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -80,6 +85,7 @@ function StatusFilterDropdown({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const t = useText();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -101,10 +107,10 @@ function StatusFilterDropdown({
   // 获取当前选中项的显示
   const getCurrentDisplay = () => {
     if (value === 'all') {
-      return <span className="text-sm text-fg-default">全部状态</span>;
+      return <span className="text-sm text-fg-default">{t("tasks.allStatuses1a4c26")}</span>;
     }
     const config = statusConfig[value as TaskDisplayStatus];
-    return <Tag variant={config.variant} className={`justify-center yj-task-status-tag ${taskStatusClass(value as TaskDisplayStatus)}`}>{config.label}</Tag>;
+    return <Tag variant={config.variant} className={`justify-center yj-task-status-tag ${taskStatusClass(value as TaskDisplayStatus)}`}>{translateUI(config.label, t)}</Tag>;
   };
 
   return (
@@ -130,7 +136,7 @@ function StatusFilterDropdown({
               setIsOpen(false);
             }}
           >
-            <span className="text-fg-default">全部状态</span>
+            <span className="text-fg-default">{t("tasks.allStatuses1a4c26")}</span>
           </button>
 
           {/* 各状态选项 */}
@@ -148,7 +154,7 @@ function StatusFilterDropdown({
                   setIsOpen(false);
                 }}
               >
-                <Tag variant={config.variant} className={`justify-center yj-task-status-tag ${taskStatusClass(option.value as TaskDisplayStatus)}`}>{config.label}</Tag>
+                <Tag variant={config.variant} className={`justify-center yj-task-status-tag ${taskStatusClass(option.value as TaskDisplayStatus)}`}>{translateUI(config.label, t)}</Tag>
               </button>
             );
           })}
@@ -159,6 +165,7 @@ function StatusFilterDropdown({
 }
 
 export default function AnalysisPage() {
+  const t = useText();
   const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -226,7 +233,7 @@ export default function AnalysisPage() {
       });
       refetch(); // Refresh data after creating
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create task';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToCreateTaska23940");
       setActionError(message);
       throw new Error(message);
     }
@@ -242,7 +249,7 @@ export default function AnalysisPage() {
       });
       refetch(); // Refresh data after updating
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update task';
+      const message = err instanceof Error ? errorText(err, t) : t("interface.failedToUpdateTaskf9b5e6");
       setActionError(message);
       throw new Error(message);
     }
@@ -257,7 +264,7 @@ export default function AnalysisPage() {
       await refreshTaskBilling(tasks ?? []);
       refetch(); // Refresh data after starting
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '启动任务失败');
+      setActionError(err instanceof Error ? errorText(err, t) : t("tasks.unableToStartTask2f67d1"));
     } finally {
       setActionLoading(null);
     }
@@ -270,7 +277,7 @@ export default function AnalysisPage() {
       await tasksApi.stop(taskId);
       refetch(); // Refresh data after stopping
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '停止任务失败');
+      setActionError(err instanceof Error ? errorText(err, t) : t("tasks.unableToStopTaskb0cdcf"));
     } finally {
       setActionLoading(null);
     }
@@ -285,7 +292,7 @@ export default function AnalysisPage() {
       await refreshTaskBilling(tasks ?? []);
       refetch(); // Refresh data after retrying
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '重试任务失败');
+      setActionError(err instanceof Error ? errorText(err, t) : t("tasks.unableToRetryTaska0acb1"));
     } finally {
       setActionLoading(null);
     }
@@ -299,7 +306,7 @@ export default function AnalysisPage() {
       await refreshTaskBilling(tasks ?? []);
       refetch(); // Refresh data after deleting
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '删除任务失败');
+      setActionError(err instanceof Error ? errorText(err, t) : t("tasks.unableToDeleteTaskb29722"));
     }
   };
 
@@ -331,19 +338,19 @@ export default function AnalysisPage() {
       );
     }
     return sortTasksByInterpretation(result);
-  }, [searchQuery, statusFilter, tasks]);
+  }, [searchQuery, statusFilter, tasks, t]);
 
   const columns: Column<AnalysisTask>[] = [
     {
       id: 'taskId',
-      header: '任务',
+      header: t("admin.task3172b3"),
       accessor: (row) => (
         <div className="min-w-0 text-left">
           <IdCell id={row.id} full />
           <div className="mt-1">
             <HoverHint content={row.name || row.pipeline}>
               <button type="button" onClick={() => handleOpenDetails(row)} className="block max-w-[220px] truncate text-xs text-fg-muted hover:text-accent-fg">
-                {row.name || row.pipeline || '分析任务'}
+                {row.name || row.pipeline || t("samples.analysisTasksf269c8")}
               </button>
             </HoverHint>
           </div>
@@ -354,7 +361,7 @@ export default function AnalysisPage() {
     },
     {
       id: 'sample',
-      header: '样本编号',
+      header: t("history.sampleId6d686e"),
       accessor: (row) => (
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-sm font-medium text-fg-default">{row.internalId || '-'}</span>
@@ -366,7 +373,7 @@ export default function AnalysisPage() {
     },
     {
       id: 'pipeline',
-      header: '分析流程',
+      header: t("tasks.analysisPipelinef22c14"),
       accessor: (row) => (
         <div className="text-center">
           <div className="text-fg-default">{row.pipeline}</div>
@@ -378,7 +385,7 @@ export default function AnalysisPage() {
     },
     {
       id: 'status',
-      header: '状态',
+      header: t("admin.status62e951"),
       accessor: (row) => {
         const config = statusConfig[taskDisplayStatus(row)];
         const terminalStatus = ['completed', 'failed', 'cancelled'].includes(row.status);
@@ -390,23 +397,23 @@ export default function AnalysisPage() {
         const releaseLabel = cleanupPhase
           ? phaseLabel
           : releaseConfirmed
-            ? row.status === 'completed' ? undefined : '节点已释放'
+            ? row.status === 'completed' ? undefined : t("tasks.nodeReleased3f8287")
             : row.executionPhase === 'terminal' && vmStatus === 'LAUNCH_FAILED'
-              ? '未创建计算节点'
+              ? t("tasks.noComputeNodeCreatedacf8b0")
               : undefined;
         const duplicateReleaseReason = cleanupPhase && ['RELEASE_RETRY', 'RELEASE_FAILED'].includes(row.executionReasonCode ?? '');
-        return <HoverHint content={row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? '请查看任务详情' : undefined}><div ><span className={`yj-task-state-label ${taskStatusClass(taskDisplayStatus(row))}`} data-interpretation-completed={!!row.interpretationCompletedAt} data-status={taskDisplayStatus(row)}><span aria-hidden="true" />{label}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{phaseLabel}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{releaseLabel}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">保留至 {new Date(row.diagnosticHoldUntil).toLocaleTimeString('zh-CN', { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{executionReasons[row.executionReasonCode] ?? '请查看任务详情'}</div>}</div></HoverHint>;
+        return <HoverHint content={translateUI(row.executionReasonCode ? executionReasons[row.executionReasonCode] ?? t("tasks.viewTaskDetails8132d3") : undefined, t)}><div ><span className={`yj-task-state-label ${taskStatusClass(taskDisplayStatus(row))}`} data-interpretation-completed={!!row.interpretationCompletedAt} data-status={taskDisplayStatus(row)}><span aria-hidden="true" />{t(label)}</span>{!terminalStatus && row.executionPhase !== 'terminal' && phaseLabel && phaseLabel !== config.label && <div className="text-xs text-fg-muted">{t(phaseLabel)}</div>}{releaseLabel && <div className={`text-xs ${row.executionPhase === 'release_failed' ? 'text-danger-fg' : row.executionPhase === 'terminating' ? 'text-warning-fg' : 'text-fg-muted'}`}>{t(releaseLabel)}</div>}{row.diagnosticHoldUntil && <div className="text-xs text-warning-fg">{t("tasks.retainedUntil028411")}{new Date(row.diagnosticHoldUntil).toLocaleTimeString(t.locale, { hour12: false })}</div>}{row.executionReasonCode && !duplicateReleaseReason && <div className="text-xs text-fg-muted">{t(executionReasons[row.executionReasonCode] ?? t("tasks.viewTaskDetails8132d3"))}</div>}</div></HoverHint>;
       },
       width: 90,
       align: 'center',
     },
     {
       id: 'progress',
-      header: '进度',
+      header: t("tasks.progressacf014"),
       accessor: (row) => {
         const terminalStatus = ['completed', 'failed', 'cancelled'].includes(row.status);
         const preparing = !terminalStatus && ['bootstrapping', 'diagnostic_hold'].includes(row.executionPhase ?? '') && row.progress === 0;
-        if (preparing) return <span className="text-xs text-fg-muted">准备中</span>;
+        if (preparing) return <span className="text-xs text-fg-muted">{t("tasks.preparing4f1f8a")}</span>;
         if (row.status !== 'running' || !Number.isFinite(row.progress)) return <span className="text-xs text-fg-muted">—</span>;
         const progress = Math.min(100, Math.max(0, row.progress));
         return (
@@ -426,7 +433,7 @@ export default function AnalysisPage() {
     },
     ...(isSaaS ? [{
       id: 'cost',
-      header: '费用',
+      header: t("tasks.cost9836a9"),
       accessor: (row: AnalysisTask) => (
         <TaskCostValue summary={taskBilling[row.id]} loading={billingLoading && !taskBilling[row.id]} />
       ),
@@ -435,21 +442,21 @@ export default function AnalysisPage() {
     }] : []),
     {
       id: 'createdAt',
-      header: '创建时间',
+      header: t("admin.createdAt84e380"),
       accessor: (row) => <span className="whitespace-nowrap tabular-nums">{formatLocalDateTime(taskDisplayCreatedAt(row))}</span>,
       width: 170,
       align: 'center',
     },
     {
       id: 'completedAt',
-      header: '完成时间',
+      header: t("tasks.completedAt754a8a"),
       accessor: (row) => <span className="whitespace-nowrap tabular-nums">{formatLocalDateTime(row.completedAt)}</span>,
       width: 170,
       align: 'center',
     },
     {
       id: 'remark',
-      header: '备注',
+      header: t("admin.notese03614"),
       accessor: (row) => (
         <span className={row.remark ? 'text-fg-default truncate block max-w-[100px] text-center' : 'text-fg-muted text-center'}>
           {row.remark || '-'}
@@ -460,7 +467,7 @@ export default function AnalysisPage() {
     },
     {
       id: 'actions',
-      header: '操作',
+      header: t("admin.actionsf3ea6d"),
       accessor: (row) => (
         <TaskActionsCell
           task={row}
@@ -487,10 +494,10 @@ export default function AnalysisPage() {
         <div className="min-w-0 flex-1">
           <div className="yj-page-shell yj-task-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
             <div className="yj-task-heading">
-              <div><h2 className="yj-page-title">任务中心</h2><p className="yj-page-subtitle">跟踪分析进度，进入结果判读。</p></div>
+              <div><h2 className="yj-page-title">{t("tasks.taskCenterf692ff")}</h2><p className="yj-page-subtitle">{t("tasks.trackAnalysisProgressAndInterpretResults9952cc")}</p></div>
               <div className="flex items-center gap-2">
-                <Button action="add" variant="secondary"  onClick={() => setIsBatchTaskModalOpen(true)}>批量新建</Button>
-                <Button action="add" variant="primary"  onClick={() => setIsNewTaskModalOpen(true)}>新建任务</Button>
+                <Button action="add" variant="secondary"  onClick={() => setIsBatchTaskModalOpen(true)}>{t("tasks.createInBatch08ebb3")}</Button>
+                <Button action="add" variant="primary"  onClick={() => setIsNewTaskModalOpen(true)}>{t("tasks.newTask6b717c")}</Button>
               </div>
             </div>
 
@@ -503,7 +510,7 @@ export default function AnalysisPage() {
             {error && tasks !== null && (
               <div className="mb-4 flex items-center gap-2 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                后台刷新失败，当前显示的是上一次成功加载的数据：{error}
+                {t("tasks.backgroundRefreshFailedShowingPreviouslyLoadedData78931b")}{error}
               </div>
             )}
 
@@ -513,7 +520,7 @@ export default function AnalysisPage() {
                   <span className="yj-empty-state-icon">
                     <Loader2 className="w-5 h-5 animate-spin" />
                   </span>
-                  <p className="text-sm text-fg-muted">加载中...</p>
+                  <p className="text-sm text-fg-muted">{t("tasks.loading514c33")}</p>
                 </div>
               </div>
             )}
@@ -524,25 +531,25 @@ export default function AnalysisPage() {
                   <span className="yj-empty-state-icon">
                     <AlertTriangle className="w-5 h-5 text-danger-fg" />
                   </span>
-                  <p className="text-sm font-medium text-[var(--yj-text-strong)] mb-1">任务列表暂不可用</p>
+                  <p className="text-sm font-medium text-[var(--yj-text-strong)] mb-1">{t("tasks.taskListUnavailable459e4e")}</p>
                   <p className="text-sm text-danger-fg mb-4">{error}</p>
-                  <Button action="retry" variant="secondary" onClick={refetch}>重试</Button>
+                  <Button action="retry" variant="secondary" onClick={refetch}>{t("pipeline.retrye2d53a")}</Button>
                 </div>
               </div>
             )}
 
             {tasks !== null && (
               <>
-                <HoverHint content="汇总最近一批任务，最多 100 个；完整状态筛选可通过工具栏选择。"><div className="yj-task-metrics" aria-label="最近任务状态概览" >
-                  {([{ label: '最近任务', value: 'all' }, { label: '运行中', value: 'running' }, { label: '待解读', value: 'pending_interpretation' }, { label: '已完成', value: 'completed' }, { label: '失败', value: 'failed' }] as const).map(item => <button type="button" key={item.label} aria-pressed={statusFilter === item.value} onClick={() => setStatusFilter(item.value)}>
-                    <strong>{(recentCounts[item.value] ?? 0).toLocaleString()}</strong>{item.label}
+                <HoverHint content={t("tasks.summaryOfUpToRecentTasksUsee0ade1")}><div className="yj-task-metrics" aria-label={t("tasks.recentTaskStatusOverview65fe08")} >
+                  {([{ label: t("admin.recentTasksabc5c3"), value: 'all' }, { label: t("admin.running594249"), value: 'running' }, { label: t("tasks.awaitingInterpretation0b7bdd"), value: 'pending_interpretation' }, { label: t("admin.completede99b48"), value: 'completed' }, { label: t("admin.failed3e3c80"), value: 'failed' }] as const).map(item => <button type="button" key={item.label} aria-pressed={statusFilter === item.value} onClick={() => setStatusFilter(item.value)}>
+                    <strong>{(recentCounts[item.value] ?? 0).toLocaleString(t.locale)}</strong>{translateUI(item.label, t)}
                   </button>)}
                 </div></HoverHint>
                 <div className="yj-task-toolbar">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="w-64">
                       <Input
-                        placeholder="搜索任务或样本编号..."
+                        placeholder={t("tasks.searchTaskOrSampleId9c4f1c")}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         leftElement={<Search className="w-4 h-4" />}
@@ -555,13 +562,13 @@ export default function AnalysisPage() {
                       />
                     </div>
                   </div>
-                  <span className="ml-auto text-xs text-fg-muted">显示 {filteredTasks.length.toLocaleString()} 个任务</span>
+                  <span className="ml-auto text-xs text-fg-muted">{t("tasks.showing5d908b")}{filteredTasks.length.toLocaleString(t.locale)} {t("tasks.tasks0fdf86")}</span>
                 </div>
 
                 {filteredTasks.length > 0 ? (
                   <DataTable
                     data={filteredTasks}
-                    columns={columns}
+                    columns={localizeDisplay(columns, t)}
                     rowKey="id"
                     density="compact"
                     className="yj-data-table right-pinned-actions-table task-center-table"
@@ -570,8 +577,8 @@ export default function AnalysisPage() {
                   <EmptyState
                     className="yj-panel"
                     icon={<List />}
-                    title="暂无任务"
-                    description="调整筛选条件，或创建新的分析任务。"
+                    title={t("common.noTasks15652e")}
+                    description={t("tasks.adjustFiltersOrCreateANewAnalysis5cca37")}
                   />
                 )}
               </>

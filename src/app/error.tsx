@@ -1,4 +1,7 @@
 'use client';
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -13,6 +16,7 @@ interface ErrorProps {
  * Error boundary component for handling runtime errors.
  */
 export default function Error({ error, reset }: ErrorProps) {
+  const t = useText();
   useEffect(() => {
     // Log the error to an error reporting service
     console.error('Application error:', error);
@@ -37,17 +41,14 @@ export default function Error({ error, reset }: ErrorProps) {
           </svg>
         </div>
         <h2 className="text-xl font-semibold text-fg-default mb-2">
-          出错了
-        </h2>
+          {t("common.somethingWentWrongad118b")}</h2>
         <p className="text-fg-muted mb-6">
-          抱歉，应用程序遇到了一个错误。请尝试刷新页面或稍后再试。
-        </p>
+          {t("common.theApplicationEncounteredAnErrorRefreshThe4082bb")}</p>
         <ActionButton action="retry" variant="ghost"
           onClick={reset}
           className="yj-public-primary inline-flex items-center rounded-xl px-4 py-2 transition-colors"
         >
-          重试
-        </ActionButton>
+          {t("pipeline.retrye2d53a")}</ActionButton>
       </div>
     </div>
   );

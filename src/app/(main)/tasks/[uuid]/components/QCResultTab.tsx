@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
+
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
@@ -34,9 +39,9 @@ const METRICS: MetricDefinition[] = [
   { key: 'mtCoverageGt0x', label: '线粒体 >0× 覆盖率', unit: 'percent' },
 ];
 
-export function memberRoleLabel(role: string) {
-  const roles: Record<string, string> = { proband: '先证者', father: '父亲', paternal: '父亲', mother: '母亲', maternal: '母亲', single: '单样本', patient: '受检者', unknown: '成员未知' };
-  return roles[role.toLowerCase()] ?? (role || '成员未知');
+export function memberRoleLabel(role: string, t: TextTranslator = chineseText) {
+  const roles: Record<string, string> = { proband: t("samples.probandc8c1fa"), father: t("samples.father03cd61"), paternal: t("samples.father03cd61"), mother: t("samples.mother166846"), maternal: t("samples.mother166846"), single: t("tasks.singleSamplebcdbc1"), patient: t("tasks.subject767087"), unknown: t("tasks.unknownMemberf15ab4") };
+  return roles[role.toLowerCase()] ?? (role || t("tasks.unknownMemberf15ab4"));
 }
 
 /** Source-based compatibility with the older API that mislabeled xamdst.
@@ -49,15 +54,15 @@ function percentageScale(metric: QCMetric): number | null {
   return null;
 }
 
-function formatMetric(metric: QCMetric | undefined, definition: MetricDefinition): string {
-  if (!metric || metric.value === null || !Number.isFinite(metric.value)) return '未提供';
+function formatMetric(metric: QCMetric | undefined, definition: MetricDefinition, t: TextTranslator = chineseText): string {
+  if (!metric || metric.value === null || !Number.isFinite(metric.value)) return t("history.notProvided071fb2");
   if (definition.unit === 'percent') {
     const scale = percentageScale(metric);
-    return scale === null ? '单位未确认' : `${(metric.value * scale).toFixed(2)}%`;
+    return scale === null ? t("tasks.unitUnconfirmeda97600") : `${formatNumericString((metric.value * scale).toFixed(2), t.locale)}%`;
   }
-  if (definition.unit === 'reads') return metric.value.toLocaleString('en-US', { maximumFractionDigits: 20 });
-  if (definition.unit === 'bp') return `${metric.value.toFixed(0)} bp`;
-  return `${metric.value.toFixed(2)}×`;
+  if (definition.unit === 'reads') return metric.value.toLocaleString(t.locale, { maximumFractionDigits: 20 });
+  if (definition.unit === 'bp') return `${formatNumericString(metric.value.toFixed(0), t.locale)} bp`;
+  return `${formatNumericString(metric.value.toFixed(2), t.locale)}×`;
 }
 
 function needsAttention(metric: QCMetric | undefined, definition: MetricDefinition): boolean {
@@ -78,63 +83,65 @@ function orderedMembers(context: ResultContext) {
   return members.sort((a, b) => (roleOrder[a.role.toLowerCase()] ?? 3) - (roleOrder[b.role.toLowerCase()] ?? 3));
 }
 
-function genderLabel(value?: string) { return value === 'male' ? '男' : value === 'female' ? '女' : '未知'; }
-function comparisonLabel(value?: string) { return value === 'match' ? '一致' : value === 'mismatch' ? '需核对' : '信息不足'; }
+function genderLabel(value?: string, t: TextTranslator = chineseText) { return value === 'male' ? t("samples.male51625d") : value === 'female' ? t("samples.female26bc84") : t("samples.unknownd9c32a"); }
+function comparisonLabel(value?: string, t: TextTranslator = chineseText) { return value === 'match' ? t("tasks.consistent5ab754") : value === 'mismatch' ? t("tasks.needsReviewd9e041") : t("tasks.insufficientInformation098237"); }
 
 export function SampleFamilyTable({ context }: { context: ResultContext }) {
+  const t = useText();
   const members = orderedMembers(context);
   const rows = [
-    ['成员', '样本编号', '登记性别', '数据性别', 'SRY reads', '对照'],
+    [t("tasks.memberc1ee9f"), t("history.sampleId6d686e"), t("tasks.registeredSex71ae63"), t("tasks.dataDerivedSex648644"), 'SRY reads', t("tasks.comparisond36792")],
     ...members.map(member => {
       const qc = context.qc.find(item => item.memberId === member.id);
       const count = qc?.metrics.find(metric => metric.key === 'sryCount')?.value;
-      return [memberRoleLabel(member.role), member.sampleId || '未提供', genderLabel(qc?.declaredGender), genderLabel(qc?.predictedGender), count == null ? '未提供' : String(count), comparisonLabel(qc?.genderComparison)];
+      return [memberRoleLabel(member.role, t), member.sampleId || t("history.notProvided071fb2"), genderLabel(qc?.declaredGender, t), genderLabel(qc?.predictedGender, t), count == null ? t("history.notProvided071fb2") : String(count), comparisonLabel(qc?.genderComparison, t)];
     }),
   ];
   return <section aria-labelledby="overview-family-heading" className="overflow-hidden rounded-lg border border-border-default bg-canvas-default">
     <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-default px-3 py-2">
-      <h3 id="overview-family-heading" className="text-sm font-semibold text-fg-default">样本与性别核对</h3>
-      {members.length > 0 && <CopyTableButton rows={rows} label="复制" />}
+      <h3 id="overview-family-heading" className="text-sm font-semibold text-fg-default">{t("tasks.sampleAndSexVerification589a17")}</h3>
+      {members.length > 0 && <CopyTableButton rows={rows} label={t("tasks.copy4edd1d")} />}
     </header>
-    {members.length === 0 ? <p className="p-3 text-xs text-fg-muted">未提供成员信息。</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
+    {members.length === 0 ? <p className="p-3 text-xs text-fg-muted">{t("tasks.memberInformationNotProvided375767")}</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
       <thead className="bg-canvas-subtle text-fg-muted"><tr>{rows[0].map(label => <th key={label} scope="col" className="whitespace-nowrap px-2 py-1.5 font-medium">{label}</th>)}</tr></thead>
       <tbody>{rows.slice(1).map((row, index) => {
         const qc = context.qc.find(item => item.memberId === members[index].id);
-        return <tr key={members[index].id} className="border-t border-border-default">{row.map((value, column) => <HoverHint content={column === 3 && qc?.sryCutoff !== undefined ? `SRY reads > ${qc.sryCutoff} 判为男性，否则判为女性` : undefined} key={column}><td key={column}  className={`px-2 py-1.5 ${column === 1 ? 'max-w-[160px] break-all' : 'whitespace-nowrap'} ${column === 5 && qc?.genderComparison === 'mismatch' ? 'bg-warning-subtle font-medium text-warning-fg' : 'text-fg-default'}`}>{value}</td></HoverHint>)}</tr>;
+        return <tr key={members[index].id} className="border-t border-border-default">{row.map((value, column) => <HoverHint content={column === 3 && qc?.sryCutoff !== undefined ? t("tasks.sryReadsClassifiedAsMaleOtherwiseFemalefafe4e", {p0: String(qc.sryCutoff)}) : undefined} key={column}><td key={column}  className={`px-2 py-1.5 ${column === 1 ? 'max-w-[160px] break-all' : 'whitespace-nowrap'} ${column === 5 && qc?.genderComparison === 'mismatch' ? 'bg-warning-subtle font-medium text-warning-fg' : 'text-fg-default'}`}>{value}</td></HoverHint>)}</tr>;
       })}</tbody>
     </table></div>}
-    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">数据性别来自本次 SRY 检测，仅用于样本核对；缺少数据时不推断性别。</p>
+    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">{t("tasks.dataDerivedSexUsesThisSryTest500a51")}</p>
   </section>;
 }
 
 export function QCAndFamilyTables({ context }: { context: ResultContext }) {
+  const t = useText();
   const members = orderedMembers(context);
   const metricFor = (id: string, key: string) => context.qc.find(member => member.memberId === id)?.metrics.find(metric => metric.key === key);
   const rows = [
-    ['指标', ...members.map(member => `${memberRoleLabel(member.role)} · ${member.sampleId || member.id}`), '复核提示'],
-    ...METRICS.map(definition => [definition.label, ...members.map(member => formatMetric(metricFor(member.id, definition.key), definition)), definition.prompt || '—']),
+    [t("tasks.metric1dfc81"), ...members.map(member => `${memberRoleLabel(member.role, t)} · ${member.sampleId || member.id}`), t("tasks.reviewNotice778aa7")],
+    ...METRICS.map(definition => [t(definition.label), ...members.map(member => formatMetric(metricFor(member.id, definition.key), definition, t)), definition.prompt ? t(definition.prompt) : '—']),
   ];
   return <section aria-labelledby="overview-qc-heading" className="overflow-hidden rounded-lg border border-border-default bg-canvas-default">
     <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-default px-3 py-2">
-      <h3 id="overview-qc-heading" className="text-sm font-semibold text-fg-default">质控统计</h3>
-      {members.length > 0 && context.qc.length > 0 && <CopyTableButton rows={rows} label="复制质控" />}
+      <h3 id="overview-qc-heading" className="text-sm font-semibold text-fg-default">{t("tasks.qcStatistics9e276c")}</h3>
+      {members.length > 0 && context.qc.length > 0 && <CopyTableButton rows={rows} label={t("tasks.copyQc9dd35b")} />}
     </header>
-    {members.length === 0 || context.qc.length === 0 ? <p className="p-3 text-xs text-fg-muted">该执行尚未提供成员质控数据。</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
+    {members.length === 0 || context.qc.length === 0 ? <p className="p-3 text-xs text-fg-muted">{t("tasks.thisExecutionHasNoMemberQcDatae07886")}</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
       <thead className="bg-canvas-subtle text-fg-muted"><tr>
-        <th scope="col" className="px-3 py-1.5 font-medium">指标</th>
-        {members.map(member => <HoverHint content={member.sampleId || member.id} key={member.id}><th key={member.id} scope="col"  className="min-w-[105px] px-2 py-1.5 font-medium">{memberRoleLabel(member.role)}</th></HoverHint>)}
+        <th scope="col" className="px-3 py-1.5 font-medium">{t("tasks.metric1dfc81")}</th>
+        {members.map(member => <HoverHint content={member.sampleId || member.id} key={member.id}><th key={member.id} scope="col"  className="min-w-[105px] px-2 py-1.5 font-medium">{memberRoleLabel(member.role, t)}</th></HoverHint>)}
       </tr></thead>
       <tbody>{METRICS.map(definition => <tr key={definition.key} className="border-t border-border-default hover:bg-canvas-subtle/50">
-        <HoverHint content={definition.prompt ? `复核提示：${definition.prompt}` : undefined}><th scope="row"  className="whitespace-nowrap px-3 py-1.5 font-normal text-fg-default">{definition.label}</th></HoverHint>
+        <HoverHint content={definition.prompt ? t("tasks.reviewNotice7cbb4e", {p0: String(t(definition.prompt))}) : undefined}><th scope="row"  className="whitespace-nowrap px-3 py-1.5 font-normal text-fg-default">{translateUI(definition.label, t)}</th></HoverHint>
         {members.map(member => {
           const metric = metricFor(member.id, definition.key);
           const attention = needsAttention(metric, definition);
-          return <HoverHint content={`来源：${metric?.source || '未提供'}${definition.prompt ? `；复核提示：${definition.prompt}` : ''}`} key={member.id}><td key={member.id}  className={`whitespace-nowrap px-2 py-1.5 tabular-nums ${attention ? 'bg-warning-subtle text-warning-fg' : 'text-fg-default'}`}>
-            <span className="font-medium">{formatMetric(metric, definition)}</span>
+          return <HoverHint content={t("tasks.source3ef7dd", {p0: String(metric?.source || t("history.notProvided071fb2")), p1: String(definition.prompt ? t("tasks.qcReviewSuffix", {p0:t(definition.prompt)}) : '')})} key={member.id}><td key={member.id}  className={`whitespace-nowrap px-2 py-1.5 tabular-nums ${attention ? 'bg-warning-subtle text-warning-fg' : 'text-fg-default'}`}>
+            <span className="font-medium">{formatMetric(metric, definition, t)}</span>
           </td></HoverHint>;
         })}
       </tr>)}</tbody>
     </table></div>}
-    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">质控复核提示不作为报告放行结论。</p>
+    <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">{t("tasks.qcNoticesDoNotConstituteReportRelease6d6103")}</p>
   </section>;
 }

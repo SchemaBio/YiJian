@@ -4,6 +4,11 @@
   "private": true,
   "description": "遗传病医生专用基因组分析系统",
   "packageManager": "pnpm@9.15.9",
+  "pnpm": {
+    "patchedDependencies": {
+      "@schema/ui-kit@0.1.0": "patches/@schema__ui-kit@0.1.0.patch"
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "test": "vitest run",
@@ -15,6 +20,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
+    "@page-agent/ui": "1.8.2",
     "@radix-ui/react-popover": "^1.0.7",
     "@schema/ui-kit": "github:SchemaBio/ui-kit",
     "clsx": "^2.1.0",
@@ -23,7 +29,8 @@
     "lucide-react": "^0.344.0",
     "mammoth": "^1.8.0",
     "next": "^16.2.6",
-    "page-agent": "^1.7.0",
+    "next-intl": "^4.14.9",
+    "page-agent": "1.8.2",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "tailwind-merge": "^2.2.1"

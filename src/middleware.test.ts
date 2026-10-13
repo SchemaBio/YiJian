@@ -6,6 +6,14 @@ import {NextRequest} from 'next/server';
 import {checkTaskDetailAccess} from './lib/task-detail-access';
 vi.mock('./lib/task-detail-access',()=>({checkTaskDetailAccess:vi.fn()}));
 afterEach(()=>vi.unstubAllEnvs());
+it.each(['zh-CN', 'zh-Hant', 'en', 'es-419'])('localizes unavailable tasks with the %s preference', async locale => {
+ vi.mocked(checkTaskDetailAccess).mockResolvedValue('unavailable');
+ vi.stubEnv('YIJIAN_DEFAULT_LOCALE', 'en');
+ const response = await middleware(new NextRequest('https://yijian.example/tasks/00000000-0000-0000-0000-000000000001', {headers: {cookie: `access_token=test; yijian-locale=${locale}`}}));
+ expect(response.status).toBe(503);
+ expect(response.headers.get('Content-Language')).toBe(locale);
+ expect(await response.text()).toBeTruthy();
+});
 it('permits the local WASM engine in production without JavaScript eval',()=>{
  vi.stubEnv('NODE_ENV','production');
  const csp=contentSecurityPolicy('test-nonce');

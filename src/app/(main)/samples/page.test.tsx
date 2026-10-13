@@ -32,5 +32,5 @@ it('exports only checked samples, including selections retained while searching'
   fireEvent.click(within(row).getByRole('checkbox'));
   fireEvent.change(screen.getByPlaceholderText('搜索样本编号、内部编号、批次或诊断...'), { target: { value: 'INT-unselected' } });
   fireEvent.click(screen.getByRole('button', { name: '导出已选样本 (1)' }));
-  expect(downloadSampleList).toHaveBeenCalledWith([samples[0]]);
+  expect(downloadSampleList).toHaveBeenCalledWith([samples[0]], 'zh-CN');
 });

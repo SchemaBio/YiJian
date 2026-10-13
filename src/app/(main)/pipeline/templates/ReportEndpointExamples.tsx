@@ -1,3 +1,7 @@
+'use client';
+
+import { useText } from '@/i18n/useText';
+
 const pythonExample = `import io
 import os
 import zipfile
@@ -149,15 +153,14 @@ const examples = [
 ];
 
 export function ReportEndpointExamples() {
+  const t = useText();
   return (
     <details className="group rounded-md border border-border-default bg-canvas-default">
       <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-fg-default marker:text-fg-muted">
-        查看 Python、Go、JavaScript 接入示例
-      </summary>
+        {t("pipeline.viewPythonGoAndJavascriptExamples828970")}</summary>
       <div className="space-y-4 border-t border-border-default px-3 py-3">
         <p className="text-xs text-fg-muted">
-          新服务使用回报快照 v2；下面的 Python、Go、JavaScript 代码是旧版原始结果包示例，不包含人工判读。
-        </p>
+          {t("pipeline.newServicesUseReportSnapshotVThe7b91bd")}</p>
         {examples.map((example) => (
           <section key={example.language} className="space-y-1.5">
             <h4 className="text-xs font-semibold text-fg-default">{example.language}</h4>

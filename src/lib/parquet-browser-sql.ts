@@ -1,3 +1,4 @@
+import { LocalizedError } from '@/i18n/errors';
 // The worker queries one immutable dataset and its versioned server overlays.
 // Only registered fields/operators may become SQL; values are escaped literals.
 export const OVERLAY_FIELDS = ['pinned', 'reviewed', 'reported', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'acmgVusSubclass', 'acmgTrial'];
@@ -51,7 +52,7 @@ export function effectiveField(s: string, raw: string[]): string {
     if (OVERLAY_FIELDS.includes(s))
         return overlay;
     if (!raw.includes(s))
-        throw new Error('未知筛选字段：' + s);
+        throw new LocalizedError('未知筛选字段：{p0}', {p0:s});
     return `t.${ident(s)}`;
 }
 export function localPredicate(f: LocalFilter, raw: string[]): string {
@@ -62,7 +63,7 @@ export function localPredicate(f: LocalFilter, raw: string[]): string {
         return `(${x} IS NOT NULL AND ${text} NOT IN ('', '.'))`;
     const values = Array.isArray(f.value) ? f.value : [f.value];
     if (!values.length || values.length > 1000 || values.some(v => v === undefined || typeof v === 'object'))
-        throw new Error('筛选值无效');
+        throw new LocalizedError("display.invalidFilterValuead2830");
     if (f.operator === 'contains')
         return `contains(lower(${text}), lower(${literal(values[0])}))`;
     if (f.operator === 'not_contains')
@@ -70,20 +71,20 @@ export function localPredicate(f: LocalFilter, raw: string[]): string {
     if (f.operator === 'equals' || f.operator === 'in')
         return `EXISTS (SELECT 1 FROM UNNEST(string_split(${text}, '&')) AS u(v) WHERE v IN (${values.map(literal).join(',')}))`;
     if (fieldType(f.column) !== 'number')
-        throw new Error('此列不支持数值筛选');
+        throw new LocalizedError("display.thisColumnDoesNotSupportNumericFiltersb80572");
     if (f.operator === 'between') {
         if (values.length !== 2 || values.some(v => !Number.isFinite(Number(v))) || Number(values[0]) > Number(values[1]))
-            throw new Error('范围无效');
+            throw new LocalizedError("display.invalidRange073cf8");
         return `EXISTS (SELECT 1 FROM UNNEST(string_split(${text}, '&')) AS u(v) WHERE TRY_CAST(NULLIF(v,'.') AS DOUBLE) BETWEEN ${Number(values[0])} AND ${Number(values[1])})`;
     }
     const ops: Record<string, string> = { gt: '>', gte: '>=', lt: '<', lte: '<=' };
     if (!(f.operator in ops) || !Number.isFinite(Number(values[0])))
-        throw new Error('数值筛选无效');
+        throw new LocalizedError("display.invalidNumericFilter0a58b3");
     return `EXISTS (SELECT 1 FROM UNNEST(string_split(${text}, '&')) AS u(v) WHERE TRY_CAST(NULLIF(v,'.') AS DOUBLE) ${ops[f.operator]} ${Number(values[0])})`;
 }
 export function buildLocalSelection(q: LocalQuery, raw: string[]) {
     if ((q.filters?.length ?? 0) > 40 || (q.search?.length ?? 0) > 256)
-        throw new Error('筛选条件超过限制');
+        throw new LocalizedError("display.filterCriteriaExceedTheLimitcf4a4a");
     const where = (q.filters ?? []).map(f => localPredicate(f, raw));
     const search = q.search?.trim();
     if (search) {

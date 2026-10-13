@@ -1,4 +1,11 @@
 'use client';
+import { LocalizedError } from '@/i18n/errors';
+
+import { errorText } from '@/i18n/errors';
+
+import { useText } from '@/i18n/useText';
+
+
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
@@ -21,6 +28,7 @@ import { getPedigree, listPedigrees } from '@/lib/pedigrees';
 import type { Pedigree } from '@/app/(main)/samples/pedigree/types';
 
 export default function NewAnalysisPage() {
+  const t = useText();
   const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
@@ -66,7 +74,7 @@ export default function NewAnalysisPage() {
         setLoadError('');
       } catch (err) {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : '加载任务选项失败');
+          setLoadError(err instanceof Error ? errorText(err, t) : t("tasks.unableToLoadTaskOptionsa4066d"));
         }
       } finally {
         if (!cancelled) setOptionsLoading(false);
@@ -92,7 +100,7 @@ export default function NewAnalysisPage() {
         setPedigrees(details);
       })
       .catch(err => {
-        if (!cancelled) setFamilyError(err instanceof Error ? err.message : '加载家系选项失败');
+        if (!cancelled) setFamilyError(err instanceof Error ? errorText(err, t) : t("tasks.unableToLoadPedigreeOptionsc1568c"));
       });
     return () => { cancelled = true; };
   }, [isTrio, optionsRetry]);
@@ -128,7 +136,7 @@ export default function NewAnalysisPage() {
       .then((estimate) => {
         if (cancelled) return;
         const minutes = Math.max(1, Math.ceil(Number(estimate.estimated_minutes)));
-        if (!Number.isFinite(minutes)) throw new Error('Invalid task estimate');
+        if (!Number.isFinite(minutes)) throw new LocalizedError("interface.invalidTaskEstimateb0d35f", undefined, "Invalid task estimate");
         setEstimatedMinutes(minutes);
         setEstimateStatus('ready');
       })
@@ -155,14 +163,14 @@ export default function NewAnalysisPage() {
   React.useEffect(() => {
     const subject = isTrio ? selectedPedigreeInfo?.internalId : (selectedSampleInfo?.internalId || selectedSampleInfo?.id);
     if (subject && selectedPipelineInfo) {
-      setTaskName(`${subject} ${selectedPipelineInfo.name} 分析`);
+      setTaskName(t("tasks.analysis8a0847", {p0: String(subject), p1: String(selectedPipelineInfo.name)}));
     }
   }, [isTrio, selectedPedigreeInfo, selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
     setFormError('');
     if (!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)) {
-      setFormError(isTrio ? '请选择符合父母-先证者结构的家系。' : '请选择样本和分析流程。');
+      setFormError(isTrio ? t("tasks.selectAPedigreeContainingParentsAndProbandc87287") : t("tasks.selectASampleAndAnalysisPipeline53d997"));
       return;
     }
     setSubmitting(true);
@@ -182,7 +190,7 @@ export default function NewAnalysisPage() {
       });
       router.push(`/tasks/${encodeURIComponent(task.id)}`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : '创建分析任务失败');
+      setFormError(err instanceof Error ? errorText(err, t) : t("tasks.unableToCreateAnalysisTaskf869b5"));
     } finally {
       setSubmitting(false);
     }
@@ -191,12 +199,12 @@ export default function NewAnalysisPage() {
   return (
     <PageContent className="yj-page-shell">
       <div className="yj-page-header">
-        <h2 className="yj-page-title">新建分析任务</h2>
+        <h2 className="yj-page-title">{t("tasks.newAnalysisTask1d4697")}</h2>
       </div>
 
-      {isSaaS && <aside role="note" aria-label="BAM 文件保留期限" className="mb-5 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-4 text-warning-fg">
+      {isSaaS && <aside role="note" aria-label={t("tasks.bamRetentionPeriodaed91e")} className="mb-5 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-4 text-warning-fg">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-        <div><h3 className="text-sm font-semibold">BAM 文件仅保留至任务完成后 7 天</h3><p className="mt-1 text-sm leading-6">到期后 BAM 将自动删除，无法再下载，也无法通过 IGV 复核样本 reads。请在保留期内完成复核，或下载 BAM 并自行备份。</p><p className="mt-1 text-xs">分析结果表与已保存的人工判读记录继续保留。</p></div>
+        <div><h3 className="text-sm font-semibold">{t("tasks.bamFilesAreRetainedForDaysAfter742e02")}</h3><p className="mt-1 text-sm leading-6">{t("tasks.expiredBamFilesAreDeletedAndCannot78d4ce")}</p><p className="mt-1 text-xs">{t("tasks.resultTablesAndSavedManualInterpretationsRemain29352c")}</p></div>
       </aside>}
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -204,7 +212,7 @@ export default function NewAnalysisPage() {
         {(loadError || (isTrio && familyError)) && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             <span>{loadError || familyError}</span>
-            <Button action="retry" variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>重试读取</Button>
+            <Button action="retry" variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>{t("billing.retryLoading7b4939")}</Button>
           </div>
         )}
 
@@ -214,37 +222,37 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {!isTrio && <FormItem label="样本" required>
+        {!isTrio && <FormItem label={t("history.sample610da8")} required>
           <Select
             options={samples.map((sample) => ({
               value: sample.id,
-              label: `${sample.internalId || sample.id}${!sample.matchedPair ? '（等待测序数据）' : '（R1/R2 已就绪）'}`,
+              label: `${sample.internalId || sample.id}${!sample.matchedPair ? t("tasks.awaitingSequencingData3a9d51") : t("tasks.rRReady51ae02")}`,
             }))}
             value={selectedSample}
             onChange={(value) => setSelectedSample(Array.isArray(value) ? value[0] : value)}
-            placeholder="选择样本"
+            placeholder={t("samples.selectSamplef0e89f")}
             searchable
           />
         </FormItem>}
 
-        {isTrio && <FormItem label="家系（父母 + 先证者）" required>
+        {isTrio && <FormItem label={t("tasks.pedigreeParentsProband5d1fa4")} required>
           <Select
             options={pedigrees.map((pedigree) => {
               const proband = pedigree.members.find((member) => member.id === pedigree.probandId || member.relation === 'proband');
               const father = pedigree.members.find((member) => member.id === proband?.fatherId);
               const mother = pedigree.members.find((member) => member.id === proband?.motherId);
               const ready = Boolean(proband?.sampleId && father?.sampleId && mother?.sampleId);
-              return { value: pedigree.id, label: `${pedigree.internalId}${ready ? '（三人样本已关联）' : '（家系不完整）'}`, disabled: !ready };
+              return { value: pedigree.id, label: `${pedigree.internalId}${ready ? t("tasks.threeSamplesLinked6adf03") : t("tasks.incompletePedigree17b6c3")}`, disabled: !ready };
             })}
             value={selectedPedigree}
             onChange={(value) => setSelectedPedigree(Array.isArray(value) ? value[0] : value)}
-            placeholder="选择已存在的父母-先证者家系"
+            placeholder={t("tasks.selectAnExistingParentsProbandPedigree0bd878")}
             searchable
           />
-          <div className="mt-2 text-xs text-fg-muted">家系需关联先证者及父母三人的测序数据。</div>
+          <div className="mt-2 text-xs text-fg-muted">{t("tasks.sequencingDataFromTheProbandAndBoth16349c")}</div>
         </FormItem>}
 
-        <FormItem label="分析流程" required>
+        <FormItem label={t("tasks.analysisPipelinef22c14")} required>
           <Select
             options={pipelines.map((pipeline) => ({
               value: pipeline.id,
@@ -252,48 +260,48 @@ export default function NewAnalysisPage() {
             }))}
             value={selectedPipeline}
             onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}
-            placeholder="选择分析流程"
+            placeholder={t("tasks.selectAnalysisPipeline196adf")}
             searchable
           />
         </FormItem>
 
-        <FormItem label="任务备注">
+        <FormItem label={t("tasks.taskNotesd34f05")}>
           <Input
-            aria-label="任务备注"
+            aria-label={t("tasks.taskNotesd34f05")}
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
-            placeholder="任务备注（可选）"
+            placeholder={t("tasks.taskNotesOptional477837")}
           />
         </FormItem>
 
         <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">高级选项</h3>
+          <h3 className="text-sm font-medium text-fg-default mb-3">{t("tasks.advancedOptions378a54")}</h3>
           <div className="flex flex-wrap gap-x-5 gap-y-3">
             <Checkbox
               checked={enableCNV}
               onCheckedChange={(checked) => setEnableCNV(checked === true)}
-              label="启用 CNV 分析"
+              label={t("tasks.enableCnvAnalysisf42731")}
             />
             <Checkbox
               checked={enableSV}
               onCheckedChange={(checked) => setEnableSV(checked === true)}
-              label="启用 SV 分析"
+              label={t("tasks.enableSvAnalysisc73efc")}
             />
           </div>
         </div>
 
       </section>
-      <aside className="yj-panel min-w-0 space-y-5 p-5" aria-label="任务预估与提交">
+      <aside className="yj-panel min-w-0 space-y-5 p-5" aria-label={t("tasks.taskEstimateAndSubmission7f6c48")}>
         <div className="border-b border-border-default pb-4">
-          <p className="text-sm font-medium text-fg-default">系统预计耗时</p>
+          <p className="text-sm font-medium text-fg-default">{t("tasks.estimatedRuntime46b89b")}</p>
           <p className="mt-1 text-xs leading-5 text-fg-muted">
             {estimateStatus === 'loading'
-              ? '正在根据所选输入估算…'
+              ? t("tasks.estimatingFromSelectedInput244ab0")
               : estimateStatus === 'ready'
-                ? `预计 ${estimatedMinutes} 分钟；按样本关联的 R1/R2 数据量计算。`
+                ? t("tasks.estimatedMinutesBasedOnLinkedRR037883", {p0: String(estimatedMinutes)})
                 : estimateStatus === 'fallback'
-                  ? '估算服务暂不可用，暂按基础预估 60 分钟。'
-                  : '选择样本或家系和分析流程后，将按关联的 R1/R2 数据量计算。'}
+                  ? t("tasks.estimationUnavailableUsingTheBasicMinuteEstimatef3a858")
+                  : t("tasks.selectASampleOrPedigreeAndPipeline3b5654")}
           </p>
         </div>
 
@@ -302,19 +310,18 @@ export default function NewAnalysisPage() {
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-accent-fg" />
               <div>
-                <div className="text-sm font-medium text-fg-default">预计预扣 {estimatedCredits ?? '--'} 积分</div>
+                <div className="text-sm font-medium text-fg-default">{t("tasks.estimatedReservationaa9641")}{estimatedCredits ?? '--'} {t("billing.creditse6d317")}</div>
                 <div className="text-xs text-fg-muted">
-                  最终按实际运行分钟结算
-                </div>
+                  {t("tasks.finalSettlementUsesActualRuntime296a82")}</div>
               </div>
             </div>
             <div className="text-right">
               <div className={insufficientCredits ? 'text-sm font-medium text-danger-fg' : 'text-sm font-medium text-fg-default'}>
-                余额 {billingBalance?.balance ?? '--'}
+                {t("tasks.balance239d15")}{billingBalance?.balance ?? '--'}
               </div>
               <div className="flex items-center justify-end gap-3 text-xs">
-                <Link href="/billing" className="text-accent-fg hover:underline">计费规则</Link>
-                <Link href="/billing/recharge" className="text-accent-fg hover:underline">充值</Link>
+                <Link href="/billing" className="text-accent-fg hover:underline">{t("settings.billingRulesab2727")}</Link>
+                <Link href="/billing/recharge" className="text-accent-fg hover:underline">{t("billing.addCreditsfa03c4")}</Link>
               </div>
             </div>
           </div>
@@ -323,12 +330,12 @@ export default function NewAnalysisPage() {
         {!isTrio && selectedSampleInfo && (
           <div className={`rounded-md border px-4 py-3 ${selectedSampleInfo.matchedPair ? 'border-success-muted bg-success-subtle' : 'border-warning-muted bg-warning-subtle'}`}>
             <div className={`text-sm font-medium ${selectedSampleInfo.matchedPair ? 'text-success-fg' : 'text-warning-fg'}`}>
-              {selectedSampleInfo.matchedPair ? 'R1/R2 已就绪' : '等待测序数据'}
+              {selectedSampleInfo.matchedPair ? t("tasks.rRReady9c9d5e") : t("common.awaitingSequencingData844492")}
             </div>
             <p className="mt-1 text-xs leading-5 text-fg-muted">
               {selectedSampleInfo.matchedPair
-                ? '任务创建后自动开始分析。'
-                : '可以立即创建任务；样本自动或手动匹配到完整 R1/R2 后，任务会自动开始分析。'}
+                ? t("tasks.analysisStartsAutomaticallyAfterTaskCreation262d0e")
+                : t("tasks.youMayCreateTheTaskNowAnalysis400a3f")}
             </p>
           </div>
         )}
@@ -342,7 +349,7 @@ export default function NewAnalysisPage() {
             loading={submitting}
             disabled={!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)}
           >
-            {submitting ? '提交中...' : '提交任务'}
+            {submitting ? t("tasks.submitting3a1624") : t("tasks.submitTask09de9e")}
           </Button>
         </div>
       </aside>

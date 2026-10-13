@@ -1,4 +1,9 @@
 'use client';
+import { formatNumericString } from '@/i18n/format';
+
+import { useText } from '@/i18n/useText';
+import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
+
 
 import * as React from 'react';
 import { Tag } from '@schema/ui-kit';
@@ -13,10 +18,10 @@ interface CNVExonHistoryTabProps {
   onFilterChange?: (state: HistoryTableFilterState) => void;
 }
 
-function cnvTypeLabel(type: GroupedCNVExon['type']): string {
-  if (type === 'Amplification') return '扩增';
-  if (type === 'Deletion') return '缺失';
-  return '正常';
+function cnvTypeLabel(type: GroupedCNVExon['type'], t: TextTranslator = chineseText): string {
+  if (type === 'Amplification') return t("history.duplication1aeb54");
+  if (type === 'Deletion') return t("history.deletion2fe9b7");
+  return t("history.normalf78d03");
 }
 
 function cnvTypeVariant(type: GroupedCNVExon['type']): 'warning' | 'info' | 'neutral' {
@@ -29,6 +34,7 @@ export function CNVExonHistoryTab({
   filterState: externalFilterState,
   onFilterChange
 }: CNVExonHistoryTabProps) {
+  const t = useText();
   const [internalFilterState, setInternalFilterState] = React.useState<HistoryTableFilterState>(DEFAULT_HISTORY_FILTER_STATE);
   const [result, setResult] = React.useState<PaginatedResult<GroupedCNVExon> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -54,67 +60,67 @@ export function CNVExonHistoryTab({
   const columns = [
     {
       id: 'gene',
-      header: '基因',
+      header: t("history.gene9ef2ed"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => row.gene,
     },
     {
       id: 'transcript',
-      header: '转录本',
+      header: t("history.transcript96b6d7"),
       width: 130,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => row.transcript,
     },
     {
       id: 'exon',
-      header: '外显子',
+      header: t("history.exonfb0270"),
       width: 100,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => row.exon,
     },
     {
       id: 'chromosome',
-      header: '染色体',
+      header: t("history.chromosome326659"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => row.chromosome,
     },
     {
       id: 'type',
-      header: '类型',
+      header: t("history.typee4e46c"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => (
         <Tag variant={cnvTypeVariant(row.type)} className="justify-center">
-          {cnvTypeLabel(row.type)}
+          {cnvTypeLabel(row.type, t)}
         </Tag>
       ),
     },
     {
       id: 'copyNumber',
-      header: '拷贝数',
+      header: t("history.copyNumber04d1ca"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => row.copyNumber,
     },
     {
       id: 'ratio',
-      header: '比值',
+      header: t("history.ratio460e70"),
       width: 80,
       align: 'center' as const,
-      accessor: (row: GroupedCNVExon) => row.ratio.toFixed(2),
+      accessor: (row: GroupedCNVExon) => formatNumericString(row.ratio.toFixed(2), t.locale),
     },
     {
       id: 'confidence',
-      header: '置信度',
+      header: t("history.confidenceb78c2d"),
       width: 80,
       align: 'center' as const,
-      accessor: (row: GroupedCNVExon) => `${(row.confidence * 100).toFixed(0)}%`,
+      accessor: (row: GroupedCNVExon) => `${formatNumericString((row.confidence * 100).toFixed(0), t.locale)}%`,
     },
     {
       id: 'detectionCount',
-      header: '检出次数',
+      header: t("history.detectionCountdf2067"),
       width: 80,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => (
@@ -125,14 +131,14 @@ export function CNVExonHistoryTab({
     },
     {
       id: 'firstDetectedAt',
-      header: '首次检出',
+      header: t("history.firstDetected16ef1a"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => formatLocalDate(row.firstDetectedAt),
     },
     {
       id: 'lastDetectedAt',
-      header: '最后检出',
+      header: t("history.lastDetected4d7fff"),
       width: 120,
       align: 'center' as const,
       accessor: (row: GroupedCNVExon) => formatLocalDate(row.lastDetectedAt),
@@ -146,12 +152,12 @@ export function CNVExonHistoryTab({
       filterState={filterState}
       onSearch={(query) => setFilterState({ ...filterState, searchQuery: query, page: 1 })}
       onPageChange={(page) => setFilterState({ ...filterState, page })}
-      searchPlaceholder="搜索基因、外显子..."
-      statsLabel="个CNV外显子"
-      columns={columns}
+      searchPlaceholder={t("tasks.searchGenesOrExons2fe67e")}
+      statsLabel={t("display.cnvExons7aa5f8")}
+      columns={localizeDisplay(columns, t)}
       getGroupId={(row) => row.groupId}
       getRecords={(row) => row.records}
-      emptyMessage="暂无CNV(Exon)历史检出位点数据"
+      emptyMessage={t("display.noHistoricalExonCnvFindingsad18cd")}
     />
   );
 }
