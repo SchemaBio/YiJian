@@ -102,7 +102,7 @@ function inheritance(d: Disease, p?: RowProof): {eligible: boolean; support: num
 function snv(row: AssessmentRow, p: RowProof | undefined, result: AutomaticAssessment) {
   const v = row.values;
   const transcript = text(v.Transcript), prediction = number(v.AlphaMissense_AM);
-  if (text(v.Type) === 'SNP' && text(v.Consequence).split('&').includes('missense_variant') && transcript && !/[&,;]/.test(transcript) && prediction !== undefined && prediction >= 0 && prediction <= 1) {
+  if (text(v.Type) === 'SNP' && text(v.Consequence).split('&').includes('missense_variant') && transcript && !/[&,;|]/.test(transcript) && prediction !== undefined && prediction >= 0 && prediction <= 1) {
     const n = prediction >= .990 ? 4 : prediction >= .906 ? 2 : prediction >= .792 ? 1 : prediction < .100 ? -2 : prediction < .170 ? -1 : 0;
     if (n) result.criteria.push({code:n>0?'PP3':'BP4',strength:Math.abs(n)===4?'strong':Math.abs(n)===2?'moderate':'supporting',source:'AlphaMissense calibrated thresholds',note:`${transcript}: ${prediction}`});
   } else result.pending.push('计算证据缺少唯一转录本或适用的错义分值');
