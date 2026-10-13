@@ -224,6 +224,9 @@ export default function AnalysisDetailPage() {
 
   // 渲染当前标签页内容
   const renderTabContent = () => {
+    if (activeTab !== 'overview' && activeTab !== 'report' && resultContext?.state === 'ready' && resultContext.parquet?.available && !resultContext.parquet.tables.includes(activeTab)) {
+      return <div className="flex h-full items-center justify-center p-8 text-sm text-fg-muted">{t('history.notProvided071fb2')}</div>;
+    }
     switch (activeTab) {
 		case 'overview':
 			return resultContext ? <ResultOverview context={resultContext} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
