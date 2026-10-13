@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import BaselinePage from './page';
-import { deleteCNVBaseline, listCNVBaselines } from '@/lib/cnv-baselines';
+import { createCNVBaseline, deleteCNVBaseline, listCNVBaselines } from '@/lib/cnv-baselines';
+import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { getBillingConfig } from '@/lib/billing';
 
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'synthetic-user' }, currentOrg: { id: 'synthetic-org' } }) }));
@@ -54,3 +55,28 @@ it('keeps the confirmation open when deletion is rejected', async () => {
  expect(await screen.findByText('请先解除流程中的基线选择')).toBeInTheDocument();
  expect(screen.getByRole('button', {name: '取消'})).toBeEnabled();
 });
+
+it('selects whole samples and submits both reads in the same selection order', async () => {
+ Element.prototype.scrollIntoView = vi.fn();
+ const file = (id: string, name: string, read_type: DataAsset['read_type'], extra: Partial<DataAsset> = {}): DataAsset => ({ id, file_name: name, read_type, file_size: 1024 ** 3, provider: 's3', status: 'completed', source: 'upload', created_at: '', updated_at: '', ...extra });
+ vi.mocked(listDataAssets).mockResolvedValue({ items: [file('a1', 'A_R1.fastq.gz', 'read1'), file('b2', 'B_R2.fastq.gz', 'read2'), file('a2', 'A_R2.fastq.gz', 'read2'), file('b1', 'B_R1.fastq.gz', 'read1'), file('incomplete', 'C_R1.fastq.gz', 'read1'), file('bed', 'normal.bed', 'bed', { reference_genome: 'GRCh38', validation_status: 'valid' })], total: 6, page: 1, page_size: 20, total_pages: 1 });
+ vi.mocked(listCNVBaselines).mockResolvedValue([]);
+ vi.mocked(createCNVBaseline).mockResolvedValue({ id: 'new', task_id: 'new-task', name: 'New baseline', reference_genome: 'GRCh38', status: 'queued', progress: 0, read_pairs: [], bed: { id: 'bed', file_name: 'normal.bed' }, input_bytes: 0, credit_cost: 0, credits_charged: 0, created_at: '', updated_at: '' });
+ render(<BaselinePage />);
+ const open = await screen.findByRole('button', { name: '校正内置 CNV 基线' });
+ await waitFor(() => expect(open).toBeEnabled());
+ fireEvent.click(open);
+ fireEvent.change(screen.getByPlaceholderText('如 GRCh38-WES-normal-2026Q3'), { target: { value: 'New baseline' } });
+ fireEvent.click(screen.getByRole('button', { name: '选择样本组' }));
+ expect(screen.queryByRole('checkbox', { name: /C_R1/ })).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole('checkbox', { name: /B.*Read1/ }));
+ fireEvent.click(screen.getByRole('checkbox', { name: /A.*Read1/ }));
+ expect(screen.getByText('预计消耗 8 积分')).toBeInTheDocument();
+ const preview = screen.getByRole('table', { name: '已选样本组 · Read1/Read2 同组提交' });
+ expect(within(preview).getAllByRole('row')[1]).toHaveTextContent('B_R1.fastq.gzB_R2.fastq.gz');
+ fireEvent.click(screen.getByRole('button', { name: '选择样本组' }));
+ fireEvent.keyDown(screen.getByText('选择 BED 文件').closest('button')!, { key: 'ArrowDown' });
+ fireEvent.keyDown(await screen.findByRole('option', { name: /normal.bed/ }), { key: 'Enter' });
+ fireEvent.click(screen.getByRole('button', { name: '启动校正流程' }));
+ await waitFor(() => expect(createCNVBaseline).toHaveBeenCalledWith({ name: 'New baseline', reference_genome: 'GRCh38', bed_asset_id: 'bed', read1_asset_ids: ['b1', 'a1'], read2_asset_ids: ['b2', 'a2'] }));
+}, 30000);

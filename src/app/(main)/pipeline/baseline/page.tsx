@@ -17,6 +17,7 @@ import { AssetMultiSelect } from './AssetMultiSelect';
 import { getBillingConfig } from '@/lib/billing';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { BUILTIN_CNV_BASELINES } from '@/lib/builtin-resources';
+import { buildCNVSamplePairs, selectedCNVSamplePairs } from '@/lib/cnv-sample-pairs';
 
 type ReferenceGenome = 'GRCh37' | 'GRCh38';
 
@@ -64,9 +65,8 @@ export default function BaselinePage() {
   const [name, setName] = React.useState('');
   const [genome, setGenome] = React.useState<ReferenceGenome>('GRCh38');
   const [bedID, setBedID] = React.useState('');
-  const [read1IDs, setRead1IDs] = React.useState<string[]>([]);
-  const [read2IDs, setRead2IDs] = React.useState<string[]>([]);
-  const [read1Open, setRead1Open] = React.useState(false), [read2Open, setRead2Open] = React.useState(false);
+  const [pairIDs, setPairIDs] = React.useState<string[]>([]);
+  const [pairsOpen, setPairsOpen] = React.useState(false);
 
   const loadData = React.useCallback(async () => {
     const generation = ++loadGeneration.current;
@@ -93,7 +93,7 @@ export default function BaselinePage() {
   }, [scope]);
 
   React.useEffect(() => {
-    setModalOpen(false); setDeleting(null); setName(''); setBedID(''); setRead1IDs([]); setRead2IDs([]); setAssets([]); setItems([]); setFormError('');
+    setModalOpen(false); setDeleting(null); setName(''); setBedID(''); setPairIDs([]); setAssets([]); setItems([]); setFormError('');
     void loadData();
     return () => { ++loadGeneration.current; assetController.current?.abort(); };
   }, [loadData]);
@@ -114,13 +114,13 @@ export default function BaselinePage() {
     return () => { disposed = true; window.clearInterval(timer); };
   }, [items, scope]);
 
-  const read1Options = React.useMemo(() => assetOptions(assets.filter((asset) => asset.read_type === 'read1')), [assets]);
-  const read2Options = React.useMemo(() => assetOptions(assets.filter((asset) => asset.read_type === 'read2')), [assets]);
+  const samplePairs = React.useMemo(() => buildCNVSamplePairs(assets), [assets]);
+  const pairOptions = React.useMemo(() => samplePairs.map(pair => ({ value: pair.id, label: pair.label, description: `Read1: ${pair.read1.file_name}\nRead2: ${pair.read2.file_name}` })), [samplePairs]);
+  const selectedPairs = React.useMemo(() => pairIDs.flatMap(id => samplePairs.filter(pair => pair.id === id)), [samplePairs, pairIDs]);
   const bedOptions = React.useMemo(() => assetOptions(assets.filter((asset) => asset.read_type === 'bed' && asset.validation_status==='valid' && asset.reference_genome === genome)), [assets, genome]);
   const selectedInputBytes = React.useMemo(() => {
-    const selected = new Set([...read1IDs, ...read2IDs]);
-    return assets.reduce((total, asset) => total + (selected.has(asset.id) ? asset.file_size : 0), 0);
-  }, [assets, read1IDs, read2IDs]);
+    return selectedPairs.reduce((total, pair) => total + pair.read1.file_size + pair.read2.file_size, 0);
+  }, [selectedPairs]);
   const estimatedCredits = creditRate === null ? null : Math.ceil(selectedInputBytes / (1024 ** 3)) * creditRate;
 
   const filteredItems = React.useMemo(() => {
@@ -131,22 +131,23 @@ export default function BaselinePage() {
 
   const closeModal = () => {
     if (submitting) return;
-    setModalOpen(false); setName(''); setBedID(''); setRead1IDs([]); setRead2IDs([]); setFormError('');
+    setModalOpen(false); setName(''); setBedID(''); setPairIDs([]); setFormError('');
   };
 
   const handleCreate = async () => {
     if (submitting) return;
-    if (!name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length) {
-      setFormError('请填写名称，选择 BED，并选择数量一致的 R1 与 R2 文件。');
+    if (!name.trim() || !bedID || pairIDs.length === 0) {
+      setFormError('请填写名称，选择 BED，并勾选完整的样本组。');
       return;
     }
     const generation = loadGeneration.current;
     setSubmitting(true); setFormError('');
     try {
-      const created = await createCNVBaseline({ name: name.trim(), reference_genome: genome, bed_asset_id: bedID, read1_asset_ids: read1IDs, read2_asset_ids: read2IDs });
+      const pairs = selectedCNVSamplePairs(assets, pairIDs);
+      const created = await createCNVBaseline({ name: name.trim(), reference_genome: genome, bed_asset_id: bedID, read1_asset_ids: pairs.map(pair => pair.read1.id), read2_asset_ids: pairs.map(pair => pair.read2.id) });
       if (generation !== loadGeneration.current) return;
       setItems((current) => [created, ...current]);
-      setModalOpen(false); setName(''); setBedID(''); setRead1IDs([]); setRead2IDs([]); setFormError('');
+      setModalOpen(false); setName(''); setBedID(''); setPairIDs([]); setFormError('');
       setSubmitting(false);
     } catch (err) {
       if (generation === loadGeneration.current) setFormError(err instanceof Error ? err.message : '创建 CNV 基线任务失败');
@@ -181,7 +182,7 @@ export default function BaselinePage() {
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span className="min-w-0 break-words">{error}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" disabled={loading} onClick={() => void loadData()}>重试读取</ActionButton></div>}
       {loading ? <div className="yj-empty-state"><Loader2 className="h-6 w-6 animate-spin text-accent-fg" /><p className="text-fg-muted">正在加载 CNV 基线...</p></div> : error && items.length === 0 ? null : filteredItems.length === 0 ? <EmptyState className="yj-panel" icon={<Database />} title={searchQuery.trim() ? "未找到匹配 CNV 基线" : "暂无 CNV 基线"} description={searchQuery.trim() ? "调整搜索条件后重试。" : "选择已上传的 R1/R2 数据和 BED 文件建立基线。"} /> : <DataTable data={filteredItems} columns={columns} rowKey="id" density="default" className="yj-data-table right-pinned-actions-table baseline-center-table" />}
 
-      <AppModal closeOnEscape={!read1Open && !read2Open} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || read1IDs.length === 0 || read1IDs.length !== read2IDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
+      <AppModal closeOnEscape={!pairsOpen} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title="校正内置 CNV 基线" size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>取消</Button><Button loading={submitting} loadingLabel="正在投递..." variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || pairIDs.length === 0 || selectedPairs.length !== pairIDs.length} leftIcon={<Database className="h-4 w-4" />}>启动校正流程</Button></>}>
         <div className="space-y-5">
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">将所选正常样本与内置基线合并校正。结果仅供参考，准确度尚未经充分验证。</div>
           {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
@@ -189,9 +190,9 @@ export default function BaselinePage() {
             <FormItem label="基线名称" required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder="如 GRCh38-WES-normal-2026Q3" /></FormItem>
             <FormItem label="参考基因组" required><Select value={genome} onChange={(value) => { setGenome((Array.isArray(value) ? value[0] : value) as ReferenceGenome); setBedID(''); }} options={genomeOptions} /></FormItem>
           </div>
-          <FormItem label="R1 数据" required hint="可多选；选择顺序需与 R2 一一对应"><AssetMultiSelect label="R1 数据" value={read1IDs} onChange={setRead1IDs} onOpenChange={setRead1Open} options={read1Options} disabled={submitting} /></FormItem>
-          <FormItem label="R2 数据" required hint={`已选择 ${read1IDs.length} 个 R1 / ${read2IDs.length} 个 R2`}><AssetMultiSelect label="R2 数据" value={read2IDs} onChange={setRead2IDs} onOpenChange={setRead2Open} options={read2Options} disabled={submitting} /></FormItem>
-          {(read1IDs.length > 0 || read2IDs.length > 0) && <div className="overflow-x-auto rounded-md border border-border-default"><table className="w-full min-w-[460px] text-left text-xs"><caption className="border-b border-border-default bg-canvas-subtle px-3 py-2 text-left">提交配对预览 · 按选择顺序对应，请确认每行属于同一样本</caption><thead><tr><th className="p-2">组</th><th className="p-2">R1</th><th className="p-2">R2</th></tr></thead><tbody>{Array.from({ length: Math.max(read1IDs.length, read2IDs.length) }, (_, index) => <tr key={index} className="border-t border-border-default"><td className="p-2">{index + 1}</td><td className="max-w-48 break-all p-2">{assets.find(asset => asset.id === read1IDs[index])?.file_name || '未选择'}</td><td className="max-w-48 break-all p-2">{assets.find(asset => asset.id === read2IDs[index])?.file_name || '未选择'}</td></tr>)}</tbody></table></div>}
+          <FormItem label="样本组" required hint={`已选择 ${selectedPairs.length} 组样本；每组包含配套的 Read1 和 Read2`}><AssetMultiSelect label="样本组" unit="组样本" value={pairIDs} onChange={setPairIDs} onOpenChange={setPairsOpen} options={pairOptions} disabled={submitting} /></FormItem>
+          <p className="text-xs leading-5 text-fg-muted">优先按数据编号配对，未填写编号的数据按文件名配对。仅显示唯一且完整的 Read1/Read2 样本组；缺失、重复或过期的数据请先在数据中心整理。</p>
+          {selectedPairs.length > 0 && <div className="overflow-x-auto rounded-md border border-border-default"><table className="w-full min-w-[460px] text-left text-xs"><caption className="border-b border-border-default bg-canvas-subtle px-3 py-2 text-left">已选样本组 · Read1/Read2 同组提交</caption><thead><tr><th className="p-2">样本</th><th className="p-2">Read1</th><th className="p-2">Read2</th></tr></thead><tbody>{selectedPairs.map(pair => <tr key={pair.id} className="border-t border-border-default"><td className="break-all p-2">{pair.label}</td><td className="max-w-48 break-all p-2">{pair.read1.file_name}</td><td className="max-w-48 break-all p-2">{pair.read2.file_name}</td></tr>)}</tbody></table></div>}
           <FormItem label="BED 文件" required hint={`仅显示 ${genome} 的可用 BED 文件`}><Select searchable value={bedID} onChange={(value) => setBedID(Array.isArray(value) ? value[0] : value)} options={bedOptions} placeholder={bedOptions.length ? '选择 BED 文件' : `暂无 ${genome} BED 文件`} disabled={bedOptions.length === 0} /></FormItem>
           {isSaaS && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-default bg-canvas-subtle px-4 py-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-accent-fg" /><div><div className="text-sm font-medium text-fg-default">{estimatedCredits === null ? '预计积分暂不可用' : `预计消耗 ${estimatedCredits} 积分`}</div><div className="mt-0.5 text-xs text-fg-muted">按 R1/R2 总大小向上取整计费。{creditRate === null ? '最终金额以服务端计费配置为准。' : `每 GiB ${creditRate} 积分，不足 1 GiB 按 1 GiB 计。`}</div></div></div><div className="shrink-0 text-xs text-fg-muted">{(selectedInputBytes / (1024 ** 3)).toFixed(2)} GiB</div></div>}
         </div>
