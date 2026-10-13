@@ -2746,5 +2746,28 @@
     "online": "線上",
     "offline": "離線",
     "busy": "忙碌"
+  },
+  "phenotype": {
+    "title": "HPO 表型相關性",
+    "priority": "HPO 相關且初評致病／可能致病",
+    "relevanceOnly": "表型相關性參考",
+    "similarity": "相似度（非致病機率）",
+    "matches": "達到表型匹配閾值",
+    "belowThreshold": "未達到候選閾值",
+    "matchedTerms": "匹配表型",
+    "none": "未提供",
+    "resource": "資源版本",
+    "source": "關聯來源",
+    "noPoints": "HPO 相關性不增加 ACMG 積分。",
+    "gqPending": "HPO 候選：GQ 未核驗",
+    "frequencyPending": "HPO 候選：AC/AN 未核驗",
+    "familyPending": "HPO 候選：家系資料待核驗",
+    "unavailable": "HPO 補充資源暫不可用，繼續原有初評",
+    "invalidHPO": "部分 HPO 編號無效、過時或已歸一，請核對",
+    "annotations": "既有註釋補充參考",
+    "annotationLimits": "這些疾病、遺傳模式及預測註釋用於篩查；未核驗的關聯和未校準的預測值不產生 ACMG 條款。",
+    "geneBackground": "ClinGen 基因層面背景（不代表上述疾病已獲相同結論）",
+    "acknowledgement": "表型關聯使用 Human Phenotype Ontology（HPO）；基因標識使用 HGNC。",
+    "negatedHPO": "明確否定或排除的 HPO 術語未參與表型匹配。"
   }
 }

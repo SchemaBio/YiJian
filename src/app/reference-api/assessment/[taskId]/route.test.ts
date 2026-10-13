@@ -1,0 +1,13 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+import {NextRequest} from 'next/server';
+import {POST} from './route';
+import {queryReferences} from '@/lib/assessment/reference-server';
+vi.mock('@/lib/assessment/reference-server',()=>({queryReferences:vi.fn()}));
+const taskId='73ac68fd-4f6e-437b-8244-d16b09bbc7e1';
+const params={params:Promise.resolve({taskId})};
+const request=(body:unknown,authenticated=true)=>new NextRequest('http://localhost/reference-api/assessment/'+taskId,{method:'POST',headers:authenticated?{cookie:'access_token=fixture-token'}:{},body:JSON.stringify(body)});
+beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('fetch',vi.fn().mockResolvedValue({ok:true,json:async()=>({data:{active:{taskId,version:'context',referenceVersion:'resource',hpo:['HP:0000001']}}})}));vi.mocked(queryReferences).mockResolvedValue({resourceVersion:'resource',version:'fixture',canonical:{},matches:{},background:{},warnings:[]});});
+it('requires authentication before public queries',async()=>{expect((await POST(request({genes:[],contextVersion:'context'},false),params)).status).toBe(401);expect(queryReferences).not.toHaveBeenCalled();});
+it('gets HPO from authorized context rather than request body',async()=>{const result=await POST(request({contextVersion:'context',resourceVersion:'resource',genes:['B'],hpo:['HP:9999999']}),params);expect(result.status).toBe(200);expect(queryReferences).toHaveBeenCalledWith(expect.objectContaining({hpo:['HP:0000001'],genes:['B']}));});
+it('rejects stale context and resource versions',async()=>{expect((await POST(request({contextVersion:'old',genes:['B']}),params)).status).toBe(409);expect((await POST(request({contextVersion:'context',resourceVersion:'old',genes:['B']}),params)).status).toBe(409);expect(queryReferences).not.toHaveBeenCalled();});
+it('limits batches and preserves backend denial',async()=>{expect((await POST(request({contextVersion:'context',genes:Array(513).fill('B')}),params)).status).toBe(400);vi.mocked(fetch).mockResolvedValue({ok:false,status:403} as Response);expect((await POST(request({contextVersion:'context',genes:['B']}),params)).status).toBe(403);});

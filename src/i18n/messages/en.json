@@ -2746,5 +2746,28 @@
     "online": "Online",
     "offline": "Offline",
     "busy": "Busy"
+  },
+  "phenotype": {
+    "title": "HPO phenotype relevance",
+    "priority": "HPO-related with pathogenic/likely pathogenic initial assessment",
+    "relevanceOnly": "Phenotype relevance reference",
+    "similarity": "Similarity (not pathogenicity probability)",
+    "matches": "Phenotype match threshold met",
+    "belowThreshold": "Below candidate threshold",
+    "matchedTerms": "Matched phenotypes",
+    "none": "Not provided",
+    "resource": "Resource version",
+    "source": "Association source",
+    "noPoints": "HPO relevance does not add ACMG points.",
+    "gqPending": "HPO candidate: GQ not verified",
+    "frequencyPending": "HPO candidate: AC/AN not verified",
+    "familyPending": "HPO candidate: family information needs review",
+    "unavailable": "HPO supplement unavailable; continuing the original assessment",
+    "invalidHPO": "Some HPO identifiers are invalid, obsolete, or normalized; please review",
+    "annotations": "Additional existing annotation references",
+    "annotationLimits": "Disease, inheritance and prediction annotations support screening. Unverified associations and uncalibrated predictions do not generate ACMG criteria.",
+    "geneBackground": "ClinGen gene-level background (may concern a different disease)",
+    "acknowledgement": "Phenotype associations use the Human Phenotype Ontology (HPO); gene identifiers use HGNC.",
+    "negatedHPO": "Explicitly negated or excluded HPO terms were not used for phenotype matching."
   }
 }

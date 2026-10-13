@@ -1,0 +1,53 @@
+{
+  "version": "HPO-20260901-HGNC-20261013-ClinGen-20261007-v1",
+  "sources": {
+    "hpo": {
+      "file": "hpo.txt",
+      "sha256": "93dace952fcb3ec4728818857f6ba76bc2d5312f4d83266519b8694b8e798f22",
+      "version": "2026-09-01",
+      "source": "https://github.com/obophenotype/human-phenotype-ontology/releases/tag/v2026-09-01",
+      "license": "HPO acknowledgement and integrity terms",
+      "accessedAt": "2026-10-07"
+    },
+    "hpoa": {
+      "file": "hpoa.txt",
+      "sha256": "e89aa39c8f97bf5a52c5d160f9250a603681d630ade8ec2679d84ac5aece1f72",
+      "version": "2026-09-01",
+      "source": "https://github.com/obophenotype/human-phenotype-ontology/releases/tag/v2026-09-01",
+      "license": "HPO acknowledgement and integrity terms",
+      "accessedAt": "2026-10-07"
+    },
+    "pack_hg19": {
+      "file": "hg19.json",
+      "sha256": "36c6ce3406f353d837ef250616ae24936477d1ba1c9b8380c6289d7ec0e4dec2",
+      "version": "HPO-20260901-ClinGen-20261007-Mondo-20261006-v1",
+      "source": "ClinGen reviewed resource manifest 2026-10-07",
+      "license": "CC0-1.0 and HPO acknowledgement terms",
+      "accessedAt": "2026-10-07"
+    },
+    "pack_hg38": {
+      "file": "hg38.json",
+      "sha256": "421294af3d376a65ac04e3cf2cbc2485f3a9c6719cd9d5055efc0f6a8393d5c7",
+      "version": "HPO-20260901-ClinGen-20261007-Mondo-20261006-v1",
+      "source": "ClinGen reviewed resource manifest 2026-10-07",
+      "license": "CC0-1.0 and HPO acknowledgement terms",
+      "accessedAt": "2026-10-07"
+    },
+    "gene_disease": {
+      "file": "genes_to_disease.txt",
+      "sha256": "7937a1b92779dc8614e39ace623b443c7c71dd15e4de11d5e52b14e331ab5978",
+      "version": "2026-09-01",
+      "source": "https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/genes_to_disease.txt",
+      "license": "HPO acknowledgement and integrity terms",
+      "accessedAt": "2026-10-13"
+    },
+    "hgnc": {
+      "file": "hgnc.tsv",
+      "sha256": "2828618d23d315be76ea415f7ef0e951858716ebab07e2d584190f52e5178c1e",
+      "version": "2026-10-13 retrieved snapshot",
+      "source": "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt",
+      "license": "CC0-1.0",
+      "accessedAt": "2026-10-13"
+    }
+  }
+}

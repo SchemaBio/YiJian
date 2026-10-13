@@ -1,4 +1,15 @@
-export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v2-fast-snv';
+export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v3-hpo-priority';
+export interface PhenotypeMatch {
+  geneBackground?:{id:string;validity:string;inheritance:string;source?:string};
+  gene:string; diseaseId:string; diseaseName?:string; score:number; eligible:boolean;
+  matched:{id:string;name?:string}[]; source:string;
+}
+export interface ReferenceSupplement {
+  resourceVersion:string; version:string; canonical:Record<string,string|null>;
+  matches:Record<string,PhenotypeMatch[]>;
+  background:Record<string,{id:string;validity:string;inheritance:string;source?:string}[]>;
+  warnings:{id:string;replacement?:string}[]; nextCursor?:number;
+}
 export type ResultTable = 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh';
 export type Classification = 'Pathogenic' | 'Likely_Pathogenic' | 'VUS' | 'Likely_Benign' | 'Benign';
 export interface Evidence { code: string; strength: 'supporting' | 'moderate' | 'strong' | 'very_strong' | 'standalone'; source: string; note: string; }
@@ -34,6 +45,8 @@ export interface RowProof {
   upd?: {genotypeSupported: boolean; parent: 'maternal' | 'paternal' | 'unknown'; source: string};
 }
 export interface AssessmentContext {
+  referenceVersion?:string;
+  supplement?:ReferenceSupplement;
   taskId: string; attemptId: string; version: string; reference: string; hpo: string[];
   hpoVersion: string; pack: ReferencePack; proofs: Record<string, RowProof>;
   members: {id: string; role: string; sampleId?: string}[];
@@ -42,6 +55,13 @@ export interface AssessmentContext {
 }
 export interface AssessmentRow { id: string; table: ResultTable; values: Record<string, unknown>; }
 export interface AutomaticAssessment {
+  annotationDetails?:{field:string;value:string}[];
+  /** Used only to restore the original baseline when supplementary queries fail. */
+  legacyPinned?:boolean;
+  phenotypeMatch?:PhenotypeMatch;
+  phenotypePriority?:boolean;
+  referenceVersion?:string;
+  phenotypeResource?:string;
   classificationBasis?: 'acmg_evidence' | 'clinvar_reference' | 'population_screening' | 'screening_vus' | 'screening_conflict';
   screeningNotes?: string[];
   profile: string; contextVersion: string; state: 'evaluated' | 'insufficient_evidence';

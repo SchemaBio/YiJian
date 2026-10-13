@@ -15,6 +15,7 @@ import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { VariantResourceLinks } from './VariantResourceLinks';
 import { ClinVarBadge } from './ClinVarBadge';
+import { PhenotypeSummary, AnnotationScreeningNotes } from './PhenotypeSummary';
 import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
@@ -398,6 +399,8 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                     <InfoItem label={t("tasks.classification435c52")} value={acmgConfig ? <Tag variant={acmgConfig.variant}>{translateUI(acmgConfig.label, t)}</Tag> : t("tasks.notAssessedd94e42")} />
                     <InfoItem label={t("tasks.assessmentSource3f01c0")} value={variant.acmgAssessmentSource === 'manual_override' ? t("tasks.manualOverrideef74b5") : variant.acmgAssessmentSource === 'manual_evidence' ? t("tasks.savedEvidencePoints874a14") : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? t("tasks.quickAssessmentClinvarReferenceb1b550") : variant.automaticAcmg?.classificationBasis === 'population_screening' ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f") : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? t("tasks.quickAssessmentConflictNeedsReviewf3c456") : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? t("tasks.quickAssessmentVusNeedsReview79d7da") : t("tasks.automaticEvidencePointsb87a06")} />
                     {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
+                    <PhenotypeSummary assessment={variant.automaticAcmg} />
+                    <AnnotationScreeningNotes details={variant.automaticAcmg?.annotationDetails} />
                     <InfoItem label={t("tasks.automaticEvidencePointsb87a06")} value={variant.automaticAcmg ? t("tasks.pointsc91542", {p0: String(variant.automaticAcmg.score)}) : undefined} />
                     {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">{t("tasks.currentAnnotationsCannotEstablishAnAcmgClassification3d8581")}</p>}
                     <InfoItem

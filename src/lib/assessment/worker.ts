@@ -1,7 +1,7 @@
 import { LocalizedError } from '@/i18n/errors';
 /// <reference lib="webworker" />
 import {evaluateRow, selectCandidates} from './engine';
-import type {AssessmentContext, AssessmentRow, AutomaticAssessment} from './types';
+import type {AssessmentContext, AssessmentRow, AutomaticAssessment,ReferenceSupplement} from './types';
 import {ASSESSMENT_BATCH_SIZE} from './transport';
 let context: AssessmentContext | undefined;
 let evaluated: {row: AssessmentRow; assessment: AutomaticAssessment}[] = [];
@@ -12,6 +12,18 @@ self.onmessage = (event: MessageEvent) => {
   try {
     if (action === 'init') {context=payload; evaluated=[]; completed=false;cursor=0; self.postMessage({id,value:true});return;}
     if (!context) throw new LocalizedError("display.assessmentContextNotFixedYet2c45a3");
+    if(action==='references'){
+      const supplement=payload as ReferenceSupplement;
+      if(supplement.resourceVersion!==context.referenceVersion)throw new Error('Reference version mismatch');
+      if(!context.supplement)context.supplement={...supplement,canonical:{},matches:{},background:{}};
+      Object.assign(context.supplement.canonical,supplement.canonical);Object.assign(context.supplement.matches,supplement.matches);Object.assign(context.supplement.background,supplement.background);context.supplement.warnings=supplement.warnings;
+      self.postMessage({id,value:true});return;
+    }
+    if(action==='references-unavailable'){
+      context.supplement=undefined;
+      for(const {assessment} of evaluated){if(assessment.phenotypePriority)assessment.pinned=assessment.legacyPinned??false;assessment.phenotypePriority=false;assessment.phenotypeMatch=undefined;assessment.pinReasons=assessment.pinReasons.filter(reason=>reason!=='HPO 相关且初评致病/可能致病');}
+      self.postMessage({id,value:true});return;
+    }
     if (action === 'batch') {
       if(completed)throw new LocalizedError("display.assessmentCompleted80797a");
       for (const row of payload as AssessmentRow[]) {

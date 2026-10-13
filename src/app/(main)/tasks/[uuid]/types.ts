@@ -204,6 +204,11 @@ export interface ACMGEvidenceEntry {
 }
 
 export interface AutomaticACMGAssessment {
+  annotationDetails?:{field:string;value:string}[];
+  phenotypeMatch?:import('@/lib/assessment/types').PhenotypeMatch;
+  phenotypePriority?:boolean;
+  phenotypeResource?:string;
+  referenceVersion?:string;
   classificationBasis?: import('@/lib/assessment/types').AutomaticAssessment['classificationBasis'];
   screeningNotes?: string[];
   profile: string;

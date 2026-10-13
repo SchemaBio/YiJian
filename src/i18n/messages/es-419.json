@@ -2746,5 +2746,28 @@
     "online": "En línea",
     "offline": "Sin conexión",
     "busy": "Ocupado"
+  },
+  "phenotype": {
+    "title": "Relevancia fenotípica HPO",
+    "priority": "Relacionado con HPO y evaluación inicial patogénica/probablemente patogénica",
+    "relevanceOnly": "Referencia de relevancia fenotípica",
+    "similarity": "Similitud (no probabilidad de patogenicidad)",
+    "matches": "Se cumple el umbral de coincidencia fenotípica",
+    "belowThreshold": "Por debajo del umbral de candidatura",
+    "matchedTerms": "Fenotipos coincidentes",
+    "none": "No proporcionado",
+    "resource": "Versión del recurso",
+    "source": "Fuente de la asociación",
+    "noPoints": "La relevancia HPO no añade puntos ACMG.",
+    "gqPending": "Candidato HPO: GQ sin verificar",
+    "frequencyPending": "Candidato HPO: AC/AN sin verificar",
+    "familyPending": "Candidato HPO: revisar información familiar",
+    "unavailable": "Suplemento HPO no disponible; continúa la evaluación original",
+    "invalidHPO": "Algunos identificadores HPO son inválidos, obsoletos o normalizados; revíselos",
+    "annotations": "Referencias adicionales de anotaciones existentes",
+    "annotationLimits": "Las anotaciones de enfermedad, herencia y predicción apoyan el cribado. Las asociaciones no verificadas y predicciones no calibradas no generan criterios ACMG.",
+    "geneBackground": "Contexto de ClinGen a nivel de gen (puede corresponder a otra enfermedad)",
+    "acknowledgement": "Las asociaciones fenotípicas usan Human Phenotype Ontology (HPO); los identificadores de genes usan HGNC.",
+    "negatedHPO": "Los términos HPO negados o excluidos explícitamente no se usaron para la coincidencia fenotípica."
   }
 }

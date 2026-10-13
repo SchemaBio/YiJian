@@ -2618,5 +2618,21 @@
   "· attempt": "interface.attempt38a16a",
   "attempt:": "interface.attempt323ccf",
   "Pangolin gain": "interface.pangolinGaindcee65",
-  "Pangolin loss": "interface.pangolinLoss653f20"
+  "Pangolin loss": "interface.pangolinLoss653f20",
+  "HPO 表型相关性": "phenotype.title",
+  "HPO 相关且初评致病/可能致病": "phenotype.priority",
+  "表型相关性参考": "phenotype.relevanceOnly",
+  "相似度（非致病概率）": "phenotype.similarity",
+  "达到表型匹配阈值": "phenotype.matches",
+  "未达到候选阈值": "phenotype.belowThreshold",
+  "匹配表型": "phenotype.matchedTerms",
+  "关联来源": "phenotype.source",
+  "HPO 相关性不增加 ACMG 积分。": "phenotype.noPoints",
+  "HPO 候选：GQ 未核验": "phenotype.gqPending",
+  "HPO 候选：AC/AN 未核验": "phenotype.frequencyPending",
+  "HPO 候选：家系资料待核验": "phenotype.familyPending",
+  "HPO 补充资源暂不可用，继续原有初评": "phenotype.unavailable",
+  "部分 HPO 编号无效、过时或已归一，请核对": "phenotype.invalidHPO",
+  "已有注释补充参考": "phenotype.annotations",
+  "这些疾病、遗传模式及预测注释用于筛查；未核验的关联和未校准的预测值不生成 ACMG 条款。": "phenotype.annotationLimits"
 }

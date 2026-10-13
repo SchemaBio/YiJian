@@ -5,6 +5,7 @@ import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
 import { IconActionButton } from '@/components/shared/ActionButton';
+import { PhenotypeSummary } from './PhenotypeSummary';
 
 
 import * as React from 'react';
@@ -149,6 +150,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
 
           </>}
           {section === 'assessment' && <>
+          <PhenotypeSummary assessment={variant.automaticAssessment} />
           {/* 致病性评估 */}
           <SectionTitle icon={Database} title={t("tasks.pathogenicityAssessment0df423")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">

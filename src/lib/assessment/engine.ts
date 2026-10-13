@@ -4,6 +4,7 @@ import { createDefaultGainAssessmentCriteria, createDefaultLossAssessmentCriteri
 import { calculateLossTotal } from '@/app/(main)/tasks/[uuid]/utils/loss-calculator';
 import { calculateGainTotal } from '@/app/(main)/tasks/[uuid]/utils/gain-calculator';
 import { screenSNV } from './snv-screen';
+import { annotationGenes } from './row-annotations';
 
 const pathogenic = (s?: string) => s === 'Pathogenic' || s === 'Likely_Pathogenic';
 const number = (v: unknown): number | undefined => v === undefined || v === null || String(v).trim() === '' || v === '.' || !Number.isFinite(Number(v)) ? undefined : Number(v);
@@ -175,6 +176,33 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
     }
   }
   if (result.classification || result.pinned) result.state='evaluated';
+  result.legacyPinned=result.pinned;
+  // Phenotype relevance is separate from ACMG evidence and strict family admission.
+  // Public gene associations are not relabelled as ClinGen-reviewed relationships.
+  if(ctx.supplement && ctx.hpo.length){
+    const geneIDs=annotationGenes(row);
+    if(!geneIDs.length){const region=interval(row,ctx.reference);if(region)for(const dosage of index(ctx).dosage.get(region.chromosome)??[])if(dosage.gene&&overlaps(region,dosage))geneIDs.push(dosage.gene);}
+    const genes=[...new Set(geneIDs.map(gene=>ctx.supplement!.canonical[gene]??gene))];
+    const annotatedDiseaseIDs=new Set(text(row.values.GenCC_disease_original_curie).split(/[&,;|]/).filter(Boolean));
+    const matches=genes.flatMap(gene=>ctx.supplement!.matches[gene]??[]).sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.score-a.score||Number(annotatedDiseaseIDs.has(b.diseaseId))-Number(annotatedDiseaseIDs.has(a.diseaseId))||a.diseaseId.localeCompare(b.diseaseId));
+    const best=matches[0];
+    if(best){
+      const background=(ctx.supplement.background[best.gene]??[]).find(record=>record.id===best.diseaseId)??ctx.supplement.background[best.gene]?.[0];
+      result.phenotypeMatch=background?{...best,geneBackground:background}:best;result.referenceVersion=ctx.supplement.resourceVersion;result.phenotypeResource=ctx.supplement.version;
+      if(best.eligible&&pathogenic(result.classification)&&result.classificationBasis!=='screening_conflict'){
+        const filter=text(read(row.values,'Filter','FILTER','filter'));
+        const depth=p?.proband?.dp??number(read(row.values,'Depth','depth'));
+        const gq=p?.proband?.gq??number(row.values.GQ);
+        const genotype=p?.proband?.gt??text(row.values.Genotype);
+        const explicitFail=p?.qualityPassed===false || !!filter&&filter!=='PASS' && filter!=='.' || depth!==undefined&&depth<10 || gq!==undefined&&gq<20 || /^(0[|/]0|0)$/.test(genotype) || p?.proband?.ad!==undefined&&(p.proband.ad[1]??0)<3;
+        if(!explicitFail){result.phenotypePriority=true;result.pinned=true;result.state='evaluated';result.pinReasons.push('HPO 相关且初评致病/可能致病');}
+      }
+      if(!p?.proband?.gq)result.pending.push('phenotype.gqPending');
+      if(!p?.frequency?.length)result.pending.push('phenotype.frequencyPending');
+      if(!p?.pedigreeVerified)result.pending.push('phenotype.familyPending');
+    }
+  }
+  if(result.phenotypePriority)result.pending=result.pending.filter(note=>note!=='质量未通过或必要质量信息缺失，不自动置顶');
   if (!ctx.pack.licenses.length) result.pending.push('本地参考证据包尚未发布');
   return result;
 }

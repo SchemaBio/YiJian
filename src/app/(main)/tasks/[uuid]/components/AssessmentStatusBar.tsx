@@ -28,7 +28,7 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
      {status.state==='loading'&&<p role="status">{t("tasks.localInitialAssessmentProcessedc2a938")}{status.processed.toLocaleString(t.locale)} {t("history.recordseb8c2d")}</p>}
      {status.state==='ready'&&<p>{t("tasks.automaticallyPinned272d97")}{status.pinned??0} {t("history.recordseb8c2d")}{table ? t("tasks.currentTypeRecordse8ce8f", {p0: String(status.pinnedByTable?.[table]??0)}) : ''}</p>}
      <section><h4 className="mb-1 font-semibold">{t("tasks.assessmentVersion0a63d1")}</h4><p className="break-words text-fg-muted">{status.version || t("history.notProvided071fb2")}</p></section>
-     <section><h4 className="mb-1 font-semibold">{t("tasks.evidenceAvailabilityc554c6")}</h4>{status.pending?.length ? <ul className="space-y-2 text-fg-muted">{status.pending.map(x=><li key={x}>{x}</li>)}</ul> : <p className="text-fg-muted">{t("tasks.noAdditionalAvailabilityNoticesProfessionalReviewIs6fffa8")}</p>}</section>
+     <section><h4 className="mb-1 font-semibold">{t("tasks.evidenceAvailabilityc554c6")}</h4>{status.pending?.length ? <ul className="space-y-2 text-fg-muted">{status.pending.map(x=><li key={x}>{t(x)}</li>)}</ul> : <p className="text-fg-muted">{t("tasks.noAdditionalAvailabilityNoticesProfessionalReviewIs6fffa8")}</p>}</section>
      <section><h4 className="mb-1 font-semibold">{t("tasks.resourceVersion0c7595")}</h4><p className="break-words text-fg-muted">{status.packVersion && status.packVersion !== 'unavailable' ? `Human Phenotype Ontology、ClinGen、Mondo · ${status.packVersion}` : t("tasks.assessmentResourcesUnavailableOrNotLoaded700183")}</p></section>
    </div>
  </ToolbarPopover>

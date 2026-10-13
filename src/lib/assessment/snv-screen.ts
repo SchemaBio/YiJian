@@ -11,6 +11,9 @@ const significant = (v: unknown) => v !== undefined && v !== null && String(v).t
 const read = (v: Record<string, unknown>, ...keys: string[]) => keys.map(k => v[k]).find(significant);
 function frequency(v: unknown): number | undefined {
   if (!significant(v) || (typeof v !== 'number' && typeof v !== 'string')) return undefined;
+  // An unassociated list may describe different alleles or transcripts.
+  // Only a scalar frequency can be used until its allele association is verified.
+  if (typeof v === 'string' && /[&|;,]/.test(v)) return undefined;
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 && n <= 1 ? n : undefined;
 }
@@ -36,7 +39,8 @@ function clinvar(v: unknown): ClinVarReference {
 export function screenSNV(values: Record<string, unknown>, result: AutomaticAssessment): void {
   const globalAF = frequency(read(values, 'GnomAD_AF', 'gnomAD_AF', 'gnomadAF'));
   const easAF = frequency(read(values, 'GnomAD_AF_EAS', 'gnomAD_AF_EAS', 'gnomadEasAF'));
-  const available = [globalAF, easAF].filter((f): f is number => f !== undefined);
+  const extraAF=frequency(values.MAX_AF);
+  const available = [globalAF, easAF, extraAF].filter((f): f is number => f !== undefined);
   const maxAF = available.length ? Math.max(...available) : undefined;
   const significance = read(values, 'ClinVar_Sig', 'ClinVar_CLNSIG', 'clinvarSignificance');
   const review = String(read(values, 'ClinVar_RevStat', 'clinvarReviewStatus') ?? '未提供审核状态');
@@ -46,6 +50,7 @@ export function screenSNV(values: Record<string, unknown>, result: AutomaticAsse
     notes.push(`gnomAD：总体 AF=${globalAF ?? '未提供'}，东亚 AF=${easAF ?? '未提供'}；${maxAF >= COMMON_AF ? '常见' : maxAF >= FREQUENT_AF ? '较常见' : maxAF === 0 ? '报告 AF 为 0（不能等同已核验缺失）' : maxAF <= 0.0001 ? '稀有' : '低频'}`);
   }
   if (significant(significance)) notes.push(`ClinVar：${significance}；${review}`);
+  result.annotationDetails=['ClinVar_DN','MAX_AF','GenCC_disease_title','GenCC_moi_title','GenCC_disease_original_curie','GenCC_assertion_criteria_url','Pangolin_Gain','Pangolin_Loss','EVOScore'].filter(field=>significant(values[field])).map(field=>({field,value:String(values[field])}));
   const formal = result.classification;
   const pathogenic = (c?: Classification) => c === 'Pathogenic' || c === 'Likely_Pathogenic';
   const benign = (c?: Classification) => c === 'Benign' || c === 'Likely_Benign';

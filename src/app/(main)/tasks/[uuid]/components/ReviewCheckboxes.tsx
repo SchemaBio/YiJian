@@ -22,6 +22,7 @@ interface ReviewCheckboxProps {
  */
 export function PinCheckbox({ checked, onChange, disabled, source, reasons }: ReviewCheckboxProps) {
   const t = useText();
+  reasons = reasons?.map(reason => translateUI(reason, t));
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
   const tooltip = readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked ? t("tasks.clickToUnpinbda191", {p0: String(source === 'automatic' ? t('系统自动置顶：{p0}{p1}', {p0:reasons?.join('；')||t("display.evidenceSupportedKeyCandidate43d43a"), p1:''}) : t("display.keyLocusPinneda50ba8"))}) : t("tasks.clickToPinImportantLocus56c657", {p0: String(reasons?.length?t("display.initialAssessment325903")+reasons.join('；'):'')});

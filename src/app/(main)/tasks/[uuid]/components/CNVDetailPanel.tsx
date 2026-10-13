@@ -1,4 +1,5 @@
 'use client';
+import { PhenotypeSummary } from './PhenotypeSummary';
 import { formatNumericString } from '@/i18n/format';
 
 import { errorText } from '@/i18n/errors';
@@ -209,6 +210,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           </div>}
           </section>
           <section hidden={section !== 'evidence'} >
+          <PhenotypeSummary assessment={variant.automaticAssessment} />
           {/* CNV 特征 */}
           <SectionTitle icon={FileText} title={t("tasks.cnvFeaturesc60b58")} />
           <div className="space-y-0">

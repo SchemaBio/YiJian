@@ -3,6 +3,7 @@ import { LocalizedError } from '@/i18n/errors';
 
 import {api} from '../api';
 import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable} from './types';
+import { loadReferences, referenceGenes } from './reference-client';
 export interface AssessmentStatus {taskId:string;state:'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
 interface Envelope {active?:AssessmentContext;latestVersion:string;reassessmentAvailable:boolean}
@@ -30,12 +31,27 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     const envelope=await api.get<Envelope>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{signal:controller.signal});
     const context=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
     session.context=context;
-    publish(session,{version:context.version,packVersion:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
+    publish(session,{version:context.version,packVersion:context.referenceVersion?`${context.pack.version} · HPO/HGNC/ClinGen ${context.referenceVersion}`:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
     await rpc('init',context);
+    const seenGenes=new Set<string>();let referencesFailed=false;
     for(const table of context.tables??[]){
       if(controller.signal.aborted)throw new LocalizedError("display.initialAssessmentCanceledf56bc8");
       publish(session,{phase:'evaluate',table});
-      await read(context,table,async rows=>{const processed=await rpc('batch',rows) as number;publish(session,{processed});},controller.signal);
+      await read(context,table,async rows=>{
+        if(context.referenceVersion && context.hpo.length && !referencesFailed){
+          const genes=referenceGenes(rows,context).filter(gene=>!seenGenes.has(gene));
+          if(genes.length)try{
+            const supplemental=await loadReferences(context,genes,controller.signal);
+            await rpc('references',supplemental);for(const gene of genes)seenGenes.add(gene);
+            if(supplemental.warnings.length)publish(session,{pending:[...context.availability,'phenotype.invalidHPO',...supplemental.warnings.map(w=>`${w.id}${w.replacement?' → '+w.replacement:''}`)]});
+          }catch(cause){
+            if(controller.signal.aborted || cause instanceof Error&&cause.message==='REFERENCE_VERSION_CHANGED')throw cause;
+            referencesFailed=true;await rpc('references-unavailable');
+            publish(session,{pending:[...context.availability,'phenotype.unavailable']});
+          }
+        }
+        const processed=await rpc('batch',rows) as number;publish(session,{processed});
+      },controller.signal);
     }
     publish(session,{phase:'finalize'});
     const total=await rpc('finish') as number;
