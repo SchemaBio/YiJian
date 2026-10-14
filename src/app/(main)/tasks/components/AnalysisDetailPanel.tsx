@@ -1,4 +1,7 @@
 'use client';
+import { useResearchExpiry } from '@/lib/research-retention';
+import { clearTaskBrowserResults } from '@/lib/parquet-browser';
+import { clearTaskRowSnapshots } from '../[uuid]/result-api';
 import { useText } from '@/i18n/useText';
 import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 
@@ -20,7 +23,7 @@ import {
   MTTab,
   UPDTab,
   ROHTab,
-  ReportTab,
+  FilesTab,
 } from '../[uuid]/components';
 import { Tag } from '@schema/ui-kit';
 import { Clock3, Server } from 'lucide-react';
@@ -68,8 +71,8 @@ const executionReasonLabels: Record<string, string> = {
 	NODE_FIRST_REPORT_TIMEOUT: '节点未在 10 分钟内完成首报',
 	NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟',
 	NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟',
-	NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败',
-	NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流',
+	NODE_CALLBACK_AUTH_FAILED: '节点状态上报鉴权失败',
+	NODE_CALLBACK_RATE_LIMITED: '节点状态上报被限流',
 	NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常',
 	NODE_DNS_FAILED: '节点无法解析状态服务域名',
 	NODE_TLS_FAILED: '节点与状态服务的 TLS 连接失败',
@@ -129,6 +132,8 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
     loadTask();
   }, [taskId]);
 
+  useResearchExpiry(task?.expiresAt,()=>{clearTaskRowSnapshots(taskId);void clearTaskBrowserResults(taskId);setTask(null);setSample(null);});
+  useResearchExpiry(sample?.expiresAt,()=>setSample(null));
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -214,8 +219,8 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
             onFilterChange={(state) => setFilterState('roh', state)}
           />
         );
-      case 'report':
-        return <ReportTab taskId={taskId} />;
+      case 'files':
+        return <FilesTab taskId={taskId} />;
       default:
         return null;
     }

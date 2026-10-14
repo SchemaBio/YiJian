@@ -12,13 +12,13 @@ export { MEITab } from './MEITab';
 export { MTTab } from './MTTab';
 export { UPDTab } from './UPDTab';
 export { ROHTab } from './ROHTab';
-export { ReportTab } from './ReportTab';
+export { ReportTab, FilesTab } from './ReportTab';
 export { TaskRuntimeTab } from './TaskRuntimeTab';
 export { IGVViewer, PositionLink } from './IGVViewer';
 export { VariantDetailPanel } from './VariantDetailPanel';
 export { CNVDetailPanel } from './CNVDetailPanel';
 export { MTDetailPanel } from './MTDetailPanel';
-export { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+export { PinCheckbox, FocusCheckbox, PinColumnHeader, FocusColumnHeader } from './ReviewCheckboxes';
 
 // CNV 致病性评估组件
 export { CNVPathogenicityTag, CNVPathogenicityBadge } from './CNVPathogenicityTag';

@@ -20,11 +20,11 @@ import type { Column } from '@schema/ui-kit';
 import { Search, ListFilter } from 'lucide-react';
 import type { SNVIndel, TableFilterState, PaginatedResult, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSNVIndels, ACMG_CONFIG, getGeneLists, reportVariant, pinVariant, saveResultRowAdjustment, type GeneListOption } from '../result-api';
+import { getSNVIndels, ACMG_CONFIG, getGeneLists, focusVariant, pinVariant, saveResultRowAdjustment, type GeneListOption } from '../result-api';
 import { IGVViewer, PositionLink } from './IGVViewer';
 import { VariantDetailPanel } from './VariantDetailPanel';
 import { formatPopulationFrequency, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
-import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, FocusCheckbox, PinColumnHeader, FocusColumnHeader } from './ReviewCheckboxes';
 import { ClinVarBadge } from './ClinVarBadge';
 import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
 import { VariantTypeBadge } from './VariantTypeBadge';
@@ -55,7 +55,7 @@ export function SNVIndelTab({
 	const [operationError, setOperationError] = React.useState<string | null>(null);
 	const [pendingVariants, setPendingVariants] = React.useState<Set<string>>(() => new Set());
   const [geneLists, setGeneLists] = React.useState<GeneListOption[]>([]);
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; focused: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='snv-indel')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -100,7 +100,7 @@ export function SNVIndelTab({
   }, []);
 
   // 处理置顶状态变更
-  const handlePinChange = React.useCallback((id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  const handlePinChange = React.useCallback((id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
       [id]: { ...currentState, pinned: checked }
@@ -115,17 +115,17 @@ export function SNVIndelTab({
 		}));
   }, [taskId, t]);
 
-  // 处理回报状态变更
-  const handleReportChange = React.useCallback((id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  // 处理关注状态变更
+  const handleFocusChange = React.useCallback((id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reported: checked }
+      [id]: { ...currentState, focused: checked }
     }));
 		setPendingVariants(previous => new Set(previous).add(id));
 		setOperationError(null);
-		void reportVariant(taskId, 'snv-indel', id, checked).catch(cause => {
+		void focusVariant(taskId, 'snv-indel', id, checked).catch(cause => {
 			setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSaveReportSelection594b1f"));
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSaveFocusSelection594b1f"));
 		}).finally(() => setPendingVariants(previous => {
 			const next = new Set(previous); next.delete(id); return next;
 		}));
@@ -133,7 +133,7 @@ export function SNVIndelTab({
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: SNVIndel) => {
-    return reviewStatus[variant.id] ?? { pinned: variant.pinned, reported: variant.reported };
+    return reviewStatus[variant.id] ?? { pinned: variant.pinned, focused: variant.focused };
   }, [reviewStatus]);
 
 	const sortedData = result?.data ?? [];
@@ -254,14 +254,14 @@ export function SNVIndelTab({
   // 列定义
   const columns: Column<SNVIndel>[] = [
     {
-      id: 'reported',
-      header: <ReportColumnHeader />,
+      id: 'focused',
+      header: <FocusColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
         return (
-          <ReportCheckbox
-            checked={state.reported}
-            onChange={(checked) => handleReportChange(row.id, checked, state)}
+          <FocusCheckbox
+            checked={state.focused}
+            onChange={(checked) => handleFocusChange(row.id, checked, state)}
 					disabled={pendingVariants.has(row.id)}
           />
         );

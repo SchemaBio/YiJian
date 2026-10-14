@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '@/lib/api';
 import { queryBrowserParquet } from '@/lib/parquet-browser';
 import { DEFAULT_FILTER_STATE } from './types';
-import { getCNVSegments, getSNVIndels, reportVariant, reviewVariant, saveResultRowAdjustment } from './result-api';
+import { getCNVSegments, getSNVIndels, focusVariant, reviewVariant, saveResultRowAdjustment } from './result-api';
 
 vi.mock('@/lib/api', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), download: vi.fn() }, ApiError: class extends Error {} }));
 vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserParquet:vi.fn(),updateBrowserOverlay:vi.fn().mockResolvedValue(undefined)}));
@@ -26,24 +26,24 @@ describe('versioned Parquet adjustments', () => {
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({ items: [{ id: 'row', attemptId: 'attempt', datasetVersion: 'hash', adjustmentVersion: 0 }], total: 1, rowCount:1, columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version: 'hash', attemptId: 'attempt' });
     await getSNVIndels(task, { ...DEFAULT_FILTER_STATE, columnFilters: [{ column: 'reviewed', operator: 'equals' as const, value: 'false' }] });
   }
-  it('captures the browser baseline only when the user reports a row',async()=>{
+  it('only writes the focus marker without capturing or confirming evidence',async()=>{
     const criteria=[{code:'PP3',strength:'strong',source:'fixture',note:'fixture'}];
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[{id:'row',attemptId:'attempt',datasetVersion:'hash',adjustmentVersion:0,adjustments:{},automaticAssessment:{contextVersion:'fixed-context',criteria},automaticAcmg:{criteria}}],total:1,rowCount:1,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});
-    await getSNVIndels('report-baseline',DEFAULT_FILTER_STATE);
-    vi.mocked(api.put).mockResolvedValueOnce({adjustment:{version:1,adjustments:{reported:true,acmgEvidence:criteria,assessmentVersion:'fixed-context'}}});
-    await reportVariant('report-baseline','snv-indel','row',true);
-    expect(api.put).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({adjustments:{reported:true,acmgEvidence:criteria,assessmentVersion:'fixed-context'}}));
-    vi.mocked(api.put).mockResolvedValueOnce({adjustment:{version:2,adjustments:{reported:false,acmgEvidence:criteria}}});
-    await reportVariant('report-baseline','snv-indel','row',false);
-    expect(api.put).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({adjustments:{reported:false,assessmentVersion:'fixed-context'}}));
+    await getSNVIndels('focus-baseline',DEFAULT_FILTER_STATE);
+    vi.mocked(api.put).mockResolvedValueOnce({adjustment:{version:1,adjustments:{focused:true}}});
+    await focusVariant('focus-baseline','snv-indel','row',true);
+    expect(api.put).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({adjustments:{focused:true}}));
+    vi.mocked(api.put).mockResolvedValueOnce({adjustment:{version:2,adjustments:{focused:false,acmgEvidence:criteria}}});
+    await focusVariant('focus-baseline','snv-indel','row',false);
+    expect(api.put).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({adjustments:{focused:false}}));
   });
-  it('does not overwrite manual evidence when reporting',async()=>{
+  it('does not overwrite manual evidence when focusing',async()=>{
     const manual=[{code:'PM2',strength:'supporting'}];
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[{id:'row',attemptId:'attempt',datasetVersion:'hash',adjustmentVersion:2,adjustments:{acmgEvidence:manual,assessmentVersion:'manual-context'},automaticAssessment:{contextVersion:'fixed-context',criteria:[{code:'PP3',strength:'strong'}]}}],total:1,rowCount:1,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});
-    await getSNVIndels('report-manual',DEFAULT_FILTER_STATE);
-    vi.mocked(api.put).mockResolvedValueOnce({adjustment:{version:3,adjustments:{reported:true,acmgEvidence:manual}}});
-    await reportVariant('report-manual','snv-indel','row',true);
-    expect(api.put).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({adjustments:{reported:true,assessmentVersion:'manual-context'}}));
+    await getSNVIndels('focus-manual',DEFAULT_FILTER_STATE);
+    vi.mocked(api.put).mockResolvedValueOnce({adjustment:{version:3,adjustments:{focused:true,acmgEvidence:manual}}});
+    await focusVariant('focus-manual','snv-indel','row',true);
+    expect(api.put).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({adjustments:{focused:true}}));
   });
   it('uses the browser overlay for CNV assessment without per-row server queries', async () => {
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({ items: [{ id: 'cnv', attemptId: 'attempt', datasetVersion: 'hash', adjustmentVersion: 3, cnvAssessment: { cnvId: 'cnv', totalScore: 1 } }], total: 1, rowCount: 1, columns: [], columnTypes: {}, fieldProfileVersion: 'parquet-fields-v2', offset: 0, limit: 20, version: 'hash', attemptId: 'attempt' });
@@ -63,7 +63,7 @@ describe('versioned Parquet adjustments', () => {
     vi.mocked(api.put).mockResolvedValueOnce({ adjustment: { version: 1, adjustments: { reviewed: true } } });
     await reviewVariant('task-save', 'snv-indel', 'row', true);
     expect(api.put).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ expectedVersion: 0, attemptId: 'attempt', datasetVersion: 'hash', adjustments: { reviewed: true } }));
-    vi.mocked(api.put).mockResolvedValueOnce({ adjustment: { version: 2, adjustments: { reported: true } } });
+    vi.mocked(api.put).mockResolvedValueOnce({ adjustment: { version: 2, adjustments: { focused: true } } });
     await reviewVariant('task-save', 'snv-indel', 'row', false);
     expect(api.put).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ expectedVersion: 1 }));
   });

@@ -40,6 +40,8 @@ interface RawTask {
   dispatch_retry_count?: number;
   dispatchRetryCount?: number;
   progress?: number;
+  expiresAt?: string;
+  expires_at?: string;
   createdAt?: string;
   created_at?: string;
   createdBy?: string;
@@ -113,6 +115,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
     progress: typeof raw.progress === 'number' && Number.isFinite(raw.progress) ? raw.progress : 0,
+    expiresAt: raw.expiresAt ?? raw.expires_at,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     createdBy: String(raw.createdBy ?? raw.created_by ?? ''),
     retryStartedAt: raw.retryStartedAt,
@@ -146,6 +149,7 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     dispatchNextRetryAt: raw.dispatchNextRetryAt ?? raw.dispatch_next_retry_at,
     dispatchRetryDeadlineAt: raw.dispatchRetryDeadlineAt ?? raw.dispatch_retry_deadline_at,
     dispatchRetryCount: raw.dispatchRetryCount ?? raw.dispatch_retry_count,
+    expiresAt: raw.expiresAt ?? raw.expires_at,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     createdBy: String(raw.createdBy ?? raw.created_by ?? ''),
     retryStartedAt: raw.retryStartedAt,

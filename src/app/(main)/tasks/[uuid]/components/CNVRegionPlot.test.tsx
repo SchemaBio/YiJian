@@ -15,7 +15,7 @@ vi.mock('./CNVPlotWindow', () => ({
 }));
 vi.mock('../result-api', () => ({ getCNVSegments: vi.fn(async () => ({ data: [segment], total: 1, version: 'fixture' })) }));
 vi.mock('../utils/cnv-signal', () => ({ loadCNR: vi.fn(async () => []), normalizeContig: (value: string) => value }));
-const segment: CNVSegment = { id: 'region', chromosome: '1', startPosition: 100000, endPosition: 150000, length: 50000, type: 'Deletion', copyNumber: 1, copyRatio: 0.5, log2Ratio: -1, genes: [], confidence: null, pinned: false, reported: false, reviewed: false };
+const segment: CNVSegment = { id: 'region', chromosome: '1', startPosition: 100000, endPosition: 150000, length: 50000, type: 'Deletion', copyNumber: 1, copyRatio: 0.5, log2Ratio: -1, genes: [], confidence: null, pinned: false, focused: false, reviewed: false };
 
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 

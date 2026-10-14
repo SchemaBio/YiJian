@@ -9,6 +9,8 @@ export function getSampleDataLink(id: string, signal?: AbortSignal): Promise<{ r
 
 type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] }; total?: number };
 type SampleFormPayload = {
+  identityPolicyAcknowledged?: boolean;
+  identityPolicyVersion?: string;
   internalId: string;
   gender: Sample['gender'];
   age?: number;
@@ -82,6 +84,7 @@ export function normalizeSample(rawValue: unknown): Sample {
     matchMode: rawString(raw, 'matchMode', 'match_mode') as Sample['matchMode'],
     autoMatchEnabled: raw.autoMatchEnabled === false || raw.auto_match_enabled === false ? false : true,
     remark: rawString(raw, 'remark', 'remark'),
+    expiresAt: rawString(raw, 'expiresAt', 'expires_at') || undefined,
     createdAt: rawString(raw, 'createdAt', 'created_at'),
     updatedAt: rawString(raw, 'updatedAt', 'updated_at'),
   };
@@ -157,6 +160,8 @@ export function samplePayload(data: SampleFormPayload) {
     throw new LocalizedError("interface.rAndRFastqPathsMustBeProvidedTogetherddfa6e", undefined, "R1 and R2 FASTQ paths must be provided together");
   }
   return {
+    identity_policy_acknowledged: data.identityPolicyAcknowledged,
+    identity_policy_version: data.identityPolicyVersion,
     internal_id: data.internalId,
     gender: data.gender,
     age: data.age ?? null,

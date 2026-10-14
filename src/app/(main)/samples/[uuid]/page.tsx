@@ -12,6 +12,7 @@ import { Tag } from '@schema/ui-kit';
 import { ArrowLeft, Database, User, FileText, Activity, Users } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-time';
 import { getSampleDetail } from '@/lib/samples';
+import { useResearchExpiry } from '@/lib/research-retention';
 import { getFamilyHistoryLabel } from '@/lib/sample-display';
 import { ApiError } from '@/lib/api';
 import type { SampleDetail } from '../types';
@@ -41,6 +42,7 @@ export default function SampleDetailPage() {
   const [loadError, setLoadError] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
   const [activeTab, setActiveTab] = React.useState<TabType>('info');
+  useResearchExpiry(sample?.expiresAt,()=>{setSample(null);router.replace('/samples');});
 
   React.useEffect(() => {
     async function loadSample() {

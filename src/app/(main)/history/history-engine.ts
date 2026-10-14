@@ -3,13 +3,13 @@ export const HISTORY_TYPES = [
   ['str', '动态突变'], ['mei', 'MEI'], ['mt', 'MT'], ['roh', 'ROH'], ['upd', 'UPD'],
 ] as const;
 export type HistoryType = typeof HISTORY_TYPES[number][0];
-export interface ReportRow {
+export interface FocusRow {
   id: string; revision: number; deleted?: boolean; table: HistoryType; taskUuid: string;
   attemptId: string; datasetId?: string; datasetVersion?: string; rowId?: string;
   groupKey: string; reference: string; identityKnown: boolean; fields: Record<string, string>;
-  reported: boolean; classification: string; reportedClassification: string;
-  acmgVersion?: string; vusSubclass?: string; reportedAcmgVersion?: string; reportedVusSubclass?: string;
-  firstReportedAt: string | null; lastReportedAt: string | null; reportedBy: string;
+  focused: boolean; classification: string; focusedClassification: string;
+  acmgVersion?: string; vusSubclass?: string; focusedAcmgVersion?: string; focusedVusSubclass?: string;
+  firstFocusedAt: string | null; lastFocusedAt: string | null; focusedBy: string;
   updatedAt: string; adjustmentVersion: number;
   currentSource?: boolean;
 }
@@ -19,7 +19,7 @@ export interface HistoryTask {
 export interface HistoryGroup {
   id: string; reference: string; identityKnown: boolean; locus: string; gene: string;
   classification: string; classificationCounts: Record<string, number>; detectionCount: number;
-  firstReportedAt: string; lastReportedAt: string; sourceCount: number; withdrawnCount: number;
+  firstFocusedAt: string; lastFocusedAt: string; sourceCount: number; withdrawnCount: number;
   fields: Record<string, string>;
 }
 export interface HistoryQuery {
@@ -57,15 +57,15 @@ function afNumbers(raw: string | undefined): number[] {
 }
 
 export class HistoryEngine {
-  private rows = new Map<string, ReportRow>();
+  private rows = new Map<string, FocusRow>();
   private revisions = new Map<string, { revision: number; table?: HistoryType }>();
   private tasks = new Map<string, HistoryTask>();
   private generation = 0;
-  private staged = new Map<HistoryType, { rows: Map<string, ReportRow>; tasks: Record<string, HistoryTask> }>();
-  private cache = new Map<string, { generation: number; groups: HistoryGroup[]; sources: Map<string, ReportRow[]>; tasks: number; variants: number }>();
+  private staged = new Map<HistoryType, { rows: Map<string, FocusRow>; tasks: Record<string, HistoryTask> }>();
+  private cache = new Map<string, { generation: number; groups: HistoryGroup[]; sources: Map<string, FocusRow[]>; tasks: number; variants: number }>();
 
   begin(table: HistoryType) { this.staged.set(table, { rows: new Map(), tasks: {} }); }
-  stage(table: HistoryType, rows: ReportRow[], tasks: Record<string, HistoryTask>) {
+  stage(table: HistoryType, rows: FocusRow[], tasks: Record<string, HistoryTask>) {
     const pending = this.staged.get(table); if (!pending) throw new Error('history sync is no longer active');
     for (const row of rows) { const prior = pending.rows.get(row.id); if (!prior || row.revision >= prior.revision) pending.rows.set(row.id, row); }
     Object.assign(pending.tasks, tasks);
@@ -73,7 +73,7 @@ export class HistoryEngine {
   commit(table: HistoryType) { const pending = this.staged.get(table); if (!pending) throw new Error('history sync is no longer active'); if (pending.rows.size || Object.keys(pending.tasks).length) this.apply(Array.from(pending.rows.values()), pending.tasks); this.staged.delete(table); }
   discard(table: HistoryType) { this.staged.delete(table); }
 
-  apply(rows: ReportRow[], tasks: Record<string, HistoryTask>): void {
+  apply(rows: FocusRow[], tasks: Record<string, HistoryTask>): void {
     for (const [id, task] of Object.entries(tasks)) this.tasks.set(id, task);
     for (const row of rows) {
       const previous = this.revisions.get(row.id);
@@ -98,29 +98,29 @@ export class HistoryEngine {
     const key = `${table}:${includeWithdrawn}`;
     const cached = this.cache.get(key);
     if (cached && cached.generation === this.generation) return cached;
-    const sources = new Map<string, ReportRow[]>();
+    const sources = new Map<string, FocusRow[]>();
     const activeGroups = new Set<string>(), activeTasks = new Set<string>();
     for (const row of this.rows.values()) {
       if (row.table !== table) continue;
-      if (row.reported) { activeGroups.add(row.groupKey); activeTasks.add(row.taskUuid); }
-      if (!includeWithdrawn && !row.reported) continue;
+      if (row.focused) { activeGroups.add(row.groupKey); activeTasks.add(row.taskUuid); }
+      if (!includeWithdrawn && !row.focused) continue;
       const members = sources.get(row.groupKey) || []; members.push(row); sources.set(row.groupKey, members);
     }
     const groups: HistoryGroup[] = [];
     for (const [id, rows] of sources) {
-      const active = rows.filter(row => row.reported);
+      const active = rows.filter(row => row.focused);
       const representative = active[0] || rows[0];
       const classes = new Map<string, Set<string>>();
       for (const row of active) {
         const tasks = classes.get(row.classification || '') || new Set<string>(); tasks.add(row.taskUuid); classes.set(row.classification || '', tasks);
       }
       const classificationCounts = Object.fromEntries(Array.from(classes, ([name, tasks]) => [name, tasks.size]));
-      const first = active.map(row => row.firstReportedAt).filter((value): value is string => Boolean(value)).sort();
-      const last = active.map(row => row.lastReportedAt).filter((value): value is string => Boolean(value)).sort();
+      const first = active.map(row => row.firstFocusedAt).filter((value): value is string => Boolean(value)).sort();
+      const last = active.map(row => row.lastFocusedAt).filter((value): value is string => Boolean(value)).sort();
       groups.push({ id, reference: representative.reference, identityKnown: representative.identityKnown,
         locus: locus(representative.fields), gene: [...new Set(rows.map(row => row.fields.gene || row.fields.mtGene).filter(Boolean))].join(' / '),
         classification: classes.size > 1 ? 'mixed' : [...classes.keys()][0] || '', classificationCounts,
-        detectionCount: new Set(active.map(row => row.taskUuid)).size, firstReportedAt: first[0] || '', lastReportedAt: last.at(-1) || '',
+        detectionCount: new Set(active.map(row => row.taskUuid)).size, firstFocusedAt: first[0] || '', lastFocusedAt: last.at(-1) || '',
         sourceCount: rows.length, withdrawnCount: rows.length - active.length, fields: representative.fields });
     }
     const result = { generation: this.generation, groups, sources, tasks: activeTasks.size, variants: activeGroups.size };
@@ -160,7 +160,7 @@ export class HistoryEngine {
       if (!av && av !== 0) return !bv && bv !== 0 ? a.id.localeCompare(b.id) : 1;
       if (!bv && bv !== 0) return -1;
       const primary = query.sort === 'af' && Number.isFinite(Number(av)) && Number.isFinite(Number(bv)) ? Number(av) - Number(bv) : typeof av === 'number' && typeof bv === 'number' ? av - bv : collator.compare(String(av), String(bv));
-      return primary * sign || b.lastReportedAt.localeCompare(a.lastReportedAt) || a.id.localeCompare(b.id);
+      return primary * sign || b.lastFocusedAt.localeCompare(a.lastFocusedAt) || a.id.localeCompare(b.id);
     });
     const page = Math.max(1, Math.min(query.page, Math.ceil(filtered.length / query.pageSize) || 1));
     return { groups: filtered.slice((page - 1) * query.pageSize, page * query.pageSize), total: filtered.length,

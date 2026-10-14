@@ -132,21 +132,21 @@ Idempotency-Key: <report-generation-uuid>
     "task_uuid": "<task>", "attempt_id": "<attempt>",
     "datasets": [{"id":"<dataset>","table":"snv-indel","version":"<version>","adjustment_revision":3}],
     "members": [], "qc": [],
-    "reported_variants": [{
+    "focused_variants": [{
       "table":"snv-indel", "row_id":"<stable-row>", "dataset_version":"<version>", "adjustment_version":2,
       "original": {}, "automatic_assessment": {},
-      "interpretation": {"reported":true}
+      "interpretation": {"focused":true}
     }]
   }
 }
 
-仅使用 reported_variants 生成回报表；空数组表示未选择回报位点。
+仅使用 focused_variants 生成关注表；空数组表示未选择关注位点。
 interpretation 是最新人工调整，automatic_assessment 是自动基线。
 服务须按 Idempotency-Key 缓存生成结果；相同键不得重新签发另一份报告。
 返回 2xx + PDF/DOCX 等二进制文件 + Content-Disposition。
 HEAD 应校验 Bearer Key 并返回 2xx；只支持 POST 可返回 405。`;
 const examples = [
- {language:'回报快照 v2 · 接口契约',code:snapshotExample},
+ {language:'关注快照 v2 · 接口契约',code:snapshotExample},
   { language: 'Python · FastAPI', code: pythonExample },
   { language: 'Go · net/http', code: goExample },
   { language: 'JavaScript · Express', code: javascriptExample },

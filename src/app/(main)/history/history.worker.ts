@@ -1,10 +1,10 @@
-import { HistoryEngine, type HistoryQuery, type HistoryTask, type HistoryType, type ReportRow } from './history-engine';
+import { HistoryEngine, type HistoryQuery, type HistoryTask, type HistoryType, type FocusRow } from './history-engine';
 
 const engine = new HistoryEngine();
 type Message = { id: number } & (
-  { action: 'apply'; rows: ReportRow[]; tasks: Record<string, HistoryTask> } |
+  { action: 'apply'; rows: FocusRow[]; tasks: Record<string, HistoryTask> } |
   { action: 'begin' | 'commit' | 'discard'; table: HistoryType } |
-  { action: 'stage'; table: HistoryType; rows: ReportRow[]; tasks: Record<string, HistoryTask> } |
+  { action: 'stage'; table: HistoryType; rows: FocusRow[]; tasks: Record<string, HistoryTask> } |
   { action: 'query'; query: HistoryQuery } |
   { action: 'clear'; table?: HistoryType } |
   { action: 'sources'; table: HistoryType; group: string; includeWithdrawn: boolean }

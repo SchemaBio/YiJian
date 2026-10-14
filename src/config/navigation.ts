@@ -1,4 +1,4 @@
-﻿import {
+import {
   Users,
   GitBranch,
   List,
@@ -56,7 +56,7 @@ export const mainNavItems: NavItem[] = [
   { label: '样本管理', href: '/samples', icon: Users },
 	{ label: '数据中心', href: '/data', icon: HardDrive },
   { label: '任务中心', href: '/tasks', icon: ListTodo },
-  { label: '历史检出', href: '/history', icon: History },
+  { label: '历史检出', href: '/history', icon: History, selfHostedOnly: true },
   { label: '流程中心', href: '/pipeline', icon: Workflow },
   { label: '费用中心', href: '/billing', icon: Coins, saasOnly: true },
   { label: '管理中心', href: '/admin', icon: Shield, selfHostedOnly: true, platformAdminOnly: true },
@@ -76,7 +76,7 @@ export const sidebarNavConfig: SidebarNavConfig = {
     { label: '基因列表', href: '/pipeline/gene-list', icon: Library },
     { label: 'BED 文件', href: '/pipeline/bed', icon: FileCode },
     { label: '基线管理', href: '/pipeline/baseline', icon: TrendingUp },
-    { label: '报告服务', href: '/pipeline/templates', icon: FileText },
+    { label: '报告服务', href: '/pipeline/templates', icon: FileText, selfHostedOnly: true },
   ],
   history: [],
   admin: [],

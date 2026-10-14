@@ -875,18 +875,18 @@
     --yj-pinned-row-bg: #f8f6e8;
     --yj-pinned-row-hover: #efecd6;
     --yj-pinned-row-selected: #e7dfb5;
-    --yj-reported-row-bg: #eef5ff;
-    --yj-reported-row-hover: #dfeaff;
-    --yj-reported-row-selected: #c7dcf7;
+    --yj-focused-row-bg: #eef5ff;
+    --yj-focused-row-hover: #dfeaff;
+    --yj-focused-row-selected: #c7dcf7;
   }
   .dark .variant-results-table,
   [data-theme='dark'] .variant-results-table {
     --yj-pinned-row-bg: #29291f;
     --yj-pinned-row-hover: #353429;
     --yj-pinned-row-selected: #48432c;
-    --yj-reported-row-bg: #1c293c;
-    --yj-reported-row-hover: #26364d;
-    --yj-reported-row-selected: #334a68;
+    --yj-focused-row-bg: #1c293c;
+    --yj-focused-row-hover: #26364d;
+    --yj-focused-row-selected: #334a68;
   }
   .variant-results-table tbody tr:has([data-result-mark='pin'][aria-pressed='true']) {
     --yj-marked-row-bg: var(--yj-pinned-row-bg);
@@ -894,10 +894,10 @@
     --yj-marked-row-selected: var(--yj-pinned-row-selected);
   }
   /* Report colors take precedence when both marks are active. */
-  .variant-results-table tbody tr:has([data-result-mark='report'][aria-pressed='true']) {
-    --yj-marked-row-bg: var(--yj-reported-row-bg);
-    --yj-marked-row-hover: var(--yj-reported-row-hover);
-    --yj-marked-row-selected: var(--yj-reported-row-selected);
+  .variant-results-table tbody tr:has([data-result-mark='focus'][aria-pressed='true']) {
+    --yj-marked-row-bg: var(--yj-focused-row-bg);
+    --yj-marked-row-hover: var(--yj-focused-row-hover);
+    --yj-marked-row-selected: var(--yj-focused-row-selected);
   }
   .variant-results-table tbody tr:has([data-result-mark][aria-pressed='true']) > td {
     background-color: var(--yj-marked-row-bg) !important;

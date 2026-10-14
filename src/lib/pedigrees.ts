@@ -78,6 +78,7 @@ export function normalizePedigreeMember(rawValue: unknown): PedigreeMember {
   return {
     id: String(raw.id ?? ''),
     sampleId: rawString(raw, 'sampleId', 'sample_id') || undefined,
+    sampleExpiresAt: rawString(raw, 'sampleExpiresAt', 'sample_expires_at') || undefined,
     name: rawString(raw, 'name', 'name'),
     gender: normalizeGender(raw.gender),
     birthYear: rawNumber(raw.birthYear ?? raw.birth_year),
@@ -159,6 +160,7 @@ export function memberPayload(data: Partial<PedigreeMember>) {
     generation: data.generation ?? 0,
     position: data.position ?? 0,
     sample_id: data.sampleId ?? '',
+    source_sample_fields: data.sourceSampleFields ?? [],
   };
 }
 

@@ -16,13 +16,13 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { MEIVariant, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMEIs, ACMG_CONFIG, reportVariant, pinVariant } from '../result-api';
+import { getMEIs, ACMG_CONFIG, focusVariant, pinVariant } from '../result-api';
 import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
 import { VariantTypeBadge } from './VariantTypeBadge';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { IGVViewer, PositionLink } from './IGVViewer';
-import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, FocusCheckbox, PinColumnHeader, FocusColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface MEITabProps {
@@ -67,7 +67,7 @@ export function MEITab({
 	const [error, setError] = React.useState<string | null>(null);
 	const [operationError, setOperationError] = React.useState<string | null>(null);
 	const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; focused: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='mei')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -79,7 +79,7 @@ export function MEITab({
   const setFilterState = onFilterChange ?? setInternalFilterState;
 
   // 处理置顶状态变更
-  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
 		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -98,19 +98,19 @@ export function MEITab({
 		}
   }, [taskId, t]);
 
-  // 处理回报状态变更
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  // 处理关注状态变更
+  const handleFocusChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
 		setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reported: checked }
+      [id]: { ...currentState, focused: checked }
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
 		try {
-			await reportVariant(taskId, 'mei', id, checked);
+			await focusVariant(taskId, 'mei', id, checked);
 		} catch (cause) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToMarkForReport8d3bd6"));
+			setOperationError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToMarkForFocus8d3bd6"));
 		} finally {
 			setPendingVariantIDs((previous) => {
 				const next = new Set(previous); next.delete(id); return next;
@@ -120,7 +120,7 @@ export function MEITab({
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: MEIVariant) => {
-    return reviewStatus[variant.id] ?? { pinned: variant.pinned, reported: variant.reported };
+    return reviewStatus[variant.id] ?? { pinned: variant.pinned, focused: variant.focused };
   }, [reviewStatus]);
 
 	// 排序和分页均由服务端在一个执行尝试范围内完成，不能在当前页再按
@@ -156,14 +156,14 @@ export function MEITab({
   // 列定义
   const columns: Column<MEIVariant>[] = [
     {
-      id: 'reported',
-      header: <ReportColumnHeader />,
+      id: 'focused',
+      header: <FocusColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
         return (
-          <ReportCheckbox
-            checked={state.reported}
-            onChange={(checked) => handleReportChange(row.id, checked, state)}
+          <FocusCheckbox
+            checked={state.focused}
+            onChange={(checked) => handleFocusChange(row.id, checked, state)}
 			disabled={pendingVariantIDs.has(row.id)}
           />
         );

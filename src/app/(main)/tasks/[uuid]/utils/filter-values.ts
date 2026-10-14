@@ -32,7 +32,7 @@ function dictionary(table: string, column: string): Term[] {
   if (['strstatus', 'status'].includes(field) && table === 'str') return dictionaries.str;
   if (['parentoforigin', 'parentorigin'].includes(field)) return dictionaries.parent;
   if (['confidencelabel', 'confidence', 'col18'].includes(field) && table === 'cnv-exon') return dictionaries.confidence;
-  if (['pinned', 'reported', 'reviewed'].includes(field)) return dictionaries.boolean;
+  if (['pinned', 'focused', 'reviewed'].includes(field)) return dictionaries.boolean;
   if (['type', 'varianttype', 'updtype', 'col4'].includes(field)) {
     if (table.startsWith('cnv-')) return dictionaries.cnv;
     if (table === 'upd') return dictionaries.upd;

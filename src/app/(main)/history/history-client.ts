@@ -1,20 +1,20 @@
 import { LocalizedError } from '@/i18n/errors';
 import { api } from '@/lib/api';
-import type { HistoryTask, HistoryType, ReportRow } from './history-engine';
+import type { HistoryTask, HistoryType, FocusRow } from './history-engine';
 
 export interface HistorySync {
   scope: string; cursor: string; watermark: number; complete: boolean;
-  rows: ReportRow[]; tasks: Record<string, HistoryTask>;
+  rows: FocusRow[]; tasks: Record<string, HistoryTask>;
 }
-export function syncReports(table: HistoryType, cursor: string, watermark: number | undefined, signal: AbortSignal) {
+export function syncFocuses(table: HistoryType, cursor: string, watermark: number | undefined, signal: AbortSignal) {
   return api.get<HistorySync>('/v1/history/sync', { params: { table, cursor, ...(watermark === undefined ? {} : { watermark: String(watermark) }) }, signal });
 }
 export interface HistoryAudit {
   id: string; actor: string; createdAt: string; reason: string;
   before: Record<string, unknown>; after: Record<string, unknown>;
 }
-export function reportDetail(id: string, signal: AbortSignal) {
-  return api.get<{ row: ReportRow; events: HistoryAudit[] }>(`/v1/history/reports/${encodeURIComponent(id)}`, { signal });
+export function focusDetail(id: string, signal: AbortSignal) {
+  return api.get<{ row: FocusRow; events: HistoryAudit[] }>(`/v1/history/focuses/${encodeURIComponent(id)}`, { signal });
 }
 
 export class HistoryWorkerClient {

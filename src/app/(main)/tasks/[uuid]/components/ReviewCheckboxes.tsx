@@ -54,15 +54,15 @@ export function PinCheckbox({ checked, onChange, disabled, source, reasons }: Re
 }
 
 /**
- * 回报标记。
+ * 关注标记。
  */
-export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
+export function FocusCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
   const t = useText();
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
   const tooltip = readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked
-    ? t("tasks.selectedForReportClickToWithdrawThis7e81d6")
-    : t("tasks.clickToIncludeInReportd66934");
+    ? t("tasks.selectedForFocusClickToWithdrawThis7e81d6")
+    : t("tasks.clickToIncludeInFocusd66934");
 
   return (
     <Tooltip content={translateUI(tooltip, t)} placement="top" variant="nav">
@@ -80,8 +80,8 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
-        data-result-mark="report"
-        aria-label={checked ? t("history.withdrawFromReport41c14c") : t("history.includeInReport233738")}
+        data-result-mark="focus"
+        aria-label={checked ? t("history.withdrawFromFocus41c14c") : t("history.includeInFocus233738")}
         aria-pressed={checked}
       >
         <FileCheck2 className={`w-5 h-5 ${checked ? 'fill-accent-subtle' : ''}`} />
@@ -91,14 +91,14 @@ export function ReportCheckbox({ checked, onChange, disabled }: ReviewCheckboxPr
 }
 
 /**
- * 置顶和回报状态的列头。
+ * 置顶和关注状态的列头。
  */
 export function PinColumnHeader() {
   const t = useText();
   return t("tasks.pin7bcf18");
 }
 
-export function ReportColumnHeader() {
+export function FocusColumnHeader() {
   const t = useText();
-  return t("tasks.report6c4cc0");
+  return t("tasks.focus6c4cc0");
 }

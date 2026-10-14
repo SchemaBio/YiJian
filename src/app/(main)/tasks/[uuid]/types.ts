@@ -34,6 +34,7 @@ export interface AnalysisTaskDetail {
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
+  expiresAt?: string;
   createdAt: string;             // 创建时间
   createdBy: string;             // 创建者
   retryStartedAt?: string;
@@ -101,7 +102,7 @@ export interface ResultMember {
 export interface ResultCount {
   total: number;
   reviewed: number;
-  reported: number;
+  focused: number;
 }
 
 export interface ResultContext {
@@ -119,7 +120,7 @@ export interface ResultContext {
   members: ResultMember[];
   types: Record<string, ResultCount>;
   qc: QCMemberSummary[];
-  permissions: { canReview: boolean; canReport: boolean };
+  permissions: { canReview: boolean; canFocus: boolean };
   parquet?: {
     available: boolean;
     tables: string[];
@@ -187,11 +188,11 @@ export interface VariantReviewStatus {
   pinned: boolean;              // 重要位点：独立于历史复核
   pinSource?: 'automatic' | 'manual';
   reviewed: boolean;             // 是否已审核
-  reported: boolean;             // 是否已回报
+  focused: boolean;             // 是否已关注
   reviewedBy?: string;           // 审核人
   reviewedAt?: string;           // 审核时间
-  reportedBy?: string;           // 回报人
-  reportedAt?: string;           // 回报时间
+  focusedBy?: string;           // 关注人
+  focusedAt?: string;           // 关注时间
   adjustmentVersion?: number;
 }
 
@@ -409,7 +410,7 @@ export interface ROHRegion extends VariantReviewStatus {
 }
 
 // ============ 标签页类型 ============
-export type TabType = 'overview' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'report';
+export type TabType = 'overview' | 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh' | 'files';
 
 export interface TabConfig {
   id: TabType;
@@ -419,7 +420,7 @@ export interface TabConfig {
 export const TAB_CONFIGS: TabConfig[] = [
   { id: 'overview', label: '总览' },
   { id: 'snv-indel', label: '变异解读' },
-  { id: 'report', label: '报告与文件' },
+  { id: 'files', label: '文件' },
 ];
 
 export const VARIANT_TAB_CONFIGS: TabConfig[] = [

@@ -29,6 +29,7 @@ export interface AnalysisTask {
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
   progress: number;
+  expiresAt?: string;
   createdAt: string;
   createdBy: string;
   retryStartedAt?: string;
@@ -59,6 +60,7 @@ export interface AnalysisTaskDetail {
   dispatchNextRetryAt?: string;
   dispatchRetryDeadlineAt?: string;
   dispatchRetryCount?: number;
+  expiresAt?: string;
   createdAt: string;
   createdBy: string;
   retryStartedAt?: string;

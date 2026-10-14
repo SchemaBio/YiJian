@@ -62,8 +62,8 @@ export interface GeneListOption {
 type BackendReviewStatus = Partial<VariantReviewStatus> & {
   reviewed_by?: string;
   reviewed_at?: string;
-  reported_by?: string;
-  reported_at?: string;
+  focused_by?: string;
+  focused_at?: string;
 };
 
 type BackendRow = Record<string, unknown> & {
@@ -150,11 +150,11 @@ function normalizeReview(row: BackendRow): VariantReviewStatus {
     pinReasons: Array.isArray(row.pinReasons) ? row.pinReasons.filter((x):x is string=>typeof x==='string') : undefined,
     pinSource: row.pinSource === 'automatic' ? 'automatic' : row.pinSource === 'manual' ? 'manual' : undefined,
     reviewed: Boolean(review.reviewed ?? row.reviewed),
-    reported: Boolean(review.reported ?? row.reported),
+    focused: Boolean(review.focused ?? row.focused),
     reviewedBy: s(review.reviewedBy ?? review.reviewed_by ?? row.reviewedBy ?? row.reviewed_by, undefined as unknown as string),
     reviewedAt: s(review.reviewedAt ?? review.reviewed_at ?? row.reviewedAt ?? row.reviewed_at, undefined as unknown as string),
-    reportedBy: s(review.reportedBy ?? review.reported_by ?? row.reportedBy ?? row.reported_by, undefined as unknown as string),
-    reportedAt: s(review.reportedAt ?? review.reported_at ?? row.reportedAt ?? row.reported_at, undefined as unknown as string),
+    focusedBy: s(review.focusedBy ?? review.focused_by ?? row.focusedBy ?? row.focused_by, undefined as unknown as string),
+    focusedAt: s(review.focusedAt ?? review.focused_at ?? row.focusedAt ?? row.focused_at, undefined as unknown as string),
     adjustmentVersion: n(row.adjustmentVersion ?? row.adjustment_version),
   };
 }
@@ -594,7 +594,7 @@ function parquetColumn(type: ResultQueryType, column: string): string {
     zygosity: 'Zygosity', genotype: 'Genotype', alleleFrequency: 'VAF', depth: 'Depth',
     gnomadAF: 'GnomAD_AF', gnomadEasAF: 'GnomAD_AF_EAS', clinvarSignificance: 'ClinVar_Sig',
     pathogenicity: 'ClinVar_Sig', status: 'Status', teType: 'TE_Family', acmgClassification: 'acmgClassification',
-    gene: 'Gene', pinned: 'pinned', reviewed: 'reviewed', reported: 'reported',
+    gene: 'Gene', pinned: 'pinned', reviewed: 'reviewed', focused: 'focused',
     iscnCandidate: 'ISCN_Candidate',
     repeatUnit: 'Repeat_Unit', normalRangeMax: 'Normal_Max',
   };
@@ -729,22 +729,11 @@ export async function reviewVariant(taskId: string, type: string, variantId: str
   return { reviewed };
 }
 
-export async function reportVariant(taskId: string, type: string, variantId: string, reported: boolean): Promise<{ reported: boolean }> {
+export async function focusVariant(taskId: string, type: string, variantId: string, focused: boolean): Promise<{ focused: boolean }> {
   const snapshot = rowSnapshots.get(snapshotKey(taskId, type, variantId));
   if (!snapshot) throw new LocalizedError("display.refreshResultsBeforeSaving87b6ee");
-  const adjustments:Record<string,unknown>={reported};
-  // Reporting is an explicit user confirmation. Capture the displayed baseline
-  // only for that selected row; automatic pinning alone never writes evidence.
-  // Existing manual interpretation must survive reporting and withdrawing.
-  if(reported&&snapshot.automatic?.contextVersion){
-    const manual=snapshot.adjustments??{};
-    if(type==='snv-indel'&&!('acmgEvidence' in manual)&&!manual.acmgOverride){adjustments.acmgEvidence=snapshot.automatic.criteria??[];}
-    if((type==='cnv-segment'||type==='cnv-exon')&&!('cnvAssessment' in manual)&&snapshot.cnvBaseline){adjustments.cnvAssessment={...snapshot.cnvBaseline,cnvId:variantId};}
-    if(snapshot.adjustments?.assessmentVersion)adjustments.assessmentVersion=snapshot.adjustments.assessmentVersion;
-    else if(!('acmgEvidence' in (snapshot.adjustments??{}))&&!('cnvAssessment' in (snapshot.adjustments??{})))adjustments.assessmentVersion=snapshot.automatic.contextVersion;
-  }
-  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, adjustments, reported ? '选入回报，确认当前有效判读及初评证据快照' : '撤回回报');
-  return { reported };
+  await saveResultRowAdjustment(taskId, type, variantId, snapshot.version, { focused }, focused ? '关注变异' : '取消关注');
+  return { focused };
 }
 
 export async function saveResultRowAdjustment(
@@ -761,7 +750,7 @@ export async function saveResultRowAdjustment(
   const existingVersion=snapshot.adjustments?.assessmentVersion;
   const existingEvidence='acmgEvidence' in (snapshot.adjustments??{})||'cnvAssessment' in (snapshot.adjustments??{})||!!snapshot.adjustments?.acmgOverride;
   const currentVersion=assessmentStatus(taskId)?.state==='ready'?assessmentStatus(taskId)?.version:undefined;
-  const evidenceVersion=changesEvidence?currentVersion:existingVersion??(!existingEvidence?currentVersion:undefined);
+  const evidenceVersion=changesEvidence?(currentVersion??existingVersion):undefined;
   const payload = {
     clientMutationId: crypto.randomUUID(),
     expectedVersion,
@@ -771,7 +760,8 @@ export async function saveResultRowAdjustment(
     adjustments: {...(evidenceVersion?{assessmentVersion:evidenceVersion}:{}),...adjustments},
     reason,
   };
-  const endpoint=`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}`;
+  const focusOnly=Object.keys(adjustments).length===1 && "focused" in adjustments;
+ const endpoint=`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}${focusOnly?"/focus":""}`;
   const write=()=>api.put<{ adjustment: { version: number; adjustments: Record<string, unknown> } }>(endpoint,payload);
   let response;
   try {response=await write();} catch(cause) {
@@ -795,4 +785,8 @@ export interface ResultRowAdjustmentEvent {
 
 export function getResultRowAdjustmentHistory(taskId: string, type: string, rowId: string, signal?: AbortSignal): Promise<ResultRowAdjustmentEvent[]> {
   return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/rows/${encodeURIComponent(type)}/${encodeURIComponent(rowId)}/history`, { signal });
+}
+
+export function clearTaskRowSnapshots(taskId:string) {
+ for(const key of rowSnapshots.keys()) if(key.startsWith(taskId+'/'))rowSnapshots.delete(key);
 }

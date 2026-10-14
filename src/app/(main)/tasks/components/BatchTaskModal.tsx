@@ -1,4 +1,5 @@
 'use client';
+import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -162,6 +163,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
       }
     >
       <div className="space-y-5">
+        <RetentionNotice kind="task" />
         <div className="grid gap-3 sm:grid-cols-2">
           <a
             href={TASK_BATCH_TEMPLATE_URL}

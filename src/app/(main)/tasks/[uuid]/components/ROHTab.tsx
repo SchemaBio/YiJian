@@ -17,10 +17,10 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { PaginatedResult, ROHRegion, TableFilterState } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getROHRegions, reportVariant, pinVariant } from '../result-api';
+import { getROHRegions, focusVariant, pinVariant } from '../result-api';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
-import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, FocusCheckbox, PinColumnHeader, FocusColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface ROHTabProps {
@@ -37,7 +37,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
   const [requestError, setRequestError] = React.useState<string | null>(null);
   const [operationError, setOperationError] = React.useState<string | null>(null);
   const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; focused: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='roh')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -82,7 +82,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     });
   }, [filterState, setFilterState]);
 
-  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -103,18 +103,18 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
     }
   }, [taskId, t]);
 
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  const handleFocusChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reported: checked },
+      [id]: { ...currentState, focused: checked },
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
     try {
-      await reportVariant(taskId, 'roh', id, checked);
+      await focusVariant(taskId, 'roh', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForReport8d3bd6"));
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForFocus8d3bd6"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -125,18 +125,18 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
   }, [taskId, t]);
 
   const getReviewState = React.useCallback((region: ROHRegion) => {
-    return reviewStatus[region.id] ?? { pinned: region.pinned, reported: region.reported };
+    return reviewStatus[region.id] ?? { pinned: region.pinned, focused: region.focused };
   }, [reviewStatus]);
 
   const sortedData = result?.data ?? [];
 
   const columns: Column<ROHRegion>[] = [
     {
-      id: 'reported',
-      header: <ReportColumnHeader />,
+      id: 'focused',
+      header: <FocusColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
-        return <ReportCheckbox checked={state.reported} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handleReportChange(row.id, checked, state)} />;
+        return <FocusCheckbox checked={state.focused} disabled={pendingVariantIDs.has(row.id)} onChange={(checked) => handleFocusChange(row.id, checked, state)} />;
       },
       width: 60,
     },

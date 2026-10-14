@@ -1,4 +1,5 @@
 'use client';
+import { SelfHostedOnly } from '@/components/shared/ResearchPolicy';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -616,4 +617,4 @@ function ReportTemplatesPageContent() {
   );
 }
 
-export default function ReportTemplatesPage(){const {user,currentOrg}=useAuth();return <ReportTemplatesPageContent key={`${user?.id??""}:${currentOrg?.id??""}`} />;}
+export default function ReportTemplatesPage(){const {user,currentOrg}=useAuth();return <SelfHostedOnly><ReportTemplatesPageContent key={`${user?.id??""}:${currentOrg?.id??""}`} /></SelfHostedOnly>;}

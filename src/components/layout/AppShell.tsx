@@ -15,6 +15,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MobileNav } from './MobileNav';
 import { AssistantButton } from '@/components/assistant';
 import { useAI } from '@/components/providers/AIProvider';
+import { ResearchUseBadge } from '@/components/shared/ResearchPolicy';
 import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
 import { SupportDialog } from '@/components/support/SupportDialog';
@@ -177,7 +178,7 @@ export function AppShell({ children }: AppShellProps) {
             <span className="font-semibold text-fg-default">{t("common.appName")}</span>
           </div>
           <div className="flex items-center gap-1">
-            <BillingDisplay />
+            <ResearchUseBadge /><BillingDisplay />
             <SupportDialog />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -219,7 +220,7 @@ export function AppShell({ children }: AppShellProps) {
 
           {/* Right: Settings + About */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <BillingDisplay />
+            <ResearchUseBadge /><BillingDisplay />
             <SupportDialog />
             <Link
               href="/settings"

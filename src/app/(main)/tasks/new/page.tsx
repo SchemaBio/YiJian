@@ -1,4 +1,5 @@
 'use client';
+import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { LocalizedError } from '@/i18n/errors';
 
 import { errorText } from '@/i18n/errors';
@@ -199,6 +200,7 @@ export default function NewAnalysisPage() {
 
   return (
     <PageContent className="yj-page-shell">
+        <RetentionNotice kind="task" />
       <div className="yj-page-header">
         <h2 className="yj-page-title">{t("tasks.newAnalysisTask1d4697")}</h2>
       </div>

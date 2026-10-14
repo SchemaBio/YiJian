@@ -7,6 +7,7 @@ import { localizeDisplay } from '@/i18n/text';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
 
 
+import { SampleIdentityNotice } from '@/components/shared/ResearchPolicy';
 import * as React from 'react';
 import { Input, Select, TextArea } from '@schema/ui-kit';
 import { FileText, Search, Stethoscope, UserRound } from 'lucide-react';
@@ -22,6 +23,8 @@ interface NewSampleModalProps {
 }
 
 export interface NewSampleFormData {
+  identityPolicyAcknowledged?: boolean;
+  identityPolicyVersion?: string;
   internalId: string;
   gender: Gender;
   age?: number;
@@ -60,6 +63,8 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     remark: '',
   });
 
+  const [acknowledged, setAcknowledged] = React.useState(false);
+  React.useEffect(() => { if (isOpen) setAcknowledged(false); }, [isOpen]);
   const [submitting, setSubmitting] = React.useState(false);
   const submittingRef = React.useRef(false);
   const [submitError, setSubmitError] = React.useState('');
@@ -79,6 +84,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     e.preventDefault();
     if (submitting || submittingRef.current) return;
     setSubmitError('');
+    if (!acknowledged) { setSubmitError(t('research.confirmRequired')); return; }
 
     if (!formData.internalId.trim()) {
       setSubmitError(t("samples.enterInternalIdbb323e"));
@@ -90,6 +96,8 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     try {
       await onSubmit({
         ...formData,
+        identityPolicyAcknowledged: acknowledged,
+        identityPolicyVersion: "research-identity-v1",
         internalId: formData.internalId.trim(),
       });
       onClose();
@@ -142,7 +150,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             {t("admin.cancel4d0b46")}</Button>
-          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")} variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>
+          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")} variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting || !acknowledged}>
             {t("samples.createSample6b316d")}</Button>
         </>
       }
@@ -155,7 +163,8 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         )}
 
         <section>
-          <ModalSectionHeading
+          <SampleIdentityNotice checked={acknowledged} onChange={setAcknowledged} />
+        <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
             title={t("samples.basicInformationb122f8")}
           />

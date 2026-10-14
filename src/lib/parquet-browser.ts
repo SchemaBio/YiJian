@@ -355,7 +355,7 @@ class BrowserTable {
         const hasAutomatic=Object.keys(auto).length>0;
         row.automaticAssessment=hasAutomatic?auto:undefined;
         row.pinReasons=auto.pinReasons;
-        Object.assign(row, { id: source.__row_id, rowId: source.__row_id, rowOrdinal: Number(source.file_row_number), reviewed: false, reported: false, adjustments: overlay, adjustmentVersion: Number(source.__version), datasetVersion: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId });
+        Object.assign(row, { id: source.__row_id, rowId: source.__row_id, rowOrdinal: Number(source.file_row_number), reviewed: false, focused: false, adjustments: overlay, adjustmentVersion: Number(source.__version), datasetVersion: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId });
         if (this.table === 'snv-indel') {
             row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));
             row.automaticAcmg = hasAutomatic?auto:undefined;
@@ -403,7 +403,7 @@ class BrowserTable {
         const manualClassification=overlay.activeAcmgVersion==='svcv4' || !!overlay.acmgOverride || 'acmgEvidence' in overlay || 'cnvAssessment' in overlay;
         row.pinned = typeof overlay.pinned === 'boolean' ? overlay.pinned : manualClassification ? ['Pathogenic', 'Likely_Pathogenic'].includes(String(effectiveClass)) : auto.pinned===true;
         row.pinSource = typeof overlay.pinned === 'boolean' || manualClassification ? 'manual' : row.pinned ? 'automatic' : undefined;
-        row.reviewStatus = { pinned: row.pinned, reviewed: row.reviewed, reported: row.reported };
+        row.reviewStatus = { pinned: row.pinned, reviewed: row.reviewed, focused: row.focused };
         return row;
     }
     async export(q: LocalQuery) {
@@ -501,4 +501,11 @@ if (typeof window !== 'undefined') {
     window.addEventListener('schema:auth-expired', () => void clearBrowserResults());
     window.addEventListener('storage', event => { if (event.key?.includes('org') || event.key?.includes('user'))
         void clearBrowserResults(); });
+}
+
+export async function clearTaskBrowserResults(task:string) {
+ invalidateAssessment(task); contexts.delete(task);
+ const active=[...sessions].filter(([key])=>key.startsWith(task+'/'));
+ for(const [key]of active)sessions.delete(key);
+ await Promise.allSettled(active.map(([,r])=>r.engine.close()));
 }

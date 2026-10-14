@@ -1,4 +1,5 @@
 'use client';
+import { useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -147,6 +148,13 @@ export default function PedigreePage() {
   }, [t]);
 
   // 处理 URL 参数，自动打开对应家系或关闭所有标签
+  const linkedSampleDeadlines=currentPedigree?.members.map(member=>Date.parse(member.sampleExpiresAt??'')).filter(Number.isFinite)??[];
+  const nextLinkedSampleExpiry=linkedSampleDeadlines.length?new Date(Math.min(...linkedSampleDeadlines)).toISOString():undefined;
+  useResearchExpiry(nextLinkedSampleExpiry,()=>{
+    const id=currentPedigree?.id;
+    setCurrentPedigree(null);setSelectedMember(null);setEditingMember(null);setIsEditMemberOpen(false);setContextMenu({isOpen:false,position:{x:0,y:0},member:null});
+    if(id)void refreshCurrentPedigree(id);
+  });
   React.useEffect(() => {
     const pedigreeId = searchParams.get('id');
     const reset = searchParams.get('reset');
@@ -348,6 +356,7 @@ export default function PedigreePage() {
         remark: data.remark,
       });
       const probandMember = await createPedigreeMember(created.id, {
+        sourceSampleFields: ['name', 'gender'],
         sampleId: data.probandSampleId,
         name: probandSample.internalId || t("samples.probandc8c1fa"),
         gender: probandSample.gender,

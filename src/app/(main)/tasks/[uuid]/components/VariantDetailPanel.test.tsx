@@ -14,7 +14,7 @@ vi.mock('../result-api', async importOriginal => ({
 const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
   ref: 'A', alt: 'G', variantType: 'SNV', zygosity: 'Heterozygous', pinned: false, reviewed: false, alleleFrequency: 0.5, depth: 100,
   transcript: 'NM_001000', hgvsc: 'c.1A>G', hgvsp: 'p.(Lys1Arg)', consequence: 'missense_variant',
-  reported: false, interpretation: '', acmgCriteria: [], annotationValues: {},
+  focused: false, interpretation: '', acmgCriteria: [], annotationValues: {},
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {

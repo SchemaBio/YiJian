@@ -15,7 +15,10 @@ import { PageContent } from '@/components/layout';
 import { tasksApi } from '@/lib/tasks';
 import {AssessmentStatusBar} from './components/AssessmentStatusBar';
 import { useTabState } from './hooks/useTabState';
-import { getResultContext } from './result-api';
+import { getResultContext, clearTaskRowSnapshots } from './result-api';
+import { clearTaskBrowserResults } from '@/lib/parquet-browser';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { useResearchExpiry } from '@/lib/research-retention';
 import type { AnalysisTaskDetail, ResultContext, TabType } from './types';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import {
@@ -30,7 +33,7 @@ import {
   MTTab,
   UPDTab,
   ROHTab,
-  ReportTab,
+  FilesTab,
 	ResultOverview,
 	VariantTypeNav,
 } from './components';
@@ -55,6 +58,21 @@ export default function AnalysisDetailPage() {
 	const [resultContext, setResultContext] = React.useState<ResultContext | null>(null);
 	const [resultContextError, setResultContextError] = React.useState<string | null>(null);
 
+
+ React.useEffect(()=>{
+  if(getRuntimeBackendFlavor()!=='squid'||!task?.expiresAt)return;
+  let timer:ReturnType<typeof setTimeout>;
+  const check=()=>{
+   clearTimeout(timer);
+   const left=Date.parse(task.expiresAt!)-Date.now();
+   if(!Number.isFinite(left))return;
+   if(left<=0){clearTaskRowSnapshots(uuid);void clearTaskBrowserResults(uuid);setTask(null);setSample(null);setResultContext(null);router.replace('/tasks');return;}
+   timer=setTimeout(check,Math.min(left,60_000));
+  };
+  check();window.addEventListener('focus',check);
+  return()=>{clearTimeout(timer);window.removeEventListener('focus',check);};
+ },[task?.expiresAt,uuid,router]);
+  useResearchExpiry(sample?.expiresAt,()=>setSample(null));
   // 使用标签页状态管理hook，默认从质控结果开始
 	const { activeTab, hasExplicitTab, setActiveTab, getFilterState, setFilterState } = useTabState(uuid);
 	const manuallySelectedTabRef = React.useRef(false);
@@ -224,7 +242,7 @@ export default function AnalysisDetailPage() {
 
   // 渲染当前标签页内容
   const renderTabContent = () => {
-    if (activeTab !== 'overview' && activeTab !== 'report' && resultContext?.state === 'ready' && resultContext.parquet?.available && !resultContext.parquet.tables.includes(activeTab)) {
+    if (activeTab !== 'overview' && activeTab !== 'files' && resultContext?.state === 'ready' && resultContext.parquet?.available && !resultContext.parquet.tables.includes(activeTab)) {
       return <div className="flex h-full items-center justify-center p-8 text-sm text-fg-muted">{t('history.notProvided071fb2')}</div>;
     }
     switch (activeTab) {
@@ -297,8 +315,8 @@ export default function AnalysisDetailPage() {
             onFilterChange={(state) => setFilterState('roh', state)}
           />
         );
-      case 'report':
-        return <ReportTab taskId={uuid} />;
+      case 'files':
+        return <FilesTab taskId={uuid} />;
       default:
         return null;
     }
@@ -320,6 +338,7 @@ export default function AnalysisDetailPage() {
       <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel={t("tasks.saving6644f0")} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? t("tasks.reopenInterpretatione505bc") : t("tasks.interpretationCompletec29533")}</ActionButton>} />
       {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">{t("tasks.interpretationIsCompleteAndReadOnlyReopen89d694")}</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
+      {!sample && task.sampleId && <aside role="note" className="mb-4 rounded-lg border border-border-default p-4 text-sm text-fg-muted">{t("research.missingSample")}</aside>}
       {sample && <SampleSummaryCard key={sample.id} sample={sample} onSampleChange={setSample} />}
 
       </div>

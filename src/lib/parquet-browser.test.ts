@@ -23,14 +23,14 @@ beforeEach(()=>{
  mocks.query.mockResolvedValue(undefined);
  mocks.send.mockImplementation(async(sql:string)=>{
   const rows=sql==='DESCRIBE source'?[{column_name:'Gene'}]:sql.startsWith('SELECT count')?[{n:2}]:[
-   {Gene:'BRCA1',__row_id:'row-1',file_row_number:0,__version:3,__acmg:null,__adjustments:JSON.stringify({reported:true,pinned:false,interpretation:'已保存的解读',acmgOverride:'VUS'})},
+   {Gene:'BRCA1',__row_id:'row-1',file_row_number:0,__version:3,__acmg:null,__adjustments:JSON.stringify({focused:true,pinned:false,interpretation:'已保存的解读',acmgOverride:'VUS'})},
    {Gene:'SCN1A',__row_id:'row-2',file_row_number:1,__version:0,__acmg:null,__adjustments:null},
   ];
   return (async function*(){yield {toArray:()=>rows.map(row=>({toJSON:()=>row}))};})();
  });
  vi.mocked(api.get).mockImplementation(async(url,options)=>{
   if(url.endsWith('/browser'))return dataset;
-  if(url.endsWith('/adjustments'))return {revision:3,items:[{rowId:'row-1',version:3,adjustments:{reported:true,pinned:false,interpretation:'已保存的解读',acmgOverride:'VUS'}}]};
+  if(url.endsWith('/adjustments'))return {revision:3,items:[{rowId:'row-1',version:3,adjustments:{focused:true,pinned:false,interpretation:'已保存的解读',acmgOverride:'VUS'}}]};
   if(url.endsWith('/assessment/context'))return new Promise((_resolve,reject)=>options?.signal?.addEventListener('abort',()=>reject(new DOMException('signal is aborted without reason','AbortError')),{once:true}));
   throw new Error('Unexpected endpoint');
  });
@@ -56,7 +56,7 @@ it('keeps the loaded table queryable with saved interpretation after cancelling 
  cancelAssessment('task');
  const page=await pending;
  expect(page.total).toBe(2);
- expect(page.items[0]).toMatchObject({gene:'BRCA1',reported:true,pinned:false,interpretation:'已保存的解读',acmgOverride:'VUS',adjustmentVersion:3});
+ expect(page.items[0]).toMatchObject({gene:'BRCA1',focused:true,pinned:false,interpretation:'已保存的解读',acmgOverride:'VUS',adjustmentVersion:3});
  expect(page.items[1]).toMatchObject({gene:'SCN1A',pinned:false,automaticAssessment:undefined});
  expect(mocks.close).not.toHaveBeenCalled();
  expect(mocks.terminate).not.toHaveBeenCalled();

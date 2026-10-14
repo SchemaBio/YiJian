@@ -293,17 +293,17 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             />
 
             <InfoItem
-              label={t("tasks.reportStatus86bba4")}
-              value={variant.reported ? (
-                <Tag variant="info">{t("tasks.reported6fb7a5")}</Tag>
+              label={t("tasks.focusStatus86bba4")}
+              value={variant.focused ? (
+                <Tag variant="info">{t("tasks.focused6fb7a5")}</Tag>
               ) : (
-                <Tag variant="neutral">{t("tasks.notReporteda438d1")}</Tag>
+                <Tag variant="neutral">{t("tasks.notFocuseda438d1")}</Tag>
               )}
             />
-            {variant.reported && variant.reportedBy && (
+            {variant.focused && variant.focusedBy && (
               <>
-                <InfoItem label={t("tasks.reportedBycc3bc9")} value={variant.reportedBy} />
-                <InfoItem label={t("tasks.reportedAt741a21")} value={variant.reportedAt} />
+                <InfoItem label={t("tasks.focusedBycc3bc9")} value={variant.focusedBy} />
+                <InfoItem label={t("tasks.focusedAt741a21")} value={variant.focusedAt} />
               </>
             )}
           </div>

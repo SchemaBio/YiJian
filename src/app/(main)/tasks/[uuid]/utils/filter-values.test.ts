@@ -21,7 +21,7 @@ describe('language-independent result filters', () => {
       ['mt', 'ClinVar_Sig', '良性', 'Benign'],
       ['mei', 'Insertion_Type', '插入', 'insertion'],
       ['mei', 'Impact', '外显子区', 'exonic'],
-      ['snv-indel', 'reported', '是', 'true'],
+      ['snv-indel', 'focused', '是', 'true'],
     ];
     for (const [table, column, label, expected] of cases) {
       const value = resultFilterValue(table, column, t(label));

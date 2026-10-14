@@ -13,6 +13,7 @@ import * as React from 'react';
 import { Select, FormItem, Tag } from '@schema/ui-kit';
 import { AppModal } from '@/components/shared';
 import { CheckCircle2, FileText, Loader2 } from 'lucide-react';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { RawResultDownloads } from './RawResultDownloads';
 import { reportsApi, saveDownload, type ReportTemplate } from '@/lib/reports';
 
@@ -160,4 +161,8 @@ export function ReportTab({ taskId }: ReportTabProps) {
       </AppModal>
     </div>
   );
+}
+
+export function FilesTab(props: ReportTabProps) {
+  return getRuntimeBackendFlavor() === 'squid' ? <RawResultDownloads taskId={props.taskId} /> : <ReportTab {...props} />;
 }

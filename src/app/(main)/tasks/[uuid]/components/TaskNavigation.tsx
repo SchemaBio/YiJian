@@ -10,7 +10,7 @@ export const TaskNavigationCollapsed = React.createContext(false);
 export const TASK_NAV_ICONS: Record<TabType, LucideIcon> = {
   overview: LayoutDashboard,
   'snv-indel': Dna,
-  report: Files,
+  files: Files,
   'cnv-segment': Copy,
   'cnv-exon': Layers,
   str: Repeat2,

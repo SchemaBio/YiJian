@@ -43,15 +43,15 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
     const known = Boolean(count) && !unqueried;
     return { ...item, count, known, status: unqueried ? t("tasks.awaitingQuery800bbc") : !count ? t("history.notProvided071fb2") : count.total === 0 ? t("tasks.noDetectionsc68a8a") : t("tasks.loadedb19bae") };
   });
-  const value = (item: typeof counts[number], key: 'total' | 'reported') => item.known && Number.isFinite(item.count[key]) ? item.count[key].toLocaleString(t.locale) : '—';
+  const value = (item: typeof counts[number], key: 'total' | 'focused') => item.known && Number.isFinite(item.count[key]) ? item.count[key].toLocaleString(t.locale) : '—';
   const rows = [
-    [t("tasks.resultTypec76229"), t("tasks.detectionCount853e60"), t("tasks.report6c4cc0"), t("tasks.dataStatusf024b4")],
-    ...counts.map(item => [item.label, value(item, 'total'), value(item, 'reported'), item.status]),
+    [t("tasks.resultTypec76229"), t("tasks.detectionCount853e60"), t("tasks.focus6c4cc0"), t("tasks.dataStatusf024b4")],
+    ...counts.map(item => [item.label, value(item, 'total'), value(item, 'focused'), item.status]),
   ];
   const allKnown = counts.every(item => item.known);
   const loaded = counts.filter(item => item.known);
-  const loadedTotal = (key: 'total' | 'reported') => loaded.length && loaded.every(item => Number.isFinite(item.count[key])) ? loaded.reduce((sum, item) => sum + item.count[key], 0).toLocaleString(t.locale) : '—';
-  const totals = (['total', 'reported'] as const).map(key => allKnown ? loadedTotal(key) : '—');
+  const loadedTotal = (key: 'total' | 'focused') => loaded.length && loaded.every(item => Number.isFinite(item.count[key])) ? loaded.reduce((sum, item) => sum + item.count[key], 0).toLocaleString(t.locale) : '—';
+  const totals = (['total', 'focused'] as const).map(key => allKnown ? loadedTotal(key) : '—');
   rows.push([t("tasks.total92bcbf"), ...totals, allKnown ? t("tasks.completeStatistics44af69") : t("tasks.someDataNotReady796729")]);
 
   return (
@@ -65,7 +65,7 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
 
       <div className="yj-overview-metrics">
         <div><span>{allKnown ? t("tasks.detectedVariants146453") : t("tasks.loadedDetections3b16ad")}</span><strong>{loadedTotal('total')}</strong></div>
-        <div><span>{allKnown ? t("history.includeInReport233738") : t("tasks.loadedReportSelections5e560a")}</span><strong>{loadedTotal('reported')}</strong></div>
+        <div><span>{allKnown ? t("history.includeInFocus233738") : t("tasks.loadedFocusSelections5e560a")}</span><strong>{loadedTotal('focused')}</strong></div>
         <div><span>{t("tasks.analysisMembers11d031")}</span><strong>{context.members.length ? context.members.length.toLocaleString(t.locale) : '—'}</strong></div>
         <div><span>{t("pipeline.referenceGenome903ba5")}</span><strong>{context.reference.declaredId || t("history.notProvided071fb2")}</strong></div>
       </div>
@@ -83,14 +83,14 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
             <tbody>{counts.map(item => (
               <tr key={item.key} className="border-t border-border-default hover:bg-canvas-subtle/50">
                 <th scope="row" className="whitespace-nowrap px-3 py-2 font-medium text-fg-default"><HoverHint content={t("tasks.view48e5d7", {p0: String(item.label)})}><button type="button" onClick={() => onNavigate(item.tab)} className="text-accent-fg hover:underline" >{translateUI(item.label, t)}</button></HoverHint></th>
-                {(['total', 'reported'] as const).map(key => <td key={key} className="px-3 py-2 tabular-nums text-fg-default">{value(item, key)}</td>)}
+                {(['total', 'focused'] as const).map(key => <td key={key} className="px-3 py-2 tabular-nums text-fg-default">{value(item, key)}</td>)}
                 <td className="whitespace-nowrap px-3 py-2 text-xs text-fg-muted">{item.status}</td>
               </tr>
             ))}</tbody>
             <tfoot className="border-t border-border-default bg-canvas-subtle font-medium text-fg-default"><tr><th scope="row" className="px-3 py-2">{t("tasks.total92bcbf")}</th>{totals.map((total, index) => <td key={index} className="px-3 py-2 tabular-nums">{total}</td>)}<td colSpan={1} className="px-3 py-2 text-xs font-normal text-fg-muted">{allKnown ? t("tasks.completeStatistics44af69") : t("tasks.someDataNotReady796729")}</td></tr></tfoot>
           </table>
         </div>
-        <p className="border-t border-border-default px-3 py-2 text-xs text-fg-muted">{t("tasks.reportSelectionDoesNotMeanAFormal8d65d4")}</p>
+        <p className="border-t border-border-default px-3 py-2 text-xs text-fg-muted">{t("tasks.focusSelectionDoesNotMeanAFormal8d65d4")}</p>
       </section>
 
       <SampleFamilyTable context={context} />

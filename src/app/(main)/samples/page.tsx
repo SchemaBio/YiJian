@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRetention } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -10,6 +11,8 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { RetentionNotice, ExpiryCell } from '@/components/shared/ResearchPolicy';
 import * as React from 'react';
 import { Input, DataTable } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
@@ -177,7 +180,8 @@ export default function SamplesPage() {
   const [editingSample, setEditingSample] = React.useState<Sample | null>(null);
   const [linkingSample, setLinkingSample] = React.useState<Sample | null>(null);
   const [deleteTargets, setDeleteTargets] = React.useState<Sample[]>([]);
-  const [samples, setSamples] = React.useState<Sample[]>([]);
+  const [rawSamples, setSamples] = React.useState<Sample[]>([]);
+ const samples=useLiveRetention(rawSamples);
   const [samplesError, setSamplesError] = React.useState('');
   const [hasLoaded, setHasLoaded] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -311,6 +315,7 @@ export default function SamplesPage() {
   };
 
   const columns: Column<Sample>[] = [
+    ...(getRuntimeBackendFlavor() === 'squid' ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:Sample)=><ExpiryCell value={row.expiresAt} />,width:170}] : []),
     {
       id: 'internalId',
       header: t("data.internalIdabcc9d"),
@@ -527,6 +532,7 @@ export default function SamplesPage() {
         </div>
 
         <div className="p-4">
+          <RetentionNotice kind="sample" />
           {samplesError && (
             <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
               <span>{samplesError}</span>

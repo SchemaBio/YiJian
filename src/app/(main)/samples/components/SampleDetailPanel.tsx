@@ -1,4 +1,5 @@
 'use client';
+import { useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -164,6 +165,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
     loadSample();
   }, [sampleId]);
 
+  useResearchExpiry(sample?.expiresAt,()=>{setSample(null);setEditData({});setIsEditing(false);onClose?.();});
   const handleSave = async () => {
     if (editData) {
       try {

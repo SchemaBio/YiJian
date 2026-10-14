@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRetention, useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -12,6 +13,7 @@ import { taskStatusConfig, taskDisplayCreatedAt, taskDisplayStatus, sortTasksByI
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
+import { RetentionNotice, ExpiryCell } from '@/components/shared/ResearchPolicy';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
@@ -29,7 +31,7 @@ import { getRecentTaskBilling, notifyBillingUpdated, type TaskBillingSummary } f
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { formatLocalDateTime } from '@/lib/utils';
 
-const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度', NODE_FIRST_REPORT_TIMEOUT: '节点首报超时', NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟', NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟', NODE_CALLBACK_AUTH_FAILED: '节点状态回报鉴权失败', NODE_CALLBACK_RATE_LIMITED: '节点状态回报被限流', NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常', NODE_DNS_FAILED: '节点无法解析状态服务域名', NODE_TLS_FAILED: '节点 TLS 连接失败', BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖', REFERENCE_DATABASE_FAILED: '参考数据库准备失败', INPUT_DOWNLOAD_FAILED: '输入文件下载失败', AGENT_START_FAILED: 'Sepiida Agent 启动失败' };
+const executionReasons: Record<string, string> = { ORGANIZATION_INACTIVE: '组织已停用', ADMISSION_REJECTED: '执行申请未通过，请检查余额', DISPATCH_FAILED: '执行申请未确认，系统正在对账', BOOTSTRAP_FAILED: '节点初始化失败', AGENT_EXITED: '节点 Agent 意外退出', MAX_RUNTIME: '超过运行时限', LEGACY_RECONCILIATION_REQUIRED: '等待管理员核对', RELEASE_RETRY: '节点释放正在重试', RELEASE_FAILED: '节点释放失败，需要管理员处理', SEPIIDA_FIRST_REPORT_TIMEOUT: 'Sepiida 未按时收到任务进度', NODE_FIRST_REPORT_TIMEOUT: '节点首报超时', NODE_HEARTBEAT_TIMEOUT: '节点心跳中断超过 5 分钟', NODE_INITIALIZATION_TIMEOUT: '节点初始化超过 60 分钟', NODE_CALLBACK_AUTH_FAILED: '节点状态关注鉴权失败', NODE_CALLBACK_RATE_LIMITED: '节点状态关注被限流', NODE_CALLBACK_UPSTREAM_ERROR: '节点状态服务暂时异常', NODE_DNS_FAILED: '节点无法解析状态服务域名', NODE_TLS_FAILED: '节点 TLS 连接失败', BOOTSTRAP_DEPENDENCY_MISSING: '节点镜像缺少启动依赖', REFERENCE_DATABASE_FAILED: '参考数据库准备失败', INPUT_DOWNLOAD_FAILED: '输入文件下载失败', AGENT_START_FAILED: 'Sepiida Agent 启动失败' };
 const executionLabels: Record<string, string> = { waiting_quota: '等待名额', waiting_capacity: '等待节点', dispatching: '申请确认中', bootstrapping: '初始化中', diagnostic_hold: '诊断日志保留中', running: '计算中', archiving: '归档中', terminating: '节点释放中', release_failed: '节点释放重试中', terminal: '本次执行已结束' };
 
 const statusConfig = taskStatusConfig;
@@ -175,6 +177,7 @@ export default function AnalysisPage() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = React.useState(false);
   const [isBatchTaskModalOpen, setIsBatchTaskModalOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<AnalysisTask | null>(null);
+  useResearchExpiry(editingTask?.expiresAt,()=>setEditingTask(null));
   const [actionError, setActionError] = React.useState('');
   const [taskBilling, setTaskBilling] = React.useState<Record<string, TaskBillingSummary>>({});
   const [billingLoading, setBillingLoading] = React.useState(false);
@@ -193,12 +196,13 @@ export default function AnalysisPage() {
   }, [statusFilter]);
 
   // Use polling hook - auto-polls when there are running tasks
-  const { data: tasks, loading, error, refetch } = usePolling(
+  const { data: fetchedTasks, loading, error, refetch } = usePolling(
     fetcher,
     10000,
     { enabled: true, immediate: true, isEqual: areTaskListsEqual }
   );
 
+  const tasks=useLiveRetention(fetchedTasks);
   const refreshTaskBilling = React.useCallback(async (taskItems: AnalysisTask[]) => {
     if (!isSaaS || taskItems.length === 0) {
       setTaskBilling({});
@@ -341,6 +345,7 @@ export default function AnalysisPage() {
   }, [searchQuery, statusFilter, tasks, t]);
 
   const columns: Column<AnalysisTask>[] = [
+    ...(isSaaS ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:AnalysisTask)=><ExpiryCell value={row.expiresAt} />,width:170}] : []),
     {
       id: 'taskId',
       header: t("admin.task3172b3"),
@@ -493,6 +498,7 @@ export default function AnalysisPage() {
     <div className="flex h-full min-w-0 w-full">
         <div className="min-w-0 flex-1">
           <div className="yj-page-shell yj-task-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
+            <RetentionNotice kind="task" />
             <div className="yj-task-heading">
               <div><h2 className="yj-page-title">{t("tasks.taskCenterf692ff")}</h2><p className="yj-page-subtitle">{t("tasks.trackAnalysisProgressAndInterpretResults9952cc")}</p></div>
               <div className="flex items-center gap-2">

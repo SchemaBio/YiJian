@@ -8,7 +8,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => true }));
 vi.mock('./CNVRegionPlot', () => ({ CNVRegionPlot: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => isOpen ? <button onClick={onClose}>测试关闭区域图</button> : null }));
 vi.mock('./CNVExonPlot', () => ({ CNVExonPlot: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => isOpen ? <button onClick={onClose}>测试关闭外显子图</button> : null }));
 vi.mock('../result-api', () => ({ getResultRowAdjustmentHistory: vi.fn().mockResolvedValue([]) }));
-const variant: CNVSegment = { id: 'A', chromosome: '1', startPosition: 100, endPosition: 200, length: 100, type: 'Deletion', copyNumber: 1, copyRatio: 0.5, log2Ratio: -1, genes: ['GENE'], confidence: null, pinned: false, reviewed: false, reported: false, interpretation: '旧解读' };
+const variant: CNVSegment = { id: 'A', chromosome: '1', startPosition: 100, endPosition: 200, length: 100, type: 'Deletion', copyNumber: 1, copyRatio: 0.5, log2Ratio: -1, genes: ['GENE'], confidence: null, pinned: false, reviewed: false, focused: false, interpretation: '旧解读' };
 
 describe('CNV interpretation tabs', () => {
   it('opens the plot with the inspector, preserves it when the inspector closes, and allows reopening', () => {

@@ -11,7 +11,7 @@ import type {Column} from '@schema/ui-kit';
 import type {PaginatedResult, TableFilterState} from '../types';
 const operators = [['contains','包含'],['not_contains','不包含'],['equals','等于'],['in','任一值'],['gte','≥'],['lte','≤'],['between','范围'],['is_missing','缺失'],['is_not_missing','非缺失']] as const;
 type Operator = typeof operators[number][0];
-const labels:Record<string,string>={Chromosome:'染色体',Position:'位置',Start:'起始位置',End:'终止位置',Ref:'参考碱基',Alt:'变异碱基',Gene:'基因',Type:'类型',Transcript:'转录本',HGVS_c:'cDNA变化',HGVS_p:'蛋白质变化',Dosage_Genes:'剂量敏感基因',GenCC_AD_Genes:'GenCC AD 基因',pinned:'置顶',reported:'回报',acmgClassification:'ACMG 分类',cnvClassification:'CNV 评定',Interval_Length:'区间长度',Repeat_Count:'重复次数',Allele1_Repeats:'等位基因1重复次数',Allele2_Repeats:'等位基因2重复次数',Normal_Min:'正常范围下限',Normal_Max:'正常范围上限'};
+const labels:Record<string,string>={Chromosome:'染色体',Position:'位置',Start:'起始位置',End:'终止位置',Ref:'参考碱基',Alt:'变异碱基',Gene:'基因',Type:'类型',Transcript:'转录本',HGVS_c:'cDNA变化',HGVS_p:'蛋白质变化',Dosage_Genes:'剂量敏感基因',GenCC_AD_Genes:'GenCC AD 基因',pinned:'置顶',focused:'关注',acmgClassification:'ACMG 分类',cnvClassification:'CNV 评定',Interval_Length:'区间长度',Repeat_Count:'重复次数',Allele1_Repeats:'等位基因1重复次数',Allele2_Repeats:'等位基因2重复次数',Normal_Min:'正常范围下限',Normal_Max:'正常范围上限'};
 function ColumnFilter({fields,fieldLabels,types,state,onChange,cnvType=false,compactLabel}: {fieldLabels:Record<string,string>;compactLabel?:string;cnvType?:boolean;fields:string[];types?:PaginatedResult<unknown>['columnTypes'];state:TableFilterState;onChange:(state:TableFilterState)=>void}) {
   const t = useText();
  const [open,setOpen]=React.useState(false);
@@ -76,7 +76,7 @@ export function filterableColumns<T>(columns: Column<T>[], result: FilterMetadat
   const fieldLabels = resultColumnLabels(columns, result, table, t);
   return columns.map(column => {
     const fields = fieldsForColumn(column.id, result, table);
-    const marking = column.id === 'pinned' || column.id === 'reported';
-    return {...column, align:'center', ...(marking ? {width:60,minWidth:60,maxWidth:60} : {minWidth:Math.max(column.minWidth ?? 0,80)}), header:<div className="flex w-full items-center justify-center gap-1 whitespace-nowrap text-center">{(!marking||!fields.length)&&<div>{translateUI(column.header, t)}</div>}<ColumnFilter fields={fields} fieldLabels={fieldLabels} types={result?.columnTypes} state={state} onChange={onChange} cnvType={table.startsWith('cnv-')} compactLabel={marking?column.id==='pinned'?t("tasks.pin7bcf18"):t("tasks.report6c4cc0"):undefined}/></div>};
+    const marking = column.id === 'pinned' || column.id === 'focused';
+    return {...column, align:'center', ...(marking ? {width:60,minWidth:60,maxWidth:60} : {minWidth:Math.max(column.minWidth ?? 0,80)}), header:<div className="flex w-full items-center justify-center gap-1 whitespace-nowrap text-center">{(!marking||!fields.length)&&<div>{translateUI(column.header, t)}</div>}<ColumnFilter fields={fields} fieldLabels={fieldLabels} types={result?.columnTypes} state={state} onChange={onChange} cnvType={table.startsWith('cnv-')} compactLabel={marking?column.id==='pinned'?t("tasks.pin7bcf18"):t("tasks.focus6c4cc0"):undefined}/></div>};
   });
 }

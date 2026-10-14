@@ -6,15 +6,16 @@
       "paragraphs": [
         "本政策说明绳墨生物科技有限公司（SchemaBio）在提供贻鉴托管服务时如何处理个人信息，适用于平台访问者、机构账户使用者及分析数据所涉及的个人。自行部署的实例由部署机构说明其处理安排；本政策适用于我们实际收到或处理的信息，不自动覆盖独立部署机构的全部活动。",
         "对账户、安全、支持和业务管理信息，我们根据自身提供服务的需要确定处理目的与方式。对机构提交的样本、测序、临床和分析信息，我们通常按照机构的合法指示作为受托处理方提供服务；机构负责确定其适用法律下的合法处理依据、告知和必要授权。双方在具体活动中的角色由实际处理安排及协议确定。",
-        "阅读本政策或勾选登录页面不替代敏感个人信息、跨境提供或其他依法需要的单独同意，也不替代机构对受检者的告知与授权。本政策说明隐私安排，不替代机构与我们之间的服务约定。"
+        "阅读本政策或勾选登录页面不替代敏感个人信息、跨境提供或其他依法需要的单独同意，也不替代机构对受检者的告知与授权。本政策说明隐私安排，不替代机构与我们之间的服务约定。",
+        "平台仅提供 Research Use Only（RUO）科研用途的生信分析服务，不开展医疗诊断，不出具诊断报告。禁止在样本编号、备注、表型描述、文件名等字段提交真实姓名、身份证件、联系方式或其他身份信息。创建样本前须确认遵守要求；该确认不表示平台已自动验证匿名性。使用化名的遗传及表型数据仍可能属于敏感个人信息。"
       ]
     },
     {
       "id": "information",
       "title": "第二条 信息类别、来源和目的",
       "paragraphs": [
-        "我们可从使用者、其所属机构及服务运行过程中取得：账户和机构信息；样本编号、性别、年龄、诊断和 HPO 表型；上传文件、序列、变异、基因、报告及人工解读；任务、操作人、时间、审计、计费、支持和访问记录。遗传、医疗健康及部分未成年人信息可能属于敏感个人信息或特殊类别数据；样本化名不保证匿名。",
-        "这些信息用于认证和权限管理、机构协作、执行分析、展示和保存结果、生成报告、处理支持请求、计费、安全防护、审计及履行法定义务。请提交完成所需功能必要的信息，避免在文件名或自由文本中添加无关身份信息。科研和模型训练等新的用途需要另行确定合法依据及必要告知、授权。",
+        "我们可从使用者、其所属机构及服务运行过程中取得：账户和机构信息；样本编号、性别、年龄、诊断和 HPO 表型；上传文件、序列、变异、基因及人工解读；任务、操作人、时间、审计、计费、支持和访问记录。遗传、医疗健康及部分未成年人信息可能属于敏感个人信息或特殊类别数据；样本化名不保证匿名。",
+        "这些信息用于认证和权限管理、机构协作、执行分析、展示和保存结果、展示分析结果、处理支持请求、计费、安全防护、审计及履行法定义务。请提交完成所需功能必要的信息，避免在文件名或自由文本中添加无关身份信息。科研和模型训练等新的用途需要另行确定合法依据及必要告知、授权。",
         "遗传与健康信息是完成所请求分析及解读的必要输入；不提供必要信息时，相关功能可能无法完成。泄露或不当使用可能影响个人隐私、家庭成员及其他权益。访问记录可能包含 IP 地址和浏览器信息。"
       ]
     },
@@ -38,8 +39,10 @@
       "id": "retention",
       "title": "第五条 数据保留与删除策略",
       "paragraphs": [
-        "上传数据按数据中心显示的适用保留期限和到期时间管理；当前默认七天策略取决于文件类型和部署配置。分析产生的 BAM 当前自任务完成起保留七天，到期后按清理策略删除。长期保存的 BED 不适用同一七天规则；分析结果、报告和审计记录也不因原始文件到期而自动全部删除。请在到期前依法保存所需资料。",
-        "其他信息的保留期限依据服务需要、机构指示、合同及适用的法定保存义务确定，可联系我们了解具体类别的保留安排或提出删除请求。删除请求依权限及适用法律处理，并覆盖适用的接收方和备份安排。因账务、争议或法律义务需要保留的部分应限制其他使用并说明原因。备份按相应生命周期清除或隔离，恢复时继续执行适用删除要求。机构或用户已下载的副本由相应持有人管理。"
+        "SaaS 任务和样本分别从原始创建时间起保留 720 小时（30 天），以 UTC 计算。未分析、排队、运行、成功、失败或已软删除均适用；编辑、启动、重试、完成及关联其他记录不延长。到期立即停止列表、搜索、详情、操作和下载访问，无须等待物理清理完成。样本到期删除其记录、数据匹配关系及源自样本的家系复制内容并解除关联；关联任务仍按自己的期限保留必要分析快照。开源自行部署版本不启用此强制期限。",
+        "FASTQ 在上传后 7 天清理；BAM 在分析完成后 7 天清理，且不得超过任务期限。成功生成的 CNV 基线转存为独立资源，制作任务到期不影响其独立可用性；制作日志和中间文件仍随任务清理。BED、内置基线及共享参考资源适用各自资源策略。请在期限内依法下载所需资料，下载副本由持有人负责保存和销毁。",
+        "到期清理先停止执行及阻止迟到写入，再删除对象存储中全部执行尝试的结果、归档、日志、截图及旧报告文件，包括历史版本和未完成分片；清除服务器缓存、解读与操作记录和数据库关联数据。故障时保持不可访问的受限清理状态并持续重试，不将故障期间尚未完成的物理删除表述为已完成；数据销毁不可撤销。",
+        "任务、样本及其衍生文件不做额外灾备。备份仅包含账户、配置及不含分析内容的账务数据；包含到期数据的旧整库备份、卷快照、对象历史版本及其他副本须销毁，不设额外宽限期。账务及运营审计去除任务名称、样本信息、文件路径和分析内容，仅保留金额、时间、组织及必要的幂等对账标识。代码回滚不恢复已销毁数据。"
       ]
     },
     {
@@ -74,14 +77,15 @@
       "paragraphs": [
         "本政策說明绳墨生物科技有限公司（SchemaBio）在提供貽鑑託管服務時如何處理個人資訊，適用於平臺訪問者、機構帳戶使用者及分析資料所涉及的個人。自行部署的實例由部署機構說明其處理安排；本政策適用於我們實際收到或處理的資訊，不自動覆蓋獨立部署機構的全部活動。",
         "對帳戶、安全、支持和業務管理資訊，我們根據自身提供服務的需要確定處理目的與方式。對機構提交的樣本、測序、臨牀和分析資訊，我們通常按照機構的合法指示作爲受託處理方提供服務；機構負責確定其適用法律下的合法處理依據、告知和必要授權。雙方在具體活動中的角色由實際處理安排及協議確定。",
-        "閱讀本政策或勾選登錄頁面不替代敏感個人資訊、跨境提供或其他依法需要的單獨同意，也不替代機構對受檢者的告知與授權。本政策說明隱私安排，不替代機構與我們之間的服務約定。"
+        "閱讀本政策或勾選登錄頁面不替代敏感個人資訊、跨境提供或其他依法需要的單獨同意，也不替代機構對受檢者的告知與授權。本政策說明隱私安排，不替代機構與我們之間的服務約定。",
+        "平台僅提供 Research Use Only（RUO）科研用途的生物資訊分析服務，不進行醫療診斷，不出具診斷報告。禁止在樣本編號、備註、表型描述、檔案名稱等欄位提交真實姓名、身分證件、聯絡方式或其他身分資訊。建立樣本前須確認遵守要求；該確認不表示平台已自動驗證匿名性。使用化名的遺傳及表型資料仍可能屬於敏感個人資訊。"
       ]
     },
     {
       "id": "information",
       "title": "第二條 資訊類別、來源和目的",
       "paragraphs": [
-        "我們可從使用者、其所屬機構及服務運行過程中取得：帳戶和機構資訊；樣本編號、性別、年齡、診斷和 HPO 表型；上傳檔案、序列、變異、基因、報告及人工解讀；任務、操作人、時間、審計、計費、支持和訪問記錄。遺傳、醫療健康及部分未成年人資訊可能屬於敏感個人資訊或特殊類別資料；樣本化名不保證匿名。",
+        "我們可從使用者、其所屬機構及服務運行過程中取得：帳戶和機構資訊；樣本編號、性別、年齡、診斷和 HPO 表型；上傳檔案、序列、變異、基因及人工解讀；任務、操作人、時間、審計、計費、支持和訪問記錄。遺傳、醫療健康及部分未成年人資訊可能屬於敏感個人資訊或特殊類別資料；樣本化名不保證匿名。",
         "這些資訊用於認證和權限管理、機構協作、執行分析、展示和儲存結果、生成報告、處理支持請求、計費、安全防護、審計及履行法定義務。請提交完成所需功能必要的資訊，避免在檔案名或自由文本中添加無關身份資訊。科研和模型訓練等新的用途需要另行確定合法依據及必要告知、授權。",
         "遺傳與健康資訊是完成所請求分析及解讀的必要輸入；不提供必要資訊時，相關功能可能無法完成。泄露或不當使用可能影響個人隱私、家庭成員及其他權益。訪問記錄可能包含 IP 地址和瀏覽器資訊。"
       ]
@@ -106,8 +110,10 @@
       "id": "retention",
       "title": "第五條 資料保留與刪除策略",
       "paragraphs": [
-        "上傳資料按資料中心顯示的適用保留期限和到期時間管理；當前默認七天策略取決於檔案類型和部署配置。分析產生的 BAM 當前自任務完成起保留七天，到期後按清理策略刪除。長期儲存的 BED 不適用同一七天規則；分析結果、報告和審計記錄也不因原始檔案到期而自動全部刪除。請在到期前依法儲存所需資料。",
-        "其他資訊的保留期限依據服務需要、機構指示、合同及適用的法定儲存義務確定，可聯繫我們瞭解具體類別的保留安排或提出刪除請求。刪除請求依權限及適用法律處理，並覆蓋適用的接收方和備份安排。因賬務、爭議或法律義務需要保留的部分應限制其他使用並說明原因。備份按相應生命週期清除或隔離，恢復時繼續執行適用刪除要求。機構或使用者已下載的副本由相應持有人管理。"
+        "SaaS 任務和樣本分別從原始建立時間起保留 720 小時（30 天），以 UTC 計算。未分析、排隊、執行中、成功、失敗或已軟刪除均適用；編輯、啟動、重試、完成及關聯其他記錄不延長。到期立即停止清單、搜尋、詳情、操作和下載存取，無須等待實體清理完成。樣本到期刪除其記錄、資料匹配關係及源自樣本的家系複製內容並解除關聯；關聯任務仍按自己的期限保留必要分析快照。開源自行部署版本不啟用此強制期限。",
+        "FASTQ 在上傳後 7 天清理；BAM 在分析完成後 7 天清理，且不得超過任務期限。成功產生的 CNV 基線轉存為獨立資源，製作任務到期不影響其獨立可用性；製作日誌和中間檔案仍隨任務清理。BED、內建基線及共用參考資源適用各自資源策略。請在期限內依法下載所需資料，下載副本由持有人負責保存和銷毀。",
+        "到期清理先停止執行及阻止延遲寫入，再刪除物件儲存中全部執行嘗試的結果、封存、日誌、截圖及舊報告檔案，包括歷史版本和未完成分片；清除伺服器快取、解讀與操作記錄和資料庫關聯資料。故障時保持不可存取的受限清理狀態並持續重試，不將故障期間尚未完成的實體刪除表述為已完成；資料銷毀不可撤銷。",
+        "任務、樣本及其衍生檔案不做額外災備。備份僅包含帳戶、設定及不含分析內容的帳務資料；包含到期資料的舊整庫備份、磁碟快照、物件歷史版本及其他副本須銷毀，不設額外寬限期。帳務及營運稽核去除任務名稱、樣本資訊、檔案路徑和分析內容，僅保留金額、時間、組織及必要的冪等對帳識別碼。程式碼回復不恢復已銷毀資料。"
       ]
     },
     {
@@ -142,7 +148,8 @@
       "paragraphs": [
         "This notice describes how 绳墨生物科技有限公司 (SchemaBio) processes personal information when providing the hosted YiJian service. It covers visitors, institutional account users, and individuals whose information is included in analysis data. Independently deployed instances are operated by their deploying institutions; this notice covers information we actually receive or process.",
         "We determine the purposes and means of processing account, security, support and business administration information for our service. For sample, sequencing, clinical and analysis information submitted by an institution, we generally act on that institution's lawful instructions as a processor. The institution determines its lawful basis, notices and required authorizations. Actual activities and agreements determine the parties' roles.",
-        "Reading this notice or checking a login box does not replace separate consent or other authorization required for sensitive information, international transfers or other activities. This policy describes privacy arrangements and does not replace the institution’s service agreement with us."
+        "Reading this notice or checking a login box does not replace separate consent or other authorization required for sensitive information, international transfers or other activities. This policy describes privacy arrangements and does not replace the institution’s service agreement with us.",
+        "The platform provides bioinformatics analysis services for Research Use Only (RUO). We do not conduct medical diagnosis or issue diagnostic reports. Do not submit real names, identity documents, contact details or other identifying information in sample IDs, notes, phenotype descriptions, filenames or other fields. Sample creation requires an acknowledgment; this does not mean the platform has automatically verified anonymity. Genetic and phenotype data may remain sensitive personal information even when pseudonyms are used."
       ]
     },
     {
@@ -174,8 +181,10 @@
       "id": "retention",
       "title": "5. Retention and deletion",
       "paragraphs": [
-        "Uploaded data follows the applicable retention period and expiry shown in the data center; the current default seven-day policy depends on file type and deployment configuration. Analysis-generated BAM files currently have a seven-day period starting at task completion and are deleted under the cleanup policy after expiry. Long-term BED files are not subject to the same seven-day rule. Analysis results, reports and audit records are not all automatically deleted when raw files expire. Keep necessary records lawfully before expiry.",
-        "Other retention periods depend on service needs, institutional instructions, contracts and applicable statutory obligations. Contact us for category-specific arrangements or to request deletion. Deletion is handled subject to authority and applicable law and addresses relevant recipients and backups. Other uses of information retained for accounting, disputes or legal obligations are restricted and the reason explained. Backups are cleared or isolated under their lifecycle, with applicable deletion requirements continuing upon restoration. Downloaded copies are managed by their respective holders."
+        "SaaS tasks and samples each expire 720 hours (30 days) after their original creation time, calculated in UTC. This applies to unanalyzed, queued, running, successful, failed and soft-deleted records. Editing, starting, retrying, finishing or linking records does not extend the period. Lists, searches, details, operations and downloads stop at expiry without waiting for physical deletion. Sample records, data matches and sample-derived family copies are erased and links removed; linked tasks retain necessary analysis snapshots until their own expiry. This mandatory period does not apply to independently deployed open-source instances.",
+        "FASTQ files are cleaned up 7 days after upload. BAM files are cleaned up 7 days after completion and never later than task expiry. Successful CNV baselines are moved to independent resources and remain usable after the creation task expires; creation logs and intermediate files still expire with that task. BED, built-in baselines and shared references follow their own resource policies. Download required information lawfully before expiry; holders are responsible for retaining and destroying downloaded copies.",
+        "Expiry cleanup first stops execution and prevents late writes, then removes results, archives, logs, screenshots and legacy report files for every execution attempt from object storage, including historical versions and unfinished multipart uploads. Server caches, interpretation and operation records, and related database data are erased. Failures leave an inaccessible restricted cleanup state and are retried. We do not claim physical deletion has completed while an outage prevents it. Destruction is irreversible.",
+        "Tasks, samples and derived files have no additional disaster backups. Backups contain only accounts, configuration and accounting data without analysis content. Old full-database backups, volume snapshots, object versions and other copies containing expired data must be destroyed without an additional grace period. Task names, sample information, file paths and analysis content are removed from accounting and operational audits; only amounts, times, organizations and necessary idempotent reconciliation identifiers remain. Rolling back code does not restore destroyed data."
       ]
     },
     {
@@ -210,7 +219,8 @@
       "paragraphs": [
         "Esta política explica cómo 绳墨生物科技有限公司 (SchemaBio) trata los datos personales al prestar el servicio alojado de YiJian. Se aplica a visitantes de la plataforma, usuarios de cuentas institucionales y personas cuyos datos se incluyen en los análisis. Las instituciones que despliegan instancias independientes deben informar sobre sus propias prácticas; esta política se aplica a los datos que efectivamente recibimos o tratamos y no cubre automáticamente todas las actividades de esas instituciones.",
         "Determinamos los fines y medios del tratamiento de los datos de cuentas, seguridad, soporte y administración comercial según las necesidades de nuestro servicio. Para los datos de muestras, secuenciación, información clínica y análisis enviados por una institución, generalmente actuamos como encargados del tratamiento conforme a sus instrucciones lícitas. La institución determina la base jurídica, los avisos y las autorizaciones necesarios según la legislación aplicable. Las funciones de ambas partes dependen de las actividades y los acuerdos concretos.",
-        "Leer esta política o marcar una casilla en el inicio de sesión no sustituye el consentimiento separado ni otras autorizaciones exigidas para datos sensibles, transferencias internacionales u otras actividades, ni la información y autorización que la institución debe obtener de la persona examinada. Esta política describe las prácticas de privacidad y no sustituye el acuerdo de servicio entre la institución y nosotros."
+        "Leer esta política o marcar una casilla en el inicio de sesión no sustituye el consentimiento separado ni otras autorizaciones exigidas para datos sensibles, transferencias internacionales u otras actividades, ni la información y autorización que la institución debe obtener de la persona examinada. Esta política describe las prácticas de privacidad y no sustituye el acuerdo de servicio entre la institución y nosotros.",
+        "La plataforma ofrece servicios de análisis bioinformático exclusivamente para investigación: Research Use Only (RUO). No realizamos diagnósticos médicos ni emitimos informes diagnósticos. No envíe nombres reales, documentos de identidad, datos de contacto ni otros identificadores en los códigos de muestra, notas, descripciones fenotípicas, nombres de archivo u otros campos. Crear una muestra requiere una confirmación; esto no significa que la plataforma haya verificado automáticamente el anonimato. Los datos genéticos y fenotípicos pueden seguir siendo información personal sensible aunque se utilicen seudónimos."
       ]
     },
     {
@@ -242,8 +252,10 @@
       "id": "retention",
       "title": "5. Conservación y eliminación",
       "paragraphs": [
-        "Los datos cargados se gestionan según el plazo de conservación y la fecha de vencimiento indicados en el centro de datos; la política predeterminada actual de siete días depende del tipo de archivo y de la configuración del despliegue. Los archivos BAM generados por el análisis se conservan actualmente durante siete días desde la finalización de la tarea y se eliminan según la política de limpieza al vencer el plazo. Los archivos BED conservados a largo plazo no están sujetos a la misma regla de siete días. Los resultados de análisis, informes y registros de auditoría no se eliminan automáticamente en su totalidad cuando vencen los archivos originales. Conserve legalmente los registros necesarios antes del vencimiento.",
-        "Los plazos de conservación de otros datos dependen de las necesidades del servicio, las instrucciones institucionales, los contratos y las obligaciones legales aplicables. Contáctenos para conocer los plazos por categoría o solicitar la eliminación. Las solicitudes se procesan según la autoridad y la legislación aplicables, incluyendo a los destinatarios y las copias de seguridad pertinentes. Los datos conservados por motivos contables, disputas u obligaciones legales deben tener restringidos otros usos y debe explicarse el motivo de su conservación. Las copias de seguridad se eliminan o aíslan conforme a su ciclo de vida; los requisitos de eliminación aplicables siguen vigentes al restaurarlas. Las copias descargadas por instituciones o usuarios son administradas por sus respectivos titulares."
+        "Las tareas y muestras de SaaS vencen por separado 720 horas (30 días) después de su creación original, calculadas en UTC. Esto incluye registros sin análisis, en cola, en ejecución, exitosos, fallidos y eliminados de forma lógica. Editar, iniciar, reintentar, completar o vincular registros no amplía el plazo. Al vencer, se bloquean listas, búsquedas, detalles, operaciones y descargas sin esperar la eliminación física. Se borran la muestra, sus coincidencias de datos y las copias familiares derivadas de ella, y se desvinculan las relaciones; las tareas vinculadas conservan las instantáneas necesarias hasta su propio vencimiento. Este plazo obligatorio no se aplica a instalaciones independientes de código abierto.",
+        "Los archivos FASTQ se eliminan 7 días después de la carga. Los BAM se eliminan 7 días después de completar el análisis, sin superar el vencimiento de la tarea. Las bases CNV generadas con éxito se trasladan a recursos independientes y siguen disponibles al vencer la tarea de creación; sus registros y archivos intermedios vencen con la tarea. BED, bases integradas y referencias compartidas siguen sus propias políticas. Descargue legalmente lo necesario antes del vencimiento; quien conserve copias descargadas es responsable de su conservación y destrucción.",
+        "La limpieza detiene primero las ejecuciones y evita escrituras tardías; luego elimina los resultados, archivos, registros, capturas e informes antiguos de todos los intentos de ejecución en el almacenamiento de objetos, incluidas versiones históricas y cargas multiparte incompletas. También borra cachés del servidor, interpretaciones, operaciones y datos relacionados de la base de datos. Los fallos mantienen un estado de limpieza restringido e inaccesible y se reintentan. No afirmamos que la eliminación física haya terminado mientras una falla la impida. La destrucción es irreversible.",
+        "Las tareas, muestras y archivos derivados no tienen respaldos adicionales para recuperación ante desastres. Los respaldos solo contienen cuentas, configuración y datos contables sin contenido de análisis. Deben destruirse sin período adicional de gracia los respaldos antiguos de toda la base, instantáneas de volúmenes, versiones de objetos y otras copias que contengan datos vencidos. Se retiran nombres de tareas, información de muestras, rutas y contenido de análisis de la contabilidad y auditoría operativa; solo quedan importes, fechas, organizaciones e identificadores necesarios para conciliación idempotente. Revertir el código no restaura datos destruidos."
       ]
     },
     {

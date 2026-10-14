@@ -25,6 +25,8 @@ export type AffectedStatus = 'affected' | 'unaffected' | 'unknown' | 'carrier';
 
 // 家系成员
 export interface PedigreeMember {
+  sourceSampleFields?: string[];
+  sampleExpiresAt?: string;
   id: string;                 // 成员ID (UUID)
   sampleId?: string;          // 关联的样本UUID（必须存在于 /samples 中）
   name: string;

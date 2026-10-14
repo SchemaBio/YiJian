@@ -28,7 +28,7 @@ function label(field: string, t: TextTranslator = chineseText): string {
   const common: Record<string, string> = {
     Chromosome: t("history.chromosome326659"), Position: t("history.position88c344"), Gene: t("history.gene9ef2ed"), Type: t("history.typee4e46c"), VAF: 'VAF',
     GnomAD_AF: 'gnomAD AF', GnomAD_AF_EAS: t("tasks.gnomadEastAsianAfe9255d"), ClinVar_Sig: t("tasks.clinvarSignificanceeb01c2"),
-    acmgClassification: t("tasks.acmgAssessment6a7cd5"), pinned: t("tasks.pin7bcf18"), reported: t("tasks.report6c4cc0"),
+    acmgClassification: t("tasks.acmgAssessment6a7cd5"), pinned: t("tasks.pin7bcf18"), focused: t("tasks.focus6c4cc0"),
   };
   return common[field] ?? field.replaceAll('_', ' ');
 }

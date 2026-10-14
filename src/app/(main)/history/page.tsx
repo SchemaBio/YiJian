@@ -1,2 +1,4 @@
 'use client';
-export { default } from './HistoryWorkspace';
+import { SelfHostedOnly } from '@/components/shared/ResearchPolicy';
+import HistoryWorkspace from './HistoryWorkspace';
+export default function HistoryPage() { return <SelfHostedOnly><HistoryWorkspace /></SelfHostedOnly>; }

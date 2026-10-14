@@ -25,6 +25,7 @@ export interface Sample {
   matchMode: SampleMatchMode;
   autoMatchEnabled: boolean;
   remark: string;  // 备注
+  expiresAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,9 +87,11 @@ export interface SampleDetail {
     id: string;
     name: string;
     status: string;
-    createdAt: string;
+    expiresAt?: string;
+  createdAt: string;
   }[];
 
+  expiresAt?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,15 +1,15 @@
 import { expect, it } from 'vitest';
-import { HistoryEngine, type HistoryQuery, type ReportRow } from './history-engine';
+import { HistoryEngine, type HistoryQuery, type FocusRow } from './history-engine';
 
 // A worst-case fixture with 100,000 distinct loci: no friendly deduplication.
 it('benchmarks 100,000 compact sources without server queries', () => {
   const engine = new HistoryEngine();
   const before = process.memoryUsage().heapUsed;
-  const rows: ReportRow[] = Array.from({ length: 100000 }, (_, index) => ({
+  const rows: FocusRow[] = Array.from({ length: 100000 }, (_, index) => ({
     id: String(index), revision: 1, table: 'snv-indel', taskUuid: `task-${index % 1000}`, attemptId: 'attempt',
     groupKey: `locus-${index}`, reference: 'hg19', identityKnown: true,
     fields: { chromosome: `chr${index % 22 + 1}`, position: String(index + 1), ref: 'A', alt: 'G', gene: `GENE${index % 500}`, gnomadAF: '0.0001' },
-    reported: true, classification: index % 2 ? 'VUS' : 'Pathogenic', reportedClassification: 'VUS', firstReportedAt: '2026-10-01T00:00:00Z', lastReportedAt: '2026-10-02T00:00:00Z', reportedBy: 'fixture', adjustmentVersion: 1, updatedAt: '2026-10-02T00:00:00Z',
+    focused: true, classification: index % 2 ? 'VUS' : 'Pathogenic', focusedClassification: 'VUS', firstFocusedAt: '2026-10-01T00:00:00Z', lastFocusedAt: '2026-10-02T00:00:00Z', focusedBy: 'fixture', adjustmentVersion: 1, updatedAt: '2026-10-02T00:00:00Z',
   }));
   const bytes = Buffer.byteLength(JSON.stringify(rows));
   engine.apply(rows, {});

@@ -8,7 +8,7 @@ import type { Column } from '@schema/ui-kit';
 import { Columns3 } from 'lucide-react';
 import { ToolbarPopover } from './ToolbarPopover';
 
-const IDENTITY_COLUMNS = new Set(['reported', 'pinned', 'gene', 'position', 'chromosome', 'startPosition', 'endPosition']);
+const IDENTITY_COLUMNS = new Set(['focused', 'pinned', 'gene', 'position', 'chromosome', 'startPosition', 'endPosition']);
 const locked = <T,>(column: Column<T>, index: number) => index === 0 || Boolean(column.pinned) || IDENTITY_COLUMNS.has(column.id);
 
 export function useTableView() {
@@ -35,7 +35,7 @@ export function TableViewControls<T>({ columns, view }: { columns: Column<T>[]; 
       {columns.map((column, index) => <label key={column.id} className="flex items-center gap-2 text-xs">
         <input type="checkbox" checked={locked(column, index) || !view.hidden.has(column.id)} disabled={locked(column, index)}
           onChange={event => view.setHidden(previous => { const next = new Set(previous); if (event.target.checked) next.delete(column.id); else next.add(column.id); return next; })} />
-        {typeof column.header === 'string' ? column.header : ({ pinned: t("tasks.pin7bcf18"), reported: t("tasks.report6c4cc0") }[column.id] ?? column.id)}
+        {typeof column.header === 'string' ? column.header : ({ pinned: t("tasks.pin7bcf18"), focused: t("tasks.focus6c4cc0") }[column.id] ?? column.id)}
       </label>)}
     </div>
   </ToolbarPopover>;

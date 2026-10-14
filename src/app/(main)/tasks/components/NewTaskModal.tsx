@@ -1,4 +1,5 @@
 'use client';
+import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { LocalizedError } from '@/i18n/errors';
 
 import { errorText } from '@/i18n/errors';
@@ -264,6 +265,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         )}
 
         <section>
+          <RetentionNotice kind="task" />
           <ModalSectionHeading
             icon={<SlidersHorizontal className="h-4 w-4" />}
             title={t("tasks.taskSettings9323d0")}

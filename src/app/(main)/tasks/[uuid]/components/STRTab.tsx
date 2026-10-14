@@ -17,10 +17,10 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { STR, STRStatus, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getSTRs, reportVariant, pinVariant } from '../result-api';
+import { getSTRs, focusVariant, pinVariant } from '../result-api';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
-import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
+import { PinCheckbox, FocusCheckbox, PinColumnHeader, FocusColumnHeader } from './ReviewCheckboxes';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface STRTabProps {
@@ -51,7 +51,7 @@ export function STRTab({
   const [requestError, setRequestError] = React.useState<string | null>(null);
   const [operationError, setOperationError] = React.useState<string | null>(null);
   const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; reported: boolean }>>({});
+  const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; focused: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='str')setReviewStatus({});};
     window.addEventListener('yijian:result-overlays-synced',sync);
@@ -106,7 +106,7 @@ export function STRTab({
   }, [filterState, setFilterState]);
 
   // 处理置顶状态变更
-  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  const handlePinChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
@@ -127,19 +127,19 @@ export function STRTab({
     }
   }, [taskId, t]);
 
-  // 处理回报状态变更
-  const handleReportChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; reported: boolean }) => {
+  // 处理关注状态变更
+  const handleFocusChange = React.useCallback(async (id: string, checked: boolean, currentState: { pinned: boolean; focused: boolean }) => {
     setOperationError(null);
     setReviewStatus(prev => ({
       ...prev,
-      [id]: { ...currentState, reported: checked }
+      [id]: { ...currentState, focused: checked }
     }));
     setPendingVariantIDs((previous) => new Set(previous).add(id));
     try {
-      await reportVariant(taskId, 'str', id, checked);
+      await focusVariant(taskId, 'str', id, checked);
     } catch (error) {
       setReviewStatus(prev => ({ ...prev, [id]: currentState }));
-      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForReport8d3bd6"));
+      setOperationError(error instanceof Error ? errorText(error, t) : t("tasks.unableToMarkForFocus8d3bd6"));
     } finally {
       setPendingVariantIDs((previous) => {
         const next = new Set(previous);
@@ -151,21 +151,21 @@ export function STRTab({
 
   // 获取变异的置顶状态
   const getReviewState = React.useCallback((variant: STR) => {
-    return reviewStatus[variant.id] ?? { pinned: variant.pinned, reported: variant.reported };
+    return reviewStatus[variant.id] ?? { pinned: variant.pinned, focused: variant.focused };
   }, [reviewStatus]);
 
   const sortedData = result?.data ?? [];
 
   const columns: Column<STR>[] = [
     {
-      id: 'reported',
-      header: <ReportColumnHeader />,
+      id: 'focused',
+      header: <FocusColumnHeader />,
       accessor: (row) => {
         const state = getReviewState(row);
         return (
-          <ReportCheckbox
-            checked={state.reported}
-            onChange={(checked) => handleReportChange(row.id, checked, state)}
+          <FocusCheckbox
+            checked={state.focused}
+            onChange={(checked) => handleFocusChange(row.id, checked, state)}
             disabled={pendingVariantIDs.has(row.id)}
           />
         );

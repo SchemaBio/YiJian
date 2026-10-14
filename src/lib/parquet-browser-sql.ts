@@ -1,7 +1,7 @@
 import { LocalizedError } from '@/i18n/errors';
 // The worker queries one immutable dataset and its versioned server overlays.
 // Only registered fields/operators may become SQL; values are escaped literals.
-export const OVERLAY_FIELDS = ['pinned', 'reviewed', 'reported', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'acmgVusSubclass', 'acmgTrial'];
+export const OVERLAY_FIELDS = ['pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'acmgVusSubclass', 'acmgTrial'];
 const NUMERIC_FIELDS = new Set(['acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
 export interface LocalFilter {
     column: string;
@@ -19,7 +19,7 @@ export interface LocalQuery {
 export const ident = (s: string) => '"' + s.replaceAll('"', '""') + '"';
 export const literal = (s: unknown) => "'" + String(s).replaceAll("'", "''") + "'";
 export function fieldType(s: string): 'text' | 'number' | 'enum' | 'boolean' {
-    if (s === 'pinned' || s === 'reviewed' || s === 'reported')
+    if (s === 'pinned' || s === 'reviewed' || s === 'focused')
         return 'boolean';
     if (s === 'acmgClassification')
         return 'enum';
@@ -35,7 +35,7 @@ export function effectiveField(s: string, raw: string[]): string {
     if(s==='acmgVusSubclass') return `CASE WHEN ${active} THEN json_extract_string(o.payload,'$.svcv4Assessment.result.vusSubclass') END`;
     if (s === 'pinned')
         return `COALESCE(${overlay}, CASE WHEN ${active} OR json_exists(o.payload,'$.acmgEvidence') OR json_exists(o.payload,'$.acmgOverride') OR json_exists(o.payload,'$.cnvAssessment') THEN CASE WHEN (CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END) IN ('Pathogenic','Likely_Pathogenic') THEN 'true' ELSE 'false' END ELSE COALESCE(json_extract_string(a.baseline,'$.pinned'),'false') END)`;
-    if (s === 'reviewed' || s === 'reported')
+    if (s === 'reviewed' || s === 'focused')
         return `COALESCE(${overlay}, 'false')`;
     if (s === 'cnvAssessment')
         return overlay;
@@ -107,11 +107,11 @@ export function buildLocalSelection(q: LocalQuery, raw: string[]) {
     // Apply the current adjustment snapshot before pagination: marking a row
     // must promote it across the whole dataset, not just within the visible page.
     const pinned = `COALESCE(TRY_CAST(${effectiveField('pinned', raw)} AS BOOLEAN), FALSE)`;
-    const reported = `COALESCE(TRY_CAST(${effectiveField('reported', raw)} AS BOOLEAN), FALSE)`;
+    const focused = `COALESCE(TRY_CAST(${effectiveField('focused', raw)} AS BOOLEAN), FALSE)`;
     const classification=`CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END`;
     const priority=`CASE ${classification} WHEN 'Pathogenic' THEN 0 WHEN 'Likely_Pathogenic' THEN 1 WHEN 'VUS' THEN 2 WHEN 'Likely_Benign' THEN 3 WHEN 'Benign' THEN 4 ELSE 5 END`;
     const manualPinned=`COALESCE(TRY_CAST(json_extract_string(o.payload,'$.pinned') AS BOOLEAN),FALSE)`;
     const phenotypePriority=`COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypePriority') AS BOOLEAN),FALSE) AND ${classification} IN ('Pathogenic','Likely_Pathogenic')`;
-    order = `CASE WHEN ${reported} THEN 0 WHEN ${pinned} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} AND ${manualPinned} THEN 0 WHEN ${pinned} AND ${phenotypePriority} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} THEN ${priority} ELSE 0 END ASC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypeMatch.score') AS DOUBLE),TRY_CAST(json_extract_string(a.baseline,'$.phenotypeScore') AS DOUBLE),0) ELSE 0 END DESC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.familySupport') AS INTEGER),0) ELSE 0 END DESC, ${order}`;
+    order = `CASE WHEN ${focused} THEN 0 WHEN ${pinned} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} AND ${manualPinned} THEN 0 WHEN ${pinned} AND ${phenotypePriority} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} THEN ${priority} ELSE 0 END ASC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypeMatch.score') AS DOUBLE),TRY_CAST(json_extract_string(a.baseline,'$.phenotypeScore') AS DOUBLE),0) ELSE 0 END DESC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.familySupport') AS INTEGER),0) ELSE 0 END DESC, ${order}`;
     return { where: where.length ? ' WHERE ' + where.join(' AND ') : '', order };
 }
