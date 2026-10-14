@@ -12,9 +12,13 @@ import { Tag } from '@schema/ui-kit';
 import { User, Calendar, HeartPulse, Users } from 'lucide-react';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import { GENDER_CONFIG } from '@/app/(main)/samples/types';
+import { getSampleDetail, updateSampleHpoTerms } from '@/lib/samples';
+import { errorText } from '@/i18n/errors';
+import { SampleHpoTerms } from './SampleHpoTerms';
 
 interface SampleSummaryCardProps {
   sample: SampleDetail;
+  onSampleChange?: (sample: SampleDetail) => void;
 }
 
 function InfoSection({
@@ -46,7 +50,9 @@ function InfoItem({ label, value, className = '' }: { label: string; value: Reac
   );
 }
 
-function SampleDetails({ sample }: SampleSummaryCardProps) {
+function SampleDetails({ sample, refreshing, onHpoSave }: {
+  sample: SampleDetail; refreshing: boolean; onHpoSave: (terms: {id:string;name:string}[]) => Promise<void>;
+}) {
   const t = useText();
   const genderInfo = GENDER_CONFIG[sample.gender];
   const isMatched = sample.matchedPair !== null;
@@ -141,23 +147,7 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
                 </div>
               </div>
             )}
-            {sample.clinicalDiagnosis?.hpoTerms && sample.clinicalDiagnosis.hpoTerms.length > 0 && (
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-fg-muted min-w-[60px] pt-0.5">HPO</span>
-                <div className="flex flex-wrap gap-1">
-                  {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
-                    <HoverHint content={hpo.name} key={i}><Tag
-                      key={i}
-                      variant="info"
-                      className="font-mono"
-
-                    >
-                      {hpo.id}
-                    </Tag></HoverHint>
-                  ))}
-                </div>
-              </div>
-            )}
+            <SampleHpoTerms terms={sample.clinicalDiagnosis?.hpoTerms ?? []} refreshing={refreshing} onSave={onHpoSave} />
           </div>
         </InfoSection>
 
@@ -179,8 +169,39 @@ function SampleDetails({ sample }: SampleSummaryCardProps) {
     </div>
   );
 }
-export function SampleSummaryCard({sample}: SampleSummaryCardProps) {
+export function SampleSummaryCard({sample: providedSample, onSampleChange}: SampleSummaryCardProps) {
   const t = useText();
+  const [sample, setSample] = React.useState(providedSample);
+  const sampleRef = React.useRef(sample); sampleRef.current = sample;
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshError, setRefreshError] = React.useState('');
+  const sequence = React.useRef(0);
+  const activeId = React.useRef(providedSample.id); activeId.current = providedSample.id;
+  React.useEffect(() => { setSample(providedSample); }, [providedSample]);
+  React.useEffect(() => () => { sequence.current++; }, []);
+  const refresh = async () => {
+    const id = providedSample.id, request = ++sequence.current;
+    setRefreshing(true); setRefreshError('');
+    try {
+      const latest = await getSampleDetail(id);
+      if (sequence.current !== request || activeId.current !== id) return;
+      if (!latest) throw new Error(t('samples.sampleNotFound73e415'));
+      setSample(latest); onSampleChange?.(latest);
+    } catch (cause) {
+      if (sequence.current === request && activeId.current === id) setRefreshError(cause instanceof Error ? errorText(cause, t) : t('interface.failedToLoadSample0c1b77'));
+    } finally { if (sequence.current === request && activeId.current === id) setRefreshing(false); }
+  };
+  const saveHpo = async (terms: {id:string;name:string}[]) => {
+    const id = sample.id;
+    sequence.current++; setRefreshing(false);
+    const updated = await updateSampleHpoTerms(id, terms);
+    if (activeId.current !== id) return;
+    sequence.current++; setRefreshing(false);
+    const latest = sampleRef.current;
+    const next = {...latest, updatedAt:updated.updatedAt, clinicalDiagnosis:{...latest.clinicalDiagnosis, hpoTerms:updated.hpoTerms}};
+    setSample(next); onSampleChange?.(next);
+    setRefreshError('');
+  };
  const gender = GENDER_CONFIG[sample.gender];
  return <div className="mb-2 flex min-w-0 items-center gap-3 rounded-md bg-canvas-subtle px-3 py-2 text-xs">
   <User className="h-3.5 w-3.5 shrink-0 text-fg-muted"/>
@@ -188,6 +209,9 @@ export function SampleSummaryCard({sample}: SampleSummaryCardProps) {
   <span className={`shrink-0 ${gender.color}`}>{translateUI(gender.label, t)}{sample.age !== undefined ? t("tasks.years519b9d", {p0: String(sample.age)}) : ''}</span>
   <span className="hidden shrink-0 text-fg-muted sm:inline">{t(sample.sampleType)}</span>
   <HoverHint content={translateUI(sample.clinicalDiagnosis?.mainDiagnosis, t)}><span className="min-w-0 flex-1 truncate text-fg-muted" >{t("tasks.diagnosis48c02c")}{sample.clinicalDiagnosis?.mainDiagnosis || t("history.notProvided071fb2")}</span></HoverHint>
-  <ToolbarPopover label={t("tasks.sampleDetailsb6d180")} wide><SampleDetails sample={sample}/></ToolbarPopover>
+  <ToolbarPopover label={t("tasks.sampleDetailsb6d180")} wide onOpenChange={open => { if (open) void refresh(); }}>
+    {refreshError && <p role="alert" className="mb-3 text-xs text-danger-fg">{refreshError}</p>}
+    <SampleDetails key={sample.id} sample={sample} refreshing={refreshing} onHpoSave={saveHpo}/>
+  </ToolbarPopover>
  </div>;
 }

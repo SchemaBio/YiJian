@@ -320,7 +320,7 @@ export default function AnalysisDetailPage() {
       <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel={t("tasks.saving6644f0")} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? t("tasks.reopenInterpretatione505bc") : t("tasks.interpretationCompletec29533")}</ActionButton>} />
       {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">{t("tasks.interpretationIsCompleteAndReadOnlyReopen89d694")}</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
-      {sample && <SampleSummaryCard sample={sample} />}
+      {sample && <SampleSummaryCard key={sample.id} sample={sample} onSampleChange={setSample} />}
 
       </div>
       <div className="min-h-0 flex-1 flex flex-col overflow-hidden px-3 pb-3 md:px-4 md:pb-4">

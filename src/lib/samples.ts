@@ -196,9 +196,14 @@ export async function listSamples(params: Record<string, string> = { page: '1', 
 }
 
 export async function getSampleDetail(id: string): Promise<SampleDetail | null> {
-  const response = await api.get<unknown>(`/v1/samples/${encodeURIComponent(id)}`);
+  const response = await api.get<unknown>(`/v1/samples/${encodeURIComponent(id)}`, { cache: 'no-store' });
   const detail = normalizeSampleDetail(response);
   return detail.id ? detail : null;
+}
+
+export async function updateSampleHpoTerms(id: string, terms: { id: string; name: string }[]): Promise<Sample> {
+  const response = await api.put<unknown>(`/v1/samples/${encodeURIComponent(id)}`, { hpo_terms: terms });
+  return normalizeSample(response);
 }
 
 export async function updateSampleMatchedPair(
