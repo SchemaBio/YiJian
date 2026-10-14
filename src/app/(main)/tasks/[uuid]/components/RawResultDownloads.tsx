@@ -19,7 +19,7 @@ interface Catalog { bam_expires_at?: string; bam_retention_days?: number; bam_st
 interface Quote { id: string; kind: string; filename: string; size_bytes: number; credits: number; charged_at?: string; expires_at?: string }
 interface Issued { kind?: string; id: string; url: string; filename: string; credits_charged: number; expires_at: string; grant_expires_at: string; refresh_after: string; remaining_issues: number; traffic_limit_bps: number; ip_bound: boolean }
 const gb = (size: number, t: TextTranslator = chineseText) => `${(size / 1_000_000_000).toLocaleString(t.locale, { maximumFractionDigits: 3 })} GB`;
-const labels: Record<string, string> = { mt_vcf: '线粒体 VCF', snp_indel: 'SNP/InDel 报告', mt: '线粒体报告', cnv_region: 'CNV 区域', cnv_gene: 'CNV 外显子', mei: 'MEI', upd: 'UPD', roh: 'ROH', qc_result: 'QC 报告', str: 'STR' };
+const labels: Record<string, string> = { mt_vcf: '线粒体 VCF', snp_indel: 'SNP/InDel 注释结果', mt: '线粒体注释结果', cnv_region: 'CNV 区域', cnv_gene: 'CNV 外显子', mei: 'MEI', upd: 'UPD', roh: 'ROH', qc_result: 'QC 报告', str: 'STR' };
 
 export function RawResultDownloads({ taskId }: { taskId: string }) {
   const t = useText();

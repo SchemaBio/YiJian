@@ -515,12 +515,12 @@ export default function SamplesPage() {
             >
               {t("samples.deleteSelected362aed")}{selectedSamples.length > 0 ? ` (${selectedSamples.length})` : ''}
             </Button>
-            <Button action="download"
+            {getRuntimeBackendFlavor() !== 'squid' && <Button action="download"
               variant="secondary"
 
               onClick={handleDownloadTemplate}
             >
-              {t("samples.downloadTemplatea3afb2")}</Button>
+              {t("samples.downloadTemplatea3afb2")}</Button>}
             <HoverHint content={t("admin.refresh38108e")}><Button action="refresh" variant="secondary" aria-label={t("admin.refresh38108e")} disabled={loading} onClick={() => void loadSamples()} >{t("admin.refresh38108e")}</Button></HoverHint>
             <Button action="add"
               variant="primary"

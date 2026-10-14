@@ -1,9 +1,16 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { NewSampleModal } from './NewSampleModal';
 vi.mock('@/lib/hpo-terms',()=>({useHpoTerms:()=>[],searchHpoTerms:()=>[]}));
 vi.mock('@/components/shared/AIDiagnosisField',()=>({AIDiagnosisField:()=>null}));
+// The shared checkbox measures its native input; jsdom has no layout observer.
+beforeEach(() => vi.stubGlobal('ResizeObserver', class {
+ observe() {}
+ unobserve() {}
+ disconnect() {}
+}));
+afterEach(() => vi.unstubAllGlobals());
 it('requires fresh identity confirmation and sends its version with creation',async()=>{
  const submit=vi.fn().mockResolvedValue(undefined),close=vi.fn();
  const {rerender}=render(<NewSampleModal isOpen onClose={close} onSubmit={submit} />);

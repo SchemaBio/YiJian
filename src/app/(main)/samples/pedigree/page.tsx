@@ -19,6 +19,7 @@ import type { NewPedigreeFormData } from './components/NewPedigreeModal';
 import type { EditPedigreeFormData } from './components/EditPedigreeModal';
 import type { PedigreeListItem, Pedigree, PedigreeMember, RelationType } from './types';
 import { listSamples } from '@/lib/samples';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import {
   createPedigree,
   createPedigreeMember,
@@ -826,7 +827,7 @@ export default function PedigreePage() {
                 <Input placeholder={t("samples.searchPedigreeIdInternalIdOrSample09da28")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button action="download" variant="secondary"  onClick={handleDownloadTemplate}>{t("samples.downloadTemplatea3afb2")}</Button>
+                {getRuntimeBackendFlavor() !== 'squid' && <Button action="download" variant="secondary" onClick={handleDownloadTemplate}>{t("samples.downloadTemplatea3afb2")}</Button>}
                 <Button action="add" variant="primary"  onClick={() => setIsNewPedigreeOpen(true)}>{t("samples.newPedigreeb7e3c2")}</Button>
               </div>
             </div>

@@ -103,6 +103,7 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
             {requireOrgFields ? t("auth.createATeamAccountAdministratorApprovalIsf98187") : t("auth.createAnAccountToStartUsingYijian2be3bc")}
           </p>
+          <p className="mt-3 text-xs leading-relaxed text-[var(--yj-text-muted)]">{t(backendFlavor === 'squid' ? 'research.audience' : 'research.selfHostedScope')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

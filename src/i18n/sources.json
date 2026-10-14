@@ -2636,5 +2636,7 @@
   "报告快照 v2 将已选入关注的位点、最新人工判读与质控固定为本次报告版本。": "tasks.reportSnapshotVFixesSelectedLociLatest5987ef",
   "报告快照 v2 · 接口契约": "display.reportSnapshotVApiContractd3e3a8",
   "关注变异": "research.focusVariant",
-  "取消关注": "research.unfocusVariant"
+  "取消关注": "research.unfocusVariant",
+  "SNP/InDel 注释结果": "display.snpIndelReportda28f8",
+  "线粒体注释结果": "display.mitochondrialReport08c58c"
 }

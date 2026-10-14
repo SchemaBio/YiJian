@@ -502,7 +502,7 @@ export default function AnalysisPage() {
             <div className="yj-task-heading">
               <div><h2 className="yj-page-title">{t("tasks.taskCenterf692ff")}</h2><p className="yj-page-subtitle">{t("tasks.trackAnalysisProgressAndInterpretResults9952cc")}</p></div>
               <div className="flex items-center gap-2">
-                <Button action="add" variant="secondary"  onClick={() => setIsBatchTaskModalOpen(true)}>{t("tasks.createInBatch08ebb3")}</Button>
+                {!isSaaS && <Button action="add" variant="secondary" onClick={() => setIsBatchTaskModalOpen(true)}>{t("tasks.createInBatch08ebb3")}</Button>}
                 <Button action="add" variant="primary"  onClick={() => setIsNewTaskModalOpen(true)}>{t("tasks.newTask6b717c")}</Button>
               </div>
             </div>
@@ -598,13 +598,13 @@ export default function AnalysisPage() {
         onSubmit={handleCreateTask}
       />
 
-      <BatchTaskModal
+      {!isSaaS && <BatchTaskModal
         isOpen={isBatchTaskModalOpen}
         onClose={() => setIsBatchTaskModalOpen(false)}
         onCompleted={async () => {
           await refetch();
         }}
-      />
+      />}
 
       {/* 编辑任务弹窗 */}
       <EditTaskModal

@@ -2,7 +2,7 @@
   "name": "@schema/web-germline",
   "version": "0.1.0",
   "private": true,
-  "description": "遗传病医生专用基因组分析系统",
+  "description": "从 FASTQ 到分析结果的生物信息分析与变异注释工具",
   "packageManager": "pnpm@9.15.9",
   "pnpm": {
     "patchedDependencies": {

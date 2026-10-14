@@ -15,6 +15,7 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { DnaHelix } from '@/components/DnaHelix';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 export default function LoginPage() {
   const t = useText();
@@ -91,7 +92,9 @@ export default function LoginPage() {
               <span>YiJian</span>
             </div>
             <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">{t("auth.signIn21f1e8")}</h1>
-            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">{t("auth.yijianGermlineAnalysisForInheritedDisorders331105")}</p>
+            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">{t(getRuntimeBackendFlavor() === 'squid' ? 'research.saasIntro' : 'research.selfHostedIntro')}</p>
+            {getRuntimeBackendFlavor() === 'squid' && <p className="mt-2 text-xs text-[var(--yj-text-muted)]">{t('research.audience')}</p>}
+            <p className="mt-3 text-xs leading-relaxed text-[var(--yj-text-muted)]">{t(getRuntimeBackendFlavor() === 'squid' ? 'research.saasScope' : 'research.selfHostedScope')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form space-y-5">

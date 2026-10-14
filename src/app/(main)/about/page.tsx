@@ -6,6 +6,7 @@ import { translateUI } from '@/i18n/text';
 import Image from 'next/image';
 import { ExternalLink } from 'lucide-react';
 import { PageContent } from '@/components/layout';
+import { ProductScopeSection } from '@/components/shared/ResearchPolicy';
 import { dependencies, devDependencies } from '../../../../package.json';
 
 interface OpenSourceLibrary {
@@ -157,6 +158,8 @@ export default function AboutPage() {
           <div><h1 className="yj-page-title mb-1">{t("about.openSourceSoftwareNotices356ef8")}</h1>
           <p className="text-sm text-fg-muted">{t("about.dependenciesVersionConstraintsAndLicenses25ed5e")}</p></div>
         </div>
+
+        <ProductScopeSection />
 
         {/* Apache 2.0 许可证说明 */}
         <div className="mb-4 yj-panel p-5">
