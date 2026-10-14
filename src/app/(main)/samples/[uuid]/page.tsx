@@ -8,7 +8,7 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { ArrowLeft, Database, User, FileText, Activity, Users } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-time';
 import { getSampleDetail } from '@/lib/samples';

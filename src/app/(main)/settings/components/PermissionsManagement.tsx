@@ -11,7 +11,8 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Input, Select, FormItem, DataTable, Tag } from '@schema/ui-kit';
+import { Input, Select, FormItem, DataTable } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { CheckCircle2, Loader2, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
 import type { SystemRole, User } from '@/types/user';

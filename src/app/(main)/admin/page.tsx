@@ -13,7 +13,8 @@ import { ActionButton as Button, ActionButton } from '@/components/shared/Action
 import * as React from 'react';
 import { AppModal } from '@/components/shared';
 import { PageContent } from '@/components/layout';
-import { DataTable, Tag } from '@schema/ui-kit';
+import { DataTable } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { AlertTriangle, BarChart3, Building2, CreditCard, Loader2, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';

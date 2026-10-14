@@ -11,7 +11,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { AlertCircle, Clock3, FileText, Loader2, RefreshCw, Server } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import type { TaskProgressResponse, TaskStatus } from '@/types/task';

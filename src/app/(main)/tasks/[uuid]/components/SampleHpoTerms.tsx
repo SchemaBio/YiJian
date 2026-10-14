@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { useText } from '@/i18n/useText';
 import { errorText } from '@/i18n/errors';
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';

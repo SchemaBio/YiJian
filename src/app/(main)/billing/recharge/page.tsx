@@ -10,7 +10,8 @@ import { ActionButton as Button, ActionButton } from '@/components/shared/Action
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Input, Tag } from '@schema/ui-kit';
+import { Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { ArrowLeft, Clock3, Coins, CreditCard } from 'lucide-react';
 import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';

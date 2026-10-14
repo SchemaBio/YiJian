@@ -8,7 +8,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 import * as React from 'react';
 import { formatDateTime } from '@/lib/date-time';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { SampleDetail } from '../../types';
 import { GENDER_CONFIG } from '../../types';
 

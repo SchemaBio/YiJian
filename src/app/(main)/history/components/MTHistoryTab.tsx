@@ -6,7 +6,7 @@ import { translateUI, localizeDisplay } from '@/i18n/text';
 
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { GroupedMTVariant, HistoryTableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedMTVariants, ACMG_CONFIG } from '../api-data';

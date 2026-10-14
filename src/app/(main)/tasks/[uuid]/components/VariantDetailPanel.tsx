@@ -19,7 +19,7 @@ import { ClinVarBadge } from './ClinVarBadge';
 import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
 import { PhenotypeSummary, AnnotationScreeningNotes } from './PhenotypeSummary';
 import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
 import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';

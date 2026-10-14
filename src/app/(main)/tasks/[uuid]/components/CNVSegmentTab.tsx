@@ -15,7 +15,8 @@ import { GeneLinks } from './GeneLinks';
 
 import * as React from 'react';
 import { TableViewControls, useTableView } from '@/components/shared/TableViewControls';
-import { DataTable, Tag, Input } from '@schema/ui-kit';
+import { DataTable, Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { CNVSegment, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';

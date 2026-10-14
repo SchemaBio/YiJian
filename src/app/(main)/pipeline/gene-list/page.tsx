@@ -12,7 +12,8 @@ import {ResourcePager} from '@/components/shared/ResourcePager';
 import {useAuth} from '@/components/providers/AuthProvider';
 
 import { PageContent } from '@/components/layout';
-import { Input, Tag } from '@schema/ui-kit';
+import { Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { Search, ChevronDown, ChevronRight, ListTree, BookOpen, Dna } from 'lucide-react';
 import * as React from 'react';
 import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';

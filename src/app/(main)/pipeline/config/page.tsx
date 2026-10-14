@@ -10,7 +10,8 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { Select, Tag } from '@schema/ui-kit';
+import { Select } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { AlertCircle, Database, Settings } from 'lucide-react';
 import { listPipelines, type Pipeline } from '@/lib/pipelines';
 import { EmptyState } from '@/components/shared';

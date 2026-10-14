@@ -25,7 +25,7 @@ import {
   ROHTab,
   FilesTab,
 } from '../[uuid]/components';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { Clock3, Server } from 'lucide-react';
 
 interface AnalysisDetailPanelProps {

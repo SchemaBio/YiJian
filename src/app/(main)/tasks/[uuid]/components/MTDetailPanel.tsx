@@ -11,7 +11,7 @@ import { PhenotypeSummary } from './PhenotypeSummary';
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { ExternalLink, FileText, Database, Dna } from 'lucide-react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { MitochondrialVariant, MitochondrialPathogenicity } from '../types';
 
 // 致病性配置

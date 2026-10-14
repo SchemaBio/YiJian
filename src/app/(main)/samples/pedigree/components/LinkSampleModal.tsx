@@ -8,7 +8,8 @@ import { ActionButton as Button, ActionButton } from '@/components/shared/Action
 
 
 import * as React from 'react';
-import { Input, Tag } from '@schema/ui-kit';
+import { Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { Link2, Loader2, Search } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import { listSamples } from '@/lib/samples';

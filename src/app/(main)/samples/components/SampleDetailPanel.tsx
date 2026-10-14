@@ -10,7 +10,8 @@ import { ActionButton as Button, ActionButton } from '@/components/shared/Action
 import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel, formatTurnaroundDays } from '@/lib/sample-display';
 
 import * as React from 'react';
-import { Tag, Input } from '@schema/ui-kit';
+import { Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Search } from 'lucide-react';
 import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { api } from '@/lib/api';

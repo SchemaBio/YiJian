@@ -10,7 +10,8 @@ import { ActionButton as Button, ActionButton } from '@/components/shared/Action
 import { useInterpretationReadOnly } from './InterpretationLock';
 
 import * as React from 'react';
-import { Select, FormItem, Tag } from '@schema/ui-kit';
+import { Select, FormItem } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { AppModal } from '@/components/shared';
 import { CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';

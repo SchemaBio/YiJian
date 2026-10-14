@@ -6,7 +6,7 @@ import { ActionButton as Button, IconActionButton } from '@/components/shared/Ac
 
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { User, Link2 } from 'lucide-react';
 import type { PedigreeMember } from '../types';
 import { RELATION_CONFIG, AFFECTED_STATUS_CONFIG } from '../types';

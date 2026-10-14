@@ -4,7 +4,7 @@ import { translateUI } from '@/i18n/text';
 
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { TagVariant } from '@schema/ui-kit';
 
 // ACMG分类类型

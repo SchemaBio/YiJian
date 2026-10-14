@@ -17,7 +17,8 @@ import { RetentionNotice, ExpiryCell } from '@/components/shared/ResearchPolicy'
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { Input, DataTable, Tag, Tooltip } from '@schema/ui-kit';
+import { Input, DataTable, Tooltip } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { Search, ChevronDown, Loader2, AlertTriangle, List } from 'lucide-react';
 import { NewTaskModal, BatchTaskModal, EditTaskModal } from './components';

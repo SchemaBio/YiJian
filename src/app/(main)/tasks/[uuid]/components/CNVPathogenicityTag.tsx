@@ -4,7 +4,8 @@ import { translateUI } from '@/i18n/text';
 
 
 import * as React from 'react';
-import { Tag, Tooltip } from '@schema/ui-kit';
+import { Tooltip } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { Pencil } from 'lucide-react';
 import type { ClinGenClassification } from '../types';
 import { 

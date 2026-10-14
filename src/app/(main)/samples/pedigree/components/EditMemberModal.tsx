@@ -8,7 +8,8 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
 import * as React from 'react';
-import { Input, Select, Tag } from '@schema/ui-kit';
+import { Input, Select } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 
 import { AppModal } from '@/components/shared';
 import type { RelationType, AffectedStatus, PedigreeMember, Gender } from '../types';

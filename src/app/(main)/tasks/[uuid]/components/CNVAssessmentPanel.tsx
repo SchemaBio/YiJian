@@ -12,7 +12,7 @@ import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
 import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
 import { Calculator } from 'lucide-react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type {
   CNVSegment,
   CNVExon,

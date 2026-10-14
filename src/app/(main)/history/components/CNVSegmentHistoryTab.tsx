@@ -6,7 +6,7 @@ import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
 
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { GroupedCNVSegment, HistoryTableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_HISTORY_FILTER_STATE } from '../types';
 import { getGroupedCNVSegments } from '../api-data';

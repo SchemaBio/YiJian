@@ -15,7 +15,8 @@ import {useAuth} from '@/components/providers/AuthProvider';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { Input, DataTable, Tag, FormItem, TextArea, type Column } from '@schema/ui-kit';
+import { Input, DataTable, FormItem, TextArea, type Column } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { Search, FileText, Link, CheckCircle, XCircle, Loader2, AlertTriangle, Power, PowerOff, Braces } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AppModal, EmptyState } from '@/components/shared';

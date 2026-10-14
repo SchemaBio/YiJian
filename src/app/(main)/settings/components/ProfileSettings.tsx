@@ -9,7 +9,8 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 
 import * as React from 'react';
-import { FormItem, Input, Tag } from '@schema/ui-kit';
+import { FormItem, Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { AlertTriangle, Bot, Building2, KeyRound, UserRound } from 'lucide-react';
 import { SupportDialog } from '@/components/support/SupportDialog';
 import { AISettingsPanel } from '@/components/shared/AISettingsPanel';

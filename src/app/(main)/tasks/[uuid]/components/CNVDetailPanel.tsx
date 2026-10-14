@@ -25,7 +25,7 @@ import { CNVExonPlot } from './CNVExonPlot';
 import type { CNVPlotAnchor } from './CNVPlotWindow';
 import { ExternalLink, FileText, Database, MapPin } from 'lucide-react';
 import { getClassificationLabel, formatScore } from '../utils/pathogenicity-classifier';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { CNVSegment, CNVExon } from '../types';
 
 interface CNVDetailPanelProps {

@@ -12,7 +12,8 @@ import { parseSTRLocus } from './str-locus';
 import { GeneLinks } from './GeneLinks';
 
 import * as React from 'react';
-import { DataTable, Tag, Input } from '@schema/ui-kit';
+import { DataTable, Input } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { STR, STRStatus, TableFilterState, PaginatedResult } from '../types';

@@ -10,7 +10,8 @@ import { ActionButton as Button, ActionButton, IconActionButton } from '@/compon
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Input, DataTable, Tag } from '@schema/ui-kit';
+import { Input, DataTable } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { Search, List, UserPlus, GitBranch, Trash2, Pencil } from 'lucide-react';
 import { PedigreeTree, MemberDetailPanel, AddMemberModal, LinkSampleModal, NewPedigreeModal, EditPedigreeModal, ConfirmDialog, EditMemberModal, ContextMenu } from './components';

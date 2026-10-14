@@ -9,7 +9,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
-import { Tag } from '@schema/ui-kit';
+import { Tag } from '@/components/shared/Tag';
 import { ArrowLeft, Clock, Clock3, Server, User } from 'lucide-react';
 import type { AnalysisTaskDetail } from '../types';
 import { TaskCostDetail } from '@/components/billing';
