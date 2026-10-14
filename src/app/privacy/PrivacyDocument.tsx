@@ -15,7 +15,7 @@ export function PrivacyDocument({ overrideLocale }: { overrideLocale?: Locale })
   const locale = overrideLocale ?? globalLocale;
   const t = useMemo(() => createTextTranslator(locale), [locale]);
   const { isAuthenticated, isLoading } = useAuth();
-  const [contact, setContact] = useState('support@schemabio.com');
+  const [contact, setContact] = useState('support@schema-bio.com');
   useEffect(() => { setContact(getRuntimeSupportEmail()); }, []);
 
   return <div className="yj-modern yj-public-shell" lang={locale}>

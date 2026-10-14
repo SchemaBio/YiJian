@@ -76,19 +76,19 @@ export function SupportDialog({ trigger = 'icon', context = 'general' }: Support
         {context === 'account' && <ModalSectionHeading icon={<UserRoundX className="h-4 w-4" />} title={t("common.requestAccountDeletion0a1735")} />}
         <p className="text-sm leading-6 text-fg-muted">{t("common.contactOurSupportEmailForCreditsBilling607251")}</p>
 
-        <div className="rounded-md border border-warning-muted bg-warning-subtle px-4 py-3">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <div className="flex items-start gap-3">
-            <UserRoundX className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" />
+            <UserRoundX className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-warning-fg">{t("common.accountDeletionAndBalanceRefunds36f625")}</p>
-              <p className="mt-1 text-xs leading-5 text-fg-muted">{t("common.accountDeletionMayInvolveUnusedCreditRefunds52e137")}</p>
+              <p className="text-sm font-medium">{t("common.accountDeletionAndBalanceRefunds36f625")}</p>
+              <p className="mt-1 text-xs leading-5">{t("common.accountDeletionMayInvolveUnusedCreditRefunds52e137")}</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-md border border-accent-muted bg-accent-subtle px-4 py-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-fg-muted"><Mail className="h-4 w-4" />{t("common.supportEmaile05010")}</div>
-          <button type="button" onClick={() => void copyEmail()} className="mt-1 break-all text-left text-base font-semibold text-accent-fg hover:underline">{supportEmail}</button>
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+          <div className="flex items-center gap-2 text-xs font-medium"><Mail className="h-4 w-4" />{t("common.supportEmaile05010")}</div>
+          <button type="button" onClick={() => void copyEmail()} className="mt-1 break-all text-left text-base font-semibold hover:underline">{supportEmail}</button>
           {copyError && <p role="alert" className="mt-1 text-xs text-danger-fg">{copyError}</p>}
         </div>
 

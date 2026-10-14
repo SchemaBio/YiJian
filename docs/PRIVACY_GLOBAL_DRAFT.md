@@ -2,13 +2,13 @@
 
 状态：2026-10-12 研究与修订记录。下方为原始讨论草案；已根据用户确认在 `src/lib/privacy-policy.ts` 实现同版本中英文页面并完成部署，实际展示内容以该文件为准。部署记录见 `PRIVACY_DEPLOYMENT_20261012.md`。不能仅凭政策文字宣称符合全部国家的法律。
 
-已确认：英文名称为 SchemaBio，隐私请求沿用 support@schemabio.com（页面支持部署级邮箱覆盖）；海外托管服务使用海外云厂商或腾讯云海外区域，不使用中国境内服务器。用户未提供地址，页面不编造地址。国内服务与海外服务分别说明，海外云不等同于欧盟云，也不自动排除跨境支持或 AI 传输。
+已确认：英文名称为 SchemaBio，隐私请求沿用 support@schema-bio.com（页面支持部署级邮箱覆盖）；海外托管服务使用海外云厂商或腾讯云海外区域，不使用中国境内服务器。用户未提供地址，页面不编造地址。国内服务与海外服务分别说明，海外云不等同于欧盟云，也不自动排除跨境支持或 AI 传输。
 
 尚需运营落实：实际云区域及接收方清单、AI 供应商和保存/训练约定、必要的 DPA/BAA/代表、权利请求流程及法定联系方式。无地址的信息不能作为“无需法定联系信息”的结论；适用法律要求的公司地址或代表信息仍需通过实际运营安排提供。
 
 ## 发布前需要核实的事实
 
-- 运营主体沿用现页的“绳墨生物科技有限公司”；补充其正式英文名称、联系地址及可受理隐私权请求的联系方式。代码默认支持邮箱为 support@schemabio.com，不能据此认定已设立隐私请求渠道。
+- 运营主体统一展示为 SchemaBio，支持及隐私联系邮箱统一为 support@schema-bio.com；页面支持部署级邮箱覆盖。未提供联系地址时，页面不编造地址。
 - 当前部署使用广州腾讯云 COS 和计算资源；海外服务是否仍使用该区域，以及网络代理、CDN、支持人员和 AI 供应商的所在地，需要形成实际的数据流和接收方清单。
 - 核实 AI 供应商、接收字段、保存期限、再利用/训练约定和分包商；代码中的 OpenAI-compatible 接口不代表供应商必然为 OpenAI。现有 AI 请求可含临床诊断、表型和变异上下文。
 - 数据中心按配置展示保留天数和到期时间；BAM 的七天期限由任务完成时间起算。核实清理开关、对象版本和备份生命周期后再承诺具体删除完成期限。
@@ -19,7 +19,7 @@
 
 ### 一、范围与处理角色
 
-本政策说明绳墨生物科技有限公司在提供贻鉴托管服务时如何处理个人信息，适用于平台访问者、机构账户使用者及分析数据所涉及的个人。自行部署的实例由部署机构说明其处理安排；本政策适用于我们实际收到或处理的信息，不自动覆盖独立部署机构的全部活动。
+本政策说明SchemaBio在提供贻鉴托管服务时如何处理个人信息，适用于平台访问者、机构账户使用者及分析数据所涉及的个人。自行部署的实例由部署机构说明其处理安排；本政策适用于我们实际收到或处理的信息，不自动覆盖独立部署机构的全部活动。
 
 对账户、安全、支持和业务管理信息，我们根据自身提供服务的需要确定处理目的与方式。对机构提交的样本、测序、临床和分析信息，我们通常按照机构的合法指示作为受托处理方提供服务；机构负责确定其适用法律下的合法处理依据、告知和必要授权。双方在具体活动中的角色由实际处理安排及协议确定。
 
@@ -71,7 +71,7 @@ GDPR 适用时，可向有管辖权的监管机构投诉；一般在一个月内
 
 ### 1. Scope and roles
 
-This notice describes how 绳墨生物科技有限公司 processes personal information when providing the hosted YiJian service. It covers visitors, institutional account users, and individuals whose information is included in analysis data. Independently deployed instances are operated by their deploying institutions; this notice covers information we actually receive or process.
+This notice describes how SchemaBio processes personal information when providing the hosted YiJian service. It covers visitors, institutional account users, and individuals whose information is included in analysis data. Independently deployed instances are operated by their deploying institutions; this notice covers information we actually receive or process.
 
 We determine the purposes and means of processing account, security, support and business administration information for our service. For sample, sequencing, clinical and analysis information submitted by an institution, we generally act on that institution's lawful instructions as a processor. The institution determines its lawful basis, notices and required authorizations. Actual activities and agreements determine the parties' roles.
 

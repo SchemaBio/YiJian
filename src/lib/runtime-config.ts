@@ -138,7 +138,7 @@ export function getRuntimeSupportEmail(): string {
   const normalized = value?.trim().toLowerCase();
   return normalized && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)
     ? normalized
-    : 'support@schemabio.com';
+    : 'support@schema-bio.com';
 }
 
 export {};

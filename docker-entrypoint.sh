@@ -11,7 +11,7 @@ API_URL="${YIJIAN_API_URL:-${NEXT_PUBLIC_API_URL:-/api}}"
 # authoritative when it is explicitly present. Older compose files set a
 # Dockerfile default for YIJIAN_BACKEND and override only BACKEND_FLAVOR.
 BACKEND="${YIJIAN_BACKEND_FLAVOR:-${YIJIAN_BACKEND:-octopus}}"
-SUPPORT_EMAIL="${YIJIAN_SUPPORT_EMAIL:-${NEXT_PUBLIC_SUPPORT_EMAIL:-support@schemabio.com}}"
+SUPPORT_EMAIL="${YIJIAN_SUPPORT_EMAIL:-${NEXT_PUBLIC_SUPPORT_EMAIL:-support@schema-bio.com}}"
 PASSWORD_RESET_ENABLED="${YIJIAN_PASSWORD_RESET_ENABLED:-${NEXT_PUBLIC_PASSWORD_RESET_ENABLED:-false}}"
 DEFAULT_LOCALE="${YIJIAN_DEFAULT_LOCALE-${NEXT_PUBLIC_DEFAULT_LOCALE-zh-CN}}"
 case "$DEFAULT_LOCALE" in
@@ -36,7 +36,7 @@ const clean = (value) => String(value || '').replace(/[\r\n]/g, '');
 const config = {
   API_URL: clean(process.env.API_URL || '/api'),
   BACKEND: clean(process.env.BACKEND || 'octopus'),
-  SUPPORT_EMAIL: clean(process.env.SUPPORT_EMAIL || 'support@schemabio.com'),
+  SUPPORT_EMAIL: clean(process.env.SUPPORT_EMAIL || 'support@schema-bio.com'),
   UPLOAD_ORIGINS: clean(process.env.YIJIAN_UPLOAD_ORIGINS || ''),
   PASSWORD_RESET_ENABLED: clean(process.env.PASSWORD_RESET_ENABLED || 'false'),
   DEFAULT_LOCALE: process.env.DEFAULT_LOCALE,
