@@ -17,7 +17,7 @@ it('keeps failed reads distinct from empty samples and recovers on retry', async
   fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
   await screen.findByText('暂无样本');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  fireEvent.change(screen.getByPlaceholderText('搜索样本编号、内部编号、批次或诊断...'), { target: { value: 'missing' } });
+  fireEvent.change(screen.getByPlaceholderText('搜索样本编号、内部编号、批次或研究背景…'), { target: { value: 'missing' } });
   expect(screen.getByText('没有匹配的样本')).toBeInTheDocument();
 });
 
@@ -30,7 +30,7 @@ it('exports only checked samples, including selections retained while searching'
   expect(screen.getByRole('button', { name: '导出已选样本' })).toBeDisabled();
   const row = screen.getByText('INT-selected').closest('tr')!;
   fireEvent.click(within(row).getByRole('checkbox'));
-  fireEvent.change(screen.getByPlaceholderText('搜索样本编号、内部编号、批次或诊断...'), { target: { value: 'INT-unselected' } });
+  fireEvent.change(screen.getByPlaceholderText('搜索样本编号、内部编号、批次或研究背景…'), { target: { value: 'INT-unselected' } });
   fireEvent.click(screen.getByRole('button', { name: '导出已选样本 (1)' }));
   expect(downloadSampleList).toHaveBeenCalledWith([samples[0]], 'zh-CN');
 });

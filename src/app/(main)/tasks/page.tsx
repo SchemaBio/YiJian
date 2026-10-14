@@ -498,7 +498,6 @@ export default function AnalysisPage() {
     <div className="flex h-full min-w-0 w-full">
         <div className="min-w-0 flex-1">
           <div className="yj-page-shell yj-task-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
-            <RetentionNotice kind="task" />
             <div className="yj-task-heading">
               <div><h2 className="yj-page-title">{t("tasks.taskCenterf692ff")}</h2><p className="yj-page-subtitle">{t("tasks.trackAnalysisProgressAndInterpretResults9952cc")}</p></div>
               <div className="flex items-center gap-2">
@@ -506,6 +505,8 @@ export default function AnalysisPage() {
                 <Button action="add" variant="primary"  onClick={() => setIsNewTaskModalOpen(true)}>{t("tasks.newTask6b717c")}</Button>
               </div>
             </div>
+
+            <RetentionNotice kind="task" />
 
             {actionError && (
               <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

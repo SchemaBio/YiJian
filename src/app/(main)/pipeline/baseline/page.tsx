@@ -192,7 +192,7 @@ export default function BaselinePage() {
 
       <AppModal closeOnEscape={!pairsOpen} open={modalOpen} onOpenChange={(open) => !open && closeModal()} title={t("pipeline.calibrateBuiltInCnvBaseline652cda")} size="large" footer={<><Button variant="secondary" onClick={closeModal} disabled={submitting}>{t("admin.cancel4d0b46")}</Button><Button loading={submitting} loadingLabel={t("pipeline.submittinge2d944")} variant="primary" onClick={handleCreate} disabled={submitting || !name.trim() || !bedID || pairIDs.length === 0 || selectedPairs.length !== pairIDs.length} leftIcon={<Database className="h-4 w-4" />}>{t("pipeline.startCalibrationPipeline285e3b")}</Button></>}>
         <div className="space-y-5">
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{t("pipeline.calibrateTheBuiltInBaselineWithSelected0c0f7a")}</div>
+          <div role="note" className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("pipeline.calibrateTheBuiltInBaselineWithSelected0c0f7a")}</span></div>
           {formError && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{formError}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormItem label={t("pipeline.baselineName97a06f")} required><Input maxLength={200} value={name} onChange={(event) => setName(event.target.value)} placeholder={t("pipeline.forExampleGrchWesNormalQ377821")} /></FormItem>

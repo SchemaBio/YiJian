@@ -9,7 +9,7 @@ export function ResearchUseBadge() {
   const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const label = isSaaS ? 'RUO' : t('research.selfHostedLabel');
-  return <Tooltip content={t(isSaaS ? 'research.saasScope' : 'research.selfHostedScope')}><span tabIndex={0} aria-label={isSaaS ? 'RUO — Research Use Only' : label} className="inline-flex shrink-0 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-bold tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-100">{label}</span></Tooltip>;
+  return <Tooltip content={isSaaS ? 'Research Use Only' : t('research.selfHostedScope')}><span tabIndex={0} aria-label={isSaaS ? 'RUO — Research Use Only' : label} className="inline-flex shrink-0 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-bold tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-100">{label}</span></Tooltip>;
 }
 
 export function ProductScopeSection() {
@@ -26,13 +26,16 @@ export function ProductScopeSection() {
     </section>
   );
 }
-export function RetentionNotice({kind}: {kind:'task'|'sample'}) {
+export function RetentionNotice({kind, acknowledgement}: {kind:'task'|'sample'; acknowledgement?: {checked:boolean; onChange:(value:boolean)=>void; disabled?:boolean}}) {
   const t = useText();
   if (getRuntimeBackendFlavor() !== 'squid') return null;
   return (
-    <aside role="note" className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-      <AlertTriangle aria-hidden="true" className="mt-1 h-4 w-4 shrink-0" />
-      <p>{t(kind === 'task' ? 'research.taskRetention' : 'research.sampleRetention')}</p>
+    <aside role="note" className="mb-4 space-y-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+      <div className="flex items-start gap-3">
+        <AlertTriangle aria-hidden="true" className="mt-1 h-4 w-4 shrink-0" />
+        <p><strong className="font-medium">{t(`research.${kind}RetentionTitle`)}</strong><span className="ml-3 inline-block text-xs">{t(`research.${kind}RetentionDetail`)}</span></p>
+      </div>
+      {acknowledgement && <Checkbox checked={acknowledgement.checked} disabled={acknowledgement.disabled} onCheckedChange={(value) => acknowledgement.onChange(value === true)} label={t('research.taskRetentionConfirm')} />}
     </aside>
   );
 }

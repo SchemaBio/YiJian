@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
-import { Coins, AlertTriangle } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
@@ -48,6 +48,7 @@ export default function NewAnalysisPage() {
   const [enableCNV, setEnableCNV] = React.useState(true);
   const [enableSV, setEnableSV] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [retentionAcknowledged, setRetentionAcknowledged] = React.useState(false);
   const [formError, setFormError] = React.useState('');
   const [billingBalance, setBillingBalance] = React.useState<BillingBalance | null>(null);
   const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
@@ -170,6 +171,7 @@ export default function NewAnalysisPage() {
   }, [isTrio, selectedPedigreeInfo, selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
+    if (submitting || (isSaaS && !retentionAcknowledged)) return;
     setFormError('');
     if (!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)) {
       setFormError(isTrio ? t("tasks.selectAPedigreeContainingParentsAndProbandc87287") : t("tasks.selectASampleAndAnalysisPipeline53d997"));
@@ -200,15 +202,11 @@ export default function NewAnalysisPage() {
 
   return (
     <PageContent className="yj-page-shell">
-        <RetentionNotice kind="task" />
       <div className="yj-page-header">
         <h2 className="yj-page-title">{t("tasks.newAnalysisTask1d4697")}</h2>
       </div>
 
-      {isSaaS && <aside role="note" aria-label={t("tasks.bamRetentionPeriodaed91e")} className="mb-5 flex items-start gap-3 rounded-md border border-warning-muted bg-warning-subtle px-4 py-4 text-warning-fg">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-        <div><h3 className="text-sm font-semibold">{t("tasks.bamFilesAreRetainedForDaysAfter742e02")}</h3><p className="mt-1 text-sm leading-6">{t("tasks.expiredBamFilesAreDeletedAndCannot78d4ce")}</p><p className="mt-1 text-xs">{t("tasks.resultTablesAndSavedManualInterpretationsRemain29352c")}</p></div>
-      </aside>}
+      <RetentionNotice kind="task" acknowledgement={{checked: retentionAcknowledged, onChange: setRetentionAcknowledged, disabled: submitting}} />
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="yj-panel min-w-0 space-y-5 p-5">
@@ -350,7 +348,7 @@ export default function NewAnalysisPage() {
 
             onClick={handleSubmit}
             loading={submitting}
-            disabled={!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)}
+            disabled={submitting || !selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo) || (isSaaS && !retentionAcknowledged)}
           >
             {submitting ? t("tasks.submitting3a1624") : t("tasks.submitTask09de9e")}
           </Button>

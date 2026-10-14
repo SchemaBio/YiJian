@@ -480,6 +480,7 @@ export default function SamplesPage() {
         </div>
       </div>
 
+      <RetentionNotice kind="sample" />
       <div className="yj-panel overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-4 px-5 py-4">
           <div className="flex min-w-[280px] flex-1 flex-wrap items-center gap-3">
@@ -532,7 +533,6 @@ export default function SamplesPage() {
         </div>
 
         <div className="p-4">
-          <RetentionNotice kind="sample" />
           {samplesError && (
             <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
               <span>{samplesError}</span>

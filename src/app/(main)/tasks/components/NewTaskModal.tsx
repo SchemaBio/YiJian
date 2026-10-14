@@ -57,6 +57,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [remark, setRemark] = React.useState('');
   const [loadingResources, setLoadingResources] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [retentionAcknowledged, setRetentionAcknowledged] = React.useState(false);
   const [resourceError, setResourceError] = React.useState('');
   const [billingBalance, setBillingBalance] = React.useState<BillingBalance | null>(null);
   const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
@@ -64,6 +65,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [estimateStatus, setEstimateStatus] = React.useState<'idle' | 'loading' | 'ready' | 'fallback'>('idle');
 
   React.useEffect(() => {
+    setRetentionAcknowledged(false);
     if (!isOpen) return;
     let cancelled = false;
 
@@ -190,7 +192,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSample || !selectedPipeline || submitting) return;
+    if (!selectedSample || !selectedPipeline || submitting || (isSaaS && !retentionAcknowledged)) return;
 
     const pipeline = pipelines.find(p => p.id === selectedPipeline);
     const template = resolveTemplate(pipeline);
@@ -228,6 +230,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     setSelectedPipeline('');
     setRemark('');
     setResourceError('');
+    setRetentionAcknowledged(false);
     onClose();
   };
 
@@ -245,7 +248,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")}
             variant="primary"
             onClick={handleSubmit}
-            disabled={loadingResources || submitting || !selectedSample || !selectedPipeline}
+            disabled={loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
 
           >
             {t("tasks.createTaskcf42fd")}</Button>
@@ -253,6 +256,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       }
     >
       <div className="space-y-6">
+        <RetentionNotice kind="task" acknowledgement={{checked: retentionAcknowledged, onChange: setRetentionAcknowledged, disabled: submitting}} />
         {loadingResources && (
           <div className="flex items-center gap-2 text-sm text-fg-muted">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -265,7 +269,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         )}
 
         <section>
-          <RetentionNotice kind="task" />
           <ModalSectionHeading
             icon={<SlidersHorizontal className="h-4 w-4" />}
             title={t("tasks.taskSettings9323d0")}

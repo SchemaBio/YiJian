@@ -2773,7 +2773,7 @@
   },
   "research": {
     "expiresAt": "Expires at",
-    "taskRetention": "SaaS tasks and samples each expire 720 hours (30 days) after their original creation time, calculated in UTC. This applies to unanalyzed, queued, running, successful, failed and soft-deleted records. Editing, starting, retrying, finishing or linking records does not extend the period. Lists, searches, details, operations and downloads stop at expiry without waiting for physical deletion. Sample records, data matches and sample-derived family copies are erased and links removed; linked tasks retain necessary analysis snapshots until their own expiry. This mandatory period does not apply to independently deployed open-source instances. FASTQ files are cleaned up 7 days after upload. BAM files are cleaned up 7 days after completion and never later than task expiry. Successful CNV baselines are moved to independent resources and remain usable after the creation task expires; creation logs and intermediate files still expire with that task. BED, built-in baselines and shared references follow their own resource policies. Download required information lawfully before expiry; holders are responsible for retaining and destroying downloaded copies.",
+    "taskRetention": "Tasks are retained for 30 days from creation, then erased. Editing, starting or retrying does not extend retention. FASTQ is deleted 7 days after upload; BAM 7 days after analysis, and no later than task expiry.",
     "sampleRetention": "Sample information is retained for 30 days from creation and then erased. Editing or linking tasks does not extend this period.",
     "identityNotice": "Do not submit real names, identity documents, contact details or other identifying information in sample IDs, notes, phenotype descriptions, filenames or other content. Use research identifiers only. Pseudonyms do not make genetic data anonymous.",
     "identityConfirm": "I confirm that I have not submitted real names, identity documents, contact details or other identifying information.",
@@ -2790,6 +2790,11 @@
     "selfHostedScope": "Users deploy and configure the open-source edition and decide its use cases and how results are used. Deployers are responsible for data authorization, security, result validation and applicable qualification and regulatory requirements. The software and its outputs do not automatically constitute a validated medical product or diagnosis. This notice adds no use restrictions to the open-source license.",
     "saasDataScope": "The hosted service does not provide sample collection, laboratory testing, diagnostic report issuance, long-term preservation or cross-task historical finding records. Results, manual flags and operation records are retained during tasks under the service retention rules. Research IDs or pseudonyms do not make genetic data anonymous.",
     "selfHostedLabel": "Self-hosted",
-    "audience": "The hosted service serves individual research users, research institutions and authorized users, solely for research analysis and annotation. Individual users must have lawful authorization to submit the data and must not use the service for personal medical decisions."
+    "audience": "The hosted service serves individual research users, research institutions and authorized users, solely for research analysis and annotation. Individual users must have lawful authorization to submit the data and must not use the service for personal medical decisions.",
+    "taskRetentionTitle": "Tasks are retained for 30 days from creation, then erased.",
+    "taskRetentionDetail": "Editing, starting or retrying does not extend retention. FASTQ is deleted 7 days after upload; BAM 7 days after analysis, and no later than task expiry.",
+    "sampleRetentionTitle": "Sample information is retained for 30 days from creation, then erased.",
+    "sampleRetentionDetail": "Editing or linking tasks does not extend retention.",
+    "taskRetentionConfirm": "I have read and understand the retention periods above."
   }
 }
