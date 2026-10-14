@@ -10,6 +10,11 @@ const values = (variant: SNVIndel, fields: string[], fallback: string[] = []) =>
   ...fields.flatMap(field => (variant.annotationValues?.[field] || '').split(/[;,|&]/)), ...fallback.flatMap(value => value.split(/[;,|&]/)),
 ].map(value => present(value)).filter((value): value is string => !!value))];
 
+export function dbSnpIdentifiers(variant: SNVIndel): string[] {
+  return [...new Set(values(variant, ['RSID', 'dbSNP'], [variant.rsId || ''])
+    .filter(id => /^rs\d+$/i.test(id)).map(id => id.toLowerCase()))];
+}
+
 /** Build only explicit outbound links from public variant/gene annotations. */
 export function variantResourceGroups(variant: SNVIndel, referenceGenome?: string): VariantResourceGroup[] {
   const reference = referenceGenome === 'hg19' || referenceGenome === 'hg38' ? referenceGenome : undefined;
@@ -21,7 +26,7 @@ export function variantResourceGroups(variant: SNVIndel, referenceGenome?: strin
   const unavailable = (label: string, reason = '流程未提供对应的数据库标识'): VariantResourceLink => ({ label, reason });
   const idLinks = (label: string, ids: string[], url: (id: string) => string): VariantResourceLink[] => ids.length
     ? ids.map(id => ({ label: ids.length > 1 ? `${label} · ${id}` : label, href: url(id) })) : [unavailable(label)];
-  const rs = values(variant, ['RSID', 'dbSNP'], [variant.rsId || '']).filter(id => /^rs\d+$/i.test(id));
+  const rs = dbSnpIdentifiers(variant);
   const hgvs = values(variant, ['CLNHGVS', 'HGVS_g', 'HGVS_c'], [variant.hgvsc]).flatMap(value => {
     if (/^[A-Za-z]+_[0-9]+(?:\.[0-9]+)?:[cgmnrp]\./.test(value)) return [value];
     if (/^c\./.test(value) && /^[A-Za-z]+_[0-9]+(?:\.[0-9]+)?$/.test(variant.transcript)) return [`${variant.transcript}:${value}`];

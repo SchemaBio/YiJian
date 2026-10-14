@@ -14,6 +14,13 @@ describe('browser effective Parquet query', () => {
         expect(q.where).toContain('$.acmgOverride');
         expect(effectiveField('acmgScore', raw)).toContain('$.acmgEvidence');
     });
+    it('matches any equivalent spelling and excludes every spelling, retaining missing cells', () => {
+        const raw = ['Zygosity'];
+        const include = localPredicate({column:'Zygosity', operator:'contains', value:['Het', 'Heterozygous']}, raw);
+        expect(include).toBe('(contains(lower(CAST(t."Zygosity" AS VARCHAR)), lower(\'Het\')) OR contains(lower(CAST(t."Zygosity" AS VARCHAR)), lower(\'Heterozygous\')))');
+        const exclude = localPredicate({column:'Zygosity', operator:'not_contains', value:['Het', 'Heterozygous']}, raw);
+        expect(exclude).toBe('NOT (contains(lower(COALESCE(CAST(t."Zygosity" AS VARCHAR), \'\')), lower(\'Het\')) OR contains(lower(COALESCE(CAST(t."Zygosity" AS VARCHAR), \'\')), lower(\'Heterozygous\')))');
+    });
     it('preserves multi-value any-match filters and minimum numeric sorting', () => {
         const q = buildLocalSelection({ offset: 0, limit: 20, sort: 'GnomAD_AF', filters: [{ column: 'GnomAD_AF', operator: 'between', value: ['0', '0.001'] }] }, raw);
         expect(q.where).toContain('UNNEST(string_split');

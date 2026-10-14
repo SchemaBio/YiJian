@@ -18,6 +18,17 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it('links each dbSNP identifier in the annotation tab and rejects non-rs values', () => {
+    render(<VariantDetailPanel taskId="task" variant={{...variant('A'), rsId:'rs671;RS123', annotationValues:{dbSNP:'rs671&rs456&invalid'}}} isOpen onClose={vi.fn()} />);
+    const identifiers = screen.getByRole('heading', {name:'变异标识'}).parentElement!;
+    for (const id of ['rs671', 'rs123', 'rs456']) {
+      const link = within(identifiers).getByRole('link', {name:id});
+      expect(link).toHaveAttribute('href', `https://www.ncbi.nlm.nih.gov/snp/${id}`);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+    expect(within(identifiers).queryByRole('link', {name:'invalid'})).not.toBeInTheDocument();
+  });
   it('shows transcript location, totals and HGVS in annotation', async () => {
     render(<VariantDetailPanel taskId="task" variant={{ ...variant('A'), annotationValues: { Location: 'Exon 2/20' } }} isOpen onClose={vi.fn()} />);
     const section = screen.getByRole('heading', { name: '转录本与 HGVS' }).closest('section')!;

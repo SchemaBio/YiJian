@@ -67,6 +67,7 @@
 .yj-task-nav-primary { display: flex; flex-direction: column; gap: 4px; }
 .yj-task-nav-button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; border-radius: 6px; padding: 8px 12px; text-align: left; }
 .yj-task-nav-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 6px 12px; border-radius: 6px; font-size: 12px; color: var(--yj-text-muted); }
+.yj-task-nav-toggle svg { color: var(--color-success-fg); }
 .yj-task-nav-toggle:hover { background: var(--yj-panel-subtle); }
 .yj-task-nav-toggle:focus-visible { outline: 2px solid var(--color-accent-emphasis); outline-offset: -2px; }
 .yj-task-nav[data-collapsed='true'] { width: 52px; flex-basis: 52px; padding-inline: 6px; }

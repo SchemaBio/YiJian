@@ -64,10 +64,12 @@ export function localPredicate(f: LocalFilter, raw: string[]): string {
     const values = Array.isArray(f.value) ? f.value : [f.value];
     if (!values.length || values.length > 1000 || values.some(v => v === undefined || typeof v === 'object'))
         throw new LocalizedError("display.invalidFilterValuead2830");
-    if (f.operator === 'contains')
-        return `contains(lower(${text}), lower(${literal(values[0])}))`;
-    if (f.operator === 'not_contains')
-        return `NOT contains(lower(COALESCE(${text}, '')), lower(${literal(values[0])}))`;
+    if (f.operator === 'contains' || f.operator === 'not_contains') {
+        const target = f.operator === 'not_contains' ? `COALESCE(${text}, '')` : text;
+        const matches = values.map(value => `contains(lower(${target}), lower(${literal(value)}))`);
+        const predicate = matches.length === 1 ? matches[0] : `(${matches.join(' OR ')})`;
+        return f.operator === 'not_contains' ? `NOT ${predicate}` : predicate;
+    }
     if (f.operator === 'equals' || f.operator === 'in')
         return `EXISTS (SELECT 1 FROM UNNEST(string_split(${text}, '&')) AS u(v) WHERE v IN (${values.map(literal).join(',')}))`;
     if (fieldType(f.column) !== 'number')

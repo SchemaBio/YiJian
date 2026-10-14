@@ -9,6 +9,19 @@ vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserP
 
 describe('versioned Parquet adjustments', () => {
   beforeEach(() => vi.clearAllMocks());
+  it('normalizes translated exclusion filters in the actual browser query', async () => {
+    vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[],total:0,rowCount:0,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});
+    await getSNVIndels('localized-filter', {...DEFAULT_FILTER_STATE, columnFilters:[
+      {column:'acmgClassification', operator:'not_contains', value:'良性'},
+      {column:'Zygosity', operator:'not_contains', value:'杂合'},
+      {column:'HGVS_c', operator:'contains', value:'c.123'},
+    ]});
+    expect(queryBrowserParquet).toHaveBeenCalledWith('localized-filter', 'snv-indel', expect.objectContaining({filters:[
+      {column:'acmgClassification', operator:'not_contains', value:'Benign'},
+      {column:'Zygosity', operator:'not_contains', value:['Het', 'Heterozygous']},
+      {column:'HGVS_c', operator:'contains', value:'c.123'},
+    ]}), undefined);
+  });
   async function load(task: string) {
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({ items: [{ id: 'row', attemptId: 'attempt', datasetVersion: 'hash', adjustmentVersion: 0 }], total: 1, rowCount:1, columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version: 'hash', attemptId: 'attempt' });
     await getSNVIndels(task, { ...DEFAULT_FILTER_STATE, columnFilters: [{ column: 'reviewed', operator: 'equals' as const, value: 'false' }] });

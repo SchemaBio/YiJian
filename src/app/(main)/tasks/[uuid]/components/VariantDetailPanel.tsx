@@ -14,6 +14,7 @@ import { useInterpretationReadOnly } from './InterpretationLock';
 import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { VariantResourceLinks } from './VariantResourceLinks';
+import { dbSnpIdentifiers } from '../utils/variant-resource-links';
 import { ClinVarBadge } from './ClinVarBadge';
 import { PhenotypeSummary, AnnotationScreeningNotes } from './PhenotypeSummary';
 import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-react';
@@ -269,6 +270,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   };
 
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
+  const dbSnpIds = dbSnpIdentifiers(variant);
   const vaf = optionalAnnotationNumber(sourceAnnotation(variant, 'VAF'));
   const transcriptInfo = transcriptLocation(variant);
 
@@ -503,9 +505,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 <AnnotationField label={t("tasks.diseaseIdentifier3697b1")} value={annotation('GenCC_disease_original_curie')} />
               </dl>
             </section>
-            {(variant.rsId || annotation('HGNC_ID') || annotation('Cytoband')) && <section aria-labelledby="variant-ids-heading">
+            {(dbSnpIds.length > 0 || variant.rsId || annotation('HGNC_ID') || annotation('Cytoband')) && <section aria-labelledby="variant-ids-heading">
               <h4 id="variant-ids-heading" className="yj-annotation-heading">{t("tasks.variantIdentifiera3a10c")}</h4>
-              {variant.rsId && <InfoItem label="dbSNP" value={variant.rsId} />}
+              {(dbSnpIds.length > 0 || variant.rsId) && <InfoItem label="dbSNP" value={dbSnpIds.length ? <span className="inline-flex flex-wrap gap-x-2 gap-y-1">{dbSnpIds.map(id => <a key={id} href={`https://www.ncbi.nlm.nih.gov/snp/${id}`} target="_blank" rel="noopener noreferrer" className="text-accent-fg hover:underline">{id}</a>)}</span> : variant.rsId} />}
               {annotation('HGNC_ID') && <InfoItem label="HGNC ID" value={annotation('HGNC_ID')} />}
               {annotation('Cytoband') && <InfoItem label={t("tasks.cytobandc12b02")} value={annotation('Cytoband')} />}
             </section>}

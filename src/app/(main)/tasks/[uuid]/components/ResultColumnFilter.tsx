@@ -64,7 +64,7 @@ export function resultColumnLabels<T>(columns: Column<T>[], result: FilterMetada
   const cnvLabels: Record<string,string> = table === 'cnv-exon'
     ? {Col4:t("history.typee4e46c"),Col5:t("history.gene9ef2ed"),Col6:t("history.transcript96b6d7"),Col7:t("tasks.ensemblTranscript7441ae"),Col8:t("tasks.exonCount17ce3c"),Col9:'log2 ratio',Col10:t("tasks.medianLog3f39fc"),Col11:t("tasks.logStandardDeviation57463b"),Col12:t("history.copyNumber04d1ca"),Col13:t("tasks.deptha1128a"),Col14:t("tasks.signalWeight9907ea"),Col15:t("tasks.binCount4a348a"),Col16:t("tasks.segmentCountbe25f0"),Col17:t("tasks.coverageFractionb12427"),Col18:t("history.confidenceb78c2d"),Col19:t("tasks.pValuebda434")}
     : table === 'cnv-segment' ? {Col4:t("history.typee4e46c"),Col5:'log2 ratio',Col6:t("tasks.deptha1128a"),Col7:t("tasks.signalWeight9907ea"),Col8:t("history.copyNumber04d1ca")} : {};
-  const resultLabels: Record<string,string> = {...Object.fromEntries(Object.entries(labels).map(([field, label]) => [field, t(label)])),...cnvLabels};
+  const resultLabels: Record<string,string> = {...Object.fromEntries(Object.entries(labels).map(([field, label]) => [field, t(label)])),...cnvLabels,HGVS_c:'HGVSc',HGVS_p:'HGVSp'};
   for (const column of columns) {
     const fields = fieldsForColumn(column.id, result, table);
     if (fields.length === 1 && typeof column.header === 'string') resultLabels[fields[0]] = t(column.header);

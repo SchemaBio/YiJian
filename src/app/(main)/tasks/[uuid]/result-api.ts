@@ -4,6 +4,7 @@ import { api, ApiError } from '@/lib/api';
 import {assessmentStatus} from '@/lib/assessment/client';
 import { queryBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
+import { resultFilterValue } from './utils/filter-values';
 import type {
   ACMGClassification,
   ACMGEvidenceEntry,
@@ -29,11 +30,11 @@ import type {
 } from './types';
 
 export const ACMG_CONFIG: Record<ACMGClassification, { label: string; variant: 'danger' | 'warning' | 'neutral' | 'info' | 'success' }> = {
-  Pathogenic: { label: '致病', variant: 'danger' },
-  Likely_Pathogenic: { label: '可能致病', variant: 'warning' },
-  VUS: { label: '意义未明', variant: 'neutral' },
-  Likely_Benign: { label: '可能良性', variant: 'info' },
-  Benign: { label: '良性', variant: 'success' },
+  Pathogenic: { label: 'Pathogenic', variant: 'danger' },
+  Likely_Pathogenic: { label: 'Likely_Pathogenic', variant: 'warning' },
+  VUS: { label: 'VUS', variant: 'neutral' },
+  Likely_Benign: { label: 'Likely_Benign', variant: 'info' },
+  Benign: { label: 'Benign', variant: 'success' },
 };
 
 const ACMG_ALIASES: Record<string, ACMGClassification> = {
@@ -634,6 +635,11 @@ async function buildTableQuery(type: ResultQueryType, filterState: TableFilterSt
     const current=lists.find(list=>list.id===filterState.geneListId);if(filterState.geneListRevision!==undefined&&current?.revision!==filterState.geneListRevision)throw new LocalizedError("display.geneListChangedRefreshItAndConfirm38f6ac");
  if (!genes?.length) throw new LocalizedError("display.selectedGeneListUnavailableRefreshTheList5f7305");
     queryFilters.push({ column: 'Gene', operator: 'in', value: genes });
+  }
+  for (const filter of queryFilters) {
+    if (filter.value !== undefined && ['contains', 'not_contains', 'equals', 'in'].includes(filter.operator)) {
+      filter.value = resultFilterValue(type, filter.column, filter.value, filter.operator);
+    }
   }
   const sort = filterState.sortColumn ? parquetColumn(type, filterState.sortColumn) : '';
   return { offset: (filterState.page - 1) * filterState.pageSize, limit: filterState.pageSize,

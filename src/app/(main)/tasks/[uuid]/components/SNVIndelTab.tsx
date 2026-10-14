@@ -405,16 +405,16 @@ export function SNVIndelTab({
     },
     {
       id: 'hgvsc',
-      header: t("tasks.cdnaChange1ae093"),
-      accessor: 'hgvsc',
-      width: 150,
+      header: 'HGVSc',
+      accessor: row => <span className="block w-[110px] max-w-full whitespace-normal break-all text-center">{row.hgvsc}</span>,
+      width: 110,
       align: 'center',
     },
     {
       id: 'hgvsp',
-      header: t("tasks.proteinChange085fb7"),
-      accessor: 'hgvsp',
-      width: 150,
+      header: 'HGVSp',
+      accessor: row => <span className="block w-[110px] max-w-full whitespace-normal break-all text-center">{row.hgvsp}</span>,
+      width: 110,
       align: 'center',
     },
   ];
