@@ -11,12 +11,14 @@ import { GeneLinks } from './GeneLinks';
 
 import * as React from 'react';
 import { formatPopulationFrequency } from '../utils/snv-annotations';
-import { DataTable, Tag, Input } from '@schema/ui-kit';
+import { DataTable, Input } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { MEIVariant, TableFilterState, PaginatedResult, ACMGClassification } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getMEIs, ACMG_CONFIG, reportVariant, pinVariant } from '../result-api';
+import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
+import { VariantTypeBadge } from './VariantTypeBadge';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { IGVViewer, PositionLink } from './IGVViewer';
@@ -35,14 +37,6 @@ const MEI_TYPE_LABELS = {
   Alu: 'Alu',
   SVA: 'SVA',
   Unknown: '未知',
-};
-
-// MEI 类型颜色
-const MEI_TYPE_COLORS = {
-  LINE1: 'bg-purple-100 text-purple-700 border-purple-200',
-  Alu: 'bg-blue-100 text-blue-700 border-blue-200',
-  SVA: 'bg-orange-100 text-orange-700 border-orange-200',
-  Unknown: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
 const MEI_INSERTION_LABELS: Record<MEIVariant['insertionType'], string> = {
@@ -221,9 +215,9 @@ export function MEITab({
       id: 'meiType',
       header: t("history.meiType05cfc0"),
       accessor: (row) => (
-        <span className={`px-2 py-0.5 text-xs rounded border ${MEI_TYPE_COLORS[row.meiType]}`}>
+        <VariantTypeBadge value={row.meiType}>
           {translateUI(MEI_TYPE_LABELS[row.meiType], t)}
-        </span>
+        </VariantTypeBadge>
       ),
       width: 80,
       align: 'center',
@@ -232,7 +226,7 @@ export function MEITab({
       id: 'insertionType',
       header: t("tasks.insertionTypeaa636e"),
       accessor: (row) => {
-        return MEI_INSERTION_LABELS[row.insertionType];
+        return <VariantTypeBadge value={row.insertionType}>{translateUI(MEI_INSERTION_LABELS[row.insertionType], t)}</VariantTypeBadge>;
       },
       width: 80,
       align: 'center',
@@ -291,7 +285,7 @@ export function MEITab({
       accessor: (row) => {
         if (!row.acmgClassification) return '-';
         const config = ACMG_CONFIG[row.acmgClassification];
-        return <Tag variant={config.variant} className="w-20 justify-center">{translateUI(config.label, t)}</Tag>;
+        return <ClinicalSignificanceBadge value={row.acmgClassification}>{config.label}</ClinicalSignificanceBadge>;
       },
       width: 100,
       align: 'center',

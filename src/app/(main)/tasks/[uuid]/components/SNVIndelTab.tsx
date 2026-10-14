@@ -26,6 +26,8 @@ import { VariantDetailPanel } from './VariantDetailPanel';
 import { formatPopulationFrequency, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from './ReviewCheckboxes';
 import { ClinVarBadge } from './ClinVarBadge';
+import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
+import { VariantTypeBadge } from './VariantTypeBadge';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 
@@ -321,10 +323,7 @@ export function SNVIndelTab({
       header: t("history.variantType6c1aef"),
       accessor: (row) => {
         const typeLabels = { SNV: 'SNP', Insertion: t("tasks.insertion022bf3"), Deletion: t("history.deletion2fe9b7"), Complex: t("tasks.complex2415d7") };
-        const variants: Record<SNVIndel['variantType'], 'neutral' | 'info' | 'warning'> = { SNV: 'neutral', Insertion: 'info', Deletion: 'warning', Complex: 'neutral' };
-        return row.variantType === 'SNV'
-          ? <span className="inline-flex rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200">SNP</span>
-          : <Tag variant={variants[row.variantType]}>{translateUI(typeLabels[row.variantType], t)}</Tag>;
+        return <VariantTypeBadge value={row.variantType}>{typeLabels[row.variantType]}</VariantTypeBadge>;
       },
       width: 80,
       align: 'center',
@@ -382,7 +381,7 @@ export function SNVIndelTab({
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
           return config
-          ? <HoverHint content={row.activeAcmgVersion==='svcv4'?t("tasks.svcVDraftNonauthoritativeReferenceAssessment3fe575"):row.acmgAssessmentSource === 'manual_override' ? t("tasks.manualClassificationOverride467829") : row.acmgAssessmentSource === 'manual_evidence' ? t("tasks.calculatedFromSavedAcmgEvidence1b9d08") : `${row.automaticAcmg?.classificationBasis && row.automaticAcmg.classificationBasis !== 'acmg_evidence' ? t("tasks.quickAssessmentManualReview10d3bd") : t("tasks.automaticInitialAssessmentecbbfb")}${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span className="inline-flex flex-col items-center gap-1"><Tag variant={config.variant} className="justify-center">{translateUI(row.activeAcmgVersion==='svcv4'&&row.acmgVusSubclass?row.acmgVusSubclass:config.label, t)}</Tag><span className="text-xs text-fg-muted">{row.activeAcmgVersion==='svcv4'?t("tasks.vExperimental7c90f7"):row.acmgAssessmentSource==='automatic'&&row.automaticAcmg?.classificationBasis&&row.automaticAcmg.classificationBasis!=='acmg_evidence'?t("tasks.quickAssessment6445dc"):t("tasks.currentEdition7b034e")}</span></span></HoverHint>
+          ? <HoverHint content={row.activeAcmgVersion==='svcv4'?t("tasks.svcVDraftNonauthoritativeReferenceAssessment3fe575"):row.acmgAssessmentSource === 'manual_override' ? t("tasks.manualClassificationOverride467829") : row.acmgAssessmentSource === 'manual_evidence' ? t("tasks.calculatedFromSavedAcmgEvidence1b9d08") : `${row.automaticAcmg?.classificationBasis && row.automaticAcmg.classificationBasis !== 'acmg_evidence' ? t("tasks.quickAssessmentManualReview10d3bd") : t("tasks.automaticInitialAssessmentecbbfb")}${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span className="inline-flex flex-col items-center gap-1"><ClinicalSignificanceBadge value={row.acmgClassification}>{row.activeAcmgVersion==='svcv4'&&row.acmgVusSubclass?row.acmgVusSubclass:config.label}</ClinicalSignificanceBadge><span className="text-xs text-fg-muted">{row.activeAcmgVersion==='svcv4'?t("tasks.vExperimental7c90f7"):row.acmgAssessmentSource==='automatic'&&row.automaticAcmg?.classificationBasis&&row.automaticAcmg.classificationBasis!=='acmg_evidence'?t("tasks.quickAssessment6445dc"):t("tasks.currentEdition7b034e")}</span></span></HoverHint>
           : <HoverHint content={row.automaticAcmg?.pending?.join('；') || t("tasks.insufficientEvidenceForAutomaticAssessmentef8b34")}><span ><Tag variant="neutral" className="w-20 justify-center">{t("tasks.insufficientEvidence70568c")}</Tag></span></HoverHint>;
       },
       width: 100,

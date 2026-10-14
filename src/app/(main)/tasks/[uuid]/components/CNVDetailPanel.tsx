@@ -16,6 +16,7 @@ import * as React from 'react';
 import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { useInterpretationReadOnly } from './InterpretationLock';
 import { ResultChangeHistory } from './ResultChangeHistory';
+import { VariantTypeBadge } from './VariantTypeBadge';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
@@ -66,12 +67,6 @@ function cnvTypeLabel(type: CNVSegment['type'], t: TextTranslator = chineseText)
   if (type === 'Deletion') return t("history.deletion2fe9b7");
   if (type === 'Normal') return t("history.normalf78d03");
   return t("history.notProvided071fb2");
-}
-
-function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
-  if (type === 'Amplification') return 'danger';
-  if (type === 'Deletion') return 'info';
-  return 'neutral';
 }
 
 // 信息项组件
@@ -144,7 +139,6 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
   const isExon = isCNVExon(variant);
   const exonRatio = isExon ? variant.ratio : null;
   const showPlot = variantType === 'segment' && Boolean(taskId);
-  const typeVariant = cnvTypeVariant(variant.type);
   const typeLabel = cnvTypeLabel(variant.type, t);
   const externalReference = ucscDatabase(referenceId);
 
@@ -157,9 +151,9 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             <h3 className="text-base font-medium text-fg-default">
               {variantType === 'exon' ? t("tasks.exonCnvDetails317773") : t("tasks.regionCnvDetails47f31b")}
             </h3>
-            <Tag variant={typeVariant}>
+            <VariantTypeBadge value={variant.type}>
               {typeLabel}
-            </Tag>
+            </VariantTypeBadge>
           </div>
           <div className="ml-auto flex items-center gap-2">
           {taskId && <ActionButton action="view" size="small" variant="secondary" className="shrink-0" onClick={() => setPlotOpen(true)}>{isExon ? t("tasks.exonCnDistribution991e77") : t("tasks.regionSignalPlot630d9d")}</ActionButton>}
@@ -217,9 +211,9 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
             <InfoItem
               label={t("history.typee4e46c")}
               value={
-                <Tag variant={typeVariant}>
+                <VariantTypeBadge value={variant.type}>
                   {typeLabel}
-                </Tag>
+                </VariantTypeBadge>
               }
             />
             <InfoItem label={t("history.copyNumber04d1ca")} value={variant.copyNumber} />

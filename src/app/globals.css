@@ -872,21 +872,43 @@
 /* Review/report state is independent of clinical classification and selection. */
 @layer utilities {
   .variant-results-table {
-    --yj-marked-row-bg: #f8f6e8;
-    --yj-marked-row-hover: #efecd6;
+    --yj-pinned-row-bg: #f8f6e8;
+    --yj-pinned-row-hover: #efecd6;
+    --yj-pinned-row-selected: #e7dfb5;
+    --yj-reported-row-bg: #eef5ff;
+    --yj-reported-row-hover: #dfeaff;
+    --yj-reported-row-selected: #c7dcf7;
   }
-  .dark .variant-results-table {
-    --yj-marked-row-bg: #29291f;
-    --yj-marked-row-hover: #353429;
+  .dark .variant-results-table,
+  [data-theme='dark'] .variant-results-table {
+    --yj-pinned-row-bg: #29291f;
+    --yj-pinned-row-hover: #353429;
+    --yj-pinned-row-selected: #48432c;
+    --yj-reported-row-bg: #1c293c;
+    --yj-reported-row-hover: #26364d;
+    --yj-reported-row-selected: #334a68;
   }
-  .variant-results-table tbody tr:not([aria-selected="true"]):has([data-result-mark][aria-pressed="true"]) > td {
+  .variant-results-table tbody tr:has([data-result-mark='pin'][aria-pressed='true']) {
+    --yj-marked-row-bg: var(--yj-pinned-row-bg);
+    --yj-marked-row-hover: var(--yj-pinned-row-hover);
+    --yj-marked-row-selected: var(--yj-pinned-row-selected);
+  }
+  /* Report colors take precedence when both marks are active. */
+  .variant-results-table tbody tr:has([data-result-mark='report'][aria-pressed='true']) {
+    --yj-marked-row-bg: var(--yj-reported-row-bg);
+    --yj-marked-row-hover: var(--yj-reported-row-hover);
+    --yj-marked-row-selected: var(--yj-reported-row-selected);
+  }
+  .variant-results-table tbody tr:has([data-result-mark][aria-pressed='true']) > td {
     background-color: var(--yj-marked-row-bg) !important;
   }
-  .variant-results-table tbody tr:not([aria-selected="true"]):has([data-result-mark][aria-pressed="true"]):hover > td {
+  .variant-results-table tbody tr:has([data-result-mark][aria-pressed='true']):hover > td {
     background-color: var(--yj-marked-row-hover) !important;
   }
-  .variant-results-table tbody tr[aria-selected="true"] > td {
-    background-color: var(--color-accent-subtle) !important;
+  /* UI kit emits the selection class even without checkbox selection enabled. */
+  .variant-results-table tbody tr:is([aria-selected='true'], [data-selected='true'], .bg-accent-subtle) > td,
+  .variant-results-table tbody tr:has([data-result-mark][aria-pressed='true']):is([aria-selected='true'], [data-selected='true'], .bg-accent-subtle) > td {
+    background-color: var(--yj-marked-row-selected, var(--color-accent-subtle)) !important;
   }
 }
 

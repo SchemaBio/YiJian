@@ -127,7 +127,7 @@
 .yj-task-state-label { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .yj-task-state-label > span { width: 6px; height: 6px; border-radius: 50%; background: var(--yj-text-muted); }
 .yj-interpretation-panel[data-density='compact'] .variant-results-table td { padding-top: 6px; padding-bottom: 6px; font-size: 13px; white-space: nowrap; }
-.yj-interpretation-panel[data-density='compact'] .variant-results-table td > [data-hover-hint]:not(.yj-clinvar-badge):not(.yj-iscn-full) { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yj-interpretation-panel[data-density='compact'] .variant-results-table td > [data-hover-hint]:not(.yj-significance-badge):not(.yj-iscn-full) { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .variant-results-table .yj-iscn-full { max-width: none; overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 @media (min-width: 1440px) {
   .yj-has-inspector { padding-right: 436px; }
@@ -142,7 +142,7 @@
   .yj-task-toolbar > div { max-width: 100%; }
 }
 
-.yj-clinvar-badge { white-space: normal; overflow-wrap: anywhere; line-height: 1.45; overflow: visible; text-overflow: clip; }
+.yj-significance-badge { white-space: normal; overflow-wrap: anywhere; line-height: 1.45; overflow: visible; text-overflow: clip; }
 .yj-annotation-layout { display: flex; flex-direction: column; gap: 24px; }
 .yj-annotation-layout > section + section { border-top: 1px solid var(--yj-border-subtle); padding-top: 20px; }
 .yj-annotation-heading { font-size: 13px; font-weight: 600; color: var(--yj-text-strong); margin-bottom: 12px; }

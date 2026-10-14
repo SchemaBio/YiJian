@@ -27,6 +27,7 @@ import { PinCheckbox, ReportCheckbox, PinColumnHeader, ReportColumnHeader } from
 import { CNVDetailPanel } from './CNVDetailPanel';
 import type { CNVPlotAnchor } from './CNVPlotWindow';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
+import { VariantTypeBadge } from './VariantTypeBadge';
 import { CNVAssessmentPanel } from './CNVAssessmentPanel';
 import { useCNVAssessment } from '../hooks/useCNVAssessment';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
@@ -43,12 +44,6 @@ function cnvTypeLabel(type: CNVSegment['type'], t: TextTranslator = chineseText)
   if (type === 'Deletion') return t("history.deletion2fe9b7");
   if (type === 'Normal') return t("history.normalf78d03");
   return t("history.notProvided071fb2");
-}
-
-function cnvTypeVariant(type: CNVSegment['type']): 'danger' | 'info' | 'neutral' {
-  if (type === 'Amplification') return 'danger';
-  if (type === 'Deletion') return 'info';
-  return 'neutral';
 }
 
 export function CNVSegmentTab({
@@ -344,9 +339,9 @@ export function CNVSegmentTab({
       header: t("history.typee4e46c"),
       accessor: (row) => {
         return (
-          <Tag variant={cnvTypeVariant(row.type)}>
+          <VariantTypeBadge value={row.type}>
             {cnvTypeLabel(row.type, t)}
-          </Tag>
+          </VariantTypeBadge>
         );
       },
       width: 80,

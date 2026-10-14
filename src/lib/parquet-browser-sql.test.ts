@@ -2,6 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { buildLocalSelection, effectiveField, localPredicate, literal } from './parquet-browser-sql';
 describe('browser effective Parquet query', () => {
     const raw = ['Chromosome', 'Position', 'Gene', 'GnomAD_AF', 'Transcript'];
+    it('promotes reported rows ahead of pinned-only rows before user sorting and pagination', () => {
+        const reported = `COALESCE(TRY_CAST(${effectiveField('reported', raw)} AS BOOLEAN), FALSE)`;
+        const pinned = `COALESCE(TRY_CAST(${effectiveField('pinned', raw)} AS BOOLEAN), FALSE)`;
+        for (const direction of ['asc', 'desc']) {
+            const q = buildLocalSelection({ offset: 20, limit: 20, sort: 'Position', direction }, raw);
+            expect(q.order.startsWith(`CASE WHEN ${reported} THEN 0 WHEN ${pinned} THEN 1 ELSE 2 END ASC,`)).toBe(true);
+            expect(q.order).toContain('$.phenotypeMatch.score');
+            expect(q.order).toContain('$.familySupport');
+            expect(q.order).toContain(` ${direction.toUpperCase()}, t.file_row_number ASC`);
+        }
+    });
     it('excludes literal text without case sensitivity, including empty cells', () => {
         const predicate = localPredicate({ column: 'Gene', operator: 'not_contains', value: "BRCA'_%" }, raw);
         expect(predicate).toBe(`NOT contains(lower(COALESCE(CAST(t."Gene" AS VARCHAR), '')), lower('BRCA''_%'))`);

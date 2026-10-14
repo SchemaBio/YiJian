@@ -16,6 +16,7 @@ import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/comp
 import { VariantResourceLinks } from './VariantResourceLinks';
 import { dbSnpIdentifiers } from '../utils/variant-resource-links';
 import { ClinVarBadge } from './ClinVarBadge';
+import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
 import { PhenotypeSummary, AnnotationScreeningNotes } from './PhenotypeSummary';
 import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-react';
 import { Tag } from '@schema/ui-kit';
@@ -316,7 +317,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-canvas-subtle">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-medium text-fg-default">{t("tasks.variantDetails7ca440")}</h3>
-            {activeConfig ? <Tag variant={activeConfig.variant}>{translateUI(variant.activeAcmgVersion==='svcv4'&&variant.svcv4Assessment?.result?.vusSubclass?variant.svcv4Assessment.result.vusSubclass:activeConfig.label, t)}</Tag> : <Tag variant="neutral">{t("tasks.acmgNotAssessed1ea79b")}</Tag>}
+            {activeConfig ? <ClinicalSignificanceBadge value={activeClassification ?? undefined}>{variant.activeAcmgVersion==='svcv4'&&variant.svcv4Assessment?.result?.vusSubclass?variant.svcv4Assessment.result.vusSubclass:activeConfig.label}</ClinicalSignificanceBadge> : <Tag variant="neutral">{t("tasks.acmgNotAssessed1ea79b")}</Tag>}
           </div>
           <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
             onClick={onClose}
@@ -398,7 +399,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                   />
                 ) : (
                   <>
-                    <InfoItem label={t("tasks.classification435c52")} value={acmgConfig ? <Tag variant={acmgConfig.variant}>{translateUI(acmgConfig.label, t)}</Tag> : t("tasks.notAssessedd94e42")} />
+                    <InfoItem label={t("tasks.classification435c52")} value={acmgConfig ? <ClinicalSignificanceBadge value={currentClassification}>{acmgConfig.label}</ClinicalSignificanceBadge> : t("tasks.notAssessedd94e42")} />
                     <InfoItem label={t("tasks.assessmentSource3f01c0")} value={variant.acmgAssessmentSource === 'manual_override' ? t("tasks.manualOverrideef74b5") : variant.acmgAssessmentSource === 'manual_evidence' ? t("tasks.savedEvidencePoints874a14") : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? t("tasks.quickAssessmentClinvarReferenceb1b550") : variant.automaticAcmg?.classificationBasis === 'population_screening' ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f") : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? t("tasks.quickAssessmentConflictNeedsReviewf3c456") : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? t("tasks.quickAssessmentVusNeedsReview79d7da") : t("tasks.automaticEvidencePointsb87a06")} />
                     {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
                     <PhenotypeSummary assessment={variant.automaticAcmg} />
