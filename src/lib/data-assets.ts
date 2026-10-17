@@ -24,7 +24,7 @@ export interface DataAsset {
   reference_genome?: 'GRCh37' | 'GRCh38';
   provider: 'local' | 's3';
   status: DataAssetStatus;
-  source: 'upload' | 'scanner';
+  source: 'upload' | 'scanner' | 'local_import';
   expires_at?: string;
   created_at: string;
   updated_at: string;
@@ -32,6 +32,7 @@ export interface DataAsset {
 }
 
 export interface DataCenterConfig {
+  local_import_directory?: string;
   provider: 'local' | 's3';
   retention_days: number;
   temporary: boolean;

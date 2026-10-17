@@ -1,5 +1,7 @@
 'use client';
 
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { SaaSPrivacyDocument } from './SaaSPrivacyDocument';
 import { useMemo } from 'react';
 import { Shield, ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -10,6 +12,10 @@ import type { Locale } from '@/i18n/locales';
 import { getPrivacySections } from '@/lib/privacy-policy';
 
 export function PrivacyDocument({ overrideLocale }: { overrideLocale?: Locale }) {
+  return getRuntimeBackendFlavor() === 'squid' ? <SaaSPrivacyDocument overrideLocale={overrideLocale} /> : <SelfHostedPrivacyDocument overrideLocale={overrideLocale} />;
+}
+
+function SelfHostedPrivacyDocument({ overrideLocale }: { overrideLocale?: Locale }) {
   const globalLocale = useAppLocale();
   const locale = overrideLocale ?? globalLocale;
   const t = useMemo(() => createTextTranslator(locale), [locale]);

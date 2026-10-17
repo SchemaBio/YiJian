@@ -1,12 +1,15 @@
 'use client';
+import { SaaSSupportDialog } from './SaaSSupportDialog';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { Github } from 'lucide-react';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 // Retain the component API for older entry points while replacing support UI.
-export function SupportDialog({ trigger = 'icon' }: {
+export function SupportDialog({ trigger = 'icon', context = 'general' }: {
   trigger?: 'icon' | 'button';
   context?: 'general' | 'billing' | 'account';
 }) {
+  if (getRuntimeBackendFlavor() === 'squid') return <SaaSSupportDialog trigger={trigger} context={context} />;
   return <HoverHint content="GitHub"><a
     href="https://github.com/SchemaBio/YiJian"
     target="_blank" rel="noopener noreferrer" aria-label="GitHub"

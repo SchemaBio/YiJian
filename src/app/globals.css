@@ -623,7 +623,7 @@
   }
 
   .pipeline-center-table table {
-    min-width: 1214px;
+    min-width: 1524px;
     table-layout: fixed;
   }
 
@@ -633,7 +633,7 @@
   }
 
   .baseline-center-table table {
-    min-width: 1458px;
+    min-width: 1768px;
     table-layout: fixed;
   }
 

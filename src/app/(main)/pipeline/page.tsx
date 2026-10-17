@@ -13,7 +13,7 @@ import {useAuth} from '@/components/providers/AuthProvider';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
+import { IdCell, AppModal, ConfirmDialog, EmptyState, ModalSectionHeading } from '@/components/shared';
 import { DataTable, Input, Select, type Column } from '@schema/ui-kit';
 import { Tag } from '@/components/shared/Tag';
 import { Database, Loader2, Pause, Play, Search, Workflow } from 'lucide-react';
@@ -259,8 +259,9 @@ function PipelineListPageContent() {
     setPipelines((items) => items.filter((item) => item.id !== deleting.id)); setDeleting(null);
   };
 
-  const filtered = pipelines.filter((item) => `${pipelineDisplayName(item.id, item.name, t)} ${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const filtered = pipelines.filter((item) => `${item.id} ${pipelineDisplayName(item.id, item.name, t)} ${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()));
   const columns: Column<Pipeline>[] = [
+    { id: 'id', header: t("pipeline.pipelineId"), accessor: (row) => <IdCell id={row.id} full />, width: 310, align: 'left' },
     { id: 'name', header: t("history.pipelineName323a83"), accessor: (row) => <div className="text-left"><div className="font-medium text-fg-default">{pipelineDisplayName(row.id, row.name, t)}</div>{row.isBuiltin && <div className="mt-0.5 text-xs text-fg-muted">{t("pipeline.systemBuiltInae8da0")}</div>}</div>, width: 210, align: 'left' },
     { id: 'base', header: t("pipeline.basePipeline41689b"), accessor: (row) => <Tag variant="neutral">{row.basePipeline === 'wes_family' ? t("pipeline.wesFamilyAnalysise07024") : t("pipeline.wesSingleSampleAnalysis400a61")}</Tag>, width: 150, align: 'center' },
     { id: 'genome', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => row.referenceGenome, width: 110, align: 'center' },

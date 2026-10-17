@@ -1,10 +1,13 @@
 import * as React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 import SamplesPage from './page';
 import { listSamples } from '@/lib/samples';
 import { downloadSampleList } from '@/lib/sample-export';
 import type { Sample } from './types';
+const mode=vi.hoisted(()=>({backend:'octopus'}));
+vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mode.backend}));
+beforeEach(()=>{mode.backend='octopus';});
 vi.mock('@/lib/sample-export', () => ({ downloadSampleList: vi.fn() }));
 vi.mock('@/lib/samples', () => ({ listSamples: vi.fn(), normalizeSample: vi.fn(), samplePayload: vi.fn() }));
 vi.mock('./components', () => ({ NewSampleModal: () => null, EditSampleModal: () => null, DataLinkModal: () => null }));
@@ -13,7 +16,7 @@ it('keeps failed reads distinct from empty samples and recovers on retry', async
   render(<SamplesPage />);
   expect(await screen.findByRole('alert')).toHaveTextContent('样本读取失败');
   expect(screen.queryByText('暂无样本')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '批量导入' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '批量导入' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
   await screen.findByText('暂无样本');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -33,4 +36,11 @@ it('exports only checked samples, including selections retained while searching'
   fireEvent.change(screen.getByPlaceholderText('搜索样本编号、内部编号、批次或研究背景…'), { target: { value: 'INT-unselected' } });
   fireEvent.click(screen.getByRole('button', { name: '导出已选样本 (1)' }));
   expect(downloadSampleList).toHaveBeenCalledWith([samples[0]], 'zh-CN');
+});
+
+it('does not expose bulk import or template download in SaaS', async()=>{
+ mode.backend='squid';vi.mocked(listSamples).mockResolvedValue([]);render(<SamplesPage />);
+ await screen.findByText('暂无样本');
+ expect(screen.queryByRole('button',{name:'批量导入'})).not.toBeInTheDocument();
+ expect(screen.queryByRole('button',{name:'下载模板'})).not.toBeInTheDocument();
 });

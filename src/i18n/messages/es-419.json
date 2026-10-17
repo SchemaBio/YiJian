@@ -859,7 +859,9 @@
     "deleteThisReportServicefa34e4": "¿Eliminar este servicio de informes?",
     "thisCannotBeUndone7da32f": "Esta acción es irreversible",
     "viewPythonGoAndJavascriptExamples828970": "Ver ejemplos de Python, Go y JavaScript",
-    "newServicesUseReportSnapshotVThe7b91bd": "La instantánea v2 conserva las variantes en seguimiento, las interpretaciones actuales y el control de calidad al generar el informe."
+    "newServicesUseReportSnapshotVThe7b91bd": "La instantánea v2 conserva las variantes en seguimiento, las interpretaciones actuales y el control de calidad al generar el informe.",
+    "pipelineId": "ID del flujo",
+    "baselineId": "ID de la línea base"
   },
   "samples": {
     "unknownSize4f6367": "Tamaño desconocido",
@@ -964,7 +966,7 @@
     "sequencingDataMatchingDetails18b064": "Detalles de asociación de datos de secuenciación",
     "unableToReadSampledeec2e": "No se pudo leer la muestra",
     "sampleIdInternalIdSexSampleType463874": "ID de muestra,Identificador interno,Sexo,Tipo de muestra,Lote,Diagnóstico clínico\nS001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查",
-    "sampleImportTemplateCsvd79af8": "Plantilla de importación de muestras.csv",
+    "sampleImportTemplateCsvd79af8": "Plantilla de importación de muestras.xlsx",
     "sampleCreatedButTheServerReturnedNo63d533": "Muestra creada, pero el servidor no devolvió su identificador",
     "unableToDeleteSamplesRetryc2e2ec": "No se pudieron eliminar {p0} muestras. Reintenta.",
     "yearsb4e3bd": " años",
@@ -1079,7 +1081,7 @@
     "addSpouse5e8688": "Agregar cónyuge",
     "deleteMembera045fb": "Eliminar miembro",
     "pedigreeInternalIdBatchSampleInternalIda7394e": "Identificador interno familiar,Lote,Identificador interno de muestra 1,Identificador interno de muestra 2,Identificador interno de muestra 3,Diagnóstico clínico,Notas\nFAM-001,BATCH-2024-001,INT-001,INT-002,,遗传性心肌病待查,家系备注\nFAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,",
-    "pedigreeImportTemplateCsvd709c6": "Plantilla de importación de árboles familiares.csv",
+    "pedigreeImportTemplateCsvd709c6": "Plantilla de importación de árboles familiares.xlsx",
     "pedigreeIdec299d": "ID del árbol familiar",
     "systemId17b196": "ID del sistema",
     "sampleInternalIdf3c5b6": "Identificador interno de muestra",
@@ -1129,6 +1131,8 @@
     "turnaroundDays": "{p0, plural, one {# día} other {# días}}"
   },
   "tasks": {
+    "uploadTaskInformation": "Subir información",
+    "taskActions": "Acciones de tareas",
     "awaitingData85354f": "En espera de datos",
     "awaitingInterpretation0b7bdd": "Pendiente de interpretación",
     "awaitingOrganizationSlotcab640": "En espera de cupo de organización",
@@ -2836,6 +2840,63 @@
       "baselines_manage": "Gestión de tareas de línea base",
       "report_services_manage": "Configuración de servicios de informes",
       "interpretation_reports_manage": "Interpretación y generación de informes"
+    }
+  },
+  "sampleImport": {
+    "title": "Importación masiva",
+    "start": "Importar / reintentar filas fallidas",
+    "instructions": "Use el XLSX de Descargar plantilla (hasta 1,000 filas y 2 MB). El sistema genera los ID de muestra; la primera columna es solo de referencia. Se importa el identificador interno. Las filas exitosas no se repiten. Los identificadores existentes dan error y no se sobrescriben.",
+    "file": "Elegir XLSX de muestras",
+    "reading": "Leyendo archivo…",
+    "tooLarge": "El archivo no debe superar 2 MB.",
+    "tooMany": "Importe hasta 1,000 muestras por vez.",
+    "invalidCsv": "XLSX inválido: revise comillas y separadores.",
+    "empty": "No hay muestras para importar.",
+    "headers": "Use los seis encabezados de la plantilla en chino simplificado, chino tradicional, inglés o español.",
+    "columns": "Cada fila debe tener seis columnas.",
+    "internalId": "El identificador interno es obligatorio y admite hasta 100 caracteres.",
+    "duplicate": "Identificador interno duplicado en el archivo.",
+    "gender": "Sexo inválido: use masculino, femenino, desconocido, male, female o unknown.",
+    "type": "Tipo inválido: use sangre total, saliva, ADN, tejido u otro.",
+    "batch": "El lote no debe superar 100 caracteres.",
+    "fix": "Corrija estas filas y vuelva a elegir el archivo:",
+    "line": "Fila {p0}",
+    "progress": "{p0} filas: {p1} importadas, {p2} fallidas",
+    "row": "Fila",
+    "status": "Estado",
+    "pending": "Pendiente",
+    "success": "Importada",
+    "error": "Fallida",
+    "exists": "El identificador interno ya existe; no se modificó la muestra.",
+    "invalidXlsx": "Selecciona un archivo XLSX válido usando la plantilla descargada."
+  },
+  "localDataImport": {
+    "title": "Carga masiva de información",
+    "start": "Validar y registrar / reintentar fallos",
+    "file": "Elegir XLSX de rutas",
+    "headers": "Identificador interno,Ruta absoluta de read1,Ruta absoluta de read2",
+    "headerError": "Use las tres columnas: Identificador interno, Ruta absoluta de read1 y Ruta absoluta de read2.",
+    "instructions": "Primero copie los FASTQ al directorio del servidor: {p0}. Escriba rutas absolutas visibles dentro del contenedor Octopus y revise el mapeo de volúmenes de Docker. No use rutas con letras de unidad de Windows. Hasta 1,000 filas y 2 MB; solo se cargan las rutas.",
+    "absolute": "Escriba dos rutas absolutas de Linux dentro del contenedor, con un máximo de 1,000 caracteres cada una.",
+    "duplicate": "Read1 y Read2 deben ser distintos y las rutas no deben repetirse en el XLSX.",
+    "existing": "La ruta ya está registrada; no se sobrescribe ni se asigna otro UUID.",
+    "validating": "Leyendo y validando todos los FASTQ. Los archivos grandes pueden tardar; mantenga abierto este diálogo.",
+    "errors": {
+      "absolute_path": "Use una ruta absoluta dentro del contenedor.",
+      "path": "El archivo no existe, no se puede leer o está fuera del directorio configurado. Revise los volúmenes de Docker.",
+      "format": "FASTQ inválido. Se admiten archivos .fastq, .fq y gzip con registros de cuatro líneas.",
+      "empty": "El archivo está vacío o no tiene registros FASTQ.",
+      "integrity": "Archivo incompleto, error de comprobación gzip o registro FASTQ truncado.",
+      "pair": "Los pares tienen distinto número de registros o identificadores de lectura.",
+      "same_file": "Read1 y Read2 apuntan al mismo archivo.",
+      "changed": "El archivo cambió durante la validación. Termine de copiarlo y reintente.",
+      "cancelled": "Validación cancelada.",
+      "disabled": "Disponible solo en almacenamiento local autohospedado.",
+      "internal_id": "El identificador interno es obligatorio y admite hasta 100 caracteres.",
+      "busy": "El servidor valida otros archivos. Reintente en breve.",
+      "duplicate": "Ruta ya registrada; no se modificaron los datos existentes.",
+      "database": "No se pudo registrar. Reintente más tarde.",
+      "permission_denied": "Los permisos cambiaron; registro denegado."
     }
   }
 }

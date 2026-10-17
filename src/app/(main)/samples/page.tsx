@@ -1,4 +1,6 @@
 'use client';
+import { downloadImportWorkbook } from '@/lib/import-workbook';
+import { ImportSamplesModal } from './components/ImportSamplesModal';
 import { useLiveRetention } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
@@ -175,6 +177,7 @@ function MatchedCell({ sample }: { sample: Sample }) {
 
 export default function SamplesPage() {
   const t = useText();
+  const [importOpen, setImportOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isNewSampleModalOpen, setIsNewSampleModalOpen] = React.useState(false);
   const [editingSample, setEditingSample] = React.useState<Sample | null>(null);
@@ -226,17 +229,10 @@ export default function SamplesPage() {
     return () => window.clearInterval(timer);
   }, [loadSamples]);
 
-  const handleDownloadTemplate = () => {
-    const templateContent = t("samples.sampleIdInternalIdSexSampleType463874");
-    const blob = new Blob(['\ufeff' + templateContent], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = t("samples.sampleImportTemplateCsvd79af8");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadImportWorkbook(t("samples.sampleIdInternalIdSexSampleType463874"), t("samples.sampleImportTemplateCsvd79af8"));
+    } catch (cause) { setSamplesError(errorText(cause, t)); }
   };
 
   const filteredSamples = React.useMemo(() => {
@@ -522,6 +518,7 @@ export default function SamplesPage() {
               onClick={handleDownloadTemplate}
             >
               {t("samples.downloadTemplatea3afb2")}</Button>}
+            {getRuntimeBackendFlavor() !== 'squid' && <Button permission="samples.write" action="upload" onClick={()=>setImportOpen(true)}>{t('sampleImport.title')}</Button>}
             <HoverHint content={t("admin.refresh38108e")}><Button action="refresh" variant="secondary" aria-label={t("admin.refresh38108e")} disabled={loading} onClick={() => void loadSamples()} >{t("admin.refresh38108e")}</Button></HoverHint>
             <Button action="add"
               variant="primary"
@@ -565,6 +562,7 @@ export default function SamplesPage() {
         </div>
       </div>
 
+      {importOpen && getRuntimeBackendFlavor() !== 'squid' && <ImportSamplesModal onClose={()=>setImportOpen(false)} onImported={()=>void loadSamples()} />}
       <NewSampleModal
         isOpen={isNewSampleModalOpen}
         onClose={() => setIsNewSampleModalOpen(false)}

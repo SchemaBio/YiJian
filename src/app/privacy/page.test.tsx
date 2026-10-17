@@ -1,18 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import PrivacyPage from './page';
 import { PrivacyDocument } from './PrivacyDocument';
 import { locales, type Locale } from '@/i18n/locales';
 import policies from '@/i18n/privacy.json';
 
-const state = vi.hoisted(() => ({ locale: 'zh-CN' as Locale }));
+const state = vi.hoisted(() => ({ locale: 'zh-CN' as Locale, backend: 'octopus' }));
 vi.mock('@/i18n/server', () => ({ getRequestLocale: async () => state.locale }));
 vi.mock('@/components/providers/LocaleProvider', () => ({ useAppLocale: () => state.locale }));
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ isAuthenticated: false, isLoading: false }) }));
-vi.mock('@/lib/runtime-config', () => ({ getRuntimeSupportEmail: () => 'privacy@example.com' }));
+vi.mock('@/lib/runtime-config', () => ({ getRuntimeSupportEmail: () => 'privacy@example.com', getRuntimeBackendFlavor: () => state.backend }));
 
 const titles: Record<Locale,string> = {'zh-CN':'隐私政策','zh-Hant':'隱私政策',en:'Privacy Policy','es-419':'Política de privacidad'};
 describe('four-language privacy policy', () => {
+  beforeEach(() => { state.backend = 'octopus'; });
   it.each(locales)('follows the global %s locale without a language switch', locale => {
     state.locale = locale;
     render(<PrivacyDocument />);
@@ -45,4 +46,15 @@ describe('four-language privacy policy', () => {
       expect(policies[locale].map(s => [s.id,s.paragraphs.length])).toEqual(policies['zh-CN'].map(s => [s.id,s.paragraphs.length]));
     }
   });
+});
+
+describe('SaaS policy isolation', () => {
+ it.each(locales)('retains the hosted policy and operator contact in %s', locale => {
+  state.backend='squid';state.locale=locale;
+  render(<PrivacyDocument />);
+  expect(screen.getByRole('link', {name:'privacy@example.com'})).toHaveAttribute('href','mailto:privacy@example.com');
+  expect(document.body).toHaveTextContent('SchemaBio');
+  expect(document.body).toHaveTextContent(/720/);
+  expect(document.body).not.toHaveTextContent(/deployer provides the service|部署者自行提供服务/);
+ });
 });

@@ -859,7 +859,9 @@
     "deleteThisReportServicefa34e4": "確定要刪除此報告服務嗎？",
     "thisCannotBeUndone7da32f": "此操作不可撤銷",
     "viewPythonGoAndJavascriptExamples828970": "查看 Python、Go、JavaScript 接入示例",
-    "newServicesUseReportSnapshotVThe7b91bd": "報告快照 v2 在產生時固定關注變異、目前人工解讀及質控資訊。"
+    "newServicesUseReportSnapshotVThe7b91bd": "報告快照 v2 在產生時固定關注變異、目前人工解讀及質控資訊。",
+    "pipelineId": "流程 ID",
+    "baselineId": "基線 ID"
   },
   "samples": {
     "unknownSize4f6367": "大小未知",
@@ -964,7 +966,7 @@
     "sequencingDataMatchingDetails18b064": "測序資料匹配詳情",
     "unableToReadSampledeec2e": "樣本讀取失敗",
     "sampleIdInternalIdSexSampleType463874": "樣本編號,內部編號,性別,樣本類型,批次,臨牀診斷\nS001,INT-001,男,全血,BATCH-2024-001,遺傳性心肌病待查",
-    "sampleImportTemplateCsvd79af8": "樣本導入模板.csv",
+    "sampleImportTemplateCsvd79af8": "樣本導入模板.xlsx",
     "sampleCreatedButTheServerReturnedNo63d533": "樣本已創建，但伺服器未返回樣本 ID",
     "unableToDeleteSamplesRetryc2e2ec": "{p0} 個樣本刪除失敗，請重試",
     "yearsb4e3bd": " 歲",
@@ -1079,7 +1081,7 @@
     "addSpouse5e8688": "添加配偶",
     "deleteMembera045fb": "刪除成員",
     "pedigreeInternalIdBatchSampleInternalIda7394e": "家系內部編號,批次,樣本內部編號1,樣本內部編號2,樣本內部編號3,臨牀診斷,備註\nFAM-001,BATCH-2024-001,INT-001,INT-002,,遺傳性心肌病待查,家系備註\nFAM-002,BATCH-2024-002,INT-003,,,智力發育遲緩,",
-    "pedigreeImportTemplateCsvd709c6": "家系導入模板.csv",
+    "pedigreeImportTemplateCsvd709c6": "家系導入模板.xlsx",
     "pedigreeIdec299d": "家系編號",
     "systemId17b196": "系統編號",
     "sampleInternalIdf3c5b6": "樣本內部編號",
@@ -1129,6 +1131,8 @@
     "turnaroundDays": "{p0, plural, other {#天}}"
   },
   "tasks": {
+    "uploadTaskInformation": "上傳資訊",
+    "taskActions": "任務操作",
     "awaitingData85354f": "等待資料",
     "awaitingInterpretation0b7bdd": "待解讀",
     "awaitingOrganizationSlotcab640": "等待組織名額",
@@ -2836,6 +2840,63 @@
       "baselines_manage": "基線工作管理",
       "report_services_manage": "報告服務設定",
       "interpretation_reports_manage": "結果解讀與報告產生"
+    }
+  },
+  "sampleImport": {
+    "title": "批次匯入",
+    "start": "開始匯入 / 重試失敗列",
+    "instructions": "請使用「下載範本」取得的 XLSX 檔案（最多 1000 列、2 MB）。樣本編號由系統自動產生，範本首欄僅供參考；匯入以「內部編號」為準。成功列不會重複匯入；已有內部編號會報錯，不會覆寫。",
+    "file": "選擇樣本 XLSX 檔案",
+    "reading": "正在讀取檔案…",
+    "tooLarge": "檔案不能超過 2 MB。",
+    "tooMany": "每次最多匯入 1000 個樣本。",
+    "invalidCsv": "XLSX 格式錯誤，請檢查雙引號及分隔符號。",
+    "empty": "檔案中沒有可匯入的樣本。",
+    "headers": "請使用下載範本的六欄標題，支援簡體中文、繁體中文、英語和西班牙語。",
+    "columns": "欄數應與範本一致（六欄）。",
+    "internalId": "內部編號不能為空且不能超過 100 個字元。",
+    "duplicate": "檔案中內部編號重複。",
+    "gender": "性別無效，請填寫男、女、未知或 male、female、unknown。",
+    "type": "樣本類型無效，請使用全血、唾液、DNA、組織或其他。",
+    "batch": "批次不能超過 100 個字元。",
+    "fix": "請修正以下列並重新選擇檔案：",
+    "line": "第 {p0} 列",
+    "progress": "共 {p0} 列，成功 {p1} 列，失敗 {p2} 列",
+    "row": "列號",
+    "status": "匯入狀態",
+    "pending": "待匯入",
+    "success": "已匯入",
+    "error": "匯入失敗",
+    "exists": "內部編號已存在，未覆寫已有樣本。",
+    "invalidXlsx": "請選擇有效的 XLSX 檔案，使用下載的範本填寫後重試。"
+  },
+  "localDataImport": {
+    "title": "批次資訊上傳",
+    "start": "校驗並登錄 / 重試失敗列",
+    "file": "選擇資料路徑 XLSX 檔案",
+    "headers": "內部編號,read1的絕對路徑,read2的絕對路徑",
+    "headerError": "請使用範本三欄：內部編號、read1 的絕對路徑、read2 的絕對路徑。",
+    "instructions": "先將 FASTQ 資料複製到伺服器資料目錄：{p0}。XLSX 必須填寫 Octopus 容器內可見的絕對路徑，請留意主機與 Docker 掛載路徑映射；不要填寫 Windows 磁碟代號。最多 1000 列、2 MB；僅上傳路徑資訊，不上傳定序檔案。",
+    "absolute": "請填寫兩個容器內 Linux 絕對路徑，各不超過 1000 字元。",
+    "duplicate": "Read1 與 Read2 不能相同，檔案路徑也不能重複。",
+    "existing": "路徑已登錄，不會覆寫或重新分配 UUID。",
+    "validating": "正在完整讀取並校驗 FASTQ，大檔案可能耗時較長，請保持視窗開啟。",
+    "errors": {
+      "absolute_path": "必須使用容器內的絕對路徑。",
+      "path": "檔案不存在、不可讀或不在已配置的資料目錄內，請檢查 Docker 掛載。",
+      "format": "FASTQ 格式錯誤，僅支援四行記錄的 .fastq、.fq 及其 gzip 檔案。",
+      "empty": "檔案為空或沒有 FASTQ 記錄。",
+      "integrity": "檔案不完整、gzip 校驗失敗或 FASTQ 記錄截斷。",
+      "pair": "雙端檔案的記錄數或 read ID 不一致。",
+      "same_file": "Read1 與 Read2 指向同一檔案。",
+      "changed": "校驗期間檔案變更，請待複製完成後重試。",
+      "cancelled": "校驗已取消。",
+      "disabled": "僅適用於自部署本地儲存。",
+      "internal_id": "內部編號不能為空且不能超過 100 字元。",
+      "busy": "伺服器正在校驗其他檔案，請稍後重試。",
+      "duplicate": "路徑已登錄，未覆寫已有資料。",
+      "database": "登錄失敗，請稍後重試。",
+      "permission_denied": "權限已變更，無法登錄。"
     }
   }
 }

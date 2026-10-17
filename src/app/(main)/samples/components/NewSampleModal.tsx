@@ -1,4 +1,5 @@
 'use client';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -51,6 +52,7 @@ const sampleTypeOptions = [
 
 export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProps) {
   const t = useText();
+  const requiresIdentityConfirmation = getRuntimeBackendFlavor() === 'squid';
   const hpoTerms = useHpoTerms(isOpen);
   const [formData, setFormData] = React.useState<NewSampleFormData>({
     internalId: '',
@@ -84,7 +86,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     e.preventDefault();
     if (submitting || submittingRef.current) return;
     setSubmitError('');
-    if (!acknowledged) { setSubmitError(t('research.confirmRequired')); return; }
+    if (requiresIdentityConfirmation && !acknowledged) { setSubmitError(t('research.confirmRequired')); return; }
 
     if (!formData.internalId.trim()) {
       setSubmitError(t("samples.enterInternalIdbb323e"));
@@ -96,8 +98,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
     try {
       await onSubmit({
         ...formData,
-        identityPolicyAcknowledged: acknowledged,
-        identityPolicyVersion: "research-identity-v1",
+        ...(requiresIdentityConfirmation ? { identityPolicyAcknowledged: acknowledged, identityPolicyVersion: "research-identity-v1" } : {}),
         internalId: formData.internalId.trim(),
       });
       onClose();
@@ -150,7 +151,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             {t("admin.cancel4d0b46")}</Button>
-          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")} variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting || !acknowledged}>
+          <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")} variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting || (requiresIdentityConfirmation && !acknowledged)}>
             {t("samples.createSample6b316d")}</Button>
         </>
       }
@@ -163,7 +164,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
         )}
 
         <section>
-          <SampleIdentityNotice checked={acknowledged} onChange={setAcknowledged} />
+          {requiresIdentityConfirmation && <SampleIdentityNotice checked={acknowledged} onChange={setAcknowledged} />}
         <ModalSectionHeading
             icon={<UserRound className="h-4 w-4" />}
             title={t("samples.basicInformationb122f8")}

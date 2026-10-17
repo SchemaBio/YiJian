@@ -859,7 +859,9 @@
     "deleteThisReportServicefa34e4": "确定要删除此报告服务吗？",
     "thisCannotBeUndone7da32f": "此操作不可撤销",
     "viewPythonGoAndJavascriptExamples828970": "查看 Python、Go、JavaScript 接入示例",
-    "newServicesUseReportSnapshotVThe7b91bd": "报告快照 v2 在生成时固定关注变异、当前人工解读及质控信息。"
+    "newServicesUseReportSnapshotVThe7b91bd": "报告快照 v2 在生成时固定关注变异、当前人工解读及质控信息。",
+    "pipelineId": "流程 ID",
+    "baselineId": "基线 ID"
   },
   "samples": {
     "unknownSize4f6367": "大小未知",
@@ -964,7 +966,7 @@
     "sequencingDataMatchingDetails18b064": "测序数据匹配详情",
     "unableToReadSampledeec2e": "样本读取失败",
     "sampleIdInternalIdSexSampleType463874": "样本编号,内部编号,性别,样本类型,批次,临床诊断\nS001,INT-001,男,全血,BATCH-2024-001,遗传性心肌病待查",
-    "sampleImportTemplateCsvd79af8": "样本导入模板.csv",
+    "sampleImportTemplateCsvd79af8": "样本导入模板.xlsx",
     "sampleCreatedButTheServerReturnedNo63d533": "样本已创建，但服务器未返回样本 ID",
     "unableToDeleteSamplesRetryc2e2ec": "{p0} 个样本删除失败，请重试",
     "yearsb4e3bd": " 岁",
@@ -1079,7 +1081,7 @@
     "addSpouse5e8688": "添加配偶",
     "deleteMembera045fb": "删除成员",
     "pedigreeInternalIdBatchSampleInternalIda7394e": "家系内部编号,批次,样本内部编号1,样本内部编号2,样本内部编号3,临床诊断,备注\nFAM-001,BATCH-2024-001,INT-001,INT-002,,遗传性心肌病待查,家系备注\nFAM-002,BATCH-2024-002,INT-003,,,智力发育迟缓,",
-    "pedigreeImportTemplateCsvd709c6": "家系导入模板.csv",
+    "pedigreeImportTemplateCsvd709c6": "家系导入模板.xlsx",
     "pedigreeIdec299d": "家系编号",
     "systemId17b196": "系统编号",
     "sampleInternalIdf3c5b6": "样本内部编号",
@@ -1129,6 +1131,8 @@
     "turnaroundDays": "{p0, plural, other {#天}}"
   },
   "tasks": {
+    "uploadTaskInformation": "上传信息",
+    "taskActions": "任务操作",
     "awaitingData85354f": "等待数据",
     "awaitingInterpretation0b7bdd": "待解读",
     "awaitingOrganizationSlotcab640": "等待组织名额",
@@ -2836,6 +2840,63 @@
       "baselines_manage": "基线任务管理",
       "report_services_manage": "报告服务配置",
       "interpretation_reports_manage": "结果解读与报告生成"
+    }
+  },
+  "sampleImport": {
+    "title": "批量导入",
+    "start": "开始导入 / 重试失败行",
+    "instructions": "请使用“下载模板”获得的 XLSX 文件（最多 1000 行、2 MB）。样本编号由系统自动生成，模板首列仅作参考；导入以“内部编号”为准。成功行不会重复导入；已有内部编号将报错，不会覆盖。",
+    "file": "选择样本 XLSX 文件",
+    "reading": "正在读取文件…",
+    "tooLarge": "文件不能超过 2 MB。",
+    "tooMany": "每次最多导入 1000 个样本。",
+    "invalidCsv": "XLSX 格式错误，请检查双引号和分隔符。",
+    "empty": "文件中没有可导入的样本。",
+    "headers": "请使用下载模板的六列表头，支持简体中文、繁体中文、英语和西班牙语。",
+    "columns": "列数应与模板一致（六列）。",
+    "internalId": "内部编号不能为空且不能超过 100 字符。",
+    "duplicate": "文件中内部编号重复。",
+    "gender": "性别无效，请填写男、女、未知或 male、female、unknown。",
+    "type": "样本类型无效，请使用全血、唾液、DNA、组织或其他。",
+    "batch": "批次不能超过 100 字符。",
+    "fix": "请修正以下行并重新选择文件：",
+    "line": "第 {p0} 行",
+    "progress": "共 {p0} 行，成功 {p1} 行，失败 {p2} 行",
+    "row": "行号",
+    "status": "导入状态",
+    "pending": "待导入",
+    "success": "已导入",
+    "error": "导入失败",
+    "exists": "内部编号已存在，未覆盖已有样本。",
+    "invalidXlsx": "请选择有效的 XLSX 文件，使用下载的模板填写后重试。"
+  },
+  "localDataImport": {
+    "title": "批量信息上传",
+    "start": "校验并登记 / 重试失败行",
+    "file": "选择数据路径 XLSX 文件",
+    "headers": "内部编号,read1的绝对路径,read2的绝对路径",
+    "headerError": "请使用模板的三列：内部编号、read1 的绝对路径、read2 的绝对路径。",
+    "instructions": "先将 FASTQ 数据复制到服务器的数据目录：{p0}。XLSX 中必须填写 Octopus 容器内可见的绝对路径，请注意宿主机与 Docker 挂载路径的映射；不要填写 Windows 盘符路径。最多 1000 行、2 MB；这里只上传路径信息，不上传测序文件。",
+    "absolute": "请填写两个容器内 Linux 绝对路径，并控制在 1000 字符以内。",
+    "duplicate": "Read1、Read2 不能相同，文件路径也不能在本文件中重复。",
+    "existing": "路径已登记，不会覆盖或重新分配 UUID。",
+    "validating": "正在完整读取并校验 FASTQ 文件，大文件可能需要较长时间，请保持弹窗打开。",
+    "errors": {
+      "absolute_path": "必须使用容器内的绝对路径。",
+      "path": "文件不存在、不可读或不在已配置的数据目录内，请检查 Docker 挂载。",
+      "format": "FASTQ 格式错误，仅支持四行记录的 .fastq、.fq 及其 gzip 文件。",
+      "empty": "文件为空或没有 FASTQ 记录。",
+      "integrity": "文件不完整、gzip 校验失败或 FASTQ 记录截断。",
+      "pair": "双端文件的记录数或 read ID 不一致。",
+      "same_file": "Read1 和 Read2 指向同一个文件。",
+      "changed": "校验期间文件发生变化，请等待复制完成再重试。",
+      "cancelled": "校验已取消。",
+      "disabled": "此功能仅适用于自部署本地存储。",
+      "internal_id": "内部编号不能为空且不能超过 100 字符。",
+      "busy": "服务器正在校验其他文件，请稍后重试。",
+      "duplicate": "路径已登记，未覆盖已有数据。",
+      "database": "登记失败，请稍后重试。",
+      "permission_denied": "权限已变更，无法登记。"
     }
   }
 }

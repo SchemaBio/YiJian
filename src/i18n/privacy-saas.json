@@ -1,0 +1,286 @@
+{
+  "zh-CN": [
+    {
+      "id": "scope",
+      "title": "第一条 范围与处理角色",
+      "paragraphs": [
+        "本政策说明SchemaBio在提供贻鉴托管服务时如何处理个人信息，适用于平台访问者、个人科研用户、机构账户使用者及分析数据所涉及的个人。自行部署的实例由部署机构说明其处理安排；本政策适用于我们实际收到或处理的信息，不自动覆盖独立部署机构的全部活动。",
+        "对账户、安全、支持和业务管理信息，我们根据自身提供服务的需要确定处理目的与方式。对机构提交的样本、测序、临床和分析信息，我们通常按照机构的合法指示作为受托处理方提供服务；机构负责确定其适用法律下的合法处理依据、告知和必要授权。双方在具体活动中的角色由实际处理安排及协议确定。",
+        "阅读本政策或勾选登录页面不替代敏感个人信息、跨境提供或其他依法需要的单独同意，也不替代机构对受检者的告知与授权。本政策说明隐私安排，不替代机构与我们之间的服务约定。",
+        "SaaS 托管版仅用于科研（Research Use Only，RUO），执行从 FASTQ 到分析结果的科研工作流，提供质控、变异注释和结果浏览。ACMG 初评、HPO 关联及 AI 辅助仅用于整理证据和筛选研究候选，不提供个人疾病诊断、健康风险结论、治疗或用药建议；不得用于个人医疗决策。 开源版由用户自行部署、配置并决定使用场景和结果用途。部署者负责数据授权、安全保护、结果验证及适用的资质和监管要求；软件及输出不自动构成经过验证的医疗产品或诊断结论。本说明不新增开源许可的用途限制。 禁止在样本编号、备注、表型描述、文件名等字段提交真实姓名、身份证件、联系方式或其他身份信息。创建样本前须确认遵守要求；该确认不表示平台已自动验证匿名性。使用化名的遗传及表型数据仍可能属于敏感个人信息。"
+      ]
+    },
+    {
+      "id": "information",
+      "title": "第二条 信息类别、来源和目的",
+      "paragraphs": [
+        "我们可从使用者、其所属机构及服务运行过程中取得：账户和机构信息；样本编号、性别、年龄、诊断和 HPO 表型；上传文件、序列、变异、基因及人工解读；任务、操作人、时间、审计、计费、支持和访问记录。遗传、医疗健康及部分未成年人信息可能属于敏感个人信息或特殊类别数据；样本化名不保证匿名。",
+        "这些信息用于认证和权限管理、机构协作、执行分析、展示和保存结果、展示分析结果、处理支持请求、计费、安全防护、审计及履行法定义务。请提交完成所需功能必要的信息，避免在文件名或自由文本中添加无关身份信息。科研和模型训练等新的用途需要另行确定合法依据及必要告知、授权。",
+        "遗传与健康信息是完成所请求分析及解读的必要输入；不提供必要信息时，相关功能可能无法完成。泄露或不当使用可能影响个人隐私、家庭成员及其他权益。访问记录可能包含 IP 地址和浏览器信息。"
+      ]
+    },
+    {
+      "id": "basis",
+      "title": "第三条 处理依据与敏感数据",
+      "paragraphs": [
+        "账户和服务管理处理依适用法律，可基于履行合同、法定义务或法律允许的合法利益；合法利益限于必要运营和服务安全，并须考虑个人权益。依赖同意时，可依法撤回。机构提交的健康、遗传数据还须满足相应敏感数据条件。在中国，依适用法律履行必要性、告知、单独同意等要求；在 GDPR 适用时，同时满足第 6 条依据和第 9 条条件。伦理批准并非在所有情形下替代个人信息处理依据。"
+      ]
+    },
+    {
+      "id": "providers",
+      "title": "第四条 接收方、AI 与国际传输",
+      "paragraphs": [
+        "必要接收方包括机构内获授权人员，以及承担托管、存储、网络、安全、支持或 AI 功能的服务提供商。披露范围限于相应目的，并按适用法律以处理协议和访问控制管理；法律要求的披露按合法程序处理。公共注释数据库的引用与向外部接口提交数据是不同活动。我们不出售机构提交的分析数据，也不将其用于跨情境行为广告共享。",
+        "AI 辅助启用时，您提交或选取的诊断、表型、变异及相关上下文可能发送给该部署配置的模型服务提供商。供应商、服务区域、保存及再利用安排依实际配置和协议确定；使用前可联系管理员或我们核实。请勿在提示词中加入无关身份信息。AI 结果需专业人员核对，不作为对个人作出具有法律或类似重大影响决定的唯一依据；本政策不授权新增训练或独立研究用途。",
+        "中国境内与海外服务采用各自的部署安排。海外托管服务使用海外云厂商或腾讯云海外区域，不使用中国境内服务器。具体国家或地区、供应商及受托安排由所用实例的配置和服务约定确定；海外不等于欧盟境内。跨区域支持访问、网络代理、AI 调用或机构转发仍可能涉及国际传输。GDPR 适用时，依法采用适当跨境机制，例如适用的标准合同条款及必要评估和补充措施；中国数据出境按适用规定落实告知、单独同意、评估、合同或认证等要求及例外。人类遗传资源相关要求依实际活动另行判断，不能由阅读本政策替代。"
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "第五条 数据保留与删除策略",
+      "paragraphs": [
+        "SaaS 任务和样本分别从原始创建时间起保留 720 小时（30 天），以 UTC 计算。未分析、排队、运行、成功、失败或已软删除均适用；编辑、启动、重试、完成及关联其他记录不延长。到期立即停止列表、搜索、详情、操作和下载访问，无须等待物理清理完成。样本到期删除其记录、数据匹配关系及源自样本的家系复制内容并解除关联；关联任务仍按自己的期限保留必要分析快照。开源自行部署版本不启用此强制期限。",
+        "FASTQ 在上传后 7 天清理；BAM 在分析完成后 7 天清理，且不得超过任务期限。成功生成的 CNV 基线转存为独立资源，制作任务到期不影响其独立可用性；制作日志和中间文件仍随任务清理。BED、内置基线及共享参考资源适用各自资源策略。请在期限内依法下载所需资料，下载副本由持有人负责保存和销毁。",
+        "到期清理先停止执行及阻止迟到写入，再删除对象存储中全部执行尝试的结果、归档、日志、截图及旧报告文件，包括历史版本和未完成分片；清除服务器缓存、解读与操作记录和数据库关联数据。故障时保持不可访问的受限清理状态并持续重试，不将故障期间尚未完成的物理删除表述为已完成；数据销毁不可撤销。",
+        "任务、样本及其衍生文件不做额外灾备。备份仅包含账户、配置及不含分析内容的账务数据；包含到期数据的旧整库备份、卷快照、对象历史版本及其他副本须销毁，不设额外宽限期。账务及运营审计去除任务名称、样本信息、文件路径和分析内容，仅保留金额、时间、组织及必要的幂等对账标识。代码回滚不恢复已销毁数据。"
+      ]
+    },
+    {
+      "id": "security",
+      "title": "第六条 安全、Cookie 与浏览器处理",
+      "paragraphs": [
+        "我们采用与风险相称的认证、权限、传输保护、组织隔离和审计措施。没有系统能够保证绝对安全。发生安全事件时，按适用法律和合同履行调查、补救和通知义务。请保护账户并及时报告异常访问。",
+        "浏览器使用认证、CSRF 防护等必要 Cookie 及设置存储；部分查询和导出在浏览器内计算，不改变此前获取数据的服务端处理。新增非必要分析或广告技术前应更新告知及适用的选择机制。"
+      ]
+    },
+    {
+      "id": "rights",
+      "title": "第七条 权利、请求与未成年人",
+      "paragraphs": [
+        "依适用法律及其例外，个人可请求访问或复制、更正、删除、限制处理、反对处理、可携带副本，以及撤回同意；撤回不影响此前合法处理。可通过本政策列明的隐私邮箱提出请求，我们适度验证身份，按法定期限回复，不因依法行使权利而歧视。机构控制的样本数据请求通常需由机构处理，我们依约协助；法律保留要求和他人权利可能限制部分请求。",
+        "中国法律适用时，个人可要求解释处理规则，并依法投诉或寻求救济。GDPR 适用时，可向有管辖权的监管机构投诉；请求一般在一个月内答复，符合法定条件的延期会说明原因。加州居民在 CCPA 适用时享有知情、访问、更正、删除、适用的出售或共享退出及敏感信息限制权利，并可按规定委托代理人。其他州居民的适用权利或申诉亦可通过隐私邮箱提出。代表、数据保护联系人及具体传输保障信息可通过该邮箱咨询。依法需要的独立消费者健康数据政策和退出机制须随相关服务提供。",
+        "托管服务面向个人科研用户、科研机构及获授权人员，仅提供科研分析与注释；个人用户须拥有提交数据的合法权限，不得用于个人医疗决策。处理未成年人数据须按适用法律取得必要授权、实施保护并遵守机构伦理要求；在中国涉及不满十四周岁儿童个人信息时适用专门规则。处理美国 HIPAA 范围内的信息时须事先落实适用的 BAA 和保护措施；本政策不是 HIPAA 合规证明。"
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "第八条 变更与联系",
+      "paragraphs": [
+        "我们标注更新日期和版本，并通过适当方式通知重大变更。处理目的、方式或类别发生依法需要新授权的变更时，履行相应程序，不能仅以继续使用视作同意。本政策不排除适用地区的强制性隐私权和救济。"
+      ]
+    }
+  ],
+  "zh-Hant": [
+    {
+      "id": "scope",
+      "title": "第一條 範圍與處理角色",
+      "paragraphs": [
+        "本政策說明SchemaBio在提供貽鑑託管服務時如何處理個人資訊，適用於平臺訪問者、個人科研使用者、機構帳戶使用者及分析資料所涉及的個人。自行部署的實例由部署機構說明其處理安排；本政策適用於我們實際收到或處理的資訊，不自動覆蓋獨立部署機構的全部活動。",
+        "對帳戶、安全、支持和業務管理資訊，我們根據自身提供服務的需要確定處理目的與方式。對機構提交的樣本、測序、臨牀和分析資訊，我們通常按照機構的合法指示作爲受託處理方提供服務；機構負責確定其適用法律下的合法處理依據、告知和必要授權。雙方在具體活動中的角色由實際處理安排及協議確定。",
+        "閱讀本政策或勾選登錄頁面不替代敏感個人資訊、跨境提供或其他依法需要的單獨同意，也不替代機構對受檢者的告知與授權。本政策說明隱私安排，不替代機構與我們之間的服務約定。",
+        "SaaS 託管版僅用於科研（Research Use Only，RUO），執行從 FASTQ 到分析結果的科研工作流程，提供品管、變異註釋與結果瀏覽。ACMG 初評、HPO 關聯及 AI 輔助僅用於整理證據與篩選研究候選，不提供個人疾病診斷、健康風險結論、治療或用藥建議；不得用於個人醫療決策。 開源版由使用者自行部署、配置並決定使用場景與結果用途。部署者負責資料授權、安全保護、結果驗證及適用的資格與監管要求；軟體及輸出不自動構成經過驗證的醫療產品或診斷結論。本說明不新增開源授權的用途限制。 禁止在樣本編號、備註、表型描述、檔案名稱等欄位提交真實姓名、身分證件、聯絡方式或其他身分資訊。建立樣本前須確認遵守要求；該確認不表示平台已自動驗證匿名性。使用化名的遺傳及表型資料仍可能屬於敏感個人資訊。"
+      ]
+    },
+    {
+      "id": "information",
+      "title": "第二條 資訊類別、來源和目的",
+      "paragraphs": [
+        "我們可從使用者、其所屬機構及服務運行過程中取得：帳戶和機構資訊；樣本編號、性別、年齡、診斷和 HPO 表型；上傳檔案、序列、變異、基因及人工解讀；任務、操作人、時間、審計、計費、支持和訪問記錄。遺傳、醫療健康及部分未成年人資訊可能屬於敏感個人資訊或特殊類別資料；樣本化名不保證匿名。",
+        "這些資訊用於認證和權限管理、機構協作、執行分析、展示和儲存結果、生成報告、處理支持請求、計費、安全防護、審計及履行法定義務。請提交完成所需功能必要的資訊，避免在檔案名或自由文本中添加無關身份資訊。科研和模型訓練等新的用途需要另行確定合法依據及必要告知、授權。",
+        "遺傳與健康資訊是完成所請求分析及解讀的必要輸入；不提供必要資訊時，相關功能可能無法完成。泄露或不當使用可能影響個人隱私、家庭成員及其他權益。訪問記錄可能包含 IP 地址和瀏覽器資訊。"
+      ]
+    },
+    {
+      "id": "basis",
+      "title": "第三條 處理依據與敏感資料",
+      "paragraphs": [
+        "帳戶和服務管理處理依適用法律，可基於履行合同、法定義務或法律允許的合法利益；合法利益限於必要運營和服務安全，並須考慮個人權益。依賴同意時，可依法撤回。機構提交的健康、遺傳資料還須滿足相應敏感資料條件。在中國，依適用法律履行必要性、告知、單獨同意等要求；在 GDPR 適用時，同時滿足第 6 條依據和第 9 條條件。倫理批准並非在所有情形下替代個人資訊處理依據。"
+      ]
+    },
+    {
+      "id": "providers",
+      "title": "第四條 接收方、AI 與國際傳輸",
+      "paragraphs": [
+        "必要接收方包括機構內獲授權人員，以及承擔託管、存儲、網絡、安全、支持或 AI 功能的服務提供商。披露範圍限於相應目的，並按適用法律以處理協議和訪問控制管理；法律要求的披露按合法程序處理。公共註釋資料庫的引用與向外部接口提交資料是不同活動。我們不出售機構提交的分析資料，也不將其用於跨情境行爲廣告共享。",
+        "AI 輔助啓用時，您提交或選取的診斷、表型、變異及相關上下文可能發送給該部署配置的模型服務提供商。供應商、服務區域、儲存及再利用安排依實際配置和協議確定；使用前可聯繫管理員或我們覈實。請勿在提示詞中加入無關身份資訊。AI 結果需專業人員覈對，不作爲對個人作出具有法律或類似重大影響決定的唯一依據；本政策不授權新增訓練或獨立研究用途。",
+        "中國境內與海外服務採用各自的部署安排。海外託管服務使用海外雲廠商或騰訊雲海外區域，不使用中國境內服務器。具體國家或地區、供應商及受託安排由所用實例的配置和服務約定確定；海外不等於歐盟境內。跨區域支持訪問、網絡代理、AI 調用或機構轉發仍可能涉及國際傳輸。GDPR 適用時，依法採用適當跨境機制，例如適用的標準合同條款及必要評估和補充措施；中國資料出境按適用規定落實告知、單獨同意、評估、合同或認證等要求及例外。人類遺傳資源相關要求依實際活動另行判斷，不能由閱讀本政策替代。"
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "第五條 資料保留與刪除策略",
+      "paragraphs": [
+        "SaaS 任務和樣本分別從原始建立時間起保留 720 小時（30 天），以 UTC 計算。未分析、排隊、執行中、成功、失敗或已軟刪除均適用；編輯、啟動、重試、完成及關聯其他記錄不延長。到期立即停止清單、搜尋、詳情、操作和下載存取，無須等待實體清理完成。樣本到期刪除其記錄、資料匹配關係及源自樣本的家系複製內容並解除關聯；關聯任務仍按自己的期限保留必要分析快照。開源自行部署版本不啟用此強制期限。",
+        "FASTQ 在上傳後 7 天清理；BAM 在分析完成後 7 天清理，且不得超過任務期限。成功產生的 CNV 基線轉存為獨立資源，製作任務到期不影響其獨立可用性；製作日誌和中間檔案仍隨任務清理。BED、內建基線及共用參考資源適用各自資源策略。請在期限內依法下載所需資料，下載副本由持有人負責保存和銷毀。",
+        "到期清理先停止執行及阻止延遲寫入，再刪除物件儲存中全部執行嘗試的結果、封存、日誌、截圖及舊報告檔案，包括歷史版本和未完成分片；清除伺服器快取、解讀與操作記錄和資料庫關聯資料。故障時保持不可存取的受限清理狀態並持續重試，不將故障期間尚未完成的實體刪除表述為已完成；資料銷毀不可撤銷。",
+        "任務、樣本及其衍生檔案不做額外災備。備份僅包含帳戶、設定及不含分析內容的帳務資料；包含到期資料的舊整庫備份、磁碟快照、物件歷史版本及其他副本須銷毀，不設額外寬限期。帳務及營運稽核去除任務名稱、樣本資訊、檔案路徑和分析內容，僅保留金額、時間、組織及必要的冪等對帳識別碼。程式碼回復不恢復已銷毀資料。"
+      ]
+    },
+    {
+      "id": "security",
+      "title": "第六條 安全、Cookie 與瀏覽器處理",
+      "paragraphs": [
+        "我們採用與風險相稱的認證、權限、傳輸保護、組織隔離和審計措施。沒有系統能夠保證絕對安全。發生安全事件時，按適用法律和合同履行調查、補救和通知義務。請保護帳戶並及時報告異常訪問。",
+        "瀏覽器使用認證、CSRF 防護等必要 Cookie 及設定存儲；部分查詢和導出在瀏覽器內計算，不改變此前獲取資料的服務端處理。新增非必要分析或廣告技術前應更新告知及適用的選擇機制。"
+      ]
+    },
+    {
+      "id": "rights",
+      "title": "第七條 權利、請求與未成年人",
+      "paragraphs": [
+        "依適用法律及其例外，個人可請求訪問或複製、更正、刪除、限制處理、反對處理、可攜帶副本，以及撤回同意；撤回不影響此前合法處理。可通過本政策列明的隱私郵箱提出請求，我們適度驗證身份，按法定期限回覆，不因依法行使權利而歧視。機構控制的樣本資料請求通常需由機構處理，我們依約協助；法律保留要求和他人權利可能限制部分請求。",
+        "中國法律適用時，個人可要求解釋處理規則，並依法投訴或尋求救濟。GDPR 適用時，可向有管轄權的監管機構投訴；請求一般在一個月內答覆，符合法定條件的延期會說明原因。加州居民在 CCPA 適用時享有知情、訪問、更正、刪除、適用的出售或共享退出及敏感資訊限制權利，並可按規定委託代理人。其他州居民的適用權利或申訴亦可通過隱私郵箱提出。代表、資料保護聯繫人及具體傳輸保障資訊可通過該郵箱諮詢。依法需要的獨立消費者健康資料政策和退出機制須隨相關服務提供。",
+        "託管服務面向個人科研使用者、科研機構及獲授權人員，僅提供科研分析與註釋；個人使用者須具備提交資料的合法權限，不得用於個人醫療決策。處理未成年人資料須按適用法律取得必要授權、實施保護並遵守機構倫理要求；在中國涉及不滿十四周歲兒童個人資訊時適用專門規則。處理美國 HIPAA 範圍內的資訊時須事先落實適用的 BAA 和保護措施；本政策不是 HIPAA 合規證明。"
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "第八條 變更與聯繫",
+      "paragraphs": [
+        "我們標註更新日期和版本，並通過適當方式通知重大變更。處理目的、方式或類別發生依法需要新授權的變更時，履行相應程序，不能僅以繼續使用視作同意。本政策不排除適用地區的強制性隱私權和救濟。"
+      ]
+    }
+  ],
+  "en": [
+    {
+      "id": "scope",
+      "title": "1. Scope and roles",
+      "paragraphs": [
+        "This notice describes how SchemaBio processes personal information when providing the hosted YiJian service. It covers visitors, individual research users, institutional account users, and individuals whose information is included in analysis data. Independently deployed instances are operated by their deploying institutions; this notice covers information we actually receive or process.",
+        "We determine the purposes and means of processing account, security, support and business administration information for our service. For sample, sequencing, clinical and analysis information submitted by an institution, we generally act on that institution's lawful instructions as a processor. The institution determines its lawful basis, notices and required authorizations. Actual activities and agreements determine the parties' roles.",
+        "Reading this notice or checking a login box does not replace separate consent or other authorization required for sensitive information, international transfers or other activities. This policy describes privacy arrangements and does not replace the institution’s service agreement with us.",
+        "The hosted SaaS is for Research Use Only (RUO) and runs research workflows from FASTQ to results, with quality control, variant annotation and result browsing. ACMG preliminary assessments, HPO associations and AI assistance organize evidence and prioritize research candidates. They do not provide personal diagnoses, health-risk conclusions, treatment or medication advice, and must not be used for personal medical decisions. Users deploy and configure the open-source edition and decide its use cases and how results are used. Deployers are responsible for data authorization, security, result validation and applicable qualification and regulatory requirements. The software and its outputs do not automatically constitute a validated medical product or diagnosis. This notice adds no use restrictions to the open-source license. Do not submit real names, identity documents, contact details or other identifying information in sample IDs, notes, phenotype descriptions, filenames or other fields. Sample creation requires an acknowledgment; this does not mean the platform has automatically verified anonymity. Genetic and phenotype data may remain sensitive personal information even when pseudonyms are used."
+      ]
+    },
+    {
+      "id": "information",
+      "title": "2. Information, sources and purposes",
+      "paragraphs": [
+        "We may receive from users, their institutions and service operations: account and organization details; sample identifiers, sex, age, diagnoses and HPO terms; uploaded files, sequences, variants, genes, reports and interpretations; and task, operator, timestamp, audit, billing, support and access records. Genetic and health information, and certain children's information, may be sensitive or special-category data. Pseudonymous sample identifiers do not guarantee anonymity.",
+        "We use this information for authentication, access control, collaboration, analysis, result storage and display, reports, support, billing, security, auditing and legal obligations. Submit only what the requested function needs and avoid unnecessary identifying details in filenames or free text. New research or model-training purposes require their own lawful basis and any required notices and authorizations.",
+        "Genetic and health information is necessary for the requested analysis and interpretation; missing necessary inputs may prevent those functions. Disclosure or misuse may affect privacy, family members and other rights. Access records may include IP addresses and browser details."
+      ]
+    },
+    {
+      "id": "basis",
+      "title": "3. Legal bases and sensitive information",
+      "paragraphs": [
+        "Under applicable law, account and service administration may rely on contract performance, legal obligations or permitted legitimate interests limited to necessary operations and service security, taking individual rights into account. Where processing relies on consent, withdrawal is available as required by law. Institutional health and genetic data also requires an applicable sensitive-data condition. Chinese requirements include necessity, notice and separate consent where applicable. Where GDPR applies, both an Article 6 basis and an Article 9 condition are required. Ethics approval does not universally replace a data-protection legal basis."
+      ]
+    },
+    {
+      "id": "providers",
+      "title": "4. Recipients, AI and international transfers",
+      "paragraphs": [
+        "Necessary recipients include authorized institutional personnel and providers of hosting, storage, networking, security, support or AI functions. Disclosures are limited to relevant purposes and managed through applicable processing agreements and access controls. Legally required disclosures follow lawful procedures. Referencing public annotation databases differs from transmitting information to an external API. We do not sell institutional analysis data or share it for cross-context behavioral advertising.",
+        "When AI assistance is enabled, diagnoses, phenotypes, variants and related context you submit or select may be sent to the model provider configured for the deployment. Provider, service region, retention and reuse depend on actual configuration and agreements; contact your administrator or us before use to verify them. Avoid unnecessary identifiers in prompts. AI outputs require professional review and are not the sole basis for decisions with legal or similarly significant effects on individuals. This policy does not authorize new training or independent research purposes.",
+        "Mainland China and overseas services use separate deployment arrangements. Overseas hosting uses overseas cloud providers or Tencent Cloud’s overseas regions and does not use servers in mainland China. Specific countries or regions, providers and processing arrangements depend on instance configuration and service agreements; overseas does not necessarily mean within the EU. Cross-region support, network intermediaries, AI calls and institutional onward disclosures may still involve international transfers. Where GDPR applies, appropriate transfer mechanisms apply, such as applicable Standard Contractual Clauses with necessary assessments and supplementary measures. Transfers from China follow applicable notice, separate consent, assessment, contractual or certification requirements and exemptions. Human genetic resources requirements depend on actual activities and are not replaced by reading this policy."
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "5. Retention and deletion",
+      "paragraphs": [
+        "SaaS tasks and samples each expire 720 hours (30 days) after their original creation time, calculated in UTC. This applies to unanalyzed, queued, running, successful, failed and soft-deleted records. Editing, starting, retrying, finishing or linking records does not extend the period. Lists, searches, details, operations and downloads stop at expiry without waiting for physical deletion. Sample records, data matches and sample-derived family copies are erased and links removed; linked tasks retain necessary analysis snapshots until their own expiry. This mandatory period does not apply to independently deployed open-source instances.",
+        "FASTQ files are cleaned up 7 days after upload. BAM files are cleaned up 7 days after completion and never later than task expiry. Successful CNV baselines are moved to independent resources and remain usable after the creation task expires; creation logs and intermediate files still expire with that task. BED, built-in baselines and shared references follow their own resource policies. Download required information lawfully before expiry; holders are responsible for retaining and destroying downloaded copies.",
+        "Expiry cleanup first stops execution and prevents late writes, then removes results, archives, logs, screenshots and legacy report files for every execution attempt from object storage, including historical versions and unfinished multipart uploads. Server caches, interpretation and operation records, and related database data are erased. Failures leave an inaccessible restricted cleanup state and are retried. We do not claim physical deletion has completed while an outage prevents it. Destruction is irreversible.",
+        "Tasks, samples and derived files have no additional disaster backups. Backups contain only accounts, configuration and accounting data without analysis content. Old full-database backups, volume snapshots, object versions and other copies containing expired data must be destroyed without an additional grace period. Task names, sample information, file paths and analysis content are removed from accounting and operational audits; only amounts, times, organizations and necessary idempotent reconciliation identifiers remain. Rolling back code does not restore destroyed data."
+      ]
+    },
+    {
+      "id": "security",
+      "title": "6. Security, cookies and browser processing",
+      "paragraphs": [
+        "We use risk-appropriate authentication, permissions, transport protection, organization separation and auditing. No system guarantees absolute security. Security incidents are investigated, mitigated and notified as required by applicable law and contracts. Protect your account and report unusual access promptly.",
+        "The browser uses necessary authentication and CSRF-protection cookies and settings storage. Some queries and exports run in the browser; this does not remove the server processing involved in obtaining the data. Introducing non-essential analytics or advertising technology requires updated disclosures and applicable choices."
+      ]
+    },
+    {
+      "id": "rights",
+      "title": "7. Rights, requests and children",
+      "paragraphs": [
+        "Subject to applicable law and exceptions, individuals may request access or copies, correction, deletion, restriction, objection, portability and withdrawal of consent. Withdrawal does not affect earlier lawful processing. Requests may be submitted through the privacy email listed in this policy. We verify identity proportionately, respond within applicable statutory periods and do not discriminate for exercising lawful rights. Institutions generally handle requests concerning data they control, with our contractual assistance. Legal retention duties and others' rights may limit requests.",
+        "Where Chinese law applies, individuals may request explanations of processing rules and pursue complaints or lawful remedies. Where GDPR applies, individuals may complain to a competent supervisory authority; requests are generally answered within one month, with reasons given for lawful extensions. Where CCPA applies, California residents have applicable rights to information, access, correction, deletion, sale or sharing opt-outs and sensitive-information limits, and may use authorized agents as permitted. Other applicable state rights and appeals may also be submitted through the privacy email. Contact that email for representative, data-protection contact and specific transfer safeguard information. Any legally required distinct consumer health data policy and opt-out mechanisms must accompany the relevant service.",
+        "The hosted service serves individual research users, research institutions and authorized users, solely for research analysis and annotation. Individual users must have lawful authorization to submit the data and must not use the service for personal medical decisions. Processing children's data requires applicable authorizations, protections and institutional ethics requirements, including special rules for children under fourteen in China. Before processing information subject to HIPAA, applicable Business Associate Agreements and safeguards must be in place. This notice is not a HIPAA compliance certification."
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "8. Changes and contact",
+      "paragraphs": [
+        "We state the update date and version and communicate material changes appropriately. Changes to purposes, methods or categories requiring renewed notice or authorization follow the applicable procedure; continued use alone does not imply that authorization. Mandatory local privacy rights and remedies are not excluded."
+      ]
+    }
+  ],
+  "es-419": [
+    {
+      "id": "scope",
+      "title": "1. Alcance y funciones",
+      "paragraphs": [
+        "Esta política explica cómo SchemaBio trata los datos personales al prestar el servicio alojado de YiJian. Se aplica a visitantes de la plataforma, usuarios individuales de investigación, usuarios de cuentas institucionales y personas cuyos datos se incluyen en los análisis. Las instituciones que despliegan instancias independientes deben informar sobre sus propias prácticas; esta política se aplica a los datos que efectivamente recibimos o tratamos y no cubre automáticamente todas las actividades de esas instituciones.",
+        "Determinamos los fines y medios del tratamiento de los datos de cuentas, seguridad, soporte y administración comercial según las necesidades de nuestro servicio. Para los datos de muestras, secuenciación, información clínica y análisis enviados por una institución, generalmente actuamos como encargados del tratamiento conforme a sus instrucciones lícitas. La institución determina la base jurídica, los avisos y las autorizaciones necesarios según la legislación aplicable. Las funciones de ambas partes dependen de las actividades y los acuerdos concretos.",
+        "Leer esta política o marcar una casilla en el inicio de sesión no sustituye el consentimiento separado ni otras autorizaciones exigidas para datos sensibles, transferencias internacionales u otras actividades, ni la información y autorización que la institución debe obtener de la persona examinada. Esta política describe las prácticas de privacidad y no sustituye el acuerdo de servicio entre la institución y nosotros.",
+        "El SaaS alojado es exclusivamente para investigación (Research Use Only, RUO) y ejecuta flujos de investigación de FASTQ a resultados, con control de calidad, anotación de variantes y consulta de resultados. Las evaluaciones preliminares ACMG, las asociaciones HPO y la asistencia de IA organizan evidencia y priorizan candidatos de investigación. No ofrecen diagnósticos personales, conclusiones sobre riesgos de salud ni recomendaciones de tratamiento o medicación, y no deben usarse para decisiones médicas personales. Los usuarios despliegan y configuran la edición de código abierto y deciden sus usos y el destino de los resultados. Quien la despliega es responsable de la autorización de datos, la seguridad, la validación de resultados y los requisitos profesionales y regulatorios aplicables. El software y sus resultados no constituyen automáticamente un producto médico validado ni un diagnóstico. Este aviso no agrega restricciones de uso a la licencia de código abierto. No envíe nombres reales, documentos de identidad, datos de contacto ni otros identificadores en los códigos de muestra, notas, descripciones fenotípicas, nombres de archivo u otros campos. Crear una muestra requiere una confirmación; esto no significa que la plataforma haya verificado automáticamente el anonimato. Los datos genéticos y fenotípicos pueden seguir siendo información personal sensible aunque se utilicen seudónimos."
+      ]
+    },
+    {
+      "id": "information",
+      "title": "2. Categorías de datos, fuentes y fines",
+      "paragraphs": [
+        "Podemos recibir de los usuarios, sus instituciones y el funcionamiento del servicio: datos de cuentas e instituciones; identificadores de muestras, sexo, edad, diagnósticos y términos HPO; archivos cargados, secuencias, variantes, genes, informes e interpretaciones; y registros de tareas, operadores, fechas, auditoría, facturación, soporte y acceso. Los datos genéticos y de salud, así como ciertos datos de menores, pueden ser sensibles o pertenecer a categorías especiales. Usar seudónimos para las muestras no garantiza el anonimato.",
+        "Usamos estos datos para autenticación, control de acceso, colaboración institucional, análisis, visualización y almacenamiento de resultados, elaboración de informes, soporte, facturación, seguridad, auditoría y cumplimiento de obligaciones legales. Envíe solo los datos necesarios para la función solicitada y evite identificadores innecesarios en nombres de archivos o texto libre. Los nuevos fines de investigación o entrenamiento de modelos requieren una base jurídica propia y los avisos y autorizaciones necesarios.",
+        "Los datos genéticos y de salud son necesarios para los análisis y las interpretaciones solicitados; la ausencia de datos necesarios puede impedir completar esas funciones. Su divulgación o uso indebido puede afectar la privacidad, a familiares y otros derechos. Los registros de acceso pueden incluir direcciones IP e información del navegador."
+      ]
+    },
+    {
+      "id": "basis",
+      "title": "3. Bases jurídicas y datos sensibles",
+      "paragraphs": [
+        "Conforme a la legislación aplicable, la administración de cuentas y servicios puede basarse en la ejecución de un contrato, obligaciones legales o intereses legítimos permitidos, limitados a las operaciones necesarias y la seguridad del servicio, teniendo en cuenta los derechos individuales. Cuando el tratamiento se basa en el consentimiento, este puede retirarse conforme a la ley. Los datos genéticos y de salud enviados por instituciones también deben cumplir las condiciones aplicables a los datos sensibles. En China se deben cumplir los requisitos de necesidad, información y consentimiento separado cuando corresponda. Cuando se aplica el GDPR, se requiere tanto una base del artículo 6 como una condición del artículo 9. La aprobación ética no sustituye en todos los casos una base jurídica para el tratamiento de datos personales."
+      ]
+    },
+    {
+      "id": "providers",
+      "title": "4. Destinatarios, IA y transferencias internacionales",
+      "paragraphs": [
+        "Los destinatarios necesarios incluyen al personal institucional autorizado y a proveedores de alojamiento, almacenamiento, redes, seguridad, soporte o funciones de IA. Las divulgaciones se limitan a los fines correspondientes y se gestionan mediante acuerdos de tratamiento y controles de acceso conforme a la legislación aplicable. Las divulgaciones exigidas por ley siguen los procedimientos legales. Consultar bases públicas de anotaciones es una actividad distinta de transmitir datos a una API externa. No vendemos los datos de análisis institucionales ni los compartimos para publicidad conductual entre contextos.",
+        "Cuando se habilita la asistencia de IA, los diagnósticos, fenotipos, variantes y el contexto relacionado que envíe o seleccione pueden transmitirse al proveedor del modelo configurado para el despliegue. El proveedor, la región del servicio y las condiciones de conservación y reutilización dependen de la configuración y los acuerdos reales; consulte a su administrador o a nosotros antes de usar la función. Evite incluir identificadores innecesarios en las instrucciones. Los resultados de IA requieren revisión profesional y no deben ser la única base de decisiones con efectos jurídicos o de importancia similar para las personas. Esta política no autoriza nuevos fines de entrenamiento ni de investigación independiente.",
+        "Los servicios de China continental y del extranjero usan despliegues separados. El alojamiento en el extranjero usa proveedores de nube extranjeros o regiones extranjeras de Tencent Cloud y no utiliza servidores en China continental. Los países o regiones, proveedores y acuerdos de tratamiento específicos dependen de la configuración de la instancia y del acuerdo de servicio; estar en el extranjero no significa necesariamente estar dentro de la Unión Europea. El soporte entre regiones, los intermediarios de red, las llamadas a IA o las transferencias posteriores de instituciones pueden implicar transferencias internacionales. Cuando se aplica el GDPR, se usan los mecanismos de transferencia correspondientes, como las cláusulas contractuales tipo aplicables, con las evaluaciones y medidas complementarias necesarias. Las transferencias desde China cumplen los requisitos y excepciones aplicables de información, consentimiento separado, evaluación, contratos o certificación. Los requisitos sobre recursos genéticos humanos se determinan según las actividades concretas y no se sustituyen por la lectura de esta política."
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "5. Conservación y eliminación",
+      "paragraphs": [
+        "Las tareas y muestras de SaaS vencen por separado 720 horas (30 días) después de su creación original, calculadas en UTC. Esto incluye registros sin análisis, en cola, en ejecución, exitosos, fallidos y eliminados de forma lógica. Editar, iniciar, reintentar, completar o vincular registros no amplía el plazo. Al vencer, se bloquean listas, búsquedas, detalles, operaciones y descargas sin esperar la eliminación física. Se borran la muestra, sus coincidencias de datos y las copias familiares derivadas de ella, y se desvinculan las relaciones; las tareas vinculadas conservan las instantáneas necesarias hasta su propio vencimiento. Este plazo obligatorio no se aplica a instalaciones independientes de código abierto.",
+        "Los archivos FASTQ se eliminan 7 días después de la carga. Los BAM se eliminan 7 días después de completar el análisis, sin superar el vencimiento de la tarea. Las bases CNV generadas con éxito se trasladan a recursos independientes y siguen disponibles al vencer la tarea de creación; sus registros y archivos intermedios vencen con la tarea. BED, bases integradas y referencias compartidas siguen sus propias políticas. Descargue legalmente lo necesario antes del vencimiento; quien conserve copias descargadas es responsable de su conservación y destrucción.",
+        "La limpieza detiene primero las ejecuciones y evita escrituras tardías; luego elimina los resultados, archivos, registros, capturas e informes antiguos de todos los intentos de ejecución en el almacenamiento de objetos, incluidas versiones históricas y cargas multiparte incompletas. También borra cachés del servidor, interpretaciones, operaciones y datos relacionados de la base de datos. Los fallos mantienen un estado de limpieza restringido e inaccesible y se reintentan. No afirmamos que la eliminación física haya terminado mientras una falla la impida. La destrucción es irreversible.",
+        "Las tareas, muestras y archivos derivados no tienen respaldos adicionales para recuperación ante desastres. Los respaldos solo contienen cuentas, configuración y datos contables sin contenido de análisis. Deben destruirse sin período adicional de gracia los respaldos antiguos de toda la base, instantáneas de volúmenes, versiones de objetos y otras copias que contengan datos vencidos. Se retiran nombres de tareas, información de muestras, rutas y contenido de análisis de la contabilidad y auditoría operativa; solo quedan importes, fechas, organizaciones e identificadores necesarios para conciliación idempotente. Revertir el código no restaura datos destruidos."
+      ]
+    },
+    {
+      "id": "security",
+      "title": "6. Seguridad, cookies y tratamiento en el navegador",
+      "paragraphs": [
+        "Aplicamos medidas de autenticación, permisos, protección de las comunicaciones, separación entre instituciones y auditoría proporcionales al riesgo. Ningún sistema garantiza una seguridad absoluta. Los incidentes de seguridad se investigan, mitigan y notifican según la legislación aplicable y los contratos. Proteja su cuenta e informe de inmediato cualquier acceso inusual.",
+        "El navegador utiliza cookies necesarias de autenticación y protección CSRF, además de almacenamiento de preferencias. Algunas consultas y exportaciones se calculan en el navegador; esto no elimina el tratamiento del servidor necesario para obtener los datos. Antes de introducir tecnologías no esenciales de análisis o publicidad, se deben actualizar los avisos y los mecanismos de elección aplicables."
+      ]
+    },
+    {
+      "id": "rights",
+      "title": "7. Derechos, solicitudes y menores",
+      "paragraphs": [
+        "Según la legislación aplicable y sus excepciones, las personas pueden solicitar acceso o copias, rectificación, eliminación, limitación del tratamiento, oposición, portabilidad y retiro del consentimiento. Retirarlo no afecta el tratamiento lícito anterior. Las solicitudes pueden enviarse al correo de privacidad indicado en esta política. Verificamos la identidad de forma proporcional, respondemos dentro de los plazos legales y no discriminamos por el ejercicio legítimo de derechos. Las instituciones generalmente gestionan las solicitudes sobre los datos de muestras que controlan, con nuestra asistencia contractual. Las obligaciones de conservación y los derechos de otras personas pueden limitar algunas solicitudes.",
+        "Cuando se aplica la legislación china, las personas pueden solicitar explicaciones de las reglas de tratamiento, presentar quejas o recurrir a remedios legales. Cuando se aplica el GDPR, pueden presentar una queja ante la autoridad de control competente; las solicitudes generalmente se responden en un mes y se explican las prórrogas permitidas por ley. Cuando se aplica la CCPA, los residentes de California tienen los derechos correspondientes de información, acceso, rectificación, eliminación, exclusión de venta o intercambio y limitación del uso de datos sensibles, y pueden designar representantes autorizados según lo permitido. Los derechos y apelaciones aplicables en otros estados también pueden solicitarse por el correo de privacidad. Ese correo ofrece información sobre representantes, contactos de protección de datos y garantías de transferencia específicas. Las políticas independientes de datos de salud de consumidores y los mecanismos de exclusión exigidos por ley deben acompañar al servicio correspondiente.",
+        "El servicio alojado está dirigido a usuarios individuales de investigación, instituciones de investigación y personas autorizadas, exclusivamente para análisis y anotación de investigación. Los usuarios individuales deben tener autorización legítima para enviar los datos y no deben usar el servicio para decisiones médicas personales. El tratamiento de datos de menores requiere las autorizaciones y protecciones previstas por la legislación aplicable y el cumplimiento de los requisitos éticos institucionales; en China se aplican reglas especiales a los datos personales de menores de catorce años. Antes de tratar información sujeta a HIPAA en Estados Unidos, deben establecerse los acuerdos con asociados comerciales (BAA) y las salvaguardas correspondientes. Esta política no es una certificación de cumplimiento de HIPAA."
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "8. Cambios y contacto",
+      "paragraphs": [
+        "Indicamos la fecha de actualización y la versión, y comunicamos los cambios importantes por medios adecuados. Los cambios en fines, métodos o categorías que exijan nuevos avisos o autorizaciones siguen el procedimiento aplicable; el uso continuado por sí solo no implica autorización. Esta política no excluye los derechos y recursos de privacidad obligatorios de la jurisdicción aplicable."
+      ]
+    }
+  ]
+}

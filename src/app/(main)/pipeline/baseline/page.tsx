@@ -14,7 +14,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 import * as React from 'react';
 import { PageContent } from '@/components/layout';
-import { AppModal, ConfirmDialog, EmptyState } from '@/components/shared';
+import { IdCell, AppModal, ConfirmDialog, EmptyState } from '@/components/shared';
 import { DataTable, FormItem, Input, Select, type Column } from '@schema/ui-kit';
 import { Tag } from '@/components/shared/Tag';
 import { AlertTriangle, Coins, Database, Loader2, Search } from 'lucide-react';
@@ -135,7 +135,7 @@ export default function BaselinePage() {
   const filteredItems = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return items;
-    return items.filter((item) => item.name.toLowerCase().includes(query) || item.reference_genome.toLowerCase().includes(query) || item.bed.file_name.toLowerCase().includes(query));
+    return items.filter((item) => item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query) || item.reference_genome.toLowerCase().includes(query) || item.bed.file_name.toLowerCase().includes(query));
   }, [items, searchQuery]);
 
   const closeModal = () => {
@@ -164,6 +164,7 @@ export default function BaselinePage() {
   };
 
   const columns: Column<CNVBaseline>[] = [
+    { id: 'id', header: t("pipeline.baselineId"), accessor: (row) => <IdCell id={row.id} full />, width: 310, align: 'left' },
     { id: 'name', header: t("pipeline.baselineName97a06f"), accessor: (row) => resourceDisplayName(row.id, row.name, t), width: 190, align: 'left' },
     { id: 'reference', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => <Tag variant="info">{row.reference_genome}</Tag>, width: 120, align: 'center' },
     { id: 'data', header: t("pipeline.dataGroupse12c50"), accessor: (row) => row.is_builtin ? '-' : t("pipeline.rRPairs41bb65", {p0: String(row.read_pairs.length)}), width: 110, align: 'center' },

@@ -1,4 +1,7 @@
 'use client';
+import { LocalDataImportModal } from './LocalDataImportModal';
+import { downloadImportWorkbook } from '@/lib/import-workbook';
+import {localDataTemplate} from '@/lib/local-data-import';
 import { formatNumericString } from '@/i18n/format';
 
 import { errorText } from '@/i18n/errors';
@@ -71,6 +74,11 @@ function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploadin
 export default function DataCenterPage() {
   const t = useText();
   const { currentOrg, hasPermission } = useAuth();
+  const [localImportOpen,setLocalImportOpen]=React.useState(false);
+  const downloadLocalTemplate=async()=>{
+   try { await downloadImportWorkbook(localDataTemplate(t.locale,config?.local_import_directory||'/data'), 'local-data-import.xlsx'); }
+   catch (cause) { setError(errorText(cause, t)); }
+  };
   const { activeUpload, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
@@ -484,6 +492,10 @@ export default function DataCenterPage() {
             </div>
             <HoverHint content={t("admin.refresh38108e")}><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label={t("admin.refresh38108e")} onClick={() => void load(search)} /></HoverHint>
           </div>
+          {getRuntimeBackendFlavor() !== 'squid' && <>
+           <Button permission={null} action="download" disabled={!config?.local_import_directory} onClick={downloadLocalTemplate}>{t('samples.downloadTemplatea3afb2')}</Button>
+           <Button permission={['data.manage','samples.write']} action="upload" disabled={!config?.local_import_directory} onClick={()=>setLocalImportOpen(true)}>{t('localDataImport.title')}</Button>
+          </>}
           <Button action="upload" variant="primary"  disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? t("data.canceling6bc0d6") : uploading ? t("data.viewUpload955ec2", {p0: String(progress)}) : t("data.uploadDatad1b00d")}</Button>
         </div>
 
@@ -501,6 +513,7 @@ export default function DataCenterPage() {
           <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? t("data.noMatchingDataAssets29b140") : t("data.noDataAssets5862af")}</p></div>
         )}
       </div>
+      {localImportOpen && getRuntimeBackendFlavor() !== 'squid' && <LocalDataImportModal directory={config?.local_import_directory||''} onClose={()=>setLocalImportOpen(false)} onImported={()=>void load(search)}/>}
       <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />
 
       <AppModal

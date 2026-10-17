@@ -1,4 +1,5 @@
 'use client';
+import { downloadImportWorkbook } from '@/lib/import-workbook';
 import { useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
@@ -659,17 +660,10 @@ export default function PedigreePage() {
   }, [pedigrees, searchQuery]);
 
   // 下载模板
-  const handleDownloadTemplate = () => {
-    const templateContent = t("samples.pedigreeInternalIdBatchSampleInternalIda7394e");
-    const blob = new Blob(['\ufeff' + templateContent], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = t("samples.pedigreeImportTemplateCsvd709c6");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadImportWorkbook(t("samples.pedigreeInternalIdBatchSampleInternalIda7394e"), t("samples.pedigreeImportTemplateCsvd709c6"));
+    } catch (cause) { setError(errorText(cause, t)); }
   };
 
   // 表格列定义

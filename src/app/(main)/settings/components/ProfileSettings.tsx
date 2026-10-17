@@ -1,5 +1,7 @@
 'use client';
 ﻿
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { SupportDialog } from '@/components/support/SupportDialog';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -36,6 +38,7 @@ function formatTime(value?: string, t: TextTranslator = chineseText): string {
 
 export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePassword }: ProfileSettingsProps) {
   const t = useText();
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [name, setName] = React.useState(user.name);
   const [isSaving, setIsSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -188,9 +191,10 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger-fg" />
           <div>
             <h3 className="text-base font-medium text-danger-fg">{t("settings.deleteAccount925984")}</h3>
-            <p className="mt-1 text-sm leading-6 text-fg-muted">{t("settings.deploymentAccountDeletion")}</p>
+            <p className="mt-1 text-sm leading-6 text-fg-muted">{t(isSaaS ? 'settings.accountDeletionMayInvolveUnusedCreditRefundsb290c0' : 'settings.deploymentAccountDeletion')}</p>
           </div>
         </div>
+        {isSaaS && <SupportDialog trigger="button" context="account" />}
       </section>
 
     </div>

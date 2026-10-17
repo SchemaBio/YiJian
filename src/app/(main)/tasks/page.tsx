@@ -1,4 +1,5 @@
 'use client';
+import { downloadTaskBatchTemplate } from '@/lib/task-batch-template';
 import { useLiveRetention, useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
@@ -501,10 +502,7 @@ export default function AnalysisPage() {
           <div className="yj-page-shell yj-task-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
             <div className="yj-task-heading">
               <div><h2 className="yj-page-title">{t("tasks.taskCenterf692ff")}</h2><p className="yj-page-subtitle">{t("tasks.trackAnalysisProgressAndInterpretResults9952cc")}</p></div>
-              <div className="flex items-center gap-2">
-                {!isSaaS && <Button action="add" variant="secondary" onClick={() => setIsBatchTaskModalOpen(true)}>{t("tasks.createInBatch08ebb3")}</Button>}
-                <Button action="add" variant="primary"  onClick={() => setIsNewTaskModalOpen(true)}>{t("tasks.newTask6b717c")}</Button>
-              </div>
+
             </div>
 
             <RetentionNotice kind="task" />
@@ -541,19 +539,18 @@ export default function AnalysisPage() {
                   </span>
                   <p className="text-sm font-medium text-[var(--yj-text-strong)] mb-1">{t("tasks.taskListUnavailable459e4e")}</p>
                   <p className="text-sm text-danger-fg mb-4">{error}</p>
-                  <Button action="retry" variant="secondary" onClick={refetch}>{t("pipeline.retrye2d53a")}</Button>
+                  <Button permission={null} action="retry" variant="secondary" onClick={refetch}>{t("pipeline.retrye2d53a")}</Button>
                 </div>
               </div>
             )}
 
-            {tasks !== null && (
-              <>
-                <HoverHint content={t("tasks.summaryOfUpToRecentTasksUsee0ade1")}><div className="yj-task-metrics" aria-label={t("tasks.recentTaskStatusOverview65fe08")} >
+            {tasks !== null && <HoverHint content={t("tasks.summaryOfUpToRecentTasksUsee0ade1")}><div className="yj-task-metrics" aria-label={t("tasks.recentTaskStatusOverview65fe08")} >
                   {([{ label: t("admin.recentTasksabc5c3"), value: 'all' }, { label: t("admin.running594249"), value: 'running' }, { label: t("tasks.awaitingInterpretation0b7bdd"), value: 'pending_interpretation' }, { label: t("admin.completede99b48"), value: 'completed' }, { label: t("admin.failed3e3c80"), value: 'failed' }] as const).map(item => <button type="button" key={item.label} aria-pressed={statusFilter === item.value} onClick={() => setStatusFilter(item.value)}>
                     <strong>{(recentCounts[item.value] ?? 0).toLocaleString(t.locale)}</strong>{translateUI(item.label, t)}
                   </button>)}
-                </div></HoverHint>
-                <div className="yj-task-toolbar">
+                </div></HoverHint>}
+                <div className="yj-panel min-w-0 overflow-hidden">
+                <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="w-64">
                       <Input
@@ -570,10 +567,15 @@ export default function AnalysisPage() {
                       />
                     </div>
                   </div>
-                  <span className="ml-auto text-xs text-fg-muted">{t("tasks.showing5d908b")}{filteredTasks.length.toLocaleString(t.locale)} {t("tasks.tasks0fdf86")}</span>
+                  {tasks !== null && <span className="text-xs text-fg-muted">{t("tasks.showing5d908b")}{filteredTasks.length.toLocaleString(t.locale)} {t("tasks.tasks0fdf86")}</span>}
+                  <div role="group" aria-label={t('tasks.taskActions')} className="ml-auto flex flex-wrap items-center gap-2">
+                    <Button permission={null} action="download" onClick={downloadTaskBatchTemplate}>{t('samples.downloadTemplatea3afb2')}</Button>
+                    <Button permission="tasks.manage" action="upload" onClick={()=>setIsBatchTaskModalOpen(true)}>{t('tasks.uploadTaskInformation')}</Button>
+                    <Button permission="tasks.manage" action="add" variant="primary" onClick={()=>setIsNewTaskModalOpen(true)}>{t('tasks.newTask6b717c')}</Button>
+                  </div>
                 </div>
 
-                {filteredTasks.length > 0 ? (
+                {tasks !== null && (filteredTasks.length > 0 ? (
                   <DataTable
                     data={filteredTasks}
                     columns={localizeDisplay(columns, t)}
@@ -583,14 +585,12 @@ export default function AnalysisPage() {
                   />
                 ) : (
                   <EmptyState
-                    className="yj-panel"
                     icon={<List />}
                     title={t("common.noTasks15652e")}
                     description={t("tasks.adjustFiltersOrCreateANewAnalysis5cca37")}
                   />
-                )}
-              </>
-            )}
+                ))}
+                </div>
           </div>
         </div>
       {/* 新建任务弹窗 */}
@@ -600,13 +600,13 @@ export default function AnalysisPage() {
         onSubmit={handleCreateTask}
       />
 
-      {!isSaaS && <BatchTaskModal
+      <BatchTaskModal
         isOpen={isBatchTaskModalOpen}
         onClose={() => setIsBatchTaskModalOpen(false)}
         onCompleted={async () => {
           await refetch();
         }}
-      />}
+      />
 
       {/* 编辑任务弹窗 */}
       <EditTaskModal

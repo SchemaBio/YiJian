@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import BaselinePage from './page';
 import { createCNVBaseline, deleteCNVBaseline, listCNVBaselines } from '@/lib/cnv-baselines';
@@ -7,7 +7,8 @@ import { listDataAssets, type DataAsset } from '@/lib/data-assets';
 import { getBillingConfig } from '@/lib/billing';
 
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'synthetic-user' }, currentOrg: { id: 'synthetic-org' } }) }));
-vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => 'squid' }));
+const mode = vi.hoisted(() => ({backend: 'squid'}));
+vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => mode.backend }));
 vi.mock('@/lib/data-assets', () => ({ listDataAssets: vi.fn(async () => ({ items: [], total_pages: 1 })) }));
 vi.mock('@/lib/cnv-baselines', () => ({ listCNVBaselines: vi.fn(), createCNVBaseline: vi.fn(), deleteCNVBaseline: vi.fn() }));
 vi.mock('@/lib/billing', () => ({ getBillingConfig: vi.fn(async () => ({ cnv_baseline_credits_per_gib: 2 })) }));
@@ -80,3 +81,20 @@ it('selects whole samples and submits both reads in the same selection order', a
  fireEvent.click(screen.getByRole('button', { name: '启动校正流程' }));
  await waitFor(() => expect(createCNVBaseline).toHaveBeenCalledWith({ name: 'New baseline', reference_genome: 'GRCh38', bed_asset_id: 'bed', read1_asset_ids: ['b1', 'a1'], read2_asset_ids: ['b2', 'a2'] }));
 }, 60000);
+
+it.each(['octopus', 'squid'])('shows searchable, copyable built-in and custom baseline IDs in %s', async backend => {
+ mode.backend = backend;
+ const id = 'b71a0364-5922-40f8-ac96-18be0b99312b';
+ vi.mocked(listCNVBaselines).mockResolvedValue([{id, task_id: 'calibration-task', name: 'Custom baseline', reference_genome: 'GRCh38', status: 'completed', progress: 100, read_pairs: [], bed: {id: 'bed', file_name: 'test.bed'}, input_bytes: 0, credit_cost: 0, credits_charged: 0, created_at: '', updated_at: ''}]);
+ const writeText = vi.fn().mockResolvedValue(undefined);
+ Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {writeText}});
+ render(<BaselinePage />);
+ const cell = await screen.findByText(id);
+ expect(screen.getByRole('columnheader', {name: '基线 ID'})).toBeInTheDocument();
+ await act(async () => { fireEvent.click(cell); });expect(writeText).toHaveBeenCalledWith(id);
+ const builtIn = screen.getByText('builtin-cnv-baseline-hg38');
+ await act(async () => { fireEvent.click(builtIn); });expect(writeText).toHaveBeenCalledWith('builtin-cnv-baseline-hg38');
+ fireEvent.change(screen.getByPlaceholderText('搜索名称、基因组或 BED...'), {target: {value: id}});
+ expect(screen.getByText('Custom baseline')).toBeInTheDocument();
+ expect(screen.queryByText('builtin-cnv-baseline-hg38')).not.toBeInTheDocument();
+});

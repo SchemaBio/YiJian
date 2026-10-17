@@ -1,4 +1,5 @@
 'use client';
+import { useBusinessPermissions } from '@/components/providers/BusinessPermissionProvider';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { errorText } from '@/i18n/errors';
 
@@ -10,14 +11,13 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
 
-import { CheckCircle2, Coins, Download, FileSpreadsheet, Loader2, Upload, XCircle } from 'lucide-react';
-import { AppModal } from '@/components/shared';
+import { CheckCircle2, Coins, XCircle } from 'lucide-react';
+import { AppModal, FilePicker } from '@/components/shared';
 import { ApiError } from '@/lib/api';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, notifyBillingUpdated, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { tasksApi, type TaskBatchCreateResponse, type TaskBatchInputRow, type TaskBatchPreviewResponse } from '@/lib/tasks';
 
-const TASK_BATCH_TEMPLATE_URL = '/outputs/01a033ef-28c3-7ce2-83fa-633c8032fc26/task-batch-import-template.xlsx';
 
 interface BatchTaskModalProps {
   isOpen: boolean;
@@ -48,8 +48,10 @@ function previewRowsToInput(preview: TaskBatchPreviewResponse): TaskBatchInputRo
 export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalProps) {
   const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = React.useState('');
+  const {hasPermission}=useBusinessPermissions();
+  const [acknowledged,setAcknowledged]=React.useState(false);
+  React.useEffect(()=>{if(isOpen)setAcknowledged(false);},[isOpen]);
+  const [file, setFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<TaskBatchPreviewResponse | null>(null);
   const [result, setResult] = React.useState<TaskBatchCreateResponse | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -81,16 +83,16 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
     : null;
   const insufficientCredits = projectedBalance !== null && billingConfig !== null
     && projectedBalance < billingConfig.min_balance;
-  const canSubmit = Boolean(preview && preview.total_rows > 0 && preview.invalid_rows === 0 && !insufficientCredits && !submitting);
+  const canSubmit = Boolean(preview && preview.total_rows > 0 && preview.invalid_rows === 0 && !insufficientCredits && !submitting && hasPermission('tasks.manage') && (!isSaaS || acknowledged));
 
   const reset = () => {
-    setFileName('');
+    setAcknowledged(false);
+    setFile(null);
     setPreview(null);
     setResult(null);
     setError('');
     setLoading(false);
     setSubmitting(false);
-    if (inputRef.current) inputRef.current.value = '';
   };
 
   const handleClose = () => {
@@ -104,7 +106,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
     setError('');
     setPreview(null);
     setResult(null);
-    setFileName(file.name);
+    setFile(file);
     if (!file.name.toLowerCase().endsWith('.xlsx')) {
       setError(t("tasks.onlyXlsxFilesAreSupportedDownloadAnd07f71c"));
       return;
@@ -145,7 +147,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
     <AppModal
       open={isOpen}
       onOpenChange={(open) => !open && handleClose()}
-      title={t("tasks.createAnalysisTasksInBatch4ba93f")}
+      title={t("tasks.uploadTaskInformation")}
       size="large"
       closeOnOverlayClick={!loading && !submitting}
       closeOnEscape={!loading && !submitting}
@@ -155,7 +157,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
             {result ? t("tasks.done33246f") : t("admin.cancel4d0b46")}
           </Button>
           {!result && (
-            <Button variant="primary" onClick={handleSubmit} disabled={!canSubmit}>
+            <Button permission="tasks.manage" variant="primary" onClick={handleSubmit} disabled={!canSubmit}>
               {submitting ? t("tasks.creatingTasksacfd5f") : t("tasks.confirmCreationf3ec88", {p0: String(preview?.valid_rows ? ` ${preview.valid_rows} 个任务` : '')})}
             </Button>
           )}
@@ -163,50 +165,12 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
       }
     >
       <div className="space-y-5">
-        <RetentionNotice kind="task" />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <a
-            href={TASK_BATCH_TEMPLATE_URL}
-            download="贻鉴-批量任务导入模板.xlsx"
-            className="flex min-h-24 items-center gap-3 rounded-md border border-border-default bg-canvas-subtle px-4 py-3 transition-colors hover:border-accent-muted hover:bg-accent-subtle"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-canvas-default text-accent-fg">
-              <Download className="h-5 w-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-fg-default">{t("tasks.downloadXlsxTemplate021a47")}</span>
-              <span className="mt-1 block text-xs leading-5 text-fg-muted">{t("tasks.includesInstructionsBuiltInPipelineIdsAndd5a9f9")}</span>
-            </span>
-          </a>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={loading || submitting}
-            className="flex min-h-24 items-center gap-3 rounded-md border border-dashed border-border-default bg-canvas-default px-4 py-3 text-left transition-colors hover:border-accent-muted hover:bg-accent-subtle disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-canvas-subtle text-accent-fg">
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-fg-default">{loading ? t("tasks.parsingAndValidating1ebd9d") : t("tasks.uploadCompletedTemplate147b22")}</span>
-              <span className="mt-1 block text-xs leading-5 text-fg-muted">{t("tasks.xlsxOnlyUpToTasksAndMb792731")}</span>
-            </span>
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="hidden"
-            onChange={(event) => void handleFile(event.target.files?.[0])}
-          />
+        <RetentionNotice kind="task" acknowledgement={isSaaS?{checked:acknowledged,onChange:setAcknowledged,disabled:loading||submitting}:undefined} />
+        <div className="space-y-3">
+          <p className="text-sm text-fg-muted">{t("tasks.xlsxOnlyUpToTasksAndMb792731")}</p>
+          <FilePicker label={t("tasks.uploadTaskInformation")} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" file={file} onChange={selected => void handleFile(selected)} disabled={loading || submitting || !hasPermission('tasks.manage')} />
+          {loading && <p role="status" className="text-sm text-fg-muted">{t("tasks.parsingAndValidating1ebd9d")}</p>}
         </div>
-
-        {fileName && (
-          <div className="flex items-center gap-2 text-xs text-fg-muted">
-            <FileSpreadsheet className="h-4 w-4" />
-            {t("tasks.currentFile1a11c2")}<span className="min-w-0 break-all font-medium text-fg-default">{fileName}</span>
-          </div>
-        )}
 
         {error && (
           <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>
