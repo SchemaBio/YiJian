@@ -524,7 +524,7 @@ export default function DataCenterPage() {
         footer={
           <>
             {uploading && <Button action="upload" variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>{t("data.cancelUpload6b9dee")}</Button>}
-            <Button loading={uploadBusy} loadingLabel={t("data.hideInDataCenter16727b")} variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{t("admin.cancel4d0b46")}</Button>
+            <Button loading={isSaaS && uploadBusy} loadingLabel={isSaaS ? t("data.hideInDataCenter16727b") : undefined} variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{!isSaaS && uploadBusy ? t("data.hideInDataCenter16727b") : t("admin.cancel4d0b46")}</Button>
             <Button action="upload" variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? t("data.cancelingf44a50") : uploading ? t("data.uploadingba72be") : t("data.startUpload456565")}</Button>
           </>
         }

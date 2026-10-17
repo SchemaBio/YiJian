@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import DataCenterPage from './page';
+import type {GlobalUploadState} from '@/components/providers/UploadProvider';
+const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,cancelUpload:vi.fn()}));
 const mode=vi.hoisted(()=>({backend:'octopus'}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mode.backend}));
-beforeEach(()=>{mode.backend='octopus';});
+beforeEach(()=>{mode.backend='octopus';uploads.activeUpload=null;uploads.cancelUpload.mockClear();});
 import { listDataAssets } from '@/lib/data-assets';
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: null, hasPermission: () => true }) }));
-vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: null }) }));
+vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, cancelUpload: uploads.cancelUpload }) }));
 vi.mock('@/lib/data-assets', () => ({
   listDataAssets: vi.fn(), getDataAssetUploadStatus: vi.fn(),
   getDataCenterConfig: vi.fn().mockResolvedValue({ temporary: false, download_allowed: true,provider:"local",local_import_directory:"/data" }),
@@ -36,4 +38,42 @@ it('exposes local information import and template download only for self-hosting
  await screen.findByText('暂无数据资产');
  expect(screen.queryByRole('button',{name:'批量信息上传'})).not.toBeInTheDocument();
  expect(screen.queryByRole('button',{name:'下载模板'})).not.toBeInTheDocument();
+});
+
+it.each(['footer', 'close'])('allows hiding an active self-hosted upload via %s and reopening its progress', async control => {
+ uploads.activeUpload={status:'uploading',progress:27,files:[],read1Name:'sample_R1.fastq.gz'};
+ vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
+ render(<DataCenterPage/>);
+ const view=await screen.findByRole('button',{name:/查看上传/});
+ fireEvent.click(view);
+ const dialog=screen.getByRole('dialog');
+ const hide=within(dialog).getByRole('button',{name:'隐藏到数据中心'});
+ expect(hide).toBeEnabled();
+ expect(within(dialog).getByText('27%')).toBeInTheDocument();
+ fireEvent.click(control==='footer'?hide:within(dialog).getByRole('button',{name:'关闭弹窗'}));
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+ expect(uploads.cancelUpload).not.toHaveBeenCalled();
+ expect(uploads.activeUpload.status).toBe('uploading');
+ fireEvent.click(screen.getByRole('button',{name:/查看上传/}));
+ expect(within(screen.getByRole('dialog')).getByText('27%')).toBeInTheDocument();
+});
+it('keeps the upload window open during cancellation in self-hosting', async () => {
+ uploads.activeUpload={status:'uploading',progress:27,files:[]};
+ vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
+ const {rerender}=render(<DataCenterPage/>);
+ fireEvent.click(await screen.findByRole('button',{name:/查看上传/}));
+ uploads.activeUpload={...uploads.activeUpload,status:'canceling'};rerender(<DataCenterPage/>);
+ expect(within(screen.getByRole('dialog')).getByRole('button',{name:'隐藏到数据中心'})).toBeDisabled();
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'关闭弹窗'}));
+ expect(screen.getByRole('dialog')).toBeInTheDocument();
+});
+it('preserves the existing SaaS upload window behavior', async () => {
+ mode.backend='squid';uploads.activeUpload={status:'uploading',progress:27,files:[]};
+ vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
+ render(<DataCenterPage/>);
+ fireEvent.click(await screen.findByRole('button',{name:/查看上传/}));
+ expect(within(screen.getByRole('dialog')).getByRole('button',{name:'隐藏到数据中心'})).toBeDisabled();
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'关闭弹窗'}));
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+ expect(uploads.cancelUpload).not.toHaveBeenCalled();
 });
