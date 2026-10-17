@@ -1,4 +1,5 @@
 'use client';
+import { useBusinessPermissions } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
 
 
@@ -13,6 +14,8 @@ import { AssistantDialog } from './AssistantDialog';
 
 export function AssistantButton() {
   const t = useText();
+  const { hasPermission } = useBusinessPermissions();
+  const allowed = hasPermission('interpretation_reports.manage');
   const { isConfigured, isExecuting } = useAI();
   const [isOpen, setIsOpen] = React.useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
@@ -26,7 +29,8 @@ export function AssistantButton() {
 
   return (
     <>
-      <HoverHint content={isConfigured ? t("assistance.aiAssistant5341ec") : t("assistance.configureTheAiServiceFirst4a3222")}><button
+      <HoverHint content={!allowed ? t('permissions.denied') : isConfigured ? t("assistance.aiAssistant5341ec") : t("assistance.configureTheAiServiceFirst4a3222")}><button
+        disabled={!allowed}
         onClick={handleClick}
         className={`
           ${positionStyle}

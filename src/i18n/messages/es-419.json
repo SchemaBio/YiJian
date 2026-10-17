@@ -146,8 +146,8 @@
     "cnvBaselineTasksAreBilledByInputfac0fc": "Las tareas de referencia de CNV se facturan por tamaño de entrada a ",
     "creditsGibac5f8a": " créditos / GiB.",
     "reservationsAreNotFinalChargesDifferencesSettleb226d9": "Las reservas no son cargos finales. La diferencia se liquida al terminar la tarea; la facturación muestra reservas, cargos, reembolsos y descargas.",
-    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "Los administradores de instalaciones propias pueden crear usuarios y asignar roles",
-    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "Los usuarios de instalaciones propias acceden según los roles asignados",
+    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "Administrador de la instancia con todos los permisos; gestiona cuentas y autorizaciones",
+    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "Cuenta común de la instancia; solo lectura por defecto, con permisos asignados individualmente",
     "unableToLoadUsers24ee20": "No se pudieron cargar los usuarios",
     "enterAName71883c": "Ingresa un nombre",
     "unableToSaveUserb23480": "No se pudo guardar el usuario",
@@ -177,7 +177,7 @@
     "deleteThisUser332e3a": "¿Eliminar este usuario?",
     "thisAccountWillNoLongerBeAble5b44aa": "La cuenta ya no podrá iniciar sesión. La eliminación es irreversible.",
     "platformAdministrator02926d": "Administrador de plataforma",
-    "organizationUser568bac": "Usuario de organización",
+    "organizationUser568bac": "Usuario común",
     "nameCannotBeEmptyb0f813": "El nombre no puede estar vacío",
     "profileSaved4695fe": "Perfil guardado",
     "unableToSaveProfilece9d35": "No se pudo guardar el perfil",
@@ -210,18 +210,26 @@
     "checkingPermissions04cb10": "Comprobando permisos…",
     "youDoNotHavePermissionToAccessbed2ab": "No tienes permiso para acceder a esta página",
     "permissionse47b7f": "Permisos",
-    "createSelfHostedUsersAndManageTheir8f13a7": "Crea usuarios de la instalación propia y administra sus roles y estados."
+    "createSelfHostedUsersAndManageTheir8f13a7": "Crea usuarios de la instalación propia y administra sus roles y estados.",
+    "accountManagementDescription": "Cree cuentas, asigne roles y gestione el acceso aquí. Los datos personales y contraseñas se modifican en Configuración personal.",
+    "accountManagementGuide": "Los administradores pueden crear cuentas y autorizar a usuarios registrados. Todos pueden consultar y descargar los datos de esta instancia. Los usuarios comunes no tienen permisos de escritura por defecto; cada permiso se asigna por separado. Los administradores tienen todos los permisos. Las cuentas desactivadas no pueden iniciar sesión.",
+    "createAccount": "Crear cuenta",
+    "initialPassword": "Contraseña inicial",
+    "passwordGuide": "Al menos 8 caracteres. Evite contraseñas comunes; se recomienda combinar letras, números y símbolos.",
+    "createdAccountGuide": "Las cuentas nuevas quedan activas. Comparta la contraseña inicial por un canal seguro y pida cambiarla en Configuración personal.",
+    "deploymentAccountDeletion": "El operador de esta instancia gestiona la eliminación de cuentas y datos. Contacte al administrador para confirmar el alcance, los datos relacionados y los respaldos. No publique información personal en incidencias públicas de GitHub.",
+    "searchAccount": "Buscar nombre o correo..."
   },
   "privacy": {
     "title": "Política de privacidad",
     "platform": "YiJian · Herramientas de análisis bioinformático y anotación de variantes, de FASTQ a resultados",
-    "version": "Actualización: 14 de octubre de 2026 · Versión 2026-10-14",
+    "version": "Actualización: 16 de octubre de 2026 · Versión 2026-10-16",
     "back": "Volver",
-    "notice": "El SaaS alojado es exclusivamente para investigación (Research Use Only, RUO) y ejecuta flujos de investigación de FASTQ a resultados, con control de calidad, anotación de variantes y consulta de resultados. Las evaluaciones preliminares ACMG, las asociaciones HPO y la asistencia de IA organizan evidencia y priorizan candidatos de investigación. No ofrecen diagnósticos personales, conclusiones sobre riesgos de salud ni recomendaciones de tratamiento o medicación, y no deben usarse para decisiones médicas personales. Los usuarios despliegan y configuran la edición de código abierto y deciden sus usos y el destino de los resultados. Quien la despliega es responsable de la autorización de datos, la seguridad, la validación de resultados y los requisitos profesionales y regulatorios aplicables. El software y sus resultados no constituyen automáticamente un producto médico validado ni un diagnóstico. Este aviso no agrega restricciones de uso a la licencia de código abierto. No envíe nombres reales, documentos de identidad, datos de contacto ni otros identificadores en los códigos de muestra, notas, descripciones fenotípicas, nombres de archivo u otros campos. Crear una muestra requiere una confirmación; esto no significa que la plataforma haya verificado automáticamente el anonimato. Los datos genéticos y fenotípicos pueden seguir siendo información personal sensible aunque se utilicen seudónimos.",
+    "notice": "El servicio es prestado por quien despliega esta instancia. Este aviso general debe completarse con su identidad, contacto y reglas reales de tratamiento.",
     "contactTitle": "Contacto y solicitudes de privacidad",
-    "operator": "Operador: SchemaBio. Consultas y solicitudes de privacidad: ",
-    "contactInstructions": "Describa su solicitud y la institución o cuenta relacionada. No envíe por correo archivos originales de secuenciación, historias clínicas completas ni documentos de identidad, salvo que se los solicitemos por un canal seguro adecuado.",
-    "footer": "Todas las versiones lingüísticas describen las mismas prácticas de tratamiento. Los derechos de privacidad obligatorios de la jurisdicción aplicable siguen vigentes."
+    "operator": "Proveedor: quien despliega esta instancia. Contacte al administrador para consultas de privacidad y solicitudes de derechos.",
+    "contactInstructions": "Use los canales publicados por el operador. No envíe archivos originales de secuenciación, expedientes médicos completos ni documentos de identidad salvo solicitud por un canal seguro.",
+    "footer": "El operador debe ofrecer una política acorde con el despliegue real."
   },
   "about": {
     "javascriptLibraryForBuildingUserInterfacesd198e4": "Biblioteca de JavaScript para crear interfaces de usuario",
@@ -2795,6 +2803,39 @@
     "taskRetentionDetail": "Editar, iniciar o reintentar no amplía el plazo. FASTQ se elimina 7 días después de cargarlo; BAM, 7 días después del análisis y, como máximo, al vencer la tarea.",
     "sampleRetentionTitle": "Los datos de la muestra se conservan 30 días desde su creación y luego se eliminan.",
     "sampleRetentionDetail": "Editar o vincular tareas no amplía el plazo.",
-    "taskRetentionConfirm": "He leído y entiendo los plazos de conservación indicados."
+    "taskRetentionConfirm": "He leído y entiendo los plazos de conservación indicados.",
+    "selfHostedResponsibility": "El operador asume los riesgos de uso."
+  },
+  "backendErrors": {
+    "passwordTooCommon": "Esta contraseña es demasiado común. Elija una más segura.",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+    "adminPasswordTooShort": "La contraseña de administrador debe tener al menos 12 caracteres.",
+    "passwordComplexity": "Incluya al menos tres categorías: minúsculas, mayúsculas, números y símbolos.",
+    "invalidCredentials": "El correo o la contraseña son incorrectos.",
+    "invalidOldPassword": "La contraseña actual es incorrecta.",
+    "emailExists": "Este correo ya está registrado. Use otro.",
+    "invalidRole": "Rol del sistema inválido. Recargue la página e inténtelo de nuevo.",
+    "cannotDeleteSelf": "Los administradores de la plataforma no pueden eliminar su propia cuenta.",
+    "cannotDeactivateSelf": "No puede desactivar su propia cuenta.",
+    "cannotDemoteSelf": "No puede quitarse su propio rol de administrador."
+  },
+  "permissions": {
+    "title": "Permisos de operaciones",
+    "all": "Todos los permisos",
+    "selectAll": "Seleccionar todos",
+    "clear": "Limpiar",
+    "denied": "No tiene permiso para esta operación. Solicite acceso al administrador.",
+    "description": "Sin permisos solo se permite consultar y descargar. Los permisos se aplican a datos compartidos de la instancia. Las líneas base son independientes de las tareas comunes.",
+    "labels": {
+      "samples_write": "Edición de muestras",
+      "data_manage": "Carga y gestión de datos",
+      "tasks_manage": "Gestión de tareas de análisis",
+      "pipelines_manage": "Gestión de flujos",
+      "gene_lists_manage": "Gestión de listas de genes",
+      "bed_manage": "Gestión de archivos BED",
+      "baselines_manage": "Gestión de tareas de línea base",
+      "report_services_manage": "Configuración de servicios de informes",
+      "interpretation_reports_manage": "Interpretación y generación de informes"
+    }
   }
 }

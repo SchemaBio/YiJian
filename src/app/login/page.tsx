@@ -1,6 +1,7 @@
 'use client';
 ﻿
 import { useText } from '@/i18n/useText';
+import { errorText } from '@/i18n/errors';
 
 
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -67,7 +68,7 @@ export default function LoginPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         const data = err.data as { error?: string } | null;
-        setError(data?.error || t("auth.signInFailedCheckEmailAndPassworda5a78d"));
+        setError(data?.error ? errorText(err, t) : t("auth.signInFailedCheckEmailAndPassworda5a78d"));
       } else {
         setError(t("auth.networkErrorRetryLatereb9dcb"));
       }

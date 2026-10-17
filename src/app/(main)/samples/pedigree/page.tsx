@@ -834,7 +834,7 @@ export default function PedigreePage() {
             </div>
             {error && (
               <div role="alert" className="mb-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-                {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>{t("billing.retryLoading7b4939")}</ActionButton>
+                {error}<ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={listLoading} onClick={() => void refreshPedigrees()}>{t("billing.retryLoading7b4939")}</ActionButton>
               </div>
             )}
             {listLoading && (
@@ -902,7 +902,7 @@ export default function PedigreePage() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-emphasis" />
               </div>
             ) : error && !currentPedigree ? (
-              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>{t("billing.retryLoading7b4939")}</ActionButton>}</div>
+              <div role="alert" className="m-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}{activeTab && <ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => void refreshCurrentPedigree(activeTab.pedigreeId)}>{t("billing.retryLoading7b4939")}</ActionButton>}</div>
             ) : currentPedigree ? (
               <PedigreeTree
                 members={currentPedigree.members}

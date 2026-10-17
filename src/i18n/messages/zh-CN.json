@@ -146,8 +146,8 @@
     "cnvBaselineTasksAreBilledByInputfac0fc": "CNV 基线任务按输入数据量计费，当前单价为 ",
     "creditsGibac5f8a": " 积分 / GiB。",
     "reservationsAreNotFinalChargesDifferencesSettleb226d9": "预扣不是最终扣费，差额会在任务终态结算；账单明细会显示预扣、扣费、退款和下载流水。",
-    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "自部署环境的管理员，可创建子用户并分配系统角色",
-    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "自部署环境的子用户，按管理员授予的角色使用业务功能",
+    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "自部署环境的管理员，拥有全部业务权限，可管理账户与授权",
+    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "自部署环境的普通账户，默认只读，由管理员逐项授予业务权限",
     "unableToLoadUsers24ee20": "加载用户列表失败",
     "enterAName71883c": "请填写姓名",
     "unableToSaveUserb23480": "保存用户失败",
@@ -177,7 +177,7 @@
     "deleteThisUser332e3a": "确定要删除此用户吗？",
     "thisAccountWillNoLongerBeAble5b44aa": "删除后该账号将无法登录，此操作不可撤销。",
     "platformAdministrator02926d": "平台管理员",
-    "organizationUser568bac": "机构用户",
+    "organizationUser568bac": "普通用户",
     "nameCannotBeEmptyb0f813": "姓名不能为空",
     "profileSaved4695fe": "个人资料已保存",
     "unableToSaveProfilece9d35": "保存个人资料失败",
@@ -210,18 +210,26 @@
     "checkingPermissions04cb10": "正在验证权限...",
     "youDoNotHavePermissionToAccessbed2ab": "您没有权限访问此页面",
     "permissionse47b7f": "权限管理",
-    "createSelfHostedUsersAndManageTheir8f13a7": "创建自部署子用户，并管理其角色与账号状态。"
+    "createSelfHostedUsersAndManageTheir8f13a7": "创建自部署子用户，并管理其角色与账号状态。",
+    "accountManagementDescription": "在这里创建账户、分配角色，并管理账户的启用状态。个人资料和密码在个人设置中修改。",
+    "accountManagementGuide": "管理员可创建账户，也可为自行注册的普通用户授权。所有用户均可浏览、查询和下载本实例业务数据；普通用户默认无写权限，由管理员逐项分配。管理员拥有全部权限。停用账户后无法登录。",
+    "createAccount": "创建账户",
+    "initialPassword": "初始密码",
+    "passwordGuide": "至少 8 位，避免使用常见弱密码，建议混合字母、数字和符号。",
+    "createdAccountGuide": "创建后账户立即启用。请通过安全渠道告知初始密码，并让用户登录后在个人设置中修改。",
+    "deploymentAccountDeletion": "账户和数据删除由本实例部署者处理。请联系本实例管理员确认删除范围、关联数据和备份保留；不要在公开 GitHub 问题区提交个人信息。",
+    "searchAccount": "搜索姓名或邮箱..."
   },
   "privacy": {
     "title": "隐私政策",
     "platform": "贻鉴 · 从 FASTQ 到分析结果的生物信息分析与变异注释工具",
-    "version": "更新日期：2026年10月14日 · 版本 2026-10-14",
+    "version": "更新日期：2026年10月16日 · 版本 2026-10-16",
     "back": "返回",
-    "notice": "SaaS 托管版仅用于科研（Research Use Only，RUO），执行从 FASTQ 到分析结果的科研工作流，提供质控、变异注释和结果浏览。ACMG 初评、HPO 关联及 AI 辅助仅用于整理证据和筛选研究候选，不提供个人疾病诊断、健康风险结论、治疗或用药建议；不得用于个人医疗决策。 开源版由用户自行部署、配置并决定使用场景和结果用途。部署者负责数据授权、安全保护、结果验证及适用的资质和监管要求；软件及输出不自动构成经过验证的医疗产品或诊断结论。本说明不新增开源许可的用途限制。 禁止在样本编号、备注、表型描述、文件名等字段提交真实姓名、身份证件、联系方式或其他身份信息。创建样本前须确认遵守要求；该确认不表示平台已自动验证匿名性。使用化名的遗传及表型数据仍可能属于敏感个人信息。",
+    "notice": "本实例由部署者自行提供服务。以下为通用隐私说明，部署者应补充其主体信息、联系方式与实际处理规则。",
     "contactTitle": "隐私联系与权利请求",
-    "operator": "运营主体：SchemaBio。隐私咨询及权利请求：",
-    "contactInstructions": "请说明请求事项及相关机构或账户。除非我们通过适当的安全渠道要求提供，请勿通过邮件发送原始测序文件、完整病历或身份证件。",
-    "footer": "各语言版本说明相同的处理安排；适用地区的强制性隐私权不受本政策排除。"
+    "operator": "服务提供者：本实例的部署者。隐私咨询和权利请求请联系本实例管理员。",
+    "contactInstructions": "请使用部署者公布的联系渠道。除非通过适当的安全渠道要求提供，请勿发送原始测序文件、完整病历或身份证件。",
+    "footer": "部署者负责提供与实际部署一致的隐私政策。"
   },
   "about": {
     "javascriptLibraryForBuildingUserInterfacesd198e4": "用于构建用户界面的 JavaScript 库",
@@ -2795,6 +2803,39 @@
     "taskRetentionDetail": "编辑、启动或重试不延期。FASTQ 上传后 7 天、BAM 分析完成后 7 天清理，且不超过任务期限。",
     "sampleRetentionTitle": "样本信息自创建起仅保留 30 天，到期后自动抹除。",
     "sampleRetentionDetail": "编辑、关联任务不会延长期限。",
-    "taskRetentionConfirm": "我已阅读并了解上述保留期限。"
+    "taskRetentionConfirm": "我已阅读并了解上述保留期限。",
+    "selfHostedResponsibility": "使用风险由部署者自行承担。"
+  },
+  "backendErrors": {
+    "passwordTooCommon": "密码过于常见，请设置更安全的密码。",
+    "passwordTooShort": "密码至少需要 8 个字符。",
+    "adminPasswordTooShort": "管理员密码至少需要 12 个字符。",
+    "passwordComplexity": "密码须包含小写字母、大写字母、数字和符号中的至少三类。",
+    "invalidCredentials": "邮箱或密码不正确。",
+    "invalidOldPassword": "当前密码不正确。",
+    "emailExists": "该邮箱已被注册，请使用其他邮箱。",
+    "invalidRole": "无效的系统角色，请刷新页面后重试。",
+    "cannotDeleteSelf": "平台管理员不能删除自身。",
+    "cannotDeactivateSelf": "不能停用自己的账户。",
+    "cannotDemoteSelf": "不能移除自己的管理员角色。"
+  },
+  "permissions": {
+    "title": "业务权限",
+    "all": "拥有全部权限",
+    "selectAll": "全选",
+    "clear": "清空",
+    "denied": "无此操作权限，请联系平台管理员授权。",
+    "description": "未勾选时仅可浏览和下载。授权适用于本实例共享的业务数据；基线权限独立于普通任务权限。",
+    "labels": {
+      "samples_write": "样本管理写入",
+      "data_manage": "数据中心上传与管理",
+      "tasks_manage": "普通任务管理",
+      "pipelines_manage": "流程管理",
+      "gene_lists_manage": "基因列表管理",
+      "bed_manage": "BED 文件管理",
+      "baselines_manage": "基线任务管理",
+      "report_services_manage": "报告服务配置",
+      "interpretation_reports_manage": "结果解读与报告生成"
+    }
   }
 }

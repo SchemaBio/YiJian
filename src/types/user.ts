@@ -18,6 +18,7 @@ export interface Organization {
 
 // 用户信息
 export interface User {
+  permissions?: string[];
   id: string;
   email: string;
   name: string;

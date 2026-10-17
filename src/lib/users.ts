@@ -1,10 +1,13 @@
 import { api } from './api';
 import type { SystemRole, User } from '@/types/user';
+import { hashPassword } from './crypto';
+import { getRuntimeBackendFlavor } from './runtime-config';
 
 interface BackendUser {
   id: string;
   email: string;
   name: string;
+  permissions?: string[];
   system_role?: string;
   systemRole?: string;
   org_id?: string;
@@ -38,9 +41,36 @@ export interface UserListResult {
 }
 
 export interface UpdateUserInput {
+  permissions?: string[];
   name?: string;
   systemRole?: SystemRole;
   isActive?: boolean;
+}
+
+export interface CreateUserInput {
+  permissions?: string[];
+  email: string;
+  name: string;
+  password: string;
+  systemRole: SystemRole;
+}
+
+function backendSystemRole(role: SystemRole): string {
+  if (getRuntimeBackendFlavor() === 'octopus') {
+    return role === 'PLATFORM_ADMIN' ? 'SUPER_ADMIN' : 'USER';
+  }
+  return role;
+}
+
+export async function createUser(input: CreateUserInput): Promise<User> {
+  const email = input.email.trim().toLowerCase();
+  const data = await api.post<BackendUser>('/v1/users', {
+    email, name: input.name.trim(),
+    password: await hashPassword(input.password, email),
+    system_role: backendSystemRole(input.systemRole),
+    ...(input.permissions !== undefined ? { permissions: input.permissions } : {}),
+  }, { coreApi: false });
+  return normalizeUser(data);
 }
 
 function mapSystemRole(role?: string): SystemRole {
@@ -52,6 +82,7 @@ export function normalizeUser(user: BackendUser): User {
     id: String(user.id),
     email: user.email,
     name: user.name,
+    permissions: user.permissions ?? [],
     systemRole: mapSystemRole(user.system_role ?? user.systemRole),
     orgId: user.org_id ?? user.orgId,
     isActive: user.is_active ?? user.isActive ?? false,
@@ -91,8 +122,9 @@ export async function listUsers(params: {
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
   const data = await api.put<BackendUser>(`/v1/users/${encodeURIComponent(id)}`, {
+    ...(input.permissions !== undefined ? { permissions: input.permissions } : {}),
     ...(input.name !== undefined ? { name: input.name } : {}),
-    ...(input.systemRole !== undefined ? { system_role: input.systemRole } : {}),
+    ...(input.systemRole !== undefined ? { system_role: backendSystemRole(input.systemRole) } : {}),
     ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
   }, { coreApi: false });
   return normalizeUser(data);

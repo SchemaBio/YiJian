@@ -1,5 +1,6 @@
 'use client';
 import { useText } from '@/i18n/useText';
+import { errorText } from '@/i18n/errors';
 
 
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -81,7 +82,7 @@ export default function RegisterPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         const msg = (err.data as any)?.error || (err.data as any)?.message || t("auth.registrationFaileda1d7fb");
-        setError(String(msg));
+        setError(errorText(String(msg), t));
       } else {
         setError(t("auth.networkErrorRetryLatereb9dcb"));
       }

@@ -142,14 +142,14 @@ export function ParquetColumnFilterBar({
         <select aria-label={t("tasks.loadPersonalFilterPresetbf4bea")} value={selectedView} className="yj-filter-view-field" onChange={event=>setSelectedView(event.target.value)}>
           <option value="">{t("tasks.selectSavedPresete82018")}</option>{views.map(v=><option key={v.name} value={v.name}>{v.name}</option>)}
         </select>
-        <ActionButton action="start" disabled={!selectedView} onClick={applyView} className="yj-filter-view-action">{t("tasks.applyPreset34d975")}</ActionButton>
+        <ActionButton permission={null} action="start" disabled={!selectedView} onClick={applyView} className="yj-filter-view-action">{t("tasks.applyPreset34d975")}</ActionButton>
         </div>
         </div>
         <div className="grid gap-2">
         <span className="text-xs font-medium text-fg-muted">{t("tasks.saveCurrentFiltersb9e931")}</span>
         <div className="yj-filter-view-row">
         <input aria-label={t("tasks.personalFilterPresetName6ffe93")} value={viewName} maxLength={80} onChange={e=>setViewName(e.target.value)} placeholder={t("tasks.enterPresetNamed45aa0")} className="yj-filter-view-field" />
-        <ActionButton loading={viewSaving} loadingLabel={t("samples.savinga032e8")} action="save" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="yj-filter-view-action">{t("tasks.savePresetede701")}</ActionButton>
+        <ActionButton permission={null} loading={viewSaving} loadingLabel={t("samples.savinga032e8")} action="save" type="button" disabled={!viewName.trim()||viewSaving} onClick={()=>void saveView()} className="yj-filter-view-action">{t("tasks.savePresetede701")}</ActionButton>
         </div>
         </div>
         <div className="flex justify-end border-t border-border-default pt-3">

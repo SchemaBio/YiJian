@@ -20,8 +20,9 @@ describe('four-language privacy policy', () => {
     const notice = screen.getByRole('heading', {name: policies[locale][4].title}).closest('section');
     expect(notice).toHaveClass('border-amber-300', 'bg-amber-50', 'dark:bg-amber-950/30');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', {name:'privacy@example.com'})).toHaveAttribute('href', 'mailto:privacy@example.com');
-    expect(screen.getByText(/2026-10-14/)).toBeInTheDocument();
+    expect(document.querySelector('a[href^="mailto:"]')).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/SchemaBio|schema-bio|SaaS|720/);
+    expect(screen.getByText(/2026-10-16/)).toBeInTheDocument();
   });
   it.each(['zh','en', ...locales])('resolves the %s policy deep link on the server without changing preference', async lang => {
     state.locale = 'es-419';
@@ -36,8 +37,8 @@ describe('four-language privacy policy', () => {
     state.locale = 'en';
     render(await PrivacyPage({searchParams: Promise.resolve({lang:'invalid'})}));
     expect(screen.getByRole('heading', {name:'Privacy Policy',level:1})).toBeInTheDocument();
-    expect(screen.getByText(/7 days after completion/)).toBeInTheDocument();
-    expect(screen.getByText(/does not use servers in mainland China/)).toBeInTheDocument();
+    expect(screen.getByText(/does not impose a hosted service/)).toBeInTheDocument();
+    expect(screen.getByText(/deployer provides the service/)).toBeInTheDocument();
   });
   it('keeps section and paragraph counts consistent', () => {
     for (const locale of locales) {

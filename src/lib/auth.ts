@@ -21,6 +21,7 @@ interface BackendLoginData {
     id: string;
     email: string;
     name: string;
+    permissions?: string[];
     system_role: string;
     org_id?: string;
     is_active: boolean;
@@ -44,6 +45,7 @@ function mapUser(user: BackendUser): User {
     id: user.id,
     email: user.email,
     name: user.name,
+    permissions: user.permissions ?? [],
     systemRole: mapSystemRole(user.system_role),
     orgId: user.org_id,
     isActive: user.is_active,

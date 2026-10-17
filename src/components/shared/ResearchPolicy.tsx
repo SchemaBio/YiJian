@@ -9,7 +9,7 @@ export function ResearchUseBadge() {
   const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const label = isSaaS ? 'RUO' : t('research.selfHostedLabel');
-  return <Tooltip content={isSaaS ? 'Research Use Only' : t('research.selfHostedScope')}><span tabIndex={0} aria-label={isSaaS ? 'RUO — Research Use Only' : label} className="inline-flex shrink-0 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-bold tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-100">{label}</span></Tooltip>;
+  return <Tooltip content={isSaaS ? 'Research Use Only' : t('research.selfHostedResponsibility')}><span tabIndex={0} aria-label={isSaaS ? 'RUO — Research Use Only' : label} className="inline-flex shrink-0 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-bold tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-100">{label}</span></Tooltip>;
 }
 
 export function ProductScopeSection() {

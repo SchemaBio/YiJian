@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Shield, ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useAppLocale } from '@/components/providers/LocaleProvider';
-import { getRuntimeSupportEmail } from '@/lib/runtime-config';
 import { createTextTranslator } from '@/i18n/text';
 import type { Locale } from '@/i18n/locales';
 import { getPrivacySections } from '@/lib/privacy-policy';
@@ -15,8 +14,6 @@ export function PrivacyDocument({ overrideLocale }: { overrideLocale?: Locale })
   const locale = overrideLocale ?? globalLocale;
   const t = useMemo(() => createTextTranslator(locale), [locale]);
   const { isAuthenticated, isLoading } = useAuth();
-  const [contact, setContact] = useState('support@schema-bio.com');
-  useEffect(() => { setContact(getRuntimeSupportEmail()); }, []);
 
   return <div className="yj-modern yj-public-shell" lang={locale}>
     <div className="yj-legal-page">
@@ -33,7 +30,7 @@ export function PrivacyDocument({ overrideLocale }: { overrideLocale?: Locale })
         </div>
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold leading-tight text-fg-default">{t('privacy.title')}</h1>
-          <p className="mt-2 text-sm text-fg-muted">SchemaBio · {t('privacy.platform')}</p>
+          <p className="mt-2 text-sm text-fg-muted">{t('privacy.platform')}</p>
           <p className="mt-3 text-xs text-fg-muted">{t('privacy.version')}</p>
         </div>
       </header>
@@ -52,13 +49,11 @@ export function PrivacyDocument({ overrideLocale }: { overrideLocale?: Locale })
         })}
         <section id="contact">
           <h2 className="mb-3 text-base font-semibold text-fg-default">{t('privacy.contactTitle')}</h2>
-          <p className="text-sm leading-relaxed text-fg-muted pl-0 md:pl-6">{t('privacy.operator')}
-            <a className="text-accent-fg underline break-all" href={`mailto:${contact}`}>{contact}</a>
-          </p>
+          <p className="text-sm leading-relaxed text-fg-muted pl-0 md:pl-6">{t('privacy.operator')}</p>
           <p className="mt-3 text-sm leading-relaxed text-fg-muted pl-0 md:pl-6">{t('privacy.contactInstructions')}</p>
         </section>
       </div>
-      <footer className="mt-6 text-center text-xs text-fg-muted">SchemaBio · {t('privacy.footer')}</footer>
+      <footer className="mt-6 text-center text-xs text-fg-muted">{t('privacy.footer')}</footer>
     </div>
   </div>;
 }

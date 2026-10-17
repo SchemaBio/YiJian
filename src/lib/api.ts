@@ -303,6 +303,10 @@ async function request<T>(
 
   if (!response.ok) {
     const data = await parseJSONBody(response);
+    if (response.status === 403 && data && typeof data === 'object' && (data as { code?: string }).code === 'permission_denied' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('schema:permissions-changed'));
+      throw new LocalizedError('permissions.denied');
+    }
     throw new ApiError(response.status, response.statusText, data);
   }
 

@@ -1,4 +1,5 @@
 'use client';
+import { useBusinessPermissions } from '@/components/providers/BusinessPermissionProvider';
 import { LocalizedError } from '@/i18n/errors';
 
 import { errorText } from '@/i18n/errors';
@@ -150,6 +151,8 @@ function staticGeneTrack(session: IGVSession): IGVTrackConfig | null {
 }
 
 export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, onClose, session: suppliedSession, flanking = 100 }: IGVViewerProps) {
+  const { hasPermission } = useBusinessPermissions();
+  const canSaveSnapshot = hasPermission('interpretation_reports.manage');
   const t = useText();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const browserRef = React.useRef<import('igv').IGVBrowser | null>(null);
@@ -324,7 +327,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       try {
         await browser.search(locus);
         if (controller.signal.aborted || browserRef.current !== browser) return;
-        if (!tracksReady || !liveBAM || !session || !snapshot || snapshot.available || snapshotLoading) return;
+        if (!canSaveSnapshot || !tracksReady || !liveBAM || !session || !snapshot || snapshot.available || snapshotLoading) return;
         await browser.updateViews();
         if (controller.signal.aborted || browserRef.current !== browser || locusRef.current !== locus) return;
         // Large regions show a zoom-in placeholder instead of reads.
@@ -352,7 +355,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       }
     });
     return () => controller.abort();
-  }, [isOpen, locus, loading, tracksReady, liveBAM, snapshot, snapshotLoading, snapshotKey, taskId, session, endPosition, position, flanking]);
+  }, [isOpen, locus, loading, tracksReady, liveBAM, snapshot, snapshotLoading, snapshotKey, taskId, session, endPosition, position, flanking, canSaveSnapshot]);
 
   if (!isOpen) return null;
 

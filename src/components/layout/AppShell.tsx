@@ -1,4 +1,6 @@
 'use client';
+import { OperationScope } from '@/components/providers/BusinessPermissionProvider';
+import { permissionForPath } from '@/lib/permissions';
 import { useText } from '@/i18n/useText';
 import { chineseText, localizeDisplay, type TextTranslator } from '@/i18n/text';
 
@@ -136,6 +138,10 @@ function shouldMountAIAssistant(pathname: string, isEnabled: boolean): boolean {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname();
+  return <OperationScope permission={permissionForPath(pathname)}><AppShellContent>{children}</AppShellContent></OperationScope>;
+}
+function AppShellContent({ children }: AppShellProps) {
   const t = useText();
   const pathname = usePathname();
   const fixedTaskWorkspace = /^\/tasks\/[^/]+$/.test(pathname) || pathname === '/history';

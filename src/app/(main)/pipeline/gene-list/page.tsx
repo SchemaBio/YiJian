@@ -324,7 +324,7 @@ function GeneListPageContent() {
 
       {error && (
         <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshGeneLists()}>{t("billing.retryLoading7b4939")}</ActionButton>
+          {error}<ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshGeneLists()}>{t("billing.retryLoading7b4939")}</ActionButton>
         </div>
       )}
 
@@ -365,7 +365,7 @@ function GeneListPageContent() {
                     {t("pipeline.updated943f4e")}{Number.isNaN(Date.parse(list.updatedAt)) ? list.updatedAt : new Date(list.updatedAt).toLocaleString(t.locale, {hour12:false})}
                   </div>
                   <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 md:col-start-3" onClick={(e) => e.stopPropagation()}>
-                    {list.scope==='personal'&&list.canMaintain&&<Button size="small" variant="secondary" onClick={async()=>{try{await publishGeneList(list);await refreshGeneLists();}catch(e){setError(e instanceof Error ? errorText(e, t):t("pipeline.sharingFailed3a7680"))}}}>{t("pipeline.shareWithCurrentOrganizationa13f3c")}</Button>}
+                    {list.scope==='personal'&&list.canMaintain&&<Button permission="gene_lists.manage" size="small" variant="secondary" onClick={async()=>{try{await publishGeneList(list);await refreshGeneLists();}catch(e){setError(e instanceof Error ? errorText(e, t):t("pipeline.sharingFailed3a7680"))}}}>{t("pipeline.shareWithCurrentOrganizationa13f3c")}</Button>}
                     <HoverHint content={t("admin.edita7f814")}><ActionButton size="small" iconOnly action="edit" variant="ghost"
                       className="p-1.5 rounded hover:bg-canvas-subtle text-fg-muted hover:text-accent-fg transition-colors"
 

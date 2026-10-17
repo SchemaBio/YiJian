@@ -1,4 +1,5 @@
 'use client';
+import { useBusinessPermissions, useOperationPermission } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
@@ -17,6 +18,9 @@ export function FilePicker({ label, accept, file, onChange, disabled = false }: 
   disabled?: boolean;
 }) {
   const t = useText();
+  const { hasPermission } = useBusinessPermissions();
+  const permission = useOperationPermission();
+  disabled = disabled || (!!permission && !hasPermission(permission));
   const input = React.useRef<HTMLInputElement>(null);
   const nameID = React.useId();
 

@@ -1,4 +1,5 @@
 'use client';
+import { OperationScope } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
@@ -99,7 +100,7 @@ export function TaskActionsCell({
   const canDelete = !task.interpretationCompletedAt;
 
   return (
-    <>
+    <OperationScope permission={task.template === 'baseline_fix' ? 'baselines.manage' : 'tasks.manage'}>
       <TableActions>
         {primaryAction && <TableAction action={primaryAction.action} label={translateUI(primaryAction.label, t)}
           tone={primaryAction.action === 'stop' ? 'danger' : primaryAction.disabled || primaryAction.action === 'completed' ? 'default' : 'primary'}
@@ -120,7 +121,7 @@ export function TaskActionsCell({
         variant="danger"
         onConfirm={() => onDelete(task.id)}
       />
-    </>
+    </OperationScope>
   );
 }
 

@@ -198,7 +198,7 @@ function BedFilesPageContent() {
     { id: 'actions', header: t("admin.actionsf3ea6d"), width: 152, minWidth: 152, maxWidth: 152, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
       ? <span className="text-xs text-fg-muted">{t("pipeline.readOnlyffc1d0")}</span>
       : <TableActions>
-        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction action="refresh" label={t("pipeline.validate20feec")}
+        {row.status === 'completed' && row.validation_status !== 'valid' && <TableAction permission="bed.manage" action="refresh" label={t("pipeline.validate20feec")}
           hint={row.validation_status === 'validating' ? t("pipeline.validatingFilePleaseWait5f67b6") : t("pipeline.revalidateBedFile57c8f7")}
           loading={validatingId === row.id} loadingLabel={t("pipeline.validatingf64375")} disabled={validatingId !== null || row.validation_status === 'validating'} onClick={() => void handleValidate(row)} />}
         <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" aria-label={t("pipeline.delete05cefd", {p0: String(row.file_name)})} disabled={validatingId === row.id}
@@ -222,7 +222,7 @@ function BedFilesPageContent() {
         <Button action="upload" variant="primary" className="shrink-0 whitespace-nowrap"  onClick={() => { setUploadPolicyAcknowledged(false); setModalOpen(true); }}>{t("pipeline.uploadBedFilec83510")}</Button>
       </div>
 
-      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
+      {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}<ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={isLoading} onClick={() => void loadData()}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
 
       {references.length>0&&<div className="rounded-md border border-warning-muted bg-warning-subtle p-3 text-sm">{t("pipeline.thisBedIsUsedByTheseResourcesb5c494")}<ul className="mt-2 space-y-1">{references.map(r=><li key={`${r.kind}:${r.id}`}><a className="text-accent-fg underline" href={r.kind==='task'?`/tasks/${r.id}`:r.kind==='baseline'?'/pipeline/baseline':'/pipeline'}>{r.name||r.id}</a></li>)}</ul></div>}
       {isLoading ? (

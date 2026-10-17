@@ -11,10 +11,8 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 import * as React from 'react';
 import { FormItem, Input } from '@schema/ui-kit';
 import { Tag } from '@/components/shared/Tag';
-import { AlertTriangle, Bot, Building2, KeyRound, UserRound } from 'lucide-react';
-import { SupportDialog } from '@/components/support/SupportDialog';
+import { AlertTriangle, Building2, KeyRound, UserRound } from 'lucide-react';
 import { AISettingsPanel } from '@/components/shared/AISettingsPanel';
-import { useAI } from '@/components/providers/AIProvider';
 import type { User, UserOrganizationInfo } from '@/types/user';
 import { LanguageSettings } from './LanguageSettings';
 
@@ -38,7 +36,6 @@ function formatTime(value?: string, t: TextTranslator = chineseText): string {
 
 export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePassword }: ProfileSettingsProps) {
   const t = useText();
-  const { config, setConfig } = useAI();
   const [name, setName] = React.useState(user.name);
   const [isSaving, setIsSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -144,7 +141,7 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
         </div>
       </section>
 
-      <section className="yj-panel p-5">
+      {currentOrg && <section className="yj-panel p-5">
         <div className="mb-5 flex items-center gap-2">
           <Building2 className="h-5 w-5 text-accent-fg" />
           <div>
@@ -155,26 +152,9 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <ReadOnlyField label={t("admin.organizationNamec50f05")}>{currentOrg?.name ?? '—'}</ReadOnlyField>
           <ReadOnlyField label={t("settings.organizationIdentifierfc5b24")} mono>{currentOrg?.id ?? '—'}</ReadOnlyField>
         </div>
-      </section>
+      </section>}
 
       <AISettingsPanel admin={user.systemRole === 'PLATFORM_ADMIN'} />
-
-      <section className="yj-panel p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Bot className="h-5 w-5 text-accent-fg" />
-          <div>
-            <h3 className="text-base font-medium text-fg-default">{t("settings.pageAssistant5c22ea")}</h3>
-            <p className="mt-1 text-xs text-fg-muted">{t("settings.enablingThisReadsTheCurrentPageAnd2082cd")}</p>
-          </div>
-        </div>
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-default">
-          <input
-            type="checkbox"
-            checked={config.aiAssistantEnabled}
-            onChange={(event) => setConfig({ aiAssistantEnabled: event.target.checked })}
-          />
-          {t("settings.enablePageAiAssistant5cfc1c")}</label>
-      </section>
 
       <section className="yj-panel p-5">
         <div className="mb-4 flex items-center gap-2">
@@ -208,10 +188,9 @@ export function ProfileSettings({ user, currentOrg, onUpdateProfile, onChangePas
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger-fg" />
           <div>
             <h3 className="text-base font-medium text-danger-fg">{t("settings.deleteAccount925984")}</h3>
-            <p className="mt-1 text-sm leading-6 text-fg-muted">{t("settings.accountDeletionMayInvolveUnusedCreditRefundsb290c0")}</p>
+            <p className="mt-1 text-sm leading-6 text-fg-muted">{t("settings.deploymentAccountDeletion")}</p>
           </div>
         </div>
-        <SupportDialog trigger="button" context="account" />
       </section>
 
     </div>

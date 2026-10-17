@@ -1,5 +1,6 @@
 'use client';
 ﻿
+import { useBusinessPermissions } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
@@ -23,9 +24,11 @@ interface ReviewCheckboxProps {
 export function PinCheckbox({ checked, onChange, disabled, source, reasons }: ReviewCheckboxProps) {
   const t = useText();
   reasons = reasons?.map(reason => translateUI(reason, t));
+  const { hasPermission } = useBusinessPermissions();
+  const noPermission = !hasPermission('interpretation_reports.manage');
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
-  const tooltip = readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked ? t("tasks.clickToUnpinbda191", {p0: String(source === 'automatic' ? t('系统自动置顶：{p0}{p1}', {p0:reasons?.join('；')||t("display.evidenceSupportedKeyCandidate43d43a"), p1:''}) : t("display.keyLocusPinneda50ba8"))}) : t("tasks.clickToPinImportantLocus56c657", {p0: String(reasons?.length?t("display.initialAssessment325903")+reasons.join('；'):'')});
+  const tooltip = noPermission ? t('permissions.denied') : readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked ? t("tasks.clickToUnpinbda191", {p0: String(source === 'automatic' ? t('系统自动置顶：{p0}{p1}', {p0:reasons?.join('；')||t("display.evidenceSupportedKeyCandidate43d43a"), p1:''}) : t("display.keyLocusPinneda50ba8"))}) : t("tasks.clickToPinImportantLocus56c657", {p0: String(reasons?.length?t("display.initialAssessment325903")+reasons.join('；'):'')});
 
   return (
     <Tooltip content={translateUI(tooltip, t)} placement="top" variant="nav">
@@ -58,9 +61,11 @@ export function PinCheckbox({ checked, onChange, disabled, source, reasons }: Re
  */
 export function FocusCheckbox({ checked, onChange, disabled }: ReviewCheckboxProps) {
   const t = useText();
+  const { hasPermission } = useBusinessPermissions();
+  const noPermission = !hasPermission('interpretation_reports.manage');
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
-  const tooltip = readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked
+  const tooltip = noPermission ? t('permissions.denied') : readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked
     ? t("tasks.selectedForFocusClickToWithdrawThis7e81d6")
     : t("tasks.clickToIncludeInFocusd66934");
 

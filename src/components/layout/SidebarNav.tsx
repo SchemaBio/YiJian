@@ -27,7 +27,7 @@ interface SidebarNavProps {
 export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
   const t = useText();
   const pathname = usePathname();
-  const { isPlatformAdmin } = useAuth();
+  const { isPlatformAdmin, currentOrg } = useAuth();
 
   const isAdmin = isPlatformAdmin();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
@@ -122,9 +122,9 @@ export function SidebarNav({ collapsed, onCollapsedChange }: SidebarNavProps) {
       </div>
 
       {/* Organization Switcher */}
-      <div className="border-b border-[var(--yj-border-subtle)] px-3">
+      {(isSaaS || currentOrg) && <div className="border-b border-[var(--yj-border-subtle)] px-3">
         <OrganizationSwitcher collapsed={collapsed} />
-      </div>
+      </div>}
 
       {/* Main Navigation */}
       <nav className="py-2.5 border-b border-[var(--yj-border-subtle)]">

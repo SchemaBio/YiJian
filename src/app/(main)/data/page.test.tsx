@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import DataCenterPage from './page';
 import { listDataAssets } from '@/lib/data-assets';
-vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: null }) }));
+vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: null, hasPermission: () => true }) }));
 vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: null }) }));
 vi.mock('@/lib/data-assets', () => ({
   listDataAssets: vi.fn(), getDataAssetUploadStatus: vi.fn(),

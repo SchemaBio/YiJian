@@ -70,7 +70,7 @@ function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploadin
 
 export default function DataCenterPage() {
   const t = useText();
-  const { currentOrg } = useAuth();
+  const { currentOrg, hasPermission } = useAuth();
   const { activeUpload, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
@@ -419,7 +419,7 @@ export default function DataCenterPage() {
             hint={asset.status === 'completed' ? t("data.downloadFile2922ce") : t("data.downloadAvailableAfterUploadCompletes289170")} onClick={() => void handleDownload(asset)} />}
           {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label={t("data.reuploadbd40ef")} hint={t("data.uploadAgain53e50e")} aria-label={t("data.uploadAgain53e50e")}
             disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} />}
-          <TableAction action="edit" label={t("admin.edita7f814")} hint={t("data.editInternalId05f8a1")} aria-label={t("data.editInternalId05f8a1")} onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
+          <TableAction permission={['data.manage', 'samples.write']} action="edit" label={t("admin.edita7f814")} hint={t("data.editInternalId05f8a1")} aria-label={t("data.editInternalId05f8a1")} onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
           <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" onClick={() => setDeleting(asset)} />
         </TableActions>
       ),
@@ -459,7 +459,7 @@ export default function DataCenterPage() {
         </div>
       )}
 
-      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>{t("billing.retryLoading7b4939")}</Button>}</div>}
+      {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button permission={null} action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>{t("billing.retryLoading7b4939")}</Button>}</div>}
 
       {activeUpload?.status === 'needs_file' && !recoveryChecking && (
         <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
@@ -523,7 +523,7 @@ export default function DataCenterPage() {
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title={t("data.sequencingFiles55cf00")} description={t("data.selectReadAndReadSeparatelyUploadingJustcdd8fe")} />
             <div className="mb-4">
               <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("data.internalIdRecommendedb0481f")}</label>
-              <Input value={internalId} disabled={uploadBusy} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder={t("data.enterTheInternalIdFromSamplesEe7533f")} />
+              <Input value={internalId} disabled={uploadBusy || !hasPermission('samples.write')} title={!hasPermission('samples.write') ? t('permissions.denied') : undefined} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder={t("data.enterTheInternalIdFromSamplesEe7533f")} />
               <p className="mt-1.5 text-xs text-fg-muted">{t("data.automaticMatchingPrefersThisIdFilenamesAred0991f")}</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -316,7 +316,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
             <p className="font-medium">{progress?.result_import_status === 'running' ? t("tasks.resultImportUnfinisheda0f228") : t("tasks.structuredResultImportFaileda4deee")}</p>
             <p className="mt-1 text-xs">{t("tasks.importResumesFromArchivedFilesWithoutAllocatingbbfbf8")}</p>
           </div>
-          <Button loading={retryingImport} action="refresh" variant="secondary" size="small" onClick={() => void handleRetryImport()} disabled={retryingImport}>
+          <Button permission="tasks.manage" loading={retryingImport} action="refresh" variant="secondary" size="small" onClick={() => void handleRetryImport()} disabled={retryingImport}>
 
             {retryingImport ? t("tasks.importingc3ddf1") : progress?.result_import_status === 'running' ? t("tasks.resumeImport3a09f5") : t("tasks.reimportResultsf469ba")}
           </Button>

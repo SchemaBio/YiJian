@@ -1,4 +1,5 @@
 'use client';
+import { PermissionEditor } from '@/components/shared/PermissionEditor';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -16,7 +17,7 @@ import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { CheckCircle2, Loader2, Search, Shield, Trash2, Users, XCircle } from 'lucide-react';
 import type { SystemRole, User } from '@/types/user';
-import { approveUser, deleteUser, listPendingUsers, listUsers, rejectUser, updateUser } from '@/lib/users';
+import { approveUser, createUser, deleteUser, listPendingUsers, listUsers, rejectUser, updateUser } from '@/lib/users';
 
 const SYSTEM_ROLES: Array<{ id: SystemRole; name: string; description: string }> = [
   { id: 'PLATFORM_ADMIN', name: '平台管理员', description: '自部署环境的管理员，可创建子用户并分配系统角色' },
@@ -28,8 +29,8 @@ const roleVariant: Record<SystemRole, 'warning' | 'info'> = {
   ORG_USER: 'info',
 };
 
-function roleName(role: SystemRole): string {
-  return SYSTEM_ROLES.find((item) => item.id === role)?.name ?? role;
+function roleName(role: SystemRole, t: TextTranslator): string {
+  return t(role === 'PLATFORM_ADMIN' ? 'settings.platformAdministrator02926d' : 'settings.organizationUser568bac');
 }
 
 function formatTime(value: string, t: TextTranslator = chineseText): string {
@@ -39,7 +40,7 @@ function formatTime(value: string, t: TextTranslator = chineseText): string {
   return date.toLocaleString(t.locale, { hour12: false });
 }
 
-export function PermissionsManagement() {
+export function PermissionsManagement({ currentUserId }: { currentUserId?: string } = {}) {
   const t = useText();
   const [users, setUsers] = React.useState<User[]>([]);
   const [pendingUsers, setPendingUsers] = React.useState<User[]>([]);
@@ -49,10 +50,14 @@ export function PermissionsManagement() {
   const [moderatingUserId, setModeratingUserId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [editingUser, setEditingUser] = React.useState<User | null>(null);
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [createError, setCreateError] = React.useState<string | null>(null);
+  const [createForm, setCreateForm] = React.useState({ name: '', email: '', password: '', permissions: [] as string[], systemRole: 'ORG_USER' as SystemRole });
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
   const [userForm, setUserForm] = React.useState({
     name: '',
     systemRole: 'ORG_USER' as SystemRole,
+    permissions: [] as string[],
     isActive: true,
   });
 
@@ -88,8 +93,26 @@ export function PermissionsManagement() {
     setUserForm({
       name: user.name,
       systemRole: user.systemRole,
+      permissions: user.systemRole === 'PLATFORM_ADMIN' ? [] : user.permissions ?? [],
       isActive: user.isActive,
     });
+  };
+
+  const resetCreateForm = () => setCreateForm({ name: '', email: '', password: '', permissions: [] as string[], systemRole: 'ORG_USER' });
+  const handleCreateUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setCreateError(null);
+    setIsSaving(true);
+    try {
+      await createUser(createForm);
+      setCreateOpen(false);
+      resetCreateForm();
+      await loadUsers();
+    } catch (err) {
+      setCreateError(errorText(err, t));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveUser = async () => {
@@ -104,6 +127,7 @@ export function PermissionsManagement() {
       const updated = await updateUser(editingUser.id, {
         name: userForm.name.trim(),
         systemRole: userForm.systemRole,
+        permissions: userForm.permissions,
         isActive: userForm.isActive,
       });
       setUsers((prev) => prev.map((user) => (user.id === updated.id ? updated : user)));
@@ -117,6 +141,10 @@ export function PermissionsManagement() {
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
+    if (!currentUserId || String(userToDelete.id) === String(currentUserId)) {
+      setError(t('backendErrors.cannotDeleteSelf'));
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
@@ -149,16 +177,16 @@ export function PermissionsManagement() {
   };
 
   const columns: Column<User>[] = [
+    { id: 'permissions', header: t('permissions.title'), accessor: row => row.systemRole === 'PLATFORM_ADMIN' ? t('permissions.all') : `${row.permissions?.length ?? 0} / 9`, width: 130 },
     { id: 'name', header: t("samples.namebe4c26"), accessor: 'name', width: 120, align: 'center' },
     { id: 'email', header: t("settings.email9ed627"), accessor: 'email', width: 220, align: 'center' },
     {
       id: 'systemRole',
       header: t("settings.systemRole97946d"),
-      accessor: (row) => <Tag variant={roleVariant[row.systemRole]}>{roleName(row.systemRole)}</Tag>,
+      accessor: (row) => <Tag variant={roleVariant[row.systemRole]}>{roleName(row.systemRole, t)}</Tag>,
       width: 130,
       align: 'center',
     },
-    { id: 'orgId', header: t("settings.organizationIdbb939b"), accessor: (row) => row.orgId || '-', width: 180, align: 'center' },
     {
       id: 'status',
       header: t("admin.status62e951"),
@@ -192,11 +220,12 @@ export function PermissionsManagement() {
 
             onClick={() => openEditModal(row)}
            /></HoverHint>
-          <HoverHint content={t("data.delete3755f5")}><ActionButton size="small" iconOnly action="delete" variant="ghost"
+          <HoverHint content={t(String(row.id) === String(currentUserId) ? 'backendErrors.cannotDeleteSelf' : 'data.delete3755f5')}><span className="inline-flex" tabIndex={String(row.id) === String(currentUserId) ? 0 : undefined}><ActionButton size="small" iconOnly action="delete" variant="ghost"
             className="p-1.5 rounded hover:bg-danger-subtle text-fg-muted hover:text-danger-fg transition-colors"
-
+            disabled={!currentUserId || String(row.id) === String(currentUserId)}
+            aria-label={t(String(row.id) === String(currentUserId) ? 'backendErrors.cannotDeleteSelf' : 'data.delete3755f5')}
             onClick={() => setUserToDelete(row)}
-           /></HoverHint>
+           /></span></HoverHint>
         </div>
       ),
       width: 90,
@@ -206,8 +235,7 @@ export function PermissionsManagement() {
 
   return (
     <div className="space-y-6">
-
-
+      <div className="yj-panel p-4 text-sm leading-6 text-fg-muted">{t('settings.accountManagementGuide')}</div>
       {pendingUsers.length > 0 && (
         <div className="yj-panel p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -223,7 +251,7 @@ export function PermissionsManagement() {
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-fg-default">{user.name || user.email}</div>
                   <div className="truncate text-xs text-fg-muted">
-                    {user.email} {t("settings.organization54ec4b")}{user.orgId || '-'} · {formatTime(user.createdAt, t)}
+                    {user.email} · {formatTime(user.createdAt, t)}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -249,9 +277,10 @@ export function PermissionsManagement() {
       )}
 
       <div className="yj-toolbar-panel">
+        <Button action="add" variant="primary" onClick={() => { setCreateError(null); setCreateOpen(true); }}>{t('settings.createAccount')}</Button>
         <div className="w-full sm:w-72">
           <Input
-            placeholder={t("settings.searchNameEmailOrOrganizationIdbfe305")}
+            placeholder={t("settings.searchAccount")}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             leftElement={<Search className="w-4 h-4" />}
@@ -275,7 +304,7 @@ export function PermissionsManagement() {
       ) : error && users.length === 0 ? null : users.length === 0 ? (
         <EmptyState className="yj-panel" icon={<Users />} title={searchQuery.trim() ? t("settings.noMatchingUsersc766ea") : t("settings.noUsers3d268b")} description={searchQuery.trim() ? t("pipeline.adjustYourSearchAndRetryf591c7") : undefined} />
       ) : (
-        <div className="[&_table]:min-w-[1110px]"><DataTable data={users} columns={localizeDisplay(columns, t)} rowKey="id" density="default" striped /></div>
+        <div className="[&_table]:min-w-[930px]"><DataTable data={users} columns={localizeDisplay(columns, t)} rowKey="id" density="default" striped /></div>
       )}
 
       <div className="yj-panel overflow-hidden">
@@ -285,13 +314,28 @@ export function PermissionsManagement() {
             <div key={role.id} className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-4 h-4 text-accent-fg" />
-                <h4 className="text-sm font-medium text-fg-default">{role.name}</h4>
+                <h4 className="text-sm font-medium text-fg-default">{roleName(role.id, t)}</h4>
               </div>
               <p className="text-xs text-fg-muted">{translateUI(role.description, t)}</p>
             </div>
           ))}
         </div>
       </div>
+
+      <AppModal open={createOpen} onOpenChange={open => { if (!isSaving) { setCreateOpen(open); if (!open) resetCreateForm(); } }} size="medium" title={t('settings.createAccount')} footer={<>
+        <Button variant="secondary" disabled={isSaving} onClick={() => { setCreateOpen(false); resetCreateForm(); }}>{t('admin.cancel4d0b46')}</Button>
+        <Button type="submit" form="create-platform-user" variant="primary" loading={isSaving}>{t('settings.createAccount')}</Button>
+      </>}>
+        <form id="create-platform-user" onSubmit={handleCreateUser} className="space-y-4">
+          {createError && <p role="alert" className="text-sm text-danger-fg">{createError}</p>}
+          <FormItem label={t('samples.namebe4c26')} required><Input aria-label={t('samples.namebe4c26')} required value={createForm.name} onChange={e => setCreateForm(prev => ({ ...prev, name: e.target.value }))} /></FormItem>
+          <FormItem label={t('settings.email9ed627')} required><Input aria-label={t('settings.email9ed627')} type="email" autoComplete="off" required value={createForm.email} onChange={e => setCreateForm(prev => ({ ...prev, email: e.target.value }))} /></FormItem>
+          <FormItem label={t('settings.initialPassword')} required><Input aria-label={t('settings.initialPassword')} type="password" autoComplete="new-password" required minLength={8} value={createForm.password} onChange={e => setCreateForm(prev => ({ ...prev, password: e.target.value }))} /><p className="mt-1 text-xs text-fg-muted">{t('settings.passwordGuide')}</p></FormItem>
+          <FormItem label={t('settings.systemRole97946d')} required><Select options={localizeDisplay(SYSTEM_ROLES.map(role => ({ value: role.id, label: roleName(role.id, t) })), t)} value={createForm.systemRole} onChange={value => setCreateForm(prev => ({ ...prev, permissions: [], systemRole: (Array.isArray(value) ? value[0] : value) as SystemRole }))} /></FormItem>
+          <PermissionEditor administrator={createForm.systemRole === 'PLATFORM_ADMIN'} values={createForm.permissions} onChange={permissions => setCreateForm(prev => ({ ...prev, permissions }))} disabled={isSaving} />
+          <p className="text-xs text-fg-muted">{t('settings.createdAccountGuide')}</p>
+        </form>
+      </AppModal>
 
       <AppModal open={Boolean(editingUser)} onOpenChange={(open) => !open && setEditingUser(null)} size="medium" title={t("settings.editUser2b8f00")} footer={<>
           <Button variant="secondary" onClick={() => setEditingUser(null)} disabled={isSaving}>
@@ -314,14 +358,15 @@ export function PermissionsManagement() {
             </FormItem>
             <FormItem label={t("settings.systemRole97946d")} required>
               <Select
-                options={localizeDisplay(SYSTEM_ROLES.map((role) => ({ value: role.id, label: role.name })), t)}
+                options={localizeDisplay(SYSTEM_ROLES.map((role) => ({ value: role.id, label: roleName(role.id, t) })), t)}
                 value={userForm.systemRole}
                 onChange={(value) => {
                   const nextRole = Array.isArray(value) ? value[0] : value;
-                  setUserForm((prev) => ({ ...prev, systemRole: nextRole as SystemRole }));
+                  setUserForm((prev) => ({ ...prev, systemRole: nextRole as SystemRole, permissions: [] }));
                 }}
               />
             </FormItem>
+            <PermissionEditor administrator={userForm.systemRole === 'PLATFORM_ADMIN'} values={userForm.permissions} onChange={permissions => setUserForm(prev => ({ ...prev, permissions }))} disabled={isSaving} />
             <FormItem label={t("settings.accountStatus67104f")} required>
               <Select
                 options={[

@@ -394,7 +394,7 @@ function ReportTemplatesPageContent() {
       accessor: (row: ReportTemplate) => (
         <TableActions>
           <TableAction label={t("admin.edita7f814")} action="edit" disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => handleEdit(row)} />
-          <TableAction label={row.status === 'active' ? t("admin.disabledd989e5") : t("admin.enabledd4e9ca")} leftIcon={row.status === 'active' ? <PowerOff /> : <Power />}
+          <TableAction permission="report_services.manage" label={row.status === 'active' ? t("admin.disabledd989e5") : t("admin.enabledd4e9ca")} leftIcon={row.status === 'active' ? <PowerOff /> : <Power />}
             loading={statusUpdatingId === row.id} disabled={!row.canMaintain || statusUpdatingId !== null} onClick={() => void handleToggleStatus(row)} />
           <TableAction label={t("data.delete3755f5")} action="delete" tone="danger" hint={row.status === 'active' ? t("pipeline.disableBeforeDeletingfb1c7e") : t("pipeline.deleteReportServicea5699c")}
             disabled={!row.canMaintain || row.status === 'active' || statusUpdatingId !== null} onClick={() => handleDelete(row)} />
@@ -434,7 +434,7 @@ function ReportTemplatesPageContent() {
 
       {error && (
         <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {error}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>{t("billing.retryLoading7b4939")}</ActionButton>
+          {error}<ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" disabled={loading} onClick={() => void refreshTemplates()}>{t("billing.retryLoading7b4939")}</ActionButton>
         </div>
       )}
 
@@ -534,7 +534,7 @@ function ReportTemplatesPageContent() {
                   leftElement={<Link className="w-4 h-4" />}
                   className="min-w-0 flex-1"
                 />
-                <Button loading={testingApi} loadingLabel={t("pipeline.testingf43705")}
+                <Button permission="report_services.manage" loading={testingApi} loadingLabel={t("pipeline.testingf43705")}
                   type="button"
                   variant="secondary"
                   size="medium"

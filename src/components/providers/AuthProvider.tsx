@@ -1,4 +1,7 @@
 'use client';
+import { BusinessPermissionContext } from './BusinessPermissionProvider';
+import { userHasPermission, type BusinessPermission } from '@/lib/permissions';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { LocalizedError } from '@/i18n/errors';
 
 
@@ -33,6 +36,8 @@ const MOCK_ORG: UserOrganizationInfo = {
 };
 
 interface AuthContextType {
+  hasPermission: (permission: BusinessPermission) => boolean;
+  refreshSession: () => Promise<void>;
   user: User | null;
   organizations: UserOrganizationInfo[];
   currentOrg: UserOrganizationInfo | null;
@@ -261,6 +266,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const isSuperAdmin = isPlatformAdmin;
+  const hasPermission = useCallback((permission: BusinessPermission) => userHasPermission(user, permission, getRuntimeBackendFlavor()), [user]);
+  const refreshSession = useCallback(async () => {
+    if (!user || DEV_MOCK_AUTH) return;
+    try { setUser(await authApi.getCurrentUser()); }
+    catch { setUser(previous => previous ? { ...previous, permissions: [] } : previous); }
+  }, [user]);
+  useEffect(() => {
+    const refresh = () => { void refreshSession(); };
+    window.addEventListener('focus', refresh);
+    window.addEventListener('schema:permissions-changed', refresh);
+    return () => { window.removeEventListener('focus', refresh); window.removeEventListener('schema:permissions-changed', refresh); };
+  }, [refreshSession]);
+
 
   // Listen for auth-expired event from api.ts refresh failure.
   useEffect(() => {
@@ -278,6 +296,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [resetSession]);
 
   const value: AuthContextType = {
+    hasPermission, refreshSession,
     user,
     organizations,
     currentOrg,
@@ -297,7 +316,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      <BusinessPermissionContext.Provider value={hasPermission}>{children}</BusinessPermissionContext.Provider>
     </AuthContext.Provider>
   );
 }

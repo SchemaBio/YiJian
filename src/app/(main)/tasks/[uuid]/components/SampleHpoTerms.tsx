@@ -37,7 +37,7 @@ export function SampleHpoTerms({ terms, refreshing, onSave }: {
   return <section className="space-y-3 border-t border-border-default pt-3" aria-label={t('samples.hpoPhenotypeTermsc62e48')}>
     <div className="flex items-center justify-between gap-2">
       <h4 className="text-xs font-medium text-fg-muted">{t('samples.hpoPhenotypeTermsc62e48')}</h4>
-      {!editing && <ActionButton action="edit" size="small" variant="ghost" disabled={refreshing} onClick={() => { setDraft(terms.map(term => ({...term}))); setQuery(''); setError(''); setEditing(true); }}>{t('admin.edita7f814')}</ActionButton>}
+      {!editing && <ActionButton permission="samples.write" action="edit" size="small" variant="ghost" disabled={refreshing} onClick={() => { setDraft(terms.map(term => ({...term}))); setQuery(''); setError(''); setEditing(true); }}>{t('admin.edita7f814')}</ActionButton>}
     </div>
     <div className="flex flex-wrap gap-2">
       {(editing ? draft : terms).map(term => <HoverHint key={term.id} content={term.name}><span className="inline-flex items-center gap-1"><Tag variant="info" className="font-mono">{term.id}</Tag>{editing && <IconActionButton action="close" size="small" variant="ghost" disabled={saving} label={t('samples.remove40a0d2', {p0:term.id})} onClick={() => setDraft(items => items.filter(item => item.id !== term.id))} />}</span></HoverHint>)}
@@ -48,7 +48,7 @@ export function SampleHpoTerms({ terms, refreshing, onSave }: {
       {matches.length > 0 && <ul className="max-h-40 overflow-y-auto rounded border border-border-default">{matches.map(term => <li key={term.id}><button type="button" disabled={saving} className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-canvas-subtle disabled:opacity-50" onClick={() => { setDraft(items => items.some(item => item.id === term.id) ? items : [...items, {id:term.id, name:term.name}]); setQuery(''); }}><span className="font-mono text-accent-fg">{term.id}</span><span>{term.name}</span></button></li>)}</ul>}
       <div className="flex justify-end gap-2">
         <ActionButton size="small" disabled={saving} onClick={() => { setEditing(false); setQuery(''); setError(''); }}>{t('admin.cancel4d0b46')}</ActionButton>
-        <ActionButton action="save" size="small" loading={saving} onClick={() => void save()}>{t('data.savefadf24')}</ActionButton>
+        <ActionButton permission="samples.write" action="save" size="small" loading={saving} onClick={() => void save()}>{t('data.savefadf24')}</ActionButton>
       </div>
     </>}
     {error && <p role="alert" className="text-xs text-danger-fg">{error}</p>}

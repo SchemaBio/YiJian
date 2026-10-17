@@ -198,7 +198,7 @@ export function ROHTab({ taskId, filterState: externalFilterState, onFilterChang
       {requestError ? (
         <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-3 text-sm text-danger-fg">
           {requestError}
-          <ActionButton action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">{t("pipeline.retrye2d53a")}</ActionButton>
+          <ActionButton permission={null} action="retry" variant="ghost" onClick={() => setFilterState({ ...filterState })} className="ml-3 underline">{t("pipeline.retrye2d53a")}</ActionButton>
         </div>
       ) : loading && !result ? (
         <div className="flex items-center justify-center py-12">

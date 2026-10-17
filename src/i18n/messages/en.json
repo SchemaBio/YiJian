@@ -146,8 +146,8 @@
     "cnvBaselineTasksAreBilledByInputfac0fc": "CNV baseline tasks are billed by input size at ",
     "creditsGibac5f8a": " credits / GiB.",
     "reservationsAreNotFinalChargesDifferencesSettleb226d9": "Reservations are not final charges. Differences settle at task completion; billing shows reservations, charges, refunds and downloads.",
-    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "Self-hosted administrators can create users and assign system roles",
-    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "Self-hosted users access features according to assigned roles",
+    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "Self-hosted administrator with all business permissions; manages accounts and grants",
+    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "Ordinary self-hosted account; read-only by default, with business permissions assigned individually",
     "unableToLoadUsers24ee20": "Unable to load users",
     "enterAName71883c": "Enter a name",
     "unableToSaveUserb23480": "Unable to save user",
@@ -177,7 +177,7 @@
     "deleteThisUser332e3a": "Delete this user?",
     "thisAccountWillNoLongerBeAble5b44aa": "This account will no longer be able to sign in. Deletion cannot be undone.",
     "platformAdministrator02926d": "Platform administrator",
-    "organizationUser568bac": "Organization user",
+    "organizationUser568bac": "Standard user",
     "nameCannotBeEmptyb0f813": "Name cannot be empty",
     "profileSaved4695fe": "Profile saved",
     "unableToSaveProfilece9d35": "Unable to save profile",
@@ -210,18 +210,26 @@
     "checkingPermissions04cb10": "Checking permissions…",
     "youDoNotHavePermissionToAccessbed2ab": "You do not have permission to access this page",
     "permissionse47b7f": "Permissions",
-    "createSelfHostedUsersAndManageTheir8f13a7": "Create self-hosted users and manage their roles and status."
+    "createSelfHostedUsersAndManageTheir8f13a7": "Create self-hosted users and manage their roles and status.",
+    "accountManagementDescription": "Create accounts, assign roles and manage access here. Edit personal details and passwords in Personal settings.",
+    "accountManagementGuide": "Administrators can create accounts and grant permissions to registered users. Everyone can browse, query and download business data in this instance. Ordinary users start with no write permissions; administrators assign each permission individually. Administrators have all permissions. Disabled accounts cannot sign in.",
+    "createAccount": "Create account",
+    "initialPassword": "Initial password",
+    "passwordGuide": "At least 8 characters. Avoid common passwords; a mix of letters, numbers and symbols is recommended.",
+    "createdAccountGuide": "New accounts are enabled immediately. Share the initial password through a secure channel and ask the user to change it in Personal settings.",
+    "deploymentAccountDeletion": "Account and data deletion is handled by this instance’s deployer. Contact the instance administrator to confirm the scope, related data and backup retention. Do not post personal information in public GitHub issues.",
+    "searchAccount": "Search name or email..."
   },
   "privacy": {
     "title": "Privacy Policy",
     "platform": "YiJian · Bioinformatics analysis and variant annotation tools, from FASTQ to results",
-    "version": "Updated: October 14, 2026 · Version 2026-10-14",
+    "version": "Updated: October 16, 2026 · Version 2026-10-16",
     "back": "Back",
-    "notice": "The hosted SaaS is for Research Use Only (RUO) and runs research workflows from FASTQ to results, with quality control, variant annotation and result browsing. ACMG preliminary assessments, HPO associations and AI assistance organize evidence and prioritize research candidates. They do not provide personal diagnoses, health-risk conclusions, treatment or medication advice, and must not be used for personal medical decisions. Users deploy and configure the open-source edition and decide its use cases and how results are used. Deployers are responsible for data authorization, security, result validation and applicable qualification and regulatory requirements. The software and its outputs do not automatically constitute a validated medical product or diagnosis. This notice adds no use restrictions to the open-source license. Do not submit real names, identity documents, contact details or other identifying information in sample IDs, notes, phenotype descriptions, filenames or other fields. Sample creation requires an acknowledgment; this does not mean the platform has automatically verified anonymity. Genetic and phenotype data may remain sensitive personal information even when pseudonyms are used.",
+    "notice": "This service is provided by its deployer. This general notice must be supplemented with the deployer’s identity, contact channels and actual processing rules.",
     "contactTitle": "Contact and privacy requests",
-    "operator": "Operator: SchemaBio. Privacy inquiries and requests: ",
-    "contactInstructions": "Describe your request and relevant organization or account. Do not email raw sequencing files, full medical records or identity documents unless requested through an appropriate secure channel.",
-    "footer": "All language versions describe the same processing arrangements. Mandatory local privacy rights remain applicable."
+    "operator": "Service provider: the deployer of this instance. Contact the instance administrator for privacy inquiries and rights requests.",
+    "contactInstructions": "Use the contact channels published by the deployer. Do not send raw sequencing files, complete medical records or identity documents unless requested through an appropriate secure channel.",
+    "footer": "The deployer is responsible for a policy matching the actual deployment."
   },
   "about": {
     "javascriptLibraryForBuildingUserInterfacesd198e4": "JavaScript library for building user interfaces",
@@ -2795,6 +2803,39 @@
     "taskRetentionDetail": "Editing, starting or retrying does not extend retention. FASTQ is deleted 7 days after upload; BAM 7 days after analysis, and no later than task expiry.",
     "sampleRetentionTitle": "Sample information is retained for 30 days from creation, then erased.",
     "sampleRetentionDetail": "Editing or linking tasks does not extend retention.",
-    "taskRetentionConfirm": "I have read and understand the retention periods above."
+    "taskRetentionConfirm": "I have read and understand the retention periods above.",
+    "selfHostedResponsibility": "The deployer assumes responsibility for the risks of use."
+  },
+  "backendErrors": {
+    "passwordTooCommon": "This password is too common. Choose a more secure password.",
+    "passwordTooShort": "The password must contain at least 8 characters.",
+    "adminPasswordTooShort": "The administrator password must contain at least 12 characters.",
+    "passwordComplexity": "Include at least three of: lowercase letters, uppercase letters, numbers and symbols.",
+    "invalidCredentials": "The email address or password is incorrect.",
+    "invalidOldPassword": "The current password is incorrect.",
+    "emailExists": "This email address is already registered. Use another address.",
+    "invalidRole": "Invalid system role. Refresh the page and try again.",
+    "cannotDeleteSelf": "Platform administrators cannot delete their own account.",
+    "cannotDeactivateSelf": "You cannot disable your own account.",
+    "cannotDemoteSelf": "You cannot remove your own administrator role."
+  },
+  "permissions": {
+    "title": "Business permissions",
+    "all": "All permissions",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "denied": "You do not have permission for this operation. Contact a platform administrator.",
+    "description": "Without grants, users can browse and download only. Grants apply to shared instance data. Baseline access is independent of ordinary task access.",
+    "labels": {
+      "samples_write": "Sample editing",
+      "data_manage": "Data upload and management",
+      "tasks_manage": "Analysis task management",
+      "pipelines_manage": "Pipeline management",
+      "gene_lists_manage": "Gene list management",
+      "bed_manage": "BED file management",
+      "baselines_manage": "Baseline task management",
+      "report_services_manage": "Report service configuration",
+      "interpretation_reports_manage": "Interpretation and report generation"
+    }
   }
 }

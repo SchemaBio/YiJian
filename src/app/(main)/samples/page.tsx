@@ -437,7 +437,7 @@ export default function SamplesPage() {
       header: t("admin.actionsf3ea6d"),
       accessor: (row) => (
         <TableActions>
-          <TableAction label={t("samples.linkdc91aa")} leftIcon={<Link2 />} hint={row.matchedPair ? t("samples.updateDataAssociation3bcbb3") : t("samples.linkDataManuallydb3c91")} aria-label={t("samples.linkSequencingData7a6f18")} onClick={() => setLinkingSample(row)} />
+          <TableAction permission="samples.write" label={t("samples.linkdc91aa")} leftIcon={<Link2 />} hint={row.matchedPair ? t("samples.updateDataAssociation3bcbb3") : t("samples.linkDataManuallydb3c91")} aria-label={t("samples.linkSequencingData7a6f18")} onClick={() => setLinkingSample(row)} />
           <TableAction action="edit" label={t("admin.edita7f814")} onClick={() => setEditingSample(row)} />
           <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" onClick={() => setDeleteTargets([row])} />
         </TableActions>
@@ -536,7 +536,7 @@ export default function SamplesPage() {
           {samplesError && (
             <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
               <span>{samplesError}</span>
-              {readFailed && <Button action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>{t("billing.retryLoading7b4939")}</Button>}
+              {readFailed && <Button permission={null} action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void loadSamples()}>{t("billing.retryLoading7b4939")}</Button>}
             </div>
           )}
           {!hasLoaded && loading ? <div className="yj-empty-state text-sm text-fg-muted">{t("samples.loadingSamples20c029")}</div> : readFailed && samples.length === 0 ? null : filteredSamples.length > 0 ? (

@@ -213,7 +213,7 @@ export default function NewAnalysisPage() {
         {(loadError || (isTrio && familyError)) && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
             <span>{loadError || familyError}</span>
-            <Button action="retry" variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>{t("billing.retryLoading7b4939")}</Button>
+            <Button permission={null} action="retry" variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>{t("billing.retryLoading7b4939")}</Button>
           </div>
         )}
 

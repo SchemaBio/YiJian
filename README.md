@@ -63,7 +63,6 @@ Other runtime settings, with defaults from `.env.example` and `docker-entrypoint
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `YIJIAN_DEFAULT_LOCALE` | `zh-CN` | Deployment default language |
-| `YIJIAN_SUPPORT_EMAIL` | `support@schema-bio.com` | Support address shown in the UI |
 | `YIJIAN_UPLOAD_ORIGINS` | empty | Extra allowed upload origins |
 | `YIJIAN_PASSWORD_RESET_ENABLED` | `false` | Password reset |
 | `NEXT_PUBLIC_PASSWORD_HASH_ENABLED` | `false` | Client-side password hashing. Baked in at image build time |
@@ -81,7 +80,7 @@ docker run -p 3000:3000 \
   yijian
 ```
 
-The entrypoint writes `public/runtime-config.js` from the environment, so API URL, backend, support email, upload origins, password reset, and default locale can change without rebuilding the image. The image listens on port 3000 and runs as a non-root user.
+The entrypoint writes `public/runtime-config.js` from the environment, so API URL, backend, upload origins, password reset, and default locale can change without rebuilding the image. The image listens on port 3000 and runs as a non-root user.
 
 ## Interface language
 
@@ -105,3 +104,9 @@ node scripts/check-i18n.cjs
 ```
 
 Reverse proxy, TLS, and public access control are the deployer’s responsibility.
+
+### Self-hosted business permissions
+
+The platform administrator can assign nine independent business permissions in Platform Management. Administrators always have every permission. All ordinary accounts, including existing accounts and self-registered users, start read-only. Users can browse, query and download local business data shared across the instance; granted permissions allow managing resources created by other local users. Personal preferences and credentials remain private.
+
+This applies only to the Octopus open-source edition. SaaS via Squid keeps its existing single-user and tenant isolation behavior. Deploy the Octopus database/backend update before YiJian. Permission changes take effect on subsequent API requests without signing in again; the interface refreshes permissions on window focus and permission errors. Running tasks continue after revocation.

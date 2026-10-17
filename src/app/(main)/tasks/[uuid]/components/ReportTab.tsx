@@ -108,7 +108,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <RawResultDownloads taskId={taskId} />
-      {generationError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>{t("tasks.reloadRecords5dc183")}</ActionButton></div>}
+      {generationError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{generationError}</span><ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button" onClick={() => setGenerationRetry(value => value + 1)}>{t("tasks.reloadRecords5dc183")}</ActionButton></div>}
  {generations.length>0&&<div className="yj-panel p-4"><h4 className="mb-3 text-sm font-medium">{t("tasks.reportGenerationHistorye7923b")}</h4><div className="overflow-x-auto"><table className="w-full min-w-[440px] text-left text-sm"><thead className="text-xs text-fg-muted"><tr><th className="pb-2 font-medium">{t("tasks.time89b4aa")}</th><th className="pb-2 font-medium">{t("tasks.reportMethode5d5cd")}</th><th className="pb-2 font-medium">{t("admin.status62e951")}</th></tr></thead><tbody>{generations.map(g=><tr key={g.id} className="border-t border-border-subtle"><td className="py-3 pr-3 whitespace-nowrap">{new Date(g.createdAt).toLocaleString(t.locale, {hour12:false})}</td><td className="pr-3">{g.contractVersion==='report-snapshot-v2'?t("tasks.reportSnapshotca5ad0"):t("tasks.history19e0e3")}</td><td><Tag variant={g.state==='ready'?'success':g.state==='failed'?'danger':g.state==='generating'?'info':'neutral'}>{({ready:t("tasks.generated79c74f"),generating:t("tasks.generating57c08c"),failed:t("admin.failed3e3c80"),unknown:t("tasks.remoteResultNeedsVerificationb568ae"),pending:t("tasks.awaitingGeneration436346")} as Record<string,string>)[g.state]??g.state}</Tag>{g.errorCode&&<span className="ml-2 text-xs text-danger-fg">{reportErrorText(g.errorCode, t)}</span>}</td></tr>)}</tbody></table></div></div>}
 
       <div className="rounded-xl border border-border-default bg-canvas-default p-5">
@@ -135,7 +135,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
           >
             {t("tasks.generateAndDownloadfcc355")}</Button>
         </div>
-        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>{t("pipeline.retrye2d53a")}</ActionButton></div>}
+        {templateError && <div role="alert" className="mt-4 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">{templateError}<ActionButton permission={null} action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={()=>setTemplateRetry(value=>value+1)}>{t("pipeline.retrye2d53a")}</ActionButton></div>}
         {generating && (
           <div className="mt-4 rounded-md border border-border bg-canvas-default px-3 py-2 text-sm text-fg-muted">
             <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export function ReportTab({ taskId }: ReportTabProps) {
         )}
       </div>
 
-      <AppModal open={errorModalOpen} onOpenChange={setErrorModalOpen} title={t("tasks.reportGenerationFailed230636")} size="small" footer={<Button variant="primary" onClick={() => setErrorModalOpen(false)}>{t("tasks.okf526c8")}</Button>}>
+      <AppModal open={errorModalOpen} onOpenChange={setErrorModalOpen} title={t("tasks.reportGenerationFailed230636")} size="small" footer={<Button permission={null} variant="primary" onClick={() => setErrorModalOpen(false)}>{t("tasks.okf526c8")}</Button>}>
         <p role="alert" className="break-words text-sm text-danger-fg">{errorMessage}</p>
       </AppModal>
     </div>

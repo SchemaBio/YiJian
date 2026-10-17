@@ -146,8 +146,8 @@
     "cnvBaselineTasksAreBilledByInputfac0fc": "CNV 基線任務按輸入資料量計費，當前單價爲 ",
     "creditsGibac5f8a": " 積分 / GiB。",
     "reservationsAreNotFinalChargesDifferencesSettleb226d9": "預扣不是最終扣費，差額會在任務終態結算；賬單明細會顯示預扣、扣費、退款和下載流水。",
-    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "自部署環境的管理員，可創建子使用者並分配系統角色",
-    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "自部署環境的子使用者，按管理員授予的角色使用業務功能",
+    "selfHostedAdministratorsCanCreateUsersAnd317e8b": "自部署環境的管理員，擁有全部業務權限，可管理帳戶與授權",
+    "selfHostedUsersAccessFeaturesAccordingTocc0e30": "自部署環境的一般帳戶，預設唯讀，由管理員逐項授予業務權限",
     "unableToLoadUsers24ee20": "載入使用者列表失敗",
     "enterAName71883c": "請填寫姓名",
     "unableToSaveUserb23480": "儲存使用者失敗",
@@ -177,7 +177,7 @@
     "deleteThisUser332e3a": "確定要刪除此使用者嗎？",
     "thisAccountWillNoLongerBeAble5b44aa": "刪除後該賬號將無法登錄，此操作不可撤銷。",
     "platformAdministrator02926d": "平臺管理員",
-    "organizationUser568bac": "機構使用者",
+    "organizationUser568bac": "一般使用者",
     "nameCannotBeEmptyb0f813": "姓名不能爲空",
     "profileSaved4695fe": "個人資料已儲存",
     "unableToSaveProfilece9d35": "儲存個人資料失敗",
@@ -210,18 +210,26 @@
     "checkingPermissions04cb10": "正在驗證權限...",
     "youDoNotHavePermissionToAccessbed2ab": "您沒有權限訪問此頁面",
     "permissionse47b7f": "權限管理",
-    "createSelfHostedUsersAndManageTheir8f13a7": "創建自部署子使用者，並管理其角色與賬號狀態。"
+    "createSelfHostedUsersAndManageTheir8f13a7": "創建自部署子使用者，並管理其角色與賬號狀態。",
+    "accountManagementDescription": "在此建立帳戶、分配角色並管理啟用狀態。個人資料和密碼在個人設定中修改。",
+    "accountManagementGuide": "管理員可建立帳戶，也可為自行註冊的一般使用者授權。所有使用者均可瀏覽、查詢及下載本實例業務資料；一般使用者預設沒有寫入權限，由管理員逐項分配。管理員擁有全部權限。停用帳戶後無法登入。",
+    "createAccount": "建立帳戶",
+    "initialPassword": "初始密碼",
+    "passwordGuide": "至少 8 位，避免使用常見弱密碼，建議混合字母、數字和符號。",
+    "createdAccountGuide": "建立後帳戶立即啟用。請透過安全管道告知初始密碼，並請使用者登入後在個人設定中修改。",
+    "deploymentAccountDeletion": "帳戶與資料刪除由本實例部署者處理。請聯絡本實例管理員確認刪除範圍、關聯資料與備份保留；不要在公開 GitHub 問題區提交個人資訊。",
+    "searchAccount": "搜尋姓名或電子郵件..."
   },
   "privacy": {
     "title": "隱私政策",
     "platform": "貽鑑 · 從 FASTQ 到分析結果的生物資訊分析與變異註釋工具",
-    "version": "更新日期：2026年10月14日 · 版本 2026-10-14",
+    "version": "更新日期：2026年10月16日 · 版本 2026-10-16",
     "back": "返回",
-    "notice": "SaaS 託管版僅用於科研（Research Use Only，RUO），執行從 FASTQ 到分析結果的科研工作流程，提供品管、變異註釋與結果瀏覽。ACMG 初評、HPO 關聯及 AI 輔助僅用於整理證據與篩選研究候選，不提供個人疾病診斷、健康風險結論、治療或用藥建議；不得用於個人醫療決策。 開源版由使用者自行部署、配置並決定使用場景與結果用途。部署者負責資料授權、安全保護、結果驗證及適用的資格與監管要求；軟體及輸出不自動構成經過驗證的醫療產品或診斷結論。本說明不新增開源授權的用途限制。 禁止在樣本編號、備註、表型描述、檔案名稱等欄位提交真實姓名、身分證件、聯絡方式或其他身分資訊。建立樣本前須確認遵守要求；該確認不表示平台已自動驗證匿名性。使用化名的遺傳及表型資料仍可能屬於敏感個人資訊。",
+    "notice": "本實例由部署者自行提供服務。以下為通用隱私說明，部署者應補充其主體資訊、聯絡方式與實際處理規則。",
     "contactTitle": "隱私聯繫與權利請求",
-    "operator": "運營主體：SchemaBio。隱私諮詢及權利請求：",
-    "contactInstructions": "請說明請求事項及相關機構或帳戶。除非我們通過適當的安全渠道要求提供，請勿通過郵件發送原始測序檔案、完整病歷或身份證件。",
-    "footer": "各語言版本說明相同的處理安排；適用地區的強制性隱私權不受本政策排除。"
+    "operator": "服務提供者：本實例的部署者。隱私諮詢與權利請求請聯絡本實例管理員。",
+    "contactInstructions": "請使用部署者公布的聯絡管道。除非透過適當安全管道要求提供，請勿傳送原始定序檔案、完整病歷或身分證件。",
+    "footer": "部署者負責提供與實際部署一致的隱私政策。"
   },
   "about": {
     "javascriptLibraryForBuildingUserInterfacesd198e4": "用於構建使用者介面的 JavaScript 庫",
@@ -2795,6 +2803,39 @@
     "taskRetentionDetail": "編輯、啟動或重試不延長期限。FASTQ 上傳後 7 天、BAM 分析完成後 7 天清理，且不超過任務期限。",
     "sampleRetentionTitle": "樣本資訊自建立起僅保留 30 天，到期後自動抹除。",
     "sampleRetentionDetail": "編輯、關聯任務不會延長期限。",
-    "taskRetentionConfirm": "我已閱讀並了解上述保留期限。"
+    "taskRetentionConfirm": "我已閱讀並了解上述保留期限。",
+    "selfHostedResponsibility": "使用風險由部署者自行承擔。"
+  },
+  "backendErrors": {
+    "passwordTooCommon": "密碼過於常見，請設定更安全的密碼。",
+    "passwordTooShort": "密碼至少需要 8 個字元。",
+    "adminPasswordTooShort": "管理員密碼至少需要 12 個字元。",
+    "passwordComplexity": "密碼須包含小寫字母、大寫字母、數字和符號中的至少三類。",
+    "invalidCredentials": "電子郵件或密碼不正確。",
+    "invalidOldPassword": "目前密碼不正確。",
+    "emailExists": "此電子郵件已被註冊，請使用其他電子郵件。",
+    "invalidRole": "無效的系統角色，請重新整理頁面後再試。",
+    "cannotDeleteSelf": "平台管理員不能刪除自身。",
+    "cannotDeactivateSelf": "不能停用自己的帳戶。",
+    "cannotDemoteSelf": "不能移除自己的管理員角色。"
+  },
+  "permissions": {
+    "title": "業務權限",
+    "all": "擁有全部權限",
+    "selectAll": "全選",
+    "clear": "清空",
+    "denied": "沒有此操作權限，請聯絡平台管理員授權。",
+    "description": "未勾選時僅可瀏覽和下載。授權適用於本實例共用的業務資料；基線權限獨立於一般工作權限。",
+    "labels": {
+      "samples_write": "樣本管理寫入",
+      "data_manage": "資料中心上傳與管理",
+      "tasks_manage": "一般工作管理",
+      "pipelines_manage": "流程管理",
+      "gene_lists_manage": "基因列表管理",
+      "bed_manage": "BED 檔案管理",
+      "baselines_manage": "基線工作管理",
+      "report_services_manage": "報告服務設定",
+      "interpretation_reports_manage": "結果解讀與報告產生"
+    }
   }
 }
