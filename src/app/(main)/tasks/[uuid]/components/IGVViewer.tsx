@@ -113,7 +113,7 @@ export function formatChromosome(chromosome: string): string {
   return `chr${name}`;
 }
 
-function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackResolver): IGVTrackConfig {
+function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackResolver, authenticated = false): IGVTrackConfig {
   return {
     sync: true,
     type: track.type as IGVTrackConfig['type'],
@@ -122,6 +122,7 @@ function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackReso
     url: resolver.url(track.id),
     ...(track.hasIndex ? { indexURL: resolver.indexURL(track.id) } : {}),
     ...(track.type === 'alignment' ? { height: 180 } : {}),
+    ...(authenticated ? {withCredentials: true} : {}),
   };
 }
 
@@ -134,6 +135,7 @@ function referenceConfiguration(session: IGVSession) {
     indexURL: reference.indexURL,
     aliasURL: reference.aliasURL,
     cytobandURL: reference.cytobandURL,
+    ...(session.transport === 'api' ? {withCredentials: true} : {}),
   };
 }
 
@@ -282,7 +284,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
         const geneTrack = staticGeneTrack(session);
         const configurations: IGVTrackConfig[] = [
           ...(geneTrack ? [geneTrack] : []),
-          ...tracks.map(track => trackConfiguration(track, resolver)),
+          ...tracks.map(track => trackConfiguration(track, resolver, session.transport === 'api')),
         ];
         for (const configuration of configurations) {
           if (!active) {

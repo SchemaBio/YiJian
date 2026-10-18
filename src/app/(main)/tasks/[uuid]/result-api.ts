@@ -1,6 +1,7 @@
 import { LocalizedError } from '@/i18n/errors';
 import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
+import {igvAPIURL} from '@/lib/igv-api-url';
 import {assessmentStatus} from '@/lib/assessment/client';
 import { queryBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { optionalAnnotationNumber } from './utils/snv-annotations';
@@ -559,11 +560,19 @@ export async function getResultContext(taskId: string, signal?: AbortSignal): Pr
   return context;
 }
 
-export function getIGVSession(taskId: string, signal?: AbortSignal): Promise<IGVSession> {
-	return api.get<IGVSession>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv`, { signal });
+export async function getIGVSession(taskId: string, signal?: AbortSignal): Promise<IGVSession> {
+	const session = await api.get<IGVSession>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv`, { signal });
+	if (session.transport === 'api') {
+		for (const key of ['fastaURL', 'indexURL'] as const) {
+			const value = session.reference[key];
+			if (value) session.reference[key] = igvAPIURL(taskId, value);
+		}
+	}
+	return session;
 }
 
 export interface IGVSnapshot {
+	transport?: 'api';
   available: boolean;
   url?: string;
   locus?: string;
@@ -571,20 +580,26 @@ export interface IGVSnapshot {
   createdAt?: string;
 }
 
-export function getIGVSnapshot(taskId: string, locus: string, signal?: AbortSignal): Promise<IGVSnapshot> {
-  return api.get(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/snapshot`, { params: { locus }, signal, cache: 'no-store' });
+function resolveIGVSnapshot(taskId: string, value: IGVSnapshot): IGVSnapshot {
+  return value.transport === 'api' && value.url ? {...value, url: igvAPIURL(taskId, value.url)} : value;
 }
 
-export function saveIGVSnapshot(taskId: string, locus: string, version: string, image: Blob, signal?: AbortSignal): Promise<IGVSnapshot> {
+export async function getIGVSnapshot(taskId: string, locus: string, signal?: AbortSignal): Promise<IGVSnapshot> {
+  return resolveIGVSnapshot(taskId, await api.get<IGVSnapshot>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/snapshot`, { params: { locus }, signal, cache: 'no-store' }));
+}
+
+export async function saveIGVSnapshot(taskId: string, locus: string, version: string, image: Blob, signal?: AbortSignal): Promise<IGVSnapshot> {
   const form = new FormData();
   form.append('locus', locus);
   form.append('version', version);
   form.append('image', image, 'igv.png');
-  return api.postForm(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/snapshot`, form, { signal });
+  return resolveIGVSnapshot(taskId, await api.postForm<IGVSnapshot>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/snapshot`, form, { signal }));
 }
 
-export async function getIGVTrackURLs(taskId: string, version: string, trackIds: string[], signal?: AbortSignal): Promise<{ tracks: IGVTrackURL[]; expiresAt: string }> {
-	return api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/urls`, { version, trackIds }, { signal });
+export async function getIGVTrackURLs(taskId: string, version: string, trackIds: string[], signal?: AbortSignal): Promise<{ tracks: IGVTrackURL[]; expiresAt: string; transport?: 'api' }> {
+	const response = await api.post<{ tracks: IGVTrackURL[]; expiresAt: string; transport?: 'api' }>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv/urls`, { version, trackIds }, { signal });
+	if (response.transport === 'api') response.tracks = response.tracks.map(track => ({...track, url: igvAPIURL(taskId, track.url), ...(track.indexURL ? {indexURL: igvAPIURL(taskId, track.indexURL)} : {})}));
+	return response;
 }
 
 function parquetColumn(type: ResultQueryType, column: string): string {

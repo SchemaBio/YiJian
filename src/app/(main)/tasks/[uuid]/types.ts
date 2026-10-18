@@ -157,6 +157,7 @@ export interface IGVTrackDescriptor {
 }
 
 export interface IGVSession {
+	transport?: 'api';
   taskUuid: string;
   executionAttemptId: string;
   version: string;

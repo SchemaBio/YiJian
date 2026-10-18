@@ -18,6 +18,15 @@ beforeEach(() => { vi.mocked(getIGVSnapshot).mockResolvedValue({ available: fals
 const session: IGVSession = { taskUuid: 'task', executionAttemptId: 'attempt', version: 'version', available: true, reference: { available: true, id: 'hg19', fastaURL: '/reference.fa', indexURL: '/reference.fa.fai' }, tracks: [] };
 const props = { taskId: 'task', chromosome: '1', position: 10, isOpen: true, onClose: vi.fn(), session };
 
+it('enables authenticated range reads for self-hosted reference and alignment tracks',async()=>{
+ const browser={search:vi.fn().mockResolvedValue(undefined),loadTrack:vi.fn().mockResolvedValue({}),dispose:vi.fn(),toSVG:vi.fn(),removeTrackByName:vi.fn(),updateViews:vi.fn().mockResolvedValue(undefined),currentLoci:vi.fn().mockReturnValue('chr1:1-110')};
+ vi.mocked(igv.createBrowser).mockResolvedValue(browser);
+ render(<IGVViewer {...props} session={{...session,transport:'api',tracks:[{id:'bam:0',name:'BAM',type:'alignment',format:'bam',hasIndex:true,available:true}]}}/>);
+ await waitFor(()=>expect(browser.loadTrack).toHaveBeenCalled());
+ expect(igv.createBrowser).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({reference:expect.objectContaining({withCredentials:true})}));
+ expect(browser.loadTrack).toHaveBeenCalledWith(expect.objectContaining({format:'bam',withCredentials:true}));
+});
+
 describe('IGV browser lifecycle', () => {
   beforeEach(() => vi.clearAllMocks());
   it('uses official removal on close and reuses the browser for locus changes', async () => {

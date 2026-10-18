@@ -9,8 +9,8 @@ export const normalizeContig = (value: string) => value.replace(/^chr/i, '').toU
 // Only parsed data is cached. Authorization is checked again on every opening;
 // signed URLs are never retained. Two task/version entries bound memory use.
 const cache = new Map<string, CNRBin[]>();
-async function readCNR(url: string, signal: AbortSignal): Promise<CNRBin[]> {
-  const response = await fetch(url, {signal, credentials:'omit', referrerPolicy:'no-referrer', cache:'no-store'});
+async function readCNR(url: string, signal: AbortSignal, authenticated = false): Promise<CNRBin[]> {
+  const response = await fetch(url, {signal, credentials:authenticated?'include':'omit', referrerPolicy:'no-referrer', cache:'no-store'});
   if (!response.ok || !response.body) throw new LocalizedError("display.cnrObjectInaccessibleCheckAuthorizationAndCosf2bd05");
   const reader = response.body.getReader(), decoder = new TextDecoder();
   let text = '', bytes = 0;
@@ -50,7 +50,7 @@ export async function loadCNR(taskId:string, attemptId:string|undefined, signal:
   const signed=await getIGVTrackURLs(taskId,session.version,[track.id],signal);
   const target=signed.tracks.find(value=>value.id===track.id);
   if(!target)throw new LocalizedError("display.cnrReadAuthorizationMissing38fc8f");
-  const bins=await readCNR(target.url,signal);
+  const bins=await readCNR(target.url,signal,signed.transport === 'api');
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
   if(cache.size>=2)cache.delete(cache.keys().next().value!);
   cache.set(key,bins);return bins;

@@ -169,6 +169,11 @@ function buildURL(endpoint: string, params?: Record<string, string>, prefix?: st
   return appendQuery(`${getRuntimeApiBaseUrl()}${withCorePrefix(endpoint, prefix, coreApi)}`, params);
 }
 
+// For authenticated streaming libraries that issue their own range requests.
+export function apiResourceURL(endpoint: string, params?: Record<string, string>): string {
+  return buildURL(endpoint, params);
+}
+
 async function parseJSONBody(response: Response): Promise<unknown> {
   if (response.status === 204) return undefined;
   const text = await response.text();

@@ -9,6 +9,7 @@ import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { type ButtonAction } from '@/components/shared/ActionButton';
 import { ConfirmDialog } from '@/components/shared';
 import type { AnalysisTask } from '@/types/task';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 // 操作单元格组件
 export function TaskActionsCell({
@@ -34,6 +35,13 @@ export function TaskActionsCell({
 }) {
   const t = useText();
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const terminalStatus = ['completed', 'failed', 'cancelled'].includes(task.status);
+  // Cloud jobs may still own a node after analysis ends. Local terminal tasks
+  // have no node to release, even if an older backend left a stale phase.
+  const executionInFlight = Boolean(
+    task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal'
+    && (getRuntimeBackendFlavor() === 'squid' || !terminalStatus)
+  );
 
   // 动态按钮配置：根据状态和进度自动切换
   // 1. 启动 - 排队中(queued)状态
@@ -42,8 +50,8 @@ export function TaskActionsCell({
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
     if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: t("tasks.done33246f"), action: 'completed' as ButtonAction, onClick: () => onView(task) };
-    if (task.executionPhase === 'terminating') return null;
-    if (task.executionPhase && task.executionPhase !== 'idle' && task.executionPhase !== 'terminal') {
+    if (executionInFlight && task.executionPhase === 'terminating') return null;
+    if (executionInFlight) {
       return {
         label: task.status === 'completed' ? t("tasks.releaseNode76fea1") : t("admin.cancel4d0b46"),
         action: 'stop' as ButtonAction,
@@ -91,11 +99,6 @@ export function TaskActionsCell({
   };
 
   const primaryAction = getPrimaryAction();
-  const executionInFlight = Boolean(
-    task.executionPhase
-      && task.executionPhase !== 'idle'
-      && task.executionPhase !== 'terminal'
-  );
   const canEdit = !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
   const canDelete = !task.interpretationCompletedAt;
 

@@ -10,6 +10,7 @@ import { awaitWorkerStartup, configureBrowserRuntime } from './parquet-runtime';
 import { buildLocalSelection, effectiveField, fieldType, ident, literal, OVERLAY_FIELDS, type LocalQuery } from './parquet-browser-sql';
 import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 interface DatasetInfo {
+	transport?: 'api';
     dataset: {
         id: string;
         executionAttemptId: string;
@@ -90,7 +91,9 @@ class BrowserTable {
                 throw new LocalizedError("display.dataReadAuthorizationMissing4cec0d");
             // COS GET signatures do not authorize HEAD. Explicit GET avoids the
             // remote filesystem's HEAD probe and downloads compressed Parquet once.
-            const response = await fetch(url, { credentials: 'omit', signal: controller.signal });
+            const response = kind === 'url'
+                ? await this.datasetResponse(this.info, this.table, controller.signal)
+                : await fetch(url, { credentials: 'omit', signal: controller.signal });
             if ((response.status === 401 || response.status === 403) && retry) {
                 const next = await api.get<DatasetInfo>(this.base() + '/browser');
                 if (next.dataset.dataVersion !== this.info.dataset.dataVersion || next.dataset.executionAttemptId !== this.info.dataset.executionAttemptId)
@@ -123,6 +126,24 @@ class BrowserTable {
             clearTimeout(timer);
             this.lifecycle.signal.removeEventListener('abort', abort);
         }
+    }
+    private async datasetResponse(info: DatasetInfo, table: string, signal: AbortSignal): Promise<Response> {
+        if (info.transport !== 'api')
+            return fetch(info.url, {credentials: 'omit', signal});
+        const url = info.url;
+        const endpoint = `/v1/tasks/${encodeURIComponent(this.task)}/results/tables/${encodeURIComponent(table)}/browser/file`;
+        const [path, query] = url.split('?');
+        const params = new URLSearchParams(query);
+        if (path !== endpoint || url.includes('#') || url.split('?').length !== 2
+            || params.getAll('attemptId').length !== 1 || params.getAll('datasetVersion').length !== 1
+            || Array.from(params.keys()).some(key => key !== 'attemptId' && key !== 'datasetVersion')
+            || params.get('attemptId') !== info.dataset.executionAttemptId
+            || params.get('datasetVersion') !== info.dataset.dataVersion)
+            throw new LocalizedError("display.dataReadAuthorizationMissing4cec0d");
+        const {blob} = await api.download(endpoint, undefined, {
+            method: 'GET', signal, params: Object.fromEntries(params),
+        });
+        return new Response(blob, {status: 200});
     }
     private async rows(sql: string, signal?: AbortSignal) {
         check(signal);
@@ -238,7 +259,7 @@ class BrowserTable {
         if(table!==this.table){
             const info=await api.get<DatasetInfo>(`/v1/tasks/${encodeURIComponent(this.task)}/results/tables/${table}/browser`,{signal:combined});
             if(info.dataset.executionAttemptId!==context.attemptId)throw new LocalizedError("display.assessmentExecutionBatchChangedefccd8");
-            const response=await fetch(info.url,{credentials:'omit',signal:combined});
+            const response=await this.datasetResponse(info,table,combined);
             if(!response.ok || Number(response.headers.get('Content-Length'))>128*1024*1024)throw new LocalizedError("display.assessmentDataReadFailed63f79b");
             const buffer=await response.arrayBuffer();if(buffer.byteLength>128*1024*1024)throw new LocalizedError("display.assessmentFileExceedsTheLimitc7b88b");
             const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer)),b=>b.toString(16).padStart(2,'0')).join('');
