@@ -1,4 +1,12 @@
 {
+  "selfHostedDownloads": {
+    "description": "Prepara un paquete de resultados para descargar o descarga por separado archivos como BAM e índices.",
+    "resultZIP": "ZIP de resultados del análisis",
+    "zipDescription": "Incluye informes archivados, VCF y resultados de control de calidad. Excluye BAM y datos de secuenciación originales.",
+    "downloadZIP": "Descargar ZIP de resultados",
+    "prepareZIP": "Preparar ZIP de resultados",
+    "individualFiles": "Descargar archivos individuales"
+  },
   "common": {
     "appName": "YiJian",
     "appDescription": "Herramientas de análisis bioinformático y anotación de variantes, de FASTQ a resultados",

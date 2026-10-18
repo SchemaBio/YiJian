@@ -1,4 +1,12 @@
 {
+  "selfHostedDownloads": {
+    "description": "准备结果包后下载，BAM 和索引等归档文件也可单独下载。",
+    "resultZIP": "分析结果 ZIP",
+    "zipDescription": "包含已归档的分析报告、VCF 和质控结果，不包含 BAM 与原始测序数据。",
+    "downloadZIP": "下载结果 ZIP",
+    "prepareZIP": "准备结果 ZIP",
+    "individualFiles": "单独下载归档文件"
+  },
   "common": {
     "appName": "贻鉴",
     "appDescription": "从 FASTQ 到分析结果的生物信息分析与变异注释工具",

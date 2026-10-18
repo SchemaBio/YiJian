@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import DashboardPage from './page';
 import { api } from '@/lib/api';
 import { tasksApi } from '@/lib/tasks';
@@ -14,6 +14,16 @@ vi.mock('@/lib/tasks', () => ({ tasksApi: { list: vi.fn(), getStats: vi.fn() } }
 beforeEach(() => {
   vi.resetAllMocks();
   auth.currentOrg = { id: 'org-1' };
+});
+afterEach(() => { delete window.__YIJIAN_CONFIG__; });
+
+it.each([['octopus', '/tasks'], ['squid', '/tasks/new']] as const)('routes the %s new-task shortcut to %s',async(backend,href)=>{
+  window.__YIJIAN_CONFIG__={BACKEND:backend};
+  availableStats();
+  vi.mocked(tasksApi.list).mockResolvedValue(taskList([]));
+  render(<DashboardPage/>);
+  await act(async()=>{});
+  expect(screen.getByRole('link',{name:'新建任务'})).toHaveAttribute('href',href);
 });
 
 function task(id: string, status: AnalysisTask['status'], interpretationCompletedAt?: string): AnalysisTask {

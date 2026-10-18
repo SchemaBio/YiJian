@@ -12,6 +12,7 @@ import { PageContent } from '@/components/layout';
 import { EmptyState } from '@/components/shared';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { api } from '@/lib/api';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { tasksApi } from '@/lib/tasks';
 import type { AnalysisTask, TaskStatsResponse } from '@/types/task';
 import { taskDisplayStatus, taskStatusConfig, taskStatusClass } from '@/lib/task-presentation';
@@ -178,7 +179,7 @@ function DashboardPageContent() {
             {t("admin.refresh38108e")}</Button>
           <Link href="/samples" className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)] px-3 text-sm font-medium text-fg-default hover:bg-[var(--yj-panel-subtle)]">
             <Plus className="h-4 w-4" /> {t("common.newSamplea24694")}</Link>
-          <Link href="/tasks/new" className="inline-flex h-9 items-center gap-2 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis hover:opacity-90">
+          <Link href={getRuntimeBackendFlavor() === 'squid' ? '/tasks/new' : '/tasks'} className="inline-flex h-9 items-center gap-2 rounded-md bg-accent-emphasis px-3 text-sm font-medium text-fg-on-emphasis hover:opacity-90">
             <Plus className="h-4 w-4" /> {t("common.newTask132e02")}</Link>
         </div>
       </div>

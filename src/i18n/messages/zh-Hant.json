@@ -1,4 +1,12 @@
 {
+  "selfHostedDownloads": {
+    "description": "準備結果套件後下載，BAM 與索引等封存檔案也可單獨下載。",
+    "resultZIP": "分析結果 ZIP",
+    "zipDescription": "包含已封存的分析報告、VCF 與品管結果，不包含 BAM 與原始定序資料。",
+    "downloadZIP": "下載結果 ZIP",
+    "prepareZIP": "準備結果 ZIP",
+    "individualFiles": "單獨下載封存檔案"
+  },
   "common": {
     "appName": "貽鑑",
     "appDescription": "從 FASTQ 到分析結果的生物資訊分析與變異註釋工具",

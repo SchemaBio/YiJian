@@ -1,4 +1,12 @@
 {
+  "selfHostedDownloads": {
+    "description": "Prepare a result package to download, or download archived files such as BAMs and indexes individually.",
+    "resultZIP": "Analysis results ZIP",
+    "zipDescription": "Includes archived analysis reports, VCFs and QC results. Excludes BAMs and raw sequencing data.",
+    "downloadZIP": "Download results ZIP",
+    "prepareZIP": "Prepare results ZIP",
+    "individualFiles": "Download individual archived files"
+  },
   "common": {
     "appName": "YiJian",
     "appDescription": "Bioinformatics analysis and variant annotation tools, from FASTQ to results",

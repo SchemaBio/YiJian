@@ -13,6 +13,7 @@ import { AppModal } from '@/components/shared';
 import { Download, FileArchive, HardDrive, Coins, Clock3, AlertTriangle } from 'lucide-react';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { api } from '@/lib/api';
+import { SelfHostedResultDownloads } from './SelfHostedResultDownloads';
 
 interface DownloadFile { id: string; filename: string; size_bytes: number; credits: number; role?: string }
 interface Catalog { bam_expires_at?: string; bam_retention_days?: number; bam_status?: string; attempt_id: string; zip_status: string; zip_error?: string; zip?: DownloadFile; bams: DownloadFile[]; missing: string[] }
@@ -22,6 +23,10 @@ const gb = (size: number, t: TextTranslator = chineseText) => `${(size / 1_000_0
 const labels: Record<string, string> = { mt_vcf: '线粒体 VCF', snp_indel: 'SNP/InDel 注释结果', mt: '线粒体注释结果', cnv_region: 'CNV 区域', cnv_gene: 'CNV 外显子', mei: 'MEI', upd: 'UPD', roh: 'ROH', qc_result: 'QC 报告', str: 'STR' };
 
 export function RawResultDownloads({ taskId }: { taskId: string }) {
+  return getRuntimeBackendFlavor() === 'squid' ? <ChargedResultDownloads taskId={taskId}/> : <SelfHostedResultDownloads taskId={taskId}/>;
+}
+
+function ChargedResultDownloads({ taskId }: { taskId: string }) {
   const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [catalog, setCatalog] = React.useState<Catalog | null>(null);
