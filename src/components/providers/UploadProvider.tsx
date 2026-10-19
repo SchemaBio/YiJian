@@ -56,7 +56,7 @@ interface UploadContextValue {
   clearUpload: () => void;
 }
 
-type UploadReadType = 'read1' | 'read2' | 'single' | 'bed';
+type UploadReadType = 'read1' | 'read2' | 'single' | 'bed' | 'vcf';
 
 interface UploadRun {
   controllers: Map<string, AbortController>;
@@ -181,7 +181,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     const previous = activeUploadRef.current?.status === 'needs_file' ? activeUploadRef.current : null;
     const canResume = Boolean(previous && previous.files.length > 0 &&
       previous.files.every((item) => {
-        const file = item.readType === 'read1' ? read1 : read2;
+        const file = item.readType === 'read1' || item.readType === 'vcf' ? read1 : read2;
         return file && file.name === item.fileName &&
           (item.fileSize === undefined || file.size === item.fileSize) &&
           (item.lastModified === undefined || file.lastModified === item.lastModified);
@@ -202,7 +202,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         fileToReadType.set(item.fileId, readType);
       });
     } else {
-      if (read1) controllersByReadType.read1 = new AbortController();
+      if (read1) { controllersByReadType.read1 = new AbortController(); if (/\.vcf(?:\.gz|\.bgz)?$/i.test(read1.name)) controllersByReadType.vcf = controllersByReadType.read1; }
       if (read2) controllersByReadType.read2 = new AbortController();
     }
     const run: UploadRun = { controllers, controllersByReadType, fileToReadType, fullCancelRequested: false };
@@ -275,7 +275,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         },
       };
       const signals: UploadSignals = {
-        read1: controllersByReadType.read1?.signal,
+        read1: (controllersByReadType.vcf ?? controllersByReadType.read1)?.signal,
         read2: controllersByReadType.read2?.signal,
         single: controllersByReadType.single?.signal,
         bed: controllersByReadType.bed?.signal,

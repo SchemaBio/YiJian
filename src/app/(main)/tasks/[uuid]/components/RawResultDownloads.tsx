@@ -129,7 +129,7 @@ function ChargedResultDownloads({ taskId }: { taskId: string }) {
           <p className="mt-2 text-center text-xs text-fg-muted">{zipReady?t("tasks.confirmTheCostNextCreditIsCharged03a0cd"):t("tasks.confirmDownloadAfterPackagingFinishesPreparationIsd4568e")}</p>
         </div>
       </article>
-      <article className="flex flex-col rounded-xl border border-border-default bg-canvas-default p-5">
+      {catalog?.bam_status !== 'not_provided' && <article className="flex flex-col rounded-xl border border-border-default bg-canvas-default p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3"><div className="rounded-lg bg-canvas-subtle p-2.5 text-accent-fg"><HardDrive className="h-5 w-5"/></div><div><h4 className="font-semibold">{t("tasks.deduplicatedBambf8124")}</h4><p className="mt-0.5 text-xs text-fg-muted">{t("tasks.requestObjectStorageDownloadLink3c0ebb")}</p></div></div>
           <div className="shrink-0 text-right"><p className="text-xl font-semibold text-accent-fg">1 <span className="text-xs font-normal">{t("tasks.creditsGba435e1")}</span></p><p className="text-[11px] text-fg-muted">{t("tasks.roundedUp7a59c9")}</p></div>
@@ -145,9 +145,9 @@ function ChargedResultDownloads({ taskId }: { taskId: string }) {
           {!catalog&&<p className="text-sm text-fg-muted">{t("tasks.readingBamFilesAndSizes7280da")}</p>}
         </div>
         <p className="mt-4 text-xs leading-5 text-fg-muted">{t("tasks.downloadDirectlyFromObjectStorageWithoutIpae48b2")}</p>
-      </article>
+      </article>}
     </div>
-    {isSaaS&&<div role="note" className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><p><strong>{t("tasks.bamRetainedForDays9f64b9")}</strong>{t("tasks.bamIsDeletedDaysAfterCompletionDisabling86a6fc")}</p></div>}
+    {isSaaS&&catalog?.bam_status !== 'not_provided'&&<div role="note" className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><p><strong>{t("tasks.bamRetainedForDays9f64b9")}</strong>{t("tasks.bamIsDeletedDaysAfterCompletionDisabling86a6fc")}</p></div>}
     <div className="flex items-start gap-2 rounded-lg bg-canvas-subtle px-4 py-3 text-xs leading-5 text-fg-muted"><Coins className="mt-0.5 h-4 w-4 shrink-0"/><p><strong className="text-fg-default">{t("tasks.chargeTiming232cba")}</strong>{t("tasks.confirmationChargesAndIssuesTheLinkCanceling9df320")}</p></div>
     {error&&<p role="alert" className="rounded-lg border border-danger-muted bg-danger-subtle p-3 text-sm text-danger-fg">{error}</p>}
     {issued&&<div role="status" className="rounded-xl border border-success-muted bg-success-subtle p-4">

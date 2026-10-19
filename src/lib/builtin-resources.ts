@@ -7,6 +7,7 @@ export type BuiltinGenome = 'hg19' | 'hg38';
 /** Translate reserved built-in IDs at display time; never rename custom pipelines. */
 export function pipelineDisplayName(id: string, original: string, t: TextTranslator): string {
   const labels: Record<string, string> = {
+ 'builtin-vcf2anno-hg19':'vcfAnnotation.hg19', 'builtin-vcf2anno-hg38':'vcfAnnotation.hg38',
     'builtin-wes-single': 'pipeline.wesSingleSampleAnalysis400a61',
     'builtin-wes-family': 'pipeline.wesFamilyAnalysise07024',
     'builtin-wes-single-hg38': 'pipeline.wesSingleSampleAnalysisHg188750',

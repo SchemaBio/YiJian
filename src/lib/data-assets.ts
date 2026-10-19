@@ -10,7 +10,7 @@ export { getDataAssetUploadStatus } from './api';
 export { UploadCancelledError, isUploadCancelled } from './api';
 
 export type DataAssetStatus = 'pending' | 'uploading' | 'completed' | 'failed' | 'missing' | 'deleting' | 'deleted';
-export type DataReadType = 'read1' | 'read2' | 'single' | 'bed';
+export type DataReadType = 'read1' | 'read2' | 'single' | 'bed' | 'vcf';
 
 export interface DataAsset {
  validation_status?:'pending'|'validating'|'valid'|'invalid'|'unavailable';
@@ -409,7 +409,7 @@ export async function uploadDataFiles(
     }
   }
   const file = (read1 ?? read2) as File;
-  const readType = read1 ? 'read1' : 'read2';
+  const readType = /\.vcf(?:\.gz|\.bgz)?$/i.test(file.name) ? 'vcf' : read1 ? 'read1' : 'read2';
   const signal = read1 ? signals?.read1 : signals?.read2;
   let startedFileId: string | undefined;
   const singleCallbacks: UploadCallbacks = {
@@ -440,9 +440,9 @@ export async function resumeDataFiles(
   signals?: UploadSignals,
 ): Promise<UploadBatchResult> {
   const selected = [
-    read1 ? { file: read1, readType: 'read1' as const } : null,
+    read1 ? { file: read1, readType: /\.vcf(?:\.gz|\.bgz)?$/i.test(read1.name) ? 'vcf' as const : 'read1' as const } : null,
     read2 ? { file: read2, readType: 'read2' as const } : null,
-  ].filter(Boolean) as Array<{ file: File; readType: 'read1' | 'read2' }>;
+  ].filter(Boolean) as Array<{ file: File; readType: 'read1' | 'read2' | 'vcf' }>;
   if (selected.length === 0) throw new LocalizedError("common.selectAtLeastOneFile7487f9");
   // The server-side recovery list is authoritative.  Match every unfinished
   // record to a selected original file, while ignoring an extra file the user
@@ -456,7 +456,7 @@ export async function resumeDataFiles(
   });
   callbacks?.onStarted?.(entries.map(({ item }) => ({ ...item, progress: item.progress || 0, status: 'uploading' })));
   const uploaded = new Map(entries.map(({ item }) => [item.fileId, 0]));
-  const signalFor = (item: UploadFileProgress) => signals?.[item.readType === 'read1' || item.readType === 'read2' ? item.readType : 'single'];
+  const signalFor = (item: UploadFileProgress) => signals?.[item.readType === 'vcf' ? 'read1' : item.readType === 'read1' || item.readType === 'read2' ? item.readType : 'single'];
   const reportOverallProgress = () => {
     const activeEntries = entries.filter(({ item }) => !signalFor(item)?.aborted);
     const activeTotal = activeEntries.reduce((sum, entry) => sum + entry.file.size, 0);

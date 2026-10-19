@@ -13,28 +13,30 @@ interface VariantTypeNavProps {
   activeTab: TabType;
   context: ResultContext | null;
   onTabChange: (tab: TabType) => void;
+  snvOnly?: boolean;
 }
 
-export function VariantTypeNav({ activeTab, context, onTabChange }: VariantTypeNavProps) {
+export function VariantTypeNav({ activeTab, context, onTabChange, snvOnly=false }: VariantTypeNavProps) {
   const t = useText();
+  const configs=snvOnly?VARIANT_TAB_CONFIGS.filter(t=>t.id==='snv-indel'):VARIANT_TAB_CONFIGS;
   const collapsed = React.useContext(TaskNavigationCollapsed);
   const buttons = React.useRef<Array<HTMLButtonElement | null>>([]);
   const handleKeyDown = (event: React.KeyboardEvent, index: number) => {
     let next: number;
-    if (event.key === 'ArrowDown') next = (index + 1) % VARIANT_TAB_CONFIGS.length;
-    else if (event.key === 'ArrowUp') next = (index - 1 + VARIANT_TAB_CONFIGS.length) % VARIANT_TAB_CONFIGS.length;
+    if (event.key === 'ArrowDown') next = (index + 1) % configs.length;
+    else if (event.key === 'ArrowUp') next = (index - 1 + configs.length) % configs.length;
     else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = VARIANT_TAB_CONFIGS.length - 1;
+    else if (event.key === 'End') next = configs.length - 1;
     else return;
     event.preventDefault();
-    onTabChange(VARIANT_TAB_CONFIGS[next].id);
+    onTabChange(configs[next].id);
     buttons.current[next]?.focus();
   };
   return (
     <nav className="yj-variant-nav" aria-label={t("history.variantType6c1aef")}>
       <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-fg-muted">{t("history.variantType6c1aef")}</p>
       <div className="yj-variant-nav-items">
-        {VARIANT_TAB_CONFIGS.map((item, index) => {
+        {configs.map((item, index) => {
           const active = activeTab === item.id;
           const count = context?.types[item.id]?.total;
           const Icon = TASK_NAV_ICONS[item.id];

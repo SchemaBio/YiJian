@@ -13,6 +13,7 @@ import type { SampleDetail } from '@/app/(main)/samples/types';
 import { normalizeSampleDetail } from './samples';
 
 interface RawTask {
+ result_capabilities?: string[];
   template?: string;
   id?: string;
   sampleId?: string;
@@ -99,6 +100,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),
     internalId: String(raw.internalId ?? raw.internal_id ?? ''),
     template: typeof raw.template === 'string' ? raw.template : undefined,
+ resultCapabilities: raw.result_capabilities,
     pipeline: String(raw.pipeline ?? ''),
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
@@ -134,6 +136,7 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),
     internalId: String(raw.internalId ?? raw.internal_id ?? ''),
     template: typeof raw.template === 'string' ? raw.template : undefined,
+ resultCapabilities: raw.result_capabilities,
     pipeline: String(raw.pipeline ?? ''),
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
@@ -221,6 +224,7 @@ export function normalizeTaskProgress(rawValue: unknown): TaskProgressResponse {
 }
 
 export interface TaskEstimateInput {
+ vcf_asset_id?: string; vcf_sample_name?: string;
   sampleId?: string;
   pedigreeId?: string;
   pipelineId: string;
@@ -231,6 +235,7 @@ export interface TaskEstimateResponse {
 }
 
 export interface TaskBatchInputRow {
+ vcf_asset_id?: string; vcf_sample_name?: string;
   row_number: number;
   sample_identifier: string;
   pedigree_id: string;

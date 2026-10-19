@@ -1,4 +1,5 @@
 'use client';
+import {VCFTaskFields} from '@/components/shared/VCFTaskFields';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { LocalizedError } from '@/i18n/errors';
 
@@ -29,6 +30,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { tasksApi } from '@/lib/tasks';
 
 export interface NewTaskFormData {
+ vcf_asset_id?: string; vcf_sample_name?: string;
   sampleId: string;
   internalId: string;
   pipelineId: string;
@@ -53,7 +55,9 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
   const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem | null>(null);
-  const [selectedPipeline, setSelectedPipeline] = React.useState<string>('');
+  const [vcfAssetId,setVcfAssetId]=React.useState('');
+ const [vcfSampleName,setVcfSampleName]=React.useState('');
+ const [selectedPipeline, setSelectedPipeline] = React.useState<string>('');
   const [remark, setRemark] = React.useState('');
   const [loadingResources, setLoadingResources] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -127,9 +131,11 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     }));
   }, [pipelines, templates, t]);
 
+  const isVCF = pipelines.find(p=>p.id===selectedPipeline)?.baseType==='vcf_annotation' || pipelines.find(p=>p.id===selectedPipeline)?.template==='vcf2anno';
   const resolveTemplate = (pipeline: TaskPipelineOption | undefined) => {
     if (pipeline?.template) return pipeline.template;
     const byBaseType: Record<string, string> = {
+      vcf_annotation: 'vcf2anno',
       wes_single: 'single',
       // Octopus' built-in trio/family WDL is trio.wdl; the catalog exposes it
       // as germline_trio with shortName "trio".
@@ -148,7 +154,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   React.useEffect(() => {
     const pipeline = pipelines.find(item => item.id === selectedPipeline);
-    if (!selectedSample?.id || !pipeline?.id) {
+    if ((isVCF && !vcfAssetId) || !selectedSample?.id || !pipeline?.id) {
       setEstimatedMinutes(60);
       setEstimateStatus('idle');
       return;
@@ -156,7 +162,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
     let cancelled = false;
     setEstimateStatus('loading');
-    tasksApi.estimate({ sampleId: selectedSample.id, pipelineId: pipeline.id })
+    tasksApi.estimate({ sampleId: selectedSample.id, pipelineId: pipeline.id, ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}) })
       .then((estimate) => {
         if (cancelled) return;
         const minutes = Math.max(1, Math.ceil(Number(estimate.estimated_minutes)));
@@ -173,7 +179,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     return () => {
       cancelled = true;
     };
-  }, [pipelines, selectedPipeline, selectedSample?.id]);
+  }, [pipelines, selectedPipeline, selectedSample?.id, isVCF, vcfAssetId, vcfSampleName]);
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
@@ -192,7 +198,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSample || !selectedPipeline || submitting || (isSaaS && !retentionAcknowledged)) return;
+    if ((isVCF && !vcfAssetId) || !selectedSample || !selectedPipeline || submitting || (isSaaS && !retentionAcknowledged)) return;
 
     const pipeline = pipelines.find(p => p.id === selectedPipeline);
     const template = resolveTemplate(pipeline);
@@ -213,7 +219,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         pipelineVersion: pipeline?.version || '',
         remark,
         template,
-        inputs: buildInputs(selectedSample),
+        inputs: isVCF ? {} : buildInputs(selectedSample),
+ ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}),
       });
       handleClose();
     } catch (err) {
@@ -228,7 +235,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     setSampleSearch('');
     setSelectedSample(null);
     setSelectedPipeline('');
-    setRemark('');
+    setRemark(''); setVcfAssetId(''); setVcfSampleName('');
     setResourceError('');
     setRetentionAcknowledged(false);
     onClose();
@@ -248,7 +255,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")}
             variant="primary"
             onClick={handleSubmit}
-            disabled={loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
+            disabled={(isVCF && !vcfAssetId) || loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
 
           >
             {t("tasks.createTaskcf42fd")}</Button>
@@ -256,6 +263,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       }
     >
       <div className="space-y-6">
+        {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName}/>}
         <RetentionNotice kind="task" acknowledgement={{checked: retentionAcknowledged, onChange: setRetentionAcknowledged, disabled: submitting}} />
         {loadingResources && (
           <div className="flex items-center gap-2 text-sm text-fg-muted">
@@ -290,7 +298,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
                 <div className="text-sm font-mono">{sample.id.substring(0, 8)}...</div>
                 <div className="text-xs text-fg-muted">
                   {sample.internalId}
-                  {!sample.matchedPair ? t("tasks.awaitingSequencingData4671bd") : t("tasks.rRReady50a422")}
+                  {isVCF ? '' : !sample.matchedPair ? t("tasks.awaitingSequencingData4671bd") : t("tasks.rRReady50a422")}
                 </div>
               </div>
             ))}
@@ -298,7 +306,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
               <div className="px-3 py-4 text-center text-sm text-fg-muted">{t("samples.noMatchingSamplesc0d84a")}</div>
             )}
           </div>
-          {selectedSample && (
+          {selectedSample && !isVCF && (
             <div className="mt-2 text-sm text-accent-fg">{t("tasks.selected34a0eb")}{selectedSample.internalId}</div>
           )}
         </div>
@@ -353,7 +361,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           </div>
         </section>
 
-        <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+        {!isVCF && <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading
             icon={<Database className="h-4 w-4" />}
             title={t("samples.sequencingDataef4c3a")}
@@ -373,7 +381,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           ) : (
             <div className="text-sm text-fg-muted">{t("tasks.selectASampleToSeeDataReadiness9eb3aa")}</div>
           )}
-        </section>
+        </section>}
 
         <section className="border-t border-[var(--yj-border-subtle)] pt-5">
           <ModalSectionHeading

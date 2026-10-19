@@ -37,7 +37,8 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
     ? { title: t("tasks.auxiliaryDataImportIncompleteb857ca"), detail: t("tasks.rawDetectionTablesAreAvailableSomeAuxiliary01772e"), icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' }
     : stateDescription(context, t);
   const StateIcon = state.icon;
-  const counts = TYPE_LABELS.map(item => {
+  const snvOnly = context.capabilities?.length ? !context.capabilities.includes('qc') : false;
+  const counts = TYPE_LABELS.filter(item=>!snvOnly||item.key==='snv-indel').map(item => {
     const unqueried = Boolean(context.parquet?.available && context.parquet.tables.includes(item.key) && !context.parquet.preparedTables.includes(item.key));
     const count = context.types[item.key];
     const known = Boolean(count) && !unqueried;
@@ -93,11 +94,12 @@ export function ResultOverview({ context, onNavigate }: { context: ResultContext
         <p className="border-t border-border-default px-3 py-2 text-xs text-fg-muted">{t("tasks.focusSelectionDoesNotMeanAFormal8d65d4")}</p>
       </section>
 
-      <SampleFamilyTable context={context} />
+      {!snvOnly && <SampleFamilyTable context={context} />}
       </div>
-      <QCAndFamilyTables context={context} />
+      {!snvOnly && <QCAndFamilyTables context={context} />}
       </div>
 
+      {context.vcfAnnotation && <section className="yj-panel space-y-3 p-4"><h3 className="font-medium">{t('vcfAnnotation.title')}</h3><dl className="grid grid-cols-2 gap-2 text-sm"><dt>{t('vcfAnnotation.inputRecords')}</dt><dd>{String(context.vcfAnnotation.preprocessing?.input_records??'—')}</dd><dt>{t('vcfAnnotation.normalizedVariants')}</dt><dd>{String(context.vcfAnnotation.preprocessing?.normalized_variants??'—')}</dd><dt>{t('vcfAnnotation.sexSites')}</dt><dd>{context.vcfAnnotation.sex_inference?.x_sum ?? '—'}</dd><dt>{t('vcfAnnotation.sexRatio')}</dt><dd>{context.vcfAnnotation.sex_inference?.ratio == null?'—':context.vcfAnnotation.sex_inference.ratio.toLocaleString(t.locale,{style:'percent',maximumFractionDigits:2})}</dd><dt>{t('vcfAnnotation.inferredSex')}</dt><dd>{t('vcfAnnotation.'+(['female','male'].includes(context.vcfAnnotation.sex_inference?.sex??'')?context.vcfAnnotation.sex_inference?.sex:'unknown'))}</dd></dl>{context.vcfAnnotation.sex_inference?.reason && ({no_x_variants:'noX',insufficient_x_variants:'insufficientX',ratio_in_uncertain_interval:'uncertainX'} as Record<string,string>)[context.vcfAnnotation.sex_inference.reason] && <p>{t('vcfAnnotation.'+({no_x_variants:'noX',insufficient_x_variants:'insufficientX',ratio_in_uncertain_interval:'uncertainX'} as Record<string,string>)[context.vcfAnnotation.sex_inference.reason])}</p>}<p className="text-xs text-fg-muted">{t('vcfAnnotation.warning')}</p></section>}
       {!context.reference.available&&<p className="text-xs text-warning-fg">{context.reference.reason || t("tasks.referenceResourcesAreNotConfiguredSequencingEvidence9cfc0a")}</p>}
     </section>
   );

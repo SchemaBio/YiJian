@@ -208,6 +208,7 @@ export default function AnalysisDetailPage() {
     return () => { controller.abort(); window.clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, [uuid]);
 
+  React.useEffect(()=>{if(task?.template==='vcf2anno' && !['overview','snv-indel','files'].includes(activeTab))setActiveTab('snv-indel');},[task?.template,activeTab,setActiveTab]);
   // 404页面
   if (notFound) {
     return (
@@ -345,7 +346,7 @@ export default function AnalysisDetailPage() {
       <div className="min-h-0 flex-1 flex flex-col overflow-hidden px-3 pb-3 md:px-4 md:pb-4">
 
       {/* 标签面板和内容 */}
-		<div className="flex-1 min-h-0"><ResultTabs activeTab={activeTab} onTabChange={handleTabChange} variantNavigation={isVariantTab && <VariantTypeNav activeTab={activeTab} context={resultContext} onTabChange={handleTabChange} />} tools={<AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />}>
+		<div className="flex-1 min-h-0"><ResultTabs activeTab={activeTab} onTabChange={handleTabChange} variantNavigation={isVariantTab && <VariantTypeNav activeTab={activeTab} context={resultContext} snvOnly={task?.resultCapabilities?.includes('snv_indel') && !task.resultCapabilities.includes('qc')} onTabChange={handleTabChange} />} tools={<AssessmentStatusBar taskId={uuid} table={isVariantTab?activeTab:undefined} />}>
 			{isVariantTab ? (
 				<div key={resultContextKey} className="yj-result-workspace">
 					<div className="yj-result-content">{renderTabContent()}</div>

@@ -1,4 +1,5 @@
 'use client';
+import {VCFTaskFields} from '@/components/shared/VCFTaskFields';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { LocalizedError } from '@/i18n/errors';
 
@@ -58,7 +59,10 @@ export default function NewAnalysisPage() {
   const selectedSampleInfo = samples.find((sample) => sample.id === selectedSample);
   const selectedPipelineInfo = pipelines.find((pipeline) => pipeline.id === selectedPipeline);
   const selectedPedigreeInfo = pedigrees.find((pedigree) => pedigree.id === selectedPedigree);
-  const isTrio = selectedPipelineInfo?.baseType === 'wes_family' || selectedPipelineInfo?.template === 'trio';
+  const [vcfAssetId,setVcfAssetId]=React.useState('');
+ const [vcfSampleName,setVcfSampleName]=React.useState('');
+ const isVCF=selectedPipelineInfo?.baseType==='vcf_annotation' || selectedPipelineInfo?.template==='vcf2anno';
+ const isTrio = selectedPipelineInfo?.baseType === 'wes_family' || selectedPipelineInfo?.template === 'trio';
 
   React.useEffect(() => {
     let cancelled = false;
@@ -127,7 +131,7 @@ export default function NewAnalysisPage() {
     const pipelineId = selectedPipelineInfo?.id;
     const sampleId = isTrio ? undefined : selectedSampleInfo?.id;
     const pedigreeId = isTrio ? selectedPedigreeInfo?.id : undefined;
-    if (!pipelineId || (!sampleId && !pedigreeId)) {
+    if (!pipelineId || (isVCF && !vcfAssetId) || (!sampleId && !pedigreeId)) {
       setEstimatedMinutes(60);
       setEstimateStatus('idle');
       return;
@@ -135,7 +139,7 @@ export default function NewAnalysisPage() {
 
     let cancelled = false;
     setEstimateStatus('loading');
-    tasksApi.estimate({ sampleId, pedigreeId, pipelineId })
+    tasksApi.estimate({ sampleId, pedigreeId, pipelineId, ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}) })
       .then((estimate) => {
         if (cancelled) return;
         const minutes = Math.max(1, Math.ceil(Number(estimate.estimated_minutes)));
@@ -152,7 +156,7 @@ export default function NewAnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, [isTrio, selectedPedigreeInfo?.id, selectedPipelineInfo?.id, selectedSampleInfo?.id]);
+  }, [isTrio, isVCF, vcfAssetId, vcfSampleName, selectedPedigreeInfo?.id, selectedPipelineInfo?.id, selectedSampleInfo?.id]);
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
@@ -171,7 +175,7 @@ export default function NewAnalysisPage() {
   }, [isTrio, selectedPedigreeInfo, selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
-    if (submitting || (isSaaS && !retentionAcknowledged)) return;
+    if ((isVCF && !vcfAssetId) || submitting || (isSaaS && !retentionAcknowledged)) return;
     setFormError('');
     if (!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)) {
       setFormError(isTrio ? t("tasks.selectAPedigreeContainingParentsAndProbandc87287") : t("tasks.selectASampleAndAnalysisPipeline53d997"));
@@ -184,10 +188,11 @@ export default function NewAnalysisPage() {
         pedigreeId: isTrio ? selectedPedigreeInfo!.id : undefined,
         internalId: isTrio ? selectedPedigreeInfo!.internalId : selectedSampleInfo!.internalId,
         pipelineId: selectedPipelineInfo.id,
+ ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}),
         pipelineName: selectedPipelineInfo.name,
         pipelineVersion: selectedPipelineInfo.version,
         remark: taskName,
-        inputs: {
+        inputs: isVCF ? {} : {
           enable_cnv: enableCNV,
           enable_sv: enableSV,
         },
@@ -266,6 +271,7 @@ export default function NewAnalysisPage() {
           />
         </FormItem>
 
+        {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName}/>}
         <FormItem label={t("tasks.taskNotesd34f05")}>
           <Input
             aria-label={t("tasks.taskNotesd34f05")}
@@ -275,7 +281,7 @@ export default function NewAnalysisPage() {
           />
         </FormItem>
 
-        <div>
+        {!isVCF && <div>
           <h3 className="text-sm font-medium text-fg-default mb-3">{t("tasks.advancedOptions378a54")}</h3>
           <div className="flex flex-wrap gap-x-5 gap-y-3">
             <Checkbox
@@ -289,7 +295,7 @@ export default function NewAnalysisPage() {
               label={t("tasks.enableSvAnalysisc73efc")}
             />
           </div>
-        </div>
+        </div>}
 
       </section>
       <aside className="yj-panel min-w-0 space-y-5 p-5" aria-label={t("tasks.taskEstimateAndSubmission7f6c48")}>
@@ -328,7 +334,7 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {!isTrio && selectedSampleInfo && (
+        {!isTrio && !isVCF && selectedSampleInfo && (
           <div className={`rounded-md border px-4 py-3 ${selectedSampleInfo.matchedPair ? 'border-success-muted bg-success-subtle' : 'border-warning-muted bg-warning-subtle'}`}>
             <div className={`text-sm font-medium ${selectedSampleInfo.matchedPair ? 'text-success-fg' : 'text-warning-fg'}`}>
               {selectedSampleInfo.matchedPair ? t("tasks.rRReady9c9d5e") : t("common.awaitingSequencingData844492")}
@@ -348,7 +354,7 @@ export default function NewAnalysisPage() {
 
             onClick={handleSubmit}
             loading={submitting}
-            disabled={submitting || !selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo) || (isSaaS && !retentionAcknowledged)}
+            disabled={(isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo) || (isSaaS && !retentionAcknowledged)}
           >
             {submitting ? t("tasks.submitting3a1624") : t("tasks.submitTask09de9e")}
           </Button>

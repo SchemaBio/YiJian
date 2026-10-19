@@ -9,6 +9,7 @@ export type TaskStatus =
 
 export interface AnalysisTask {
   template?: string;
+ resultCapabilities?: string[];
   id: string;
   name?: string;
   sampleId: string;
@@ -41,6 +42,7 @@ export interface AnalysisTask {
 
 export interface AnalysisTaskDetail {
   template?: string;
+ resultCapabilities?: string[];
   id: string;
   name: string;
   sampleId: string;
@@ -78,6 +80,7 @@ export interface TaskListResponse {
 }
 
 export interface TaskCreateRequest {
+ vcf_asset_id?: string; vcf_sample_name?: string;
   sampleId: string;
   pedigreeId?: string;
   internalId: string;
@@ -86,6 +89,7 @@ export interface TaskCreateRequest {
   pipelineVersion: string;
   remark: string;
   template?: string;
+ resultCapabilities?: string[];
   executor?: 'local' | 'slurm' | 'lsf';
   inputs?: Record<string, unknown>;
   config_file?: string;

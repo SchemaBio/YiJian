@@ -140,11 +140,11 @@ export default function PipelineConfigPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                   <Info label={t("pipeline.pipelineId8c44a5")} value={selected.id} mono />
-                  <Info label={t("pipeline.basePipeline41689b")} value={translateUI(BASE_TYPE_LABEL[selected.baseType] ?? selected.baseType, t)} />
+                  <Info label={t("pipeline.basePipeline41689b")} value={selected.baseType==='vcf_annotation'?t('vcfAnnotation.title'):translateUI(BASE_TYPE_LABEL[selected.baseType] ?? selected.baseType, t)} />
                   <Info label={t("pipeline.version989d1a")} value={selected.version || '-'} />
                   <Info label={t("pipeline.referenceGenome903ba5")} value={selected.referenceGenome || '-'} />
-                  <Info label={t("pipeline.bedFiles8ee058")} value={selected.bedFile || '-'} />
-                  <Info label={t("pipeline.cnvBaselinefd84b0")} value={selected.cnvBaseline || t("pipeline.notConfigured63595e")} />
+                  {selected.baseType!=='vcf_annotation' && <Info label={t("pipeline.bedFiles8ee058")} value={selected.bedFile || '-'} />}
+                  {selected.baseType!=='vcf_annotation' && <Info label={t("pipeline.cnvBaselinefd84b0")} value={selected.cnvBaseline || t("pipeline.notConfigured63595e")} />}
                   <Info label={t("admin.createdAt84e380")} value={formatTime(selected.createdAt, t)} />
                   <Info label={t("pipeline.updatedAt093dea")} value={formatTime(selected.updatedAt, t)} />
                 </div>

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({
+  requestPresignedUploadUrl:vi.fn(), confirmUpload:vi.fn(),
   requestPairedUploadJob: vi.fn(),
   startUpload: vi.fn(),
   uploadToCOS: vi.fn(),
@@ -70,4 +71,14 @@ describe('paired upload cancellation', () => {
       expect.objectContaining({ signal: read1Controller.signal }),
     );
   });
+});
+
+it('uploads a single VCF through the dedicated role and original cancellation signal',async()=>{
+ const file=new File(['VCF'],'sample.vcf.bgz');const controller=new AbortController();const onStarted=vi.fn();
+ apiMocks.requestPresignedUploadUrl.mockResolvedValueOnce({file_id:'vcf',job_id:'vcf-job',upload_url:'https://objects.test/vcf',storage_type:'presigned'});
+ apiMocks.startUpload.mockResolvedValueOnce(undefined);apiMocks.uploadToCOS.mockResolvedValueOnce(undefined);apiMocks.confirmUpload.mockResolvedValueOnce(undefined);
+ await uploadDataFiles(file,null,true,'BIZ',vi.fn(),{onStarted},{read1:controller.signal});
+ expect(apiMocks.requestPresignedUploadUrl).toHaveBeenCalledWith(file.name,file.size,'vcf',undefined,true,'BIZ',{signal:controller.signal});
+ expect(apiMocks.confirmUpload).toHaveBeenCalledWith('vcf',{signal:controller.signal});
+ expect(onStarted).toHaveBeenCalledWith([expect.objectContaining({readType:'vcf',fileId:'vcf'})]);
 });

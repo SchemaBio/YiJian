@@ -2906,5 +2906,34 @@
       "database": "No se pudo registrar. Reintente más tarde.",
       "permission_denied": "Los permisos cambiaron; registro denegado."
     }
+  },
+  "vcfAnnotation": {
+    "title": "Anotación SNP/InDel de VCF",
+    "file": "Archivo VCF",
+    "sampleName": "Nombre de muestra dentro del VCF (opcional)",
+    "sampleHint": "La muestra se selecciona automáticamente en archivos de una muestra. Para archivos de varias muestras, ingresa el nombre exacto del encabezado VCF. Se anota una muestra por tarea.",
+    "selectFile": "Selecciona una carga VCF completada",
+    "loadError": "No se pudieron cargar los archivos VCF. Reintenta.",
+    "upload": "Cargar VCF",
+    "import": "Importar VCF local",
+    "path": "Ruta absoluta del VCF",
+    "allTypes": "Todos los tipos",
+    "vcfOnly": "Solo VCF",
+    "fastqOnly": "Solo FASTQ",
+    "sexSites": "Sitios X válidos",
+    "sexRatio": "Proporción X homocigota / haploide",
+    "inferredSex": "Sexo inferido",
+    "warning": "Inferido a partir de la proporción de variantes del cromosoma X en el VCF; las variantes del cromosoma X, las regiones del ensayo y el método de detección pueden afectar el resultado.",
+    "hg19": "Anotación SNP/InDel de VCF (hg19)",
+    "hg38": "Anotación SNP/InDel de VCF (hg38)",
+    "timeBilling": "Cobro por tiempo de cómputo con la misma tarifa que WES; el importe final se liquida según la ejecución real.",
+    "inputRecords": "Registros de entrada",
+    "normalizedVariants": "Variantes normalizadas",
+    "female": "Femenino",
+    "male": "Masculino",
+    "unknown": "Desconocido",
+    "noX": "Sin sitios válidos del cromosoma X",
+    "insufficientX": "Sitios X válidos insuficientes",
+    "uncertainX": "Proporción dentro del intervalo incierto"
   }
 }

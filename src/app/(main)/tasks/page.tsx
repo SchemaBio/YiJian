@@ -236,6 +236,7 @@ export default function AnalysisPage() {
         remark: data.remark,
         template: data.template,
         inputs: data.inputs,
+ vcf_asset_id: data.vcf_asset_id, vcf_sample_name: data.vcf_sample_name,
       });
       refetch(); // Refresh data after creating
     } catch (err) {

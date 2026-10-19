@@ -1,6 +1,6 @@
 import {readResourcePages} from './resource-pages';
 
-export type PipelineBaseType = 'wes_single' | 'wes_family';
+export type PipelineBaseType = 'wes_single' | 'wes_family' | 'vcf_annotation';
 export type PipelineStatus = 'active' | 'inactive';
 
 export interface Pipeline {
@@ -34,7 +34,7 @@ function rawString(raw: Record<string, unknown>, camel: string, snake: string, f
 }
 
 function normalizeBaseType(value: string): PipelineBaseType {
-  return value === 'wes_family' ? value : 'wes_single';
+  return value === 'wes_family' || value === 'vcf_annotation' ? value : 'wes_single';
 }
 
 function normalizeStatus(value: string): PipelineStatus {

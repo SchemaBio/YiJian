@@ -24,8 +24,8 @@ import { listAllBEDAssets, type DataAsset } from '@/lib/data-assets';
 import { listCNVBaselines, type CNVBaseline } from '@/lib/cnv-baselines';
 import { builtinBEDId, builtinBEDLabel, builtinCNVBaselineId, builtinCNVBaselineLabel, resourceDisplayName, pipelineDisplayName } from '@/lib/builtin-resources';
 
-type BasePipelineType = 'wes_single' | 'wes_family';
-type BuiltinPipelineID = 'builtin-wes-single' | 'builtin-wes-family' | 'builtin-wes-single-hg38' | 'builtin-wes-family-hg38';
+type BasePipelineType = 'wes_single' | 'wes_family' | 'vcf_annotation';
+type BuiltinPipelineID = 'builtin-vcf2anno-hg19' | 'builtin-vcf2anno-hg38' | 'builtin-wes-single' | 'builtin-wes-family' | 'builtin-wes-single-hg38' | 'builtin-wes-family-hg38';
 type PipelineStatus = 'active' | 'inactive';
 type ReferenceGenome = 'hg19' | 'hg38';
 
@@ -58,6 +58,7 @@ interface PipelineFormData {
 type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] } };
 
 const BASE_OPTIONS = [
+ {value:'builtin-vcf2anno-hg19',label:'VCF SNP/InDel 注释（hg19）'}, {value:'builtin-vcf2anno-hg38',label:'VCF SNP/InDel 注释（hg38）'},
   { value: 'builtin-wes-single', label: 'WES单样本分析' },
   { value: 'builtin-wes-family', label: 'WES家系分析' },
   { value: 'builtin-wes-single-hg38', label: 'WES单样本分析（hg38）' },
@@ -70,12 +71,13 @@ const EMPTY_FORM: PipelineFormData = {
 
 function basePipelineDefinition(id: BuiltinPipelineID): { baseType: BasePipelineType; referenceGenome: ReferenceGenome } {
   return {
-    baseType: id.includes('family') ? 'wes_family' : 'wes_single',
+    baseType: id.includes('vcf2anno') ? 'vcf_annotation' : id.includes('family') ? 'wes_family' : 'wes_single',
     referenceGenome: id.endsWith('hg38') ? 'hg38' : 'hg19',
   };
 }
 
 function builtinPipelineId(baseType: BasePipelineType, referenceGenome: ReferenceGenome): BuiltinPipelineID {
+  if(baseType==='vcf_annotation') return referenceGenome==='hg38'?'builtin-vcf2anno-hg38':'builtin-vcf2anno-hg19';
   if (referenceGenome === 'hg38') {
     return baseType === 'wes_family' ? 'builtin-wes-family-hg38' : 'builtin-wes-single-hg38';
   }
@@ -102,7 +104,7 @@ function normalizePipeline(value: unknown, t: TextTranslator = chineseText): Pip
   return {
     id: String(raw.id ?? ''),resourceAvailable:raw.resource_available!==false,resourceError:String(raw.resource_error??''),
     name: stringOf(raw, 'name', 'name'),
-    basePipeline: base === 'wes_family' ? 'wes_family' : 'wes_single',
+    basePipeline: base === 'vcf_annotation' ? 'vcf_annotation' : base === 'wes_family' ? 'wes_family' : 'wes_single',
     version: stringOf(raw, 'version', 'version'),
     description: stringOf(raw, 'description', 'description'),
     bedFile: stringOf(raw, 'bedFile', 'bed_file', t("pipeline.builtInDefaultBed44f413")),
@@ -121,8 +123,8 @@ function payload(data: PipelineFormData, status?: PipelineStatus, version = 'v1.
   return {
     name: data.name.trim(), base_pipeline_id: data.basePipelineId, version,
     description: data.description.trim(),
-    bed_asset_id: data.bedAssetId,
-    cnv_baseline_id: data.cnvBaselineId,
+    bed_asset_id: data.basePipelineId.includes('vcf2anno') ? '' : data.bedAssetId,
+    cnv_baseline_id: data.basePipelineId.includes('vcf2anno') ? '' : data.cnvBaselineId,
     ...(status ? { status } : {}),
   };
 }
@@ -160,7 +162,7 @@ function PipelineFields({ form, setForm, beds, baselines }: {
       <div className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("pipeline.basePipelined9745b")}</label>
-          <Select value={form.basePipelineId} options={localizeDisplay(BASE_OPTIONS, t)} onChange={(value) => {
+          <Select value={form.basePipelineId} options={BASE_OPTIONS.map(o=>({...o,label:o.value.includes('vcf2anno')?t('vcfAnnotation.'+(o.value.endsWith('hg38')?'hg38':'hg19')):localizeDisplay(o.label,t)}))} onChange={(value) => {
             const basePipelineId = (Array.isArray(value) ? value[0] : value) as BuiltinPipelineID;
             const nextGenome = basePipelineDefinition(basePipelineId).referenceGenome;
             setForm((current) => ({ ...current, basePipelineId, bedAssetId: builtinBEDId(nextGenome), cnvBaselineId: builtinCNVBaselineId(nextGenome) }));
@@ -172,13 +174,13 @@ function PipelineFields({ form, setForm, beds, baselines }: {
         </div>
       </div>
     </section>
-    <section className="border-t border-border-default pt-5">
+    {!form.basePipelineId.includes('vcf2anno') && <section className="border-t border-border-default pt-5">
       <ModalSectionHeading icon={<Database className="h-4 w-4" />} title={t("pipeline.analysisResourcesa59d6e")} description={t("pipeline.theBasePipelineBedAndCnvBaseline0c2734")} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div><label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("pipeline.bedFiles8ee058")}</label><Select searchable value={form.bedAssetId} options={bedOptions} onChange={(value) => change('bedAssetId', Array.isArray(value) ? value[0] : value)} /></div>
         <div><label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("pipeline.cnvBaselinefd84b0")}</label><Select searchable value={form.cnvBaselineId} options={localizeDisplay(baselineOptions, t)} onChange={(value) => change('cnvBaselineId', Array.isArray(value) ? value[0] : value)} /></div>
       </div>
-    </section>
+    </section>}
   </div>;
 }
 
@@ -263,7 +265,7 @@ function PipelineListPageContent() {
   const columns: Column<Pipeline>[] = [
     { id: 'id', header: t("pipeline.pipelineId"), accessor: (row) => <IdCell id={row.id} full />, width: 310, align: 'left' },
     { id: 'name', header: t("history.pipelineName323a83"), accessor: (row) => <div className="text-left"><div className="font-medium text-fg-default">{pipelineDisplayName(row.id, row.name, t)}</div>{row.isBuiltin && <div className="mt-0.5 text-xs text-fg-muted">{t("pipeline.systemBuiltInae8da0")}</div>}</div>, width: 210, align: 'left' },
-    { id: 'base', header: t("pipeline.basePipeline41689b"), accessor: (row) => <Tag variant="neutral">{row.basePipeline === 'wes_family' ? t("pipeline.wesFamilyAnalysise07024") : t("pipeline.wesSingleSampleAnalysis400a61")}</Tag>, width: 150, align: 'center' },
+    { id: 'base', header: t("pipeline.basePipeline41689b"), accessor: (row) => <Tag variant="neutral">{row.basePipeline === 'vcf_annotation' ? t('vcfAnnotation.title') : row.basePipeline === 'wes_family' ? t("pipeline.wesFamilyAnalysise07024") : t("pipeline.wesSingleSampleAnalysis400a61")}</Tag>, width: 150, align: 'center' },
     { id: 'genome', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => row.referenceGenome, width: 110, align: 'center' },
     { id: 'bed', header: t("pipeline.bedFiles8ee058"), accessor: (row) => <HoverHint content={row.resourceError||row.bedFile}><span className="block truncate" >{resourceDisplayName(row.bedAssetId, row.bedFile, t)}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{row.resourceError}</span>}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'cnv', header: t("pipeline.cnvBaselinefd84b0"), accessor: (row) => <HoverHint content={row.cnvBaseline}><span className="block truncate" >{resourceDisplayName(row.cnvBaselineId, row.cnvBaseline, t)}</span></HoverHint>, width: 210, align: 'left' },

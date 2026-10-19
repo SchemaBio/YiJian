@@ -1,4 +1,5 @@
 'use client';
+import { VCFLocalImportModal } from './VCFLocalImportModal';
 import { LocalDataImportModal } from './LocalDataImportModal';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
 import {localDataTemplate} from '@/lib/local-data-import';
@@ -88,7 +89,10 @@ export default function DataCenterPage() {
   const [error, setError] = React.useState('');
   const [loadFailed, setLoadFailed] = React.useState(false);
   const [hasLoaded, setHasLoaded] = React.useState(false);
-  const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [vcfMode,setVcfMode]=React.useState(false);
+ const [vcfImportOpen,setVcfImportOpen]=React.useState(false);
+ const [typeFilter,setTypeFilter]=React.useState('');
+ const [uploadOpen, setUploadOpen] = React.useState(false);
   const [cancelUploadConfirmOpen, setCancelUploadConfirmOpen] = React.useState(false);
   const [recoveryChecking, setRecoveryChecking] = React.useState(false);
   const [recoveryLookupFailed, setRecoveryLookupFailed] = React.useState(false);
@@ -128,14 +132,14 @@ export default function DataCenterPage() {
     setError('');
     try {
       const [assetResult, configResult, statsResult] = await Promise.all([
-        listDataAssets(query),
+        listDataAssets(query, typeFilter==='vcf'?{readType:'vcf'}:undefined),
         getDataCenterConfig(),
         getUploadStorageStats(),
       ]);
       if (requestId !== loadRequestRef.current) return;
       // BED files are managed only in Workflow Center. Storage stats remain
       // the unfiltered organization aggregate so BED still consumes quota.
-      setAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed'));
+      setAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed' && (typeFilter!=='fastq'||asset.read_type!=='vcf')));
       setConfig(configResult);
       setStorageStats(statsResult);
       setHasLoaded(true);
@@ -146,7 +150,7 @@ export default function DataCenterPage() {
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
     }
-  }, [t]);
+  }, [t,typeFilter]);
 
   React.useEffect(() => { void load(''); }, [load]);
 
@@ -492,11 +496,14 @@ export default function DataCenterPage() {
             </div>
             <HoverHint content={t("admin.refresh38108e")}><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label={t("admin.refresh38108e")} onClick={() => void load(search)} /></HoverHint>
           </div>
+          <select aria-label={t('vcfAnnotation.allTypes')} className="rounded-md border border-border-default bg-canvas-default p-2 text-sm" value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">{t('vcfAnnotation.allTypes')}</option><option value="vcf">{t('vcfAnnotation.vcfOnly')}</option><option value="fastq">{t('vcfAnnotation.fastqOnly')}</option></select>
+          <Button action="upload" disabled={uploadBusy} onClick={()=>{setVcfMode(true);setRead1(null);setRead2(null);setUploadPolicyAcknowledged(false);setUploadOpen(true);}}>{t('vcfAnnotation.upload')}</Button>
+          {config?.local_import_directory && <Button permission={['data.manage','samples.write']} onClick={()=>setVcfImportOpen(true)}>{t('vcfAnnotation.import')}</Button>}
           {getRuntimeBackendFlavor() !== 'squid' && <>
            <Button permission={null} action="download" disabled={!config?.local_import_directory} onClick={downloadLocalTemplate}>{t('samples.downloadTemplatea3afb2')}</Button>
            <Button permission={['data.manage','samples.write']} action="upload" disabled={!config?.local_import_directory} onClick={()=>setLocalImportOpen(true)}>{t('localDataImport.title')}</Button>
           </>}
-          <Button action="upload" variant="primary"  disabled={canceling} onClick={() => { if (!uploadBusy) setUploadPolicyAcknowledged(false); setUploadOpen(true); }}>{canceling ? t("data.canceling6bc0d6") : uploading ? t("data.viewUpload955ec2", {p0: String(progress)}) : t("data.uploadDatad1b00d")}</Button>
+          <Button action="upload" variant="primary"  disabled={canceling} onClick={() => { if (!uploadBusy) { setUploadPolicyAcknowledged(false); setVcfMode(Boolean(activeUpload?.files.some(f=>f.readType==='vcf'))); } setUploadOpen(true); }}>{canceling ? t("data.canceling6bc0d6") : uploading ? t("data.viewUpload955ec2", {p0: String(progress)}) : t("data.uploadDatad1b00d")}</Button>
         </div>
 
         {loading ? (
@@ -513,6 +520,7 @@ export default function DataCenterPage() {
           <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? t("data.noMatchingDataAssets29b140") : t("data.noDataAssets5862af")}</p></div>
         )}
       </div>
+      {vcfImportOpen && <VCFLocalImportModal onClose={()=>setVcfImportOpen(false)} onImported={()=>void load(search)}/>}
       {localImportOpen && getRuntimeBackendFlavor() !== 'squid' && <LocalDataImportModal directory={config?.local_import_directory||''} onClose={()=>setLocalImportOpen(false)} onImported={()=>void load(search)}/>}
       <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />
 
@@ -533,15 +541,15 @@ export default function DataCenterPage() {
           {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("data.uploadedFilesAreDeletedAfter56abf0")}{config.retention_days} {t("data.daysSaasDoesNotOfferDownloadsMaximumab8001")}</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label={t("data.iConfirm7bd7e7")} /></div>}
           {isSaaS && <p className="text-xs text-fg-muted">{t("data.currentlyUseda80723")}{formatBytes(totalBytes, t)}{t("data.totalCapacityd83765")}{storageQuotaLabel}。</p>}
           <section>
-            <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title={t("data.sequencingFiles55cf00")} description={t("data.selectReadAndReadSeparatelyUploadingJustcdd8fe")} />
+            <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title={vcfMode?t("vcfAnnotation.file"):t("data.sequencingFiles55cf00")} description={vcfMode?t("vcfAnnotation.sampleHint"):t("data.selectReadAndReadSeparatelyUploadingJustcdd8fe")} />
             <div className="mb-4">
               <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("data.internalIdRecommendedb0481f")}</label>
               <Input value={internalId} disabled={uploadBusy || !hasPermission('samples.write')} title={!hasPermission('samples.write') ? t('permissions.denied') : undefined} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder={t("data.enterTheInternalIdFromSamplesEe7533f")} />
               <p className="mt-1.5 text-xs text-fg-muted">{t("data.automaticMatchingPrefersThisIdFilenamesAred0991f")}</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read1（R1 FASTQ）</span><FilePicker label={t("data.readFilese79622")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read1} disabled={uploadBusy} onChange={setRead1} /></div>
-              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label={t("data.readFiles88c0f2")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={uploadBusy} onChange={setRead2} /></div>
+              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">{vcfMode?t("vcfAnnotation.file"):"Read1（R1 FASTQ）"}</span><FilePicker label={vcfMode?t("vcfAnnotation.file"):t("data.readFilese79622")} accept={vcfMode?".vcf,.vcf.gz,.vcf.bgz":".fastq,.fq,.fastq.gz,.fq.gz"} file={read1} disabled={uploadBusy} onChange={setRead1} /></div>
+              {!vcfMode && <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label={t("data.readFiles88c0f2")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={uploadBusy} onChange={setRead2} /></div>}
             </div>
           </section>
           {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? t("data.cancelingUpload5eb505") : t("data.uploadProgress211354")} description={canceling ? t("data.stoppingTransferAndCleaningObjectStoragePlease8085f0") : t("data.keepThisPageOpenCompletedFilesArecc7e43")} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? t("data.canceling733d8c") : t("data.uploadingf8d6e4")}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}

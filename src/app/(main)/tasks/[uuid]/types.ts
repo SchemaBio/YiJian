@@ -15,6 +15,7 @@ export type AnalysisStatus =
 // ============ 分析任务详情 ============
 export interface AnalysisTaskDetail {
   template?: string;
+ resultCapabilities?: string[];
   id: string;                    // UUID
   name: string;                  // 任务名称
   sampleId: string;              // 样本ID (UUID)
@@ -106,6 +107,8 @@ export interface ResultCount {
 }
 
 export interface ResultContext {
+ capabilities?: string[];
+ vcfAnnotation?: {preprocessing?: Record<string,unknown>; sex_inference?: {x_sum:number;ratio:number|null;sex:string;warning?:string;reason?:string};summary?: Record<string,unknown>};
   taskUuid: string;
   executionAttemptId: string;
   importBatchId?: number;

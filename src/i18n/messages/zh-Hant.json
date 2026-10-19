@@ -2906,5 +2906,34 @@
       "database": "登錄失敗，請稍後重試。",
       "permission_denied": "權限已變更，無法登錄。"
     }
+  },
+  "vcfAnnotation": {
+    "title": "VCF SNP/InDel 註釋",
+    "file": "VCF 檔案",
+    "sampleName": "VCF 內樣本名稱（選填）",
+    "sampleHint": "單樣本自動選擇；多樣本須填寫 VCF 標頭中的樣本名稱，每次僅註釋一個樣本。",
+    "selectFile": "請選擇已完成上傳的 VCF 檔案",
+    "loadError": "無法載入 VCF 檔案，請重試",
+    "upload": "上傳 VCF",
+    "import": "匯入本機 VCF",
+    "path": "VCF 絕對路徑",
+    "allTypes": "全部類型",
+    "vcfOnly": "僅 VCF",
+    "fastqOnly": "僅 FASTQ",
+    "sexSites": "X 有效位點數",
+    "sexRatio": "X 純合 / 單倍體比例",
+    "inferredSex": "推算性別",
+    "warning": "由 VCF 的 X 染色體位點比例推算，可能受 X 染色體變異、檢測區域及變異檢出方式影響。",
+    "hg19": "VCF SNP/InDel 註釋（hg19）",
+    "hg38": "VCF SNP/InDel 註釋（hg38）",
+    "timeBilling": "按計算時間收費，與 WES 使用相同費率；最終按實際執行結算。",
+    "inputRecords": "輸入記錄",
+    "normalizedVariants": "規範化變異",
+    "female": "女性",
+    "male": "男性",
+    "unknown": "未知",
+    "noX": "沒有有效 X 染色體位點",
+    "insufficientX": "有效 X 位點不足",
+    "uncertainX": "比例處於未知區間"
   }
 }

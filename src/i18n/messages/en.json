@@ -2906,5 +2906,34 @@
       "database": "Registration failed. Retry later.",
       "permission_denied": "Permissions changed; registration denied."
     }
+  },
+  "vcfAnnotation": {
+    "title": "VCF SNP/InDel annotation",
+    "file": "VCF file",
+    "sampleName": "Sample name within VCF (optional)",
+    "sampleHint": "Single-sample files are selected automatically. For multi-sample files, enter the exact VCF header sample name. One sample is annotated per task.",
+    "selectFile": "Select a completed VCF upload",
+    "loadError": "Unable to load VCF files. Please retry.",
+    "upload": "Upload VCF",
+    "import": "Import local VCF",
+    "path": "Absolute VCF path",
+    "allTypes": "All types",
+    "vcfOnly": "VCF only",
+    "fastqOnly": "FASTQ only",
+    "sexSites": "Valid X sites",
+    "sexRatio": "X homozygous / haploid ratio",
+    "inferredSex": "Inferred sex",
+    "warning": "Inferred from the ratio of X chromosome variants in the VCF; X chromosome variation, assay regions and variant detection methods may affect the result.",
+    "hg19": "VCF SNP/InDel annotation (hg19)",
+    "hg38": "VCF SNP/InDel annotation (hg38)",
+    "timeBilling": "Billed by compute time at the same rate as WES; final charges use actual execution time.",
+    "inputRecords": "Input records",
+    "normalizedVariants": "Normalized variants",
+    "female": "Female",
+    "male": "Male",
+    "unknown": "Unknown",
+    "noX": "No valid X chromosome sites",
+    "insufficientX": "Insufficient valid X sites",
+    "uncertainX": "Ratio within the uncertain interval"
   }
 }

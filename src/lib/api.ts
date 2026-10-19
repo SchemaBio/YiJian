@@ -525,13 +525,13 @@ function squidFallbackLocalUploadURL(uploadURL: string): string | null {
 export async function requestPresignedUploadUrl(
   filename: string,
   fileSize: number,
-  readType: 'read1' | 'read2' | 'single' | 'bed' = 'single',
+  readType: 'read1' | 'read2' | 'single' | 'bed' | 'vcf' = 'single',
   referenceGenome?: 'GRCh37' | 'GRCh38',
   uploadPolicyAcknowledged = false,
   internalId?: string,
   options?: ApiSignalOptions,
 ): Promise<PresignedUploadResult> {
-  const fileType = readType === 'bed'
+  const fileType = readType === 'vcf' ? 'vcf' : readType === 'bed'
     ? 'bed'
     : readType === 'single'
       ? 'fastq_single'
