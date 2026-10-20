@@ -2,7 +2,7 @@ import * as React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import BillingPage from './page';
-import { getBillingTransactions } from '@/lib/billing';
+import { getBillingTransactions, getBillingConfig } from '@/lib/billing';
 
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
@@ -25,4 +25,16 @@ it('distinguishes failed transactions from an empty account and recovers after r
   await screen.findByText('暂无交易记录');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(getBillingTransactions).toHaveBeenCalledTimes(2);
+});
+
+
+it('refreshes the organization multiplier', async () => {
+  vi.mocked(getBillingTransactions).mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20, total_pages: 1 });
+  vi.mocked(getBillingConfig).mockResolvedValueOnce({ credits_per_minute: 1, credit_rate_multiplier: 1, min_balance: 0, download_credits: 1 })
+    .mockResolvedValueOnce({ credits_per_minute: 1, credit_rate_multiplier: 2, min_balance: 0, download_credits: 1 });
+  render(<BillingPage />);
+  await screen.findByText('1x');
+  fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+  await screen.findByText('2x');
+  expect(screen.queryByText('1x')).not.toBeInTheDocument();
 });

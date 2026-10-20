@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { summarizeTaskBilling, type BillingTransaction } from './billing';
+import { describe, expect, it, vi } from 'vitest';
+import { summarizeTaskBilling, getBillingConfig, calculateEstimatedCredits, type BillingTransaction } from './billing';
 
 function row(id: number, type: string, amount: number, attempt: string, billing_basis?: string): BillingTransaction {
   return { id, type, amount, reference_id: `task:${attempt}`, org_id: 'org', balance_after: 0,
@@ -28,4 +28,15 @@ describe('task reservations across retries', () => {
     expect(summarizeTaskBilling('task', [row(1, 'pre_deduction', -77, 'old'), settlement]))
       .toMatchObject({ preDeducted: 0, netCost });
   });
+});
+
+vi.mock('./api', () => ({ api: { get: vi.fn() } }));
+
+it('reads uncached organization rates rather than the platform administrator baseline', async () => {
+  const { api } = await import('./api');
+  const config = { credits_per_minute: 1, credit_rate_multiplier: 2, download_credits: 1, min_balance: -20 };
+  vi.mocked(api.get).mockResolvedValueOnce(config);
+  expect(await getBillingConfig()).toEqual(config);
+  expect(api.get).toHaveBeenCalledWith('/v1/billing/effective-config', { coreApi: false, cache: 'no-store' });
+  expect(calculateEstimatedCredits(60, config)).toBe(120);
 });

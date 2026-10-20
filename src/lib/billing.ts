@@ -1,4 +1,4 @@
-﻿import { api } from './api';
+import { api } from './api';
 
 export interface BillingBalance {
   org_id: string;
@@ -143,7 +143,7 @@ export async function getBillingConfig(): Promise<BillingConfig> {
   // Billing policy can be changed by Cuttlefish while this tab is open. Do
   // not let the browser HTTP cache keep showing the previous organization
   // multiplier after a refresh or a route transition.
-  return api.get<BillingConfig>('/v1/billing/config', { coreApi: false, cache: 'no-store' });
+  return api.get<BillingConfig>('/v1/billing/effective-config', { coreApi: false, cache: 'no-store' });
 }
 
 export async function getBillingTransactions(page = 1, pageSize = 20): Promise<BillingTransactionPage> {
