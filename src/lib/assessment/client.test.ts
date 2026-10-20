@@ -1,5 +1,7 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {api} from '../api';
+import { readAssessmentCache, writeAssessmentCache } from './cache';
+vi.mock('./cache', () => ({ assessmentCacheKey: vi.fn(async () => 'scoped-key'), readAssessmentCache: vi.fn(async () => null), writeAssessmentCache: vi.fn(async () => {}), removeAssessmentCache: vi.fn(async () => {}), setAssessmentCacheScope: vi.fn() }));
 import {assessTask,assessmentStatus,clearAssessments,invalidateAssessment,cancelAssessment} from './client';
 import type {AssessmentContext} from './types';
 vi.mock('../api',()=>({api:{get:vi.fn(),post:vi.fn()}}));
@@ -65,4 +67,14 @@ it('discards a partially processed baseline on cancellation and permits explicit
   vi.mocked(api.get).mockResolvedValue({active:context});
   await expect(assessTask('task',vi.fn(),new AbortController().signal)).resolves.toEqual([]);
   expect(assessmentStatus('task')?.state).toBe('ready');
+});
+
+it('reuses persisted results only after fetching the authorized current context', async () => {
+ vi.mocked(readAssessmentCache).mockResolvedValueOnce([]);
+ const read = vi.fn();
+ await expect(assessTask('task', read, new AbortController().signal)).resolves.toEqual([]);
+ expect(api.get).toHaveBeenCalledWith('/v1/tasks/task/results/assessment/context', expect.anything());
+ expect(read).not.toHaveBeenCalled();
+ expect(worker.postMessage).not.toHaveBeenCalled();
+ expect(assessmentStatus('task')?.state).toBe('ready');
 });

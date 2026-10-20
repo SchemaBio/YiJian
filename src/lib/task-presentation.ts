@@ -1,6 +1,8 @@
+import { isTaskResultPreparing } from './task-interpretation';
 import type { AnalysisTask, TaskStatus } from '@/types/task';
-export type TaskDisplayStatus = TaskStatus | 'interpretation_completed';
+export type TaskDisplayStatus = TaskStatus | 'interpretation_completed' | 'preparing_results';
 export const taskStatusConfig: Record<TaskDisplayStatus, { label: string; variant: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
+  preparing_results: { label: '结果准备中', variant: 'neutral' },
   waiting_for_data: { label: '等待数据', variant: 'warning' },
   queued: { label: '排队中', variant: 'neutral' },
   running: { label: '运行中', variant: 'neutral' },
@@ -10,7 +12,8 @@ export const taskStatusConfig: Record<TaskDisplayStatus, { label: string; varian
   cancelled: { label: '已取消', variant: 'neutral' },
   pending_interpretation: { label: '待解读', variant: 'warning' },
 };
-export function taskDisplayStatus(task: { status: TaskStatus; interpretationCompletedAt?: string }): TaskDisplayStatus {
+export function taskDisplayStatus(task: { status: TaskStatus; interpretationCompletedAt?: string; resultImportStatus?: string; template?: string }): TaskDisplayStatus {
+  if (isTaskResultPreparing(task)) return 'preparing_results';
   return task.interpretationCompletedAt ? 'interpretation_completed' : task.status;
 }
 export function sortTasksByInterpretation(tasks: AnalysisTask[]): AnalysisTask[] {

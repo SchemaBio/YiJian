@@ -60,3 +60,17 @@ it('shows VCF workflow outputs and hides BAM and WES content even while loading'
  expect(screen.queryByText('去重复 BAM')).not.toBeInTheDocument();
  expect(screen.queryByText(/线粒体 VCF/)).not.toBeInTheDocument();
 });
+
+it('opens the latest ZIP link immediately and reopens it without another quote or charge', async () => {
+ vi.mocked(api.get).mockImplementation(async path => path.endsWith('/active') ? [] : {attempt_id:'attempt',zip_status:'ready',zip:{id:'zip',filename:'sample.zip',credits:1,size_bytes:100},bams:[],missing:[]});
+ vi.mocked(api.post).mockImplementation(async path => path.endsWith('/quote') ? {...quote('zip'),charged_at:undefined} : issued('sample.zip'));
+ render(<RawResultDownloads taskId="task"/>);
+ fireEvent.click(await screen.findByRole('button',{name:'下载原始 ZIP · 1 积分'}));
+ const pay=await screen.findByRole('button',{name:/支付.*ZIP/});
+ fireEvent.click(pay);fireEvent.click(pay);
+ await screen.findByRole('link',{name:'开始下载 / 续传'});
+ expect(screen.getByRole('status')).toHaveTextContent('sample.zip');
+ expect(api.post).toHaveBeenCalledTimes(2);
+ fireEvent.click(screen.getByRole('button',{name:'下载原始 ZIP · 1 积分'}));
+ expect(api.post).toHaveBeenCalledTimes(2);
+});

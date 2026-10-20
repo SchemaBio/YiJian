@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './AuthProvider';
 import { AIProvider } from './AIProvider';
 import { UploadProvider } from './UploadProvider';
 import { LocaleProvider } from './LocaleProvider';
+import { setAssessmentCacheScope } from '@/lib/assessment/cache';
 import type { Locale } from '@/i18n/locales';
 
 interface AppProvidersProps {
@@ -39,5 +40,6 @@ export function AppProviders({ children, locale }: AppProvidersProps) {
 function AssistanceScope({ children }: { children: React.ReactNode }) {
   const { user, currentOrg } = useAuth();
   const scope = user ? `${user.id}:${currentOrg?.id ?? ''}` : 'anonymous';
+  React.useEffect(() => { setAssessmentCacheScope(scope); }, [scope]);
   return <AIAssistanceProvider key={scope} scope={scope}>{children}</AIAssistanceProvider>;
 }

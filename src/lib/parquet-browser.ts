@@ -519,6 +519,7 @@ export async function updateBrowserContext(task: string, attempt: string, versio
 }
 if (typeof window !== 'undefined') {
     window.addEventListener('pagehide', () => void clearBrowserResults());
+    window.addEventListener('yijian:assessment-scope-changed', () => void clearBrowserResults());
     window.addEventListener('schema:auth-expired', () => void clearBrowserResults());
     window.addEventListener('storage', event => { if (event.key?.includes('org') || event.key?.includes('user'))
         void clearBrowserResults(); });

@@ -394,15 +394,19 @@ export async function uploadDataFiles(
       globalUploadLimiter,
       (sessionId, completedParts) => callbacks?.onMultipartState?.(item.fileId, sessionId, completedParts),
       signal,
-    ).then(() => ({ fileId: item.fileId, cancelled: false })).catch((error) => {
+    ).then(() => { callbacks?.onFileProgress?.({ ...item, progress: 100, status: 'completed' }); return { fileId: item.fileId, cancelled: false }; }).catch((error) => {
       if (cancellationFor(error, signal)) return { fileId: item.fileId, cancelled: true };
+      callbacks?.onFileProgress?.({ ...item, status: 'failed' });
       throw error;
     });
     try {
-      const results = await Promise.all([
+      const settled = await Promise.allSettled([
         uploadPairFile(read1, first, startedFiles[0], signals?.read1),
         uploadPairFile(read2, second, startedFiles[1], signals?.read2),
       ]);
+      const failed = settled.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failed) throw failed.reason;
+      const results = settled.filter((result): result is PromiseFulfilledResult<{fileId: string; cancelled: boolean}> => result.status === 'fulfilled').map(result => result.value);
       return { cancelledFileIds: results.filter((result) => result.cancelled).map((result) => result.fileId) };
     } finally {
       abortListeners.forEach(([signal, listener]) => signal.removeEventListener('abort', listener));

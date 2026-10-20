@@ -15,6 +15,7 @@ import {
 import { STORAGE_KEYS } from '@/lib/storage';
 import {
   resumeDataFiles,
+  retryDataAsset,
   uploadDataFiles,
   type UploadBatchResult,
   type UploadFileProgress,
@@ -45,6 +46,9 @@ interface StartUploadOptions {
 }
 
 interface UploadContextValue {
+  queuedCount: number;
+  retries: Record<string, { progress: number; status: 'uploading' | 'completed' | 'failed'; error?: string }>;
+  retryFile: (id: string, file: File) => Promise<void>;
   activeUpload: GlobalUploadState | null;
   canceling: boolean;
   startUpload: (options: StartUploadOptions) => Promise<void>;
@@ -110,6 +114,33 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = React.useState(false);
   const activeUploadRef = React.useRef<GlobalUploadState | null>(activeUpload);
   const uploadRunRef = React.useRef<UploadRun | null>(null);
+  const queueRef = React.useRef<Promise<void>>(Promise.resolve());
+  const [queuedCount, setQueuedCount] = React.useState(0);
+  const [retries, setRetries] = React.useState<UploadContextValue['retries']>({});
+  const retryControllers = React.useRef(new Map<string, AbortController>());
+
+  React.useEffect(() => {
+    if (activeUpload?.status !== 'uploading' && queuedCount === 0 && !Object.values(retries).some(item => item.status === 'uploading')) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [activeUpload?.status, queuedCount, retries]);
+
+  const retryFile = React.useCallback(async (id: string, file: File) => {
+    if (retryControllers.current.has(id)) return;
+    const controller = new AbortController();
+    retryControllers.current.set(id, controller);
+    // The provider owns transfers, so route components can unmount freely.
+    setRetries(current => ({ ...current, [id]: { status: 'uploading', progress: 0 } }));
+    try {
+      await retryDataAsset(id, file, progress => setRetries(current => ({ ...current, [id]: { status: 'uploading', progress } })), controller.signal);
+      setRetries(current => ({ ...current, [id]: { status: 'completed', progress: 100 } }));
+      updateUploadState(current => current ? { ...current, files: current.files.filter(item => item.fileId !== id) } : current);
+    } catch (cause) {
+      setRetries(current => ({ ...current, [id]: { ...current[id], status: 'failed', error: errorText(cause, t) } }));
+      throw cause;
+    } finally { retryControllers.current.delete(id); }
+  }, [t]);
 
   // Keep a synchronous mirror of the state used by cleanup paths. React state
   // effects run after paint, so relying on the effect alone can miss a
@@ -164,7 +195,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     persist(activeUpload);
   }, [activeUpload, hydrated, persist]);
 
-  const startUpload = React.useCallback(async ({ read1, read2, uploadPolicyAcknowledged, internalId }: StartUploadOptions) => {
+  const executeUpload = React.useCallback(async ({ read1, read2, uploadPolicyAcknowledged, internalId }: StartUploadOptions) => {
     if (!read1 && !read2) throw new Error(t("common.selectAtLeastOneFile7487f9"));
     const initial: GlobalUploadState = {
       status: 'uploading',
@@ -322,7 +353,18 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cleanupMultipartSessions, updateUploadState, t]);
 
+  const startUpload = React.useCallback((options: StartUploadOptions) => {
+    setQueuedCount(count => count + 1);
+    const pending = queueRef.current.catch(() => undefined).then(() => {
+      setQueuedCount(count => count - 1);
+      return executeUpload(options);
+    });
+    queueRef.current = pending;
+    return pending;
+  }, [executeUpload]);
+
   const cancelFile = React.useCallback((fileId: string) => {
+    retryControllers.current.get(fileId)?.abort();
     const run = uploadRunRef.current;
     const current = activeUploadRef.current;
     if (!current) return;
@@ -431,7 +473,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     setActiveUpload(null);
   }, [cleanupMultipartSessions, persist]);
 
-  return <UploadContext.Provider value={{ activeUpload, canceling: activeUpload?.status === 'canceling', startUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload }}>{children}</UploadContext.Provider>;
+  return <UploadContext.Provider value={{ queuedCount, retries, retryFile, activeUpload, canceling: activeUpload?.status === 'canceling', startUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload }}>{children}</UploadContext.Provider>;
 }
 
 export function useUpload() {

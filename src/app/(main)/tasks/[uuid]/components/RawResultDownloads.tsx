@@ -35,6 +35,8 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
   const [busy, setBusy] = React.useState(false);
   const [quote, setQuote] = React.useState<Quote | null>(null);
   const [issued, setIssued] = React.useState<Issued | null>(null);
+  const [linkOpen, setLinkOpen] = React.useState(false);
+  const busyRef = React.useRef(false);
   const [copied, setCopied] = React.useState(false);
   const [active, setActive] = React.useState<Quote[]>([]);
   const [now, setNow] = React.useState(Date.now);
@@ -44,20 +46,20 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
   const catalogExpiry = React.useRef<number | null>(null);
   const base = `/v1/tasks/${encodeURIComponent(taskId)}/downloads`;
   const refreshIssued = async () => {
-    if (!issued || busy) return;
+    if (!issued || busyRef.current) return;
     const current = generation.current;
-    setBusy(true); setError('');
+    busyRef.current = true; setBusy(true); setError('');
     try {
       const next = await api.post<Issued>(`${base}/issue`, { quote_id: issued.id });
       if (current === generation.current) { setIssued({ ...next, kind: issued.kind }); setCopied(false); setNow(Date.now()); }
     } catch (cause) { if (current === generation.current) setError(cause instanceof Error ? errorText(cause, t) : t("tasks.refreshFailedRetryTheSameRequestNode82c0")); }
-    finally { if (current === generation.current) setBusy(false); }
+    finally { if (current === generation.current) { busyRef.current = false; setBusy(false); } }
   };
   React.useEffect(() => {
     const current = ++generation.current;
     let disposed = false;
     let pending = false;
-    setCatalog(null); setQuote(null); setIssued(null); setActive([]); setError(''); setBusy(false); polling.current = false; catalogExpiry.current = null;
+    busyRef.current = false; setLinkOpen(false); setCatalog(null); setQuote(null); setIssued(null); setActive([]); setError(''); setBusy(false); polling.current = false; catalogExpiry.current = null;
     const load = async () => {
       if (pending) return; pending = true;
       try {
@@ -74,34 +76,35 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
   }, [base]);
 
   const request = async (kind: 'zip' | 'bam', file?: DownloadFile) => {
-    if (busy) return;
+    if (busyRef.current) return;
     const current = generation.current;
-    setBusy(true); setError(''); setCopied(false);
+    busyRef.current = true; setBusy(true); setError(''); setCopied(false);
     try {
       if (kind === 'zip' && catalog?.zip_status !== 'ready') {
         const next = await api.post<Catalog>(`${base}/prepare`, {});
         if (current === generation.current) { setCatalog(next); polling.current = next.zip_status === 'building'; }
       } else {
+        if (issued && issued.kind === kind && (kind === 'zip' || issued.filename === file?.filename) && Date.parse(issued.grant_expires_at) > Date.now()) { setLinkOpen(true); return; }
         const next = await api.post<Quote>(`${base}/quote`, { kind, file_id: file?.id });
         if (current === generation.current) setQuote(next);
       }
     } catch (cause) {
       if (current === generation.current) setError(cause instanceof Error ? errorText(cause, t) : t("tasks.downloadRequestFailed4cec7b"));
-    } finally { if (current === generation.current) setBusy(false); }
+    } finally { if (current === generation.current) { busyRef.current = false; setBusy(false); } }
   };
   const confirm = async () => {
-    if (!quote || busy) return;
+    if (!quote || busyRef.current) return;
     const current = generation.current;
-    setBusy(true); setError('');
+    busyRef.current = true; setBusy(true); setError('');
     try {
       const next = await api.post<Issued>(`${base}/issue`, { quote_id: quote.id });
       if (current !== generation.current) return;
-      setIssued({...next, kind: quote.kind}); setQuote(null);
+      setIssued({...next, kind: quote.kind}); setQuote(null); setLinkOpen(true);
       void api.get<Quote[]>(`${base}/active`).then(rows => {if(current === generation.current)setActive(rows);}).catch(() => {});
     } catch (cause) {
       // Retain the quote: retrying this exact ID is billing-idempotent.
       if (current === generation.current) setError(t("tasks.retryTheSameRequestWithoutPayingAgain7889a5", {p0: String(cause instanceof Error ? errorText(cause, t) : t("display.requestOutcomeNotYetConfirmedf12ffd"))}));
-    } finally { if (current === generation.current) setBusy(false); }
+    } finally { if (current === generation.current) { busyRef.current = false; setBusy(false); } }
   };
 
   const preparing = catalog?.zip_status === 'building';
@@ -150,8 +153,9 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
     </div>
     {isSaaS&&catalog?.bam_status !== 'not_provided'&&<div role="note" className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><p><strong>{t("tasks.bamRetainedForDays9f64b9")}</strong>{t("tasks.bamIsDeletedDaysAfterCompletionDisabling86a6fc")}</p></div>}
     <div className="flex items-start gap-2 rounded-lg bg-canvas-subtle px-4 py-3 text-xs leading-5 text-fg-muted"><Coins className="mt-0.5 h-4 w-4 shrink-0"/><p><strong className="text-fg-default">{t("tasks.chargeTiming232cba")}</strong>{t("tasks.confirmationChargesAndIssuesTheLinkCanceling9df320")}</p></div>
+    {issued && <Button variant="secondary" onClick={() => setLinkOpen(true)}>{t("uploadExperience.showDownload", { p0: issued.filename })}</Button>}
     {error&&<p role="alert" className="rounded-lg border border-danger-muted bg-danger-subtle p-3 text-sm text-danger-fg">{error}</p>}
-    {issued&&<div role="status" className="rounded-xl border border-success-muted bg-success-subtle p-4">
+    {issued&&<AppModal open={linkOpen} onOpenChange={setLinkOpen} title={t("uploadExperience.downloadReady")} size="large"><div role="status" aria-live="polite" className="rounded-xl border border-success-muted bg-success-subtle p-4">
       <p className="break-all text-sm font-medium">{t("tasks.downloadLinkReady4c818d")}{issued.filename}</p>
       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-fg-muted"><span>{t("tasks.requestCost396221")}{issued.credits_charged} {t("billing.creditse6d317")}</span><span>{t("tasks.linkExpiresf23884")}{new Date(issued.expires_at).toLocaleString(t.locale)}</span><span>{t("tasks.requestDeadline3d4137")}{new Date(issued.grant_expires_at).toLocaleString(t.locale)}</span><span>{t("tasks.perRequestRateLimit41dbdf")}{issued.traffic_limit_bps / 8 / 1024 / 1024} {t("tasks.mibSRemainingLinkIssuances846a23")}{issued.remaining_issues} {t("tasks.label793578")}</span></div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -160,8 +164,8 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
         <Button size="small" variant="secondary" disabled={busy || grantExpired || refreshSeconds > 0 || issued.remaining_issues <= 0} onClick={()=>void refreshIssued()}>{refreshSeconds > 0 ? t("tasks.refreshAvailableInSecondscffaf7", {p0: String(refreshSeconds)}) : t("tasks.refreshLinkFree0912d2")}</Button>
         <span className="text-xs text-fg-muted">{t("tasks.refreshDoesNotExtendRequestValidityResume92d40a")}</span>
       </div>
-    </div>}
-    {!!active.length&&<details className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">{t("tasks.existingRequestRetrievingAPaidLinkIncurs83fe7c")}</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?t("tasks.retrievePaidLink2b6fc5"):t("tasks.continueOriginalRequest6993b2")}</Button></div>)}</div></details>}
+    </div></AppModal>}
+    {!!active.length&&<details open className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">{t("tasks.existingRequestRetrievingAPaidLinkIncurs83fe7c")}</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?t("tasks.retrievePaidLink2b6fc5"):t("tasks.continueOriginalRequest6993b2")}</Button></div>)}</div></details>}
     <AppModal open={!!quote} onOpenChange={open=>{if(!open&&!busy)setQuote(null);}} title={quote?.charged_at?t("tasks.retrieveExistingDownloadLink7e9525"):t("tasks.confirmDownloadCost458ee4")} size="small" closeOnEscape={!busy} closeOnOverlayClick={!busy}
       footer={<><Button variant="secondary" disabled={busy} onClick={()=>setQuote(null)}>{t("admin.cancel4d0b46")}</Button><Button permission={null} variant="primary" className="whitespace-nowrap" loading={busy} onClick={()=>void confirm()}>{quote?.charged_at?t("tasks.retrieveDownloadLinked0404"):quote?.kind==='bam'?t("tasks.payCreditsAndGetLink7efa0c", {p0: String(quote?.credits)}):t("tasks.payCreditAndGetZipLink07d19b")}</Button></>}
     >

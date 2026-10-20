@@ -2971,5 +2971,16 @@
   "previous": "上一页",
   "next": "下一页",
   "searchAll": "搜索覆盖全部记录"
-}
+},
+  "uploadExperience": {
+    "addToQueue": "加入上传队列",
+    "queueHint": "可连续添加多组 FASTQ；同组双端并行上传，组间排队。等待中：{p0} 组。",
+    "dismissRecovery": "关闭恢复提示",
+    "resultsPreparing": "结果准备中",
+    "resultsPreparingDetail": "分析已结束，结果正在归档或导入。准备完成后即可解读，请稍后返回任务列表。",
+    "interpretationDone": "已解读完成，点击取消",
+    "interpretationOpen": "解读未完成，点击完成",
+    "downloadReady": "下载链接已就绪",
+    "showDownload": "查看下载链接：{p0}"
+  }
 }

@@ -4,7 +4,7 @@ import { errorText } from '@/i18n/errors';
 import { useText } from '@/i18n/useText';
 
 
-import { canInterpretTask } from '@/lib/task-interpretation';
+import { canInterpretTask, isTaskResultPreparing } from '@/lib/task-interpretation';
 import { ActionButton } from '@/components/shared/ActionButton';
 
 
@@ -92,10 +92,11 @@ export default function AnalysisDetailPage() {
       try {
         const taskData = await tasksApi.get(uuid);
         if (controller.signal.aborted) return;
-        if (!canInterpretTask(taskData)) {
+        if (!canInterpretTask(taskData) && !isTaskResultPreparing(taskData)) {
           setNotFound(true); setTask(null); setSample(null); setResultContext(null);
           return;
         }
+        if (isTaskResultPreparing(taskData)) { setTask(taskData); setSample(null); setResultContext(null); return; }
         const [sampleData, contextData] = await Promise.all([
           tasksApi.getSample(uuid).catch(() => null),
 			getResultContext(uuid, controller.signal).catch(cause => {
@@ -209,6 +210,25 @@ export default function AnalysisDetailPage() {
   }, [uuid]);
 
   React.useEffect(()=>{if(task?.template==='vcf2anno' && !['overview','snv-indel','files'].includes(activeTab))setActiveTab('snv-indel');},[task?.template,activeTab,setActiveTab]);
+  React.useEffect(() => {
+    if (!task || !isTaskResultPreparing(task)) return;
+    let disposed = false, pending = false;
+    const timer = window.setInterval(async () => {
+      if (pending) return; pending = true;
+      try {
+        const next = await tasksApi.get(uuid);
+        if (disposed) return;
+        if (!isTaskResultPreparing(next)) {
+          const [sampleData, contextData] = await Promise.all([tasksApi.getSample(uuid).catch(() => null), getResultContext(uuid)]);
+          if (disposed) return;
+          setSample(sampleData); setResultContext(contextData);
+        }
+        setTask(next);
+      } catch { /* Keep the preparation notice during a transient outage. */ }
+      finally { pending = false; }
+    }, 5000);
+    return () => { disposed = true; window.clearInterval(timer); };
+  }, [uuid, task?.resultImportStatus]);
   // 404页面
   if (notFound) {
     return (
@@ -240,6 +260,8 @@ export default function AnalysisDetailPage() {
   if (!task) {
     return null;
   }
+
+  if (isTaskResultPreparing(task)) return <PageContent><div role="status" className="mx-auto max-w-xl space-y-4 py-16 text-center"><h2 className="text-xl font-semibold">{t('uploadExperience.resultsPreparing')}</h2><p className="text-fg-muted">{t('uploadExperience.resultsPreparingDetail')}</p><button type="button" className="text-accent-fg hover:underline" onClick={handleBack}>{t('tasks.backToTaskListcd3b22')}</button></div></PageContent>;
 
   // 渲染当前标签页内容
   const renderTabContent = () => {
@@ -336,7 +358,7 @@ export default function AnalysisDetailPage() {
     <PageContent padded={false} className="h-full min-h-0 !overflow-hidden flex flex-col">
       <div className="shrink-0 border-b border-border-subtle bg-canvas-default px-3 pt-2 md:px-4">
       {/* 任务信息头部 */}
-      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton action={task.interpretationCompletedAt ? 'unlock' : 'lock'} loading={completionSaving} loadingLabel={t("tasks.saving6644f0")} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}>{task.interpretationCompletedAt ? t("tasks.reopenInterpretatione505bc") : t("tasks.interpretationCompletec29533")}</ActionButton>} />
+      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton iconOnly aria-label={t(task.interpretationCompletedAt ? "uploadExperience.interpretationDone" : "uploadExperience.interpretationOpen")} title={t(task.interpretationCompletedAt ? "uploadExperience.interpretationDone" : "uploadExperience.interpretationOpen")} action={task.interpretationCompletedAt ? 'lock' : 'unlock'} loading={completionSaving} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}></ActionButton>} />
       {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">{t("tasks.interpretationIsCompleteAndReadOnlyReopen89d694")}</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
       {!sample && task.sampleId && <aside role="note" className="mb-4 rounded-lg border border-border-default p-4 text-sm text-fg-muted">{t("research.missingSample")}</aside>}

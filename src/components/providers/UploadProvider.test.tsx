@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   uploadDataFiles: vi.fn(),
   resumeDataFiles: vi.fn(),
+  retryDataAsset: vi.fn(),
   deleteUploadJob: vi.fn(),
   abortMultipartUpload: vi.fn(),
 }));
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/data-assets', () => ({
   uploadDataFiles: mocks.uploadDataFiles,
   resumeDataFiles: mocks.resumeDataFiles,
+  retryDataAsset: mocks.retryDataAsset,
 }));
 
 vi.mock('@/lib/api', async () => {
@@ -155,4 +157,35 @@ describe('UploadProvider cancellation lifecycle', () => {
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('completed:pending-r2-completed'));
     expect(mocks.resumeDataFiles).toHaveBeenCalledTimes(1);
   });
+});
+
+it('queues successive pairs without replacing an active transfer', async () => {
+  window.localStorage.clear();
+  let finish!: (value: {cancelledFileIds: string[]}) => void;
+  mocks.uploadDataFiles.mockReset().mockImplementationOnce(() => new Promise(resolve => { finish = resolve; })).mockResolvedValue({ cancelledFileIds: [] });
+  render(<UploadProvider><Harness /></UploadProvider>);
+  fireEvent.click(screen.getByRole('button', {name:'start'}));
+  await waitFor(() => expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole('button', {name:'start'}));
+  expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(1);
+  finish({cancelledFileIds:[]});
+  await waitFor(() => expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(2));
+});
+
+it('keeps paired retries independent across route content unmounts', async () => {
+  window.localStorage.clear();
+  const finish: Record<string, () => void> = {};
+  mocks.retryDataAsset.mockImplementation((id, _file, progress) => new Promise(resolve => { progress(31); finish[id] = () => resolve({}); }));
+  function RetryRoute() {
+    const {retryFile, retries} = useUpload();
+    return <><button onClick={() => void retryFile('r1', new File(['one'],'R1.fastq'))}>retry1</button><button onClick={() => void retryFile('r2', new File(['two'],'R2.fastq'))}>retry2</button><output data-testid="retries">{JSON.stringify(retries)}</output></>;
+  }
+  const view = render(<UploadProvider><RetryRoute /></UploadProvider>);
+  fireEvent.click(screen.getByText('retry1')); fireEvent.click(screen.getByText('retry2'));
+  expect(mocks.retryDataAsset).toHaveBeenCalledTimes(2);
+  view.rerender(<UploadProvider><div>another route</div></UploadProvider>);
+  finish.r1(); finish.r2();
+  view.rerender(<UploadProvider><RetryRoute /></UploadProvider>);
+  await waitFor(() => expect(screen.getByTestId('retries')).toHaveTextContent('completed'));
+  expect(screen.getByTestId('retries')).toHaveTextContent('"progress":100');
 });

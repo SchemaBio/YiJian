@@ -2642,5 +2642,6 @@
   "VCF SNP/InDel 注释（hg19）": "vcfAnnotation.hg19",
   "VCF SNP/InDel 注释（hg38）": "vcfAnnotation.hg38",
   "家系分析暂未开放": "familyAnalysis.unavailable",
-  "family analysis is not available yet": "familyAnalysis.unavailable"
+  "family analysis is not available yet": "familyAnalysis.unavailable",
+  "结果准备中": "uploadExperience.resultsPreparing"
 }

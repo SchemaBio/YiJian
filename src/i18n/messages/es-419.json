@@ -2971,5 +2971,16 @@
   "previous": "Anterior",
   "next": "Siguiente",
   "searchAll": "La búsqueda abarca todos los registros"
-}
+},
+  "uploadExperience": {
+    "addToQueue": "Agregar a la cola de carga",
+    "queueHint": "Agrega varios pares FASTQ. Ambas lecturas se cargan juntas; los pares esperan en cola. Pendientes: {p0}.",
+    "dismissRecovery": "Cerrar aviso de recuperación",
+    "resultsPreparing": "Preparando resultados",
+    "resultsPreparingDetail": "El análisis terminó. Los resultados se están archivando o importando. Vuelve a la lista de tareas cuando estén listos para interpretarlos.",
+    "interpretationDone": "Interpretación completa. Haz clic para reabrir",
+    "interpretationOpen": "Interpretación incompleta. Haz clic para completar",
+    "downloadReady": "El enlace de descarga está listo",
+    "showDownload": "Ver enlace de descarga: {p0}"
+  }
 }

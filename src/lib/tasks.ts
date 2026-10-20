@@ -25,6 +25,7 @@ interface RawTask {
   pipeline_version?: string;
   status?: string;
   vm_status?: string;
+  result_import_status?: string;
   execution_phase?: string;
   execution_reason_code?: string;
   attempt_id?: string;
@@ -105,6 +106,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
     vmStatus: raw.vmStatus ?? raw.vm_status,
+    resultImportStatus: raw.result_import_status,
     executionPhase: raw.execution_phase,
     executionReasonCode: raw.execution_reason_code,
     attemptId: raw.attempt_id,
@@ -141,6 +143,7 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
     vmStatus: raw.vmStatus ?? raw.vm_status,
+    resultImportStatus: raw.result_import_status,
     executionPhase: raw.execution_phase,
     executionReasonCode: raw.execution_reason_code,
     attemptId: raw.attempt_id,

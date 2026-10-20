@@ -2,6 +2,8 @@
 import { LocalizedError } from '@/i18n/errors';
 
 import {api} from '../api';
+import { assessmentCacheKey, readAssessmentCache, writeAssessmentCache, removeAssessmentCache, setAssessmentCacheScope } from './cache';
+export { setAssessmentCacheScope } from './cache';
 import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable} from './types';
 import { loadReferences, referenceGenes } from './reference-client';
 export interface AssessmentStatus {taskId:string;state:'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
@@ -32,6 +34,16 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     const context=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
     session.context=context;
     publish(session,{version:context.version,packVersion:context.referenceVersion?`${context.pack.version} · HPO/HGNC/ClinGen ${context.referenceVersion}`:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
+    const cacheKey = await assessmentCacheKey(context);
+    const cached = await readAssessmentCache(cacheKey);
+    if (controller.signal.aborted) throw controller.signal.reason;
+    if (cached) {
+      session.byRow = new Map(cached.map(entry => [entry.rowId, entry.assessment]));
+      const pinnedByTable: Record<string, number> = {};
+      for (const row of cached) if (row.assessment.pinned) pinnedByTable[row.table] = (pinnedByTable[row.table] ?? 0) + 1;
+      publish(session, { state: 'ready', processed: cached.length, pinned: cached.filter(row => row.assessment.pinned).length, pinnedByTable });
+      return cached;
+    }
     await rpc('init',context);
     const seenGenes=new Set<string>();let referencesFailed=false;
     for(const table of context.tables??[]){
@@ -63,6 +75,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
       if(!batch.length||result.length+batch.length>total)throw new LocalizedError("display.localAssessmentResultTransferIncompleteRetry025832");
       for(const entry of batch)result.push(entry);
     }
+    if (!referencesFailed && !controller.signal.aborted) await writeAssessmentCache(cacheKey, result);
     session.byRow=new Map(result.map(entry=>[entry.rowId,entry.assessment]));
     const pinnedByTable:Record<string,number>={};for(const row of result)if(row.assessment.pinned)pinnedByTable[row.table]=(pinnedByTable[row.table]??0)+1;
     publish(session,{state:'ready',pinned:result.filter(x=>x.assessment.pinned).length,pinnedByTable});
@@ -74,10 +87,13 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
   return session.promise;
 }
 export async function reassessTask(taskId:string){
+  await removeAssessmentCache(taskId);
   const old=sessions.get(taskId);if(!old?.context)throw new LocalizedError("display.assessmentNotReady28ef38");
   await api.post(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{expectedVersion:old.context.version});
   old.controller.abort();sessions.delete(taskId);
 }
 export function clearAssessments(){for(const session of sessions.values())session.controller.abort();sessions.clear();}
-export function invalidateAssessment(taskId:string){const session=sessions.get(taskId);session?.controller.abort();sessions.delete(taskId);}
+export function invalidateAssessment(taskId:string){void removeAssessmentCache(taskId);const session=sessions.get(taskId);session?.controller.abort();sessions.delete(taskId);}
 export function cancelAssessment(taskId:string){const session=sessions.get(taskId);if(session?.status.state!=='loading')return;session.controller.abort();publish(session,{state:'cancelled',error:undefined});}
+
+if (typeof window !== "undefined") window.addEventListener("schema:auth-expired", () => { clearAssessments(); void removeAssessmentCache(); });

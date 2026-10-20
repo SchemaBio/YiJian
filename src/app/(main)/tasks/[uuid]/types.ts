@@ -24,6 +24,7 @@ export interface AnalysisTaskDetail {
   pipelineVersion: string;       // 流程版本
   status: AnalysisStatus;        // 任务状态
   vmStatus?: string;
+  resultImportStatus?: string;
   executionPhase?: string;
   executionReasonCode?: string;
   attemptId?: string;

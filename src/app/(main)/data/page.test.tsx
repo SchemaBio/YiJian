@@ -3,13 +3,13 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import DataCenterPage from './page';
 import type {GlobalUploadState} from '@/components/providers/UploadProvider';
-const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,cancelUpload:vi.fn()}));
+const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,cancelUpload:vi.fn(),pruneFiles:vi.fn(),clearUpload:vi.fn()}));
 const mode=vi.hoisted(()=>({backend:'octopus'}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mode.backend}));
 beforeEach(()=>{mode.backend='octopus';uploads.activeUpload=null;uploads.cancelUpload.mockClear();});
-import { listDataAssets } from '@/lib/data-assets';
+import { listDataAssets, getDataAssetUploadStatus } from '@/lib/data-assets';
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: null, hasPermission: () => true }) }));
-vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, cancelUpload: uploads.cancelUpload }) }));
+vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, cancelUpload: uploads.cancelUpload, pruneFiles: uploads.pruneFiles, clearUpload: uploads.clearUpload }) }));
 vi.mock('@/lib/data-assets', () => ({
   listDataAssets: vi.fn(), getDataAssetUploadStatus: vi.fn(),
   getDataCenterConfig: vi.fn().mockResolvedValue({ temporary: false, download_allowed: true,provider:"local",local_import_directory:"/data" }),
@@ -72,8 +72,20 @@ it('preserves the existing SaaS upload window behavior', async () => {
  vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
  render(<DataCenterPage/>);
  fireEvent.click(await screen.findByRole('button',{name:/查看上传/}));
- expect(within(screen.getByRole('dialog')).getByRole('button',{name:'隐藏到数据中心'})).toBeDisabled();
- fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'关闭弹窗'}));
+ expect(within(screen.getByRole('dialog')).getByRole('button',{name:'隐藏到数据中心'})).toBeEnabled();
+ fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'隐藏到数据中心'}));
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
  expect(uploads.cancelUpload).not.toHaveBeenCalled();
+});
+
+it('dismisses the recovery notice without discarding resumable metadata', async () => {
+ uploads.activeUpload={status:'needs_file',progress:12,files:[{fileId:'r1',fileName:'R1.fastq',readType:'read1',progress:12,status:'failed'}]};
+ vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
+ vi.mocked(getDataAssetUploadStatus).mockResolvedValue({status:'failed'} as never);
+ uploads.clearUpload.mockClear();
+ render(<DataCenterPage/>);
+ fireEvent.click(await screen.findByRole('button',{name:'关闭恢复提示'}));
+ expect(screen.queryByText(/上次上传在浏览器刷新/)).not.toBeInTheDocument();
+ expect(uploads.clearUpload).not.toHaveBeenCalled();
+ expect(uploads.activeUpload.files).toHaveLength(1);
 });

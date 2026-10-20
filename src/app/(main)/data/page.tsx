@@ -17,7 +17,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 import * as React from 'react';
 import { Checkbox, DataTable, Input, type Column } from '@schema/ui-kit';
-import { AlertTriangle, CheckCircle2, Cloud, Database, HardDrive, Loader2, Search, Trash2, Upload, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Cloud, Database, HardDrive, Loader2, Search, Trash2, Upload, X, XCircle } from 'lucide-react';
 import {
   deleteDataAsset, downloadDataAsset, getDataCenterConfig, getDataAssetUploadStatus, getUploadStorageStats, listDataAssets,
   retryDataAsset, updateDataAsset, type DataAsset, type DataCenterConfig,
@@ -28,6 +28,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { useUpload } from '@/components/providers/UploadProvider';
 import { ApiError } from '@/lib/api';
+import { sortPairedAssets } from '@/lib/data-asset-order';
 
 function formatBytes(value: number, t: TextTranslator = chineseText): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -53,18 +54,19 @@ const statusMeta = {
 } as const;
 
 function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploading' | 'canceling' | 'cancelled' | 'completed' | 'failed' | 'deleted', t: TextTranslator = chineseText) {
-  const meta = statusMeta[asset.status] ?? statusMeta.failed;
+  const effectiveStatus = liveStatus === 'uploading' || liveStatus === 'completed' || liveStatus === 'failed' ? liveStatus : asset.status;
+  const meta = statusMeta[effectiveStatus] ?? statusMeta.failed;
   const Icon = meta.icon;
   const isCanceling = liveStatus === 'canceling';
   const isCancelled = liveStatus === 'cancelled';
-  const isActiveUpload = liveStatus === 'uploading' || (progress !== undefined && progress < 100);
+  const isActiveUpload = liveStatus === 'uploading' || (liveStatus === undefined && progress !== undefined && progress < 100);
   const isFailed = liveStatus === 'failed';
   const isSpinning = isCanceling || liveStatus === 'uploading' || (liveStatus === undefined && (isActiveUpload || asset.status === 'uploading' || asset.status === 'deleting'));
   return (
     <div className="min-w-[112px]">
       <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium ${isCanceling || isCancelled ? statusMeta.deleting.className : isFailed ? statusMeta.failed.className : isActiveUpload ? statusMeta.uploading.className : meta.className}`}>
         <Icon className={`h-3.5 w-3.5 ${isSpinning ? 'animate-spin' : ''}`} />
-        {isCanceling ? t("data.canceling733d8c") : isCancelled ? t("admin.canceleda5ffdc") : isFailed ? t("admin.failed3e3c80") : isActiveUpload ? t("data.uploading2c0454", {p0: String(progress ?? 0)}) : meta.label}
+        {isCanceling ? t("data.canceling733d8c") : isCancelled ? t("admin.canceleda5ffdc") : isFailed ? t("admin.failed3e3c80") : isActiveUpload ? t("data.uploading2c0454", {p0: String(progress ?? 0)}) : localizeDisplay(meta.label, t)}
       </span>
       {isActiveUpload && <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress ?? 0}%` }} /></div>}
     </div>
@@ -79,7 +81,7 @@ export default function DataCenterPage() {
    try { await downloadImportWorkbook(localDataTemplate(t.locale,config?.local_import_directory||'/data'), 'local-data-import.xlsx'); }
    catch (cause) { setError(errorText(cause, t)); }
   };
-  const { activeUpload, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
+  const { activeUpload, queuedCount = 0, retries = {}, retryFile, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
   const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
@@ -102,8 +104,7 @@ export default function DataCenterPage() {
   const [editing, setEditing] = React.useState<DataAsset | null>(null);
   const [editingInternalId, setEditingInternalId] = React.useState('');
   const [savingEdit, setSavingEdit] = React.useState(false);
-  const [retryingId, setRetryingId] = React.useState<string | null>(null);
-  const [retryProgress, setRetryProgress] = React.useState<Record<string, number>>({});
+  const [recoveryDismissed, setRecoveryDismissed] = React.useState(false);
   const retryInputRef = React.useRef<HTMLInputElement | null>(null);
   const retryAssetIdRef = React.useRef<string | null>(null);
   const loadRequestRef = React.useRef(0);
@@ -137,7 +138,7 @@ export default function DataCenterPage() {
       if (requestId !== loadRequestRef.current) return;
       // BED files are managed only in Workflow Center. Storage stats remain
       // the unfiltered organization aggregate so BED still consumes quota.
-      setAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed' && (typeFilter!=='fastq'||asset.read_type!=='vcf')));
+      setAssets(sortPairedAssets((assetResult.items ?? []).filter((asset) => asset.read_type !== 'bed' && (typeFilter!=='fastq'||asset.read_type!=='vcf'))));
       setConfig(configResult);
       setStorageStats(statsResult);
       setHasLoaded(true);
@@ -151,6 +152,9 @@ export default function DataCenterPage() {
   }, [t,typeFilter]);
 
   React.useEffect(() => { void load(''); }, [load]);
+
+  const retryStatusKey = Object.entries(retries).map(([id, item]) => `${id}:${item.status}`).join(',');
+  React.useEffect(() => { if (retryStatusKey) void load(search); }, [retryStatusKey, load, search]);
 
   const activeFileKey = (activeUpload?.files ?? []).map((file) => file.fileId).join(',');
   const activeUploadStatus = activeUpload?.status;
@@ -253,12 +257,13 @@ export default function DataCenterPage() {
     }
     setError('');
     try {
-      await runUpload({ read1, read2, uploadPolicyAcknowledged, internalId });
+      const pending = runUpload({ read1, read2, uploadPolicyAcknowledged, internalId });
       setUploadOpen(false);
       setRead1(null);
       setRead2(null);
       setInternalId('');
       setUploadPolicyAcknowledged(false);
+      await pending;
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? errorText(err, t) : t("data.uploadFaileda6f805"));
@@ -332,18 +337,14 @@ export default function DataCenterPage() {
       if (retryInputRef.current) retryInputRef.current.value = '';
       return;
     }
-    setRetryingId(asset.id);
+    retryAssetIdRef.current = null;
+    if (retryInputRef.current) retryInputRef.current.value = '';
     setError('');
     try {
-      await retryDataAsset(asset.id, file, (value) => setRetryProgress((current) => ({ ...current, [asset.id]: value })));
+      await retryFile(asset.id, file);
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? errorText(err, t) : t("data.uploadRetryFailed61b24c"));
-    } finally {
-      setRetryingId(null);
-      setRetryProgress((current) => { const next = { ...current }; delete next[asset.id]; return next; });
-      retryAssetIdRef.current = null;
-      if (retryInputRef.current) retryInputRef.current.value = '';
     }
   };
 
@@ -402,7 +403,7 @@ export default function DataCenterPage() {
     {
       id: 'status',
       header: t("admin.status62e951"),
-      accessor: (asset) => assetStatus(asset, fileProgress[asset.id] ?? retryProgress[asset.id], fileLiveStatus[asset.id], t),
+      accessor: (asset) => assetStatus(asset, retries[asset.id]?.progress ?? fileProgress[asset.id], retries[asset.id]?.status ?? fileLiveStatus[asset.id], t),
       width: 140,
       minWidth: 140,
     },
@@ -428,7 +429,7 @@ export default function DataCenterPage() {
           {config?.download_allowed && <TableAction action="download" label={t("data.download2b9d01")} disabled={asset.status !== 'completed'}
             hint={asset.status === 'completed' ? t("data.downloadFile2922ce") : t("data.downloadAvailableAfterUploadCompletes289170")} onClick={() => void handleDownload(asset)} />}
           {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label={t("data.reuploadbd40ef")} hint={t("data.uploadAgain53e50e")} aria-label={t("data.uploadAgain53e50e")}
-            disabled={retryingId !== null} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} />}
+            disabled={retries[asset.id]?.status === 'uploading' || fileLiveStatus[asset.id] === 'uploading'} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} />}
           <TableAction permission={['data.manage', 'samples.write']} action="edit" label={t("admin.edita7f814")} hint={t("data.editInternalId05f8a1")} aria-label={t("data.editInternalId05f8a1")} onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
           <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" onClick={() => setDeleting(asset)} />
         </TableActions>
@@ -471,9 +472,10 @@ export default function DataCenterPage() {
 
       {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg"><span>{error}</span>{loadFailed && <Button permission={null} action="retry" variant="secondary" size="small" disabled={loading} onClick={() => void load(search)}>{t("billing.retryLoading7b4939")}</Button>}</div>}
 
-      {activeUpload?.status === 'needs_file' && !recoveryChecking && (
+      {activeUpload?.status === 'needs_file' && !recoveryChecking && !recoveryDismissed && (
         <div className="mb-4 rounded-md border border-warning-muted bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
           <div className="flex flex-wrap items-center justify-between gap-3">
+            <button type="button" aria-label={t("uploadExperience.dismissRecovery")} className="order-last ml-auto rounded-md p-1 hover:bg-warning-muted/40" onClick={() => setRecoveryDismissed(true)}><X className="h-4 w-4" /></button>
             <span>{recoveryLookupFailed ? t("data.someUploadStatusesCannotBeConfirmedRefresh42ae61") : t("data.someUploadsRemainUnfinishedAfterRefreshingSelecte51a79")}</span>
             <button type="button" className="shrink-0 rounded-md border border-warning-muted px-2.5 py-1 text-xs font-medium text-warning-fg hover:bg-warning-muted/40" onClick={() => clearUpload()}>
               {t("data.discardRecoveryRecord683763")}</button>
@@ -486,6 +488,7 @@ export default function DataCenterPage() {
           {t("data.storageIsFullDeleteUnusedDataOr56d3c8")}</div>
       )}
 
+      <p role="status" className="mb-3 text-sm text-fg-muted">{t("uploadExperience.queueHint", { p0: queuedCount })}</p>
       <div className="yj-panel min-w-0 overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
           <div className="flex min-w-[280px] flex-1 items-center gap-2">
@@ -495,7 +498,7 @@ export default function DataCenterPage() {
             <HoverHint content={t("admin.refresh38108e")}><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label={t("admin.refresh38108e")} onClick={() => void load(search)} /></HoverHint>
           </div>
           <select aria-label={t('vcfAnnotation.allTypes')} className="h-8 rounded-md border border-border-default bg-canvas-default px-3 py-0 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-emphasis" value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">{t('vcfAnnotation.allTypes')}</option><option value="vcf">{t('vcfAnnotation.vcfOnly')}</option><option value="fastq">{t('vcfAnnotation.fastqOnly')}</option></select>
-          <Button action="upload" disabled={uploadBusy} onClick={()=>{setVcfMode(true);setRead1(null);setRead2(null);setUploadPolicyAcknowledged(false);setUploadOpen(true);}}>{t('vcfAnnotation.upload')}</Button>
+          <Button action="upload" disabled={canceling} onClick={()=>{setVcfMode(true);setRead1(null);setRead2(null);setUploadPolicyAcknowledged(false);setUploadOpen(true);}}>{t('vcfAnnotation.upload')}</Button>
           {getRuntimeBackendFlavor() !== 'squid' && <>
            <Button permission={null} action="download" disabled={!config?.local_import_directory} onClick={downloadLocalTemplate}>{t('samples.downloadTemplatea3afb2')}</Button>
            <Button permission={['data.manage','samples.write']} action="upload" disabled={!config?.local_import_directory} onClick={()=>setLocalImportOpen(true)}>{t('localDataImport.title')}</Button>
@@ -528,24 +531,24 @@ export default function DataCenterPage() {
         footer={
           <>
             {uploading && <Button action="upload" variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>{t("data.cancelUpload6b9dee")}</Button>}
-            <Button loading={isSaaS && uploadBusy} loadingLabel={isSaaS ? t("data.hideInDataCenter16727b") : undefined} variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{!isSaaS && uploadBusy ? t("data.hideInDataCenter16727b") : t("admin.cancel4d0b46")}</Button>
-            <Button action="upload" variant="primary" disabled={uploadBusy || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? t("data.cancelingf44a50") : uploading ? t("data.uploadingba72be") : t("data.startUpload456565")}</Button>
+            <Button variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploadBusy ? t("data.hideInDataCenter16727b") : t("admin.cancel4d0b46")}</Button>
+            <Button action="upload" variant="primary" disabled={canceling || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? t("data.cancelingf44a50") : uploading ? t("uploadExperience.addToQueue") : t("data.startUpload456565")}</Button>
           </>
         }
       >
         <div className="space-y-6">
-          {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("data.uploadedFilesAreDeletedAfter56abf0")}{config.retention_days} {t("data.daysSaasDoesNotOfferDownloadsMaximumab8001")}</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={uploadBusy} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label={t("data.iConfirm7bd7e7")} /></div>}
+          {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("data.uploadedFilesAreDeletedAfter56abf0")}{config.retention_days} {t("data.daysSaasDoesNotOfferDownloadsMaximumab8001")}</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={canceling} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label={t("data.iConfirm7bd7e7")} /></div>}
           {isSaaS && <p className="text-xs text-fg-muted">{t("data.currentlyUseda80723")}{formatBytes(totalBytes, t)}{t("data.totalCapacityd83765")}{storageQuotaLabel}。</p>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title={vcfMode?t("vcfAnnotation.file"):t("data.sequencingFiles55cf00")} description={vcfMode?t("vcfAnnotation.sampleHint"):t("data.selectReadAndReadSeparatelyUploadingJustcdd8fe")} />
             <div className="mb-4">
               <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("data.internalIdRecommendedb0481f")}</label>
-              <Input value={internalId} disabled={uploadBusy || !hasPermission('samples.write')} title={!hasPermission('samples.write') ? t('permissions.denied') : undefined} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder={t("data.enterTheInternalIdFromSamplesEe7533f")} />
+              <Input value={internalId} disabled={canceling || !hasPermission('samples.write')} title={!hasPermission('samples.write') ? t('permissions.denied') : undefined} maxLength={100} onChange={(event) => setInternalId(event.target.value)} placeholder={t("data.enterTheInternalIdFromSamplesEe7533f")} />
               <p className="mt-1.5 text-xs text-fg-muted">{t("data.automaticMatchingPrefersThisIdFilenamesAred0991f")}</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">{vcfMode?t("vcfAnnotation.file"):"Read1（R1 FASTQ）"}</span><FilePicker label={vcfMode?t("vcfAnnotation.file"):t("data.readFilese79622")} accept={vcfMode?".vcf,.vcf.gz,.vcf.bgz":".fastq,.fq,.fastq.gz,.fq.gz"} file={read1} disabled={uploadBusy} onChange={setRead1} /></div>
-              {!vcfMode && <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label={t("data.readFiles88c0f2")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={uploadBusy} onChange={setRead2} /></div>}
+              <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">{vcfMode?t("vcfAnnotation.file"):"Read1（R1 FASTQ）"}</span><FilePicker label={vcfMode?t("vcfAnnotation.file"):t("data.readFilese79622")} accept={vcfMode?".vcf,.vcf.gz,.vcf.bgz":".fastq,.fq,.fastq.gz,.fq.gz"} file={read1} disabled={canceling} onChange={setRead1} /></div>
+              {!vcfMode && <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label={t("data.readFiles88c0f2")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={canceling} onChange={setRead2} /></div>}
             </div>
           </section>
           {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? t("data.cancelingUpload5eb505") : t("data.uploadProgress211354")} description={canceling ? t("data.stoppingTransferAndCleaningObjectStoragePlease8085f0") : t("data.keepThisPageOpenCompletedFilesArecc7e43")} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? t("data.canceling733d8c") : t("data.uploadingf8d6e4")}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}

@@ -18,6 +18,7 @@ export interface AnalysisTask {
   pipelineVersion: string;
   status: TaskStatus;
   vmStatus?: string;
+  resultImportStatus?: string;
   executionPhase?: string;
   executionReasonCode?: string;
   attemptId?: string;
@@ -51,6 +52,7 @@ export interface AnalysisTaskDetail {
   pipelineVersion: string;
   status: TaskStatus;
   vmStatus?: string;
+  resultImportStatus?: string;
   executionPhase?: string;
   executionReasonCode?: string;
   attemptId?: string;

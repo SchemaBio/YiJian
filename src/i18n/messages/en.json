@@ -2971,5 +2971,16 @@
   "previous": "Previous",
   "next": "Next",
   "searchAll": "Search covers all records"
-}
+},
+  "uploadExperience": {
+    "addToQueue": "Add to upload queue",
+    "queueHint": "Add multiple FASTQ pairs. Both reads upload together; pairs are queued. Waiting: {p0}.",
+    "dismissRecovery": "Dismiss recovery notice",
+    "resultsPreparing": "Preparing results",
+    "resultsPreparingDetail": "Analysis has ended. Results are being archived or imported. Return to the task list once preparation finishes to interpret them.",
+    "interpretationDone": "Interpretation complete. Click to reopen",
+    "interpretationOpen": "Interpretation incomplete. Click to complete",
+    "downloadReady": "Your download link is ready",
+    "showDownload": "View download link: {p0}"
+  }
 }
