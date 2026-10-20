@@ -7,6 +7,7 @@ import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
+import type { SampleDetail } from '@/app/(main)/samples/types';
 import type { QCMetric, ResultContext } from '../types';
 import { CopyTableButton } from './CopyTableButton';
 
@@ -86,8 +87,11 @@ function orderedMembers(context: ResultContext) {
 function genderLabel(value?: string, t: TextTranslator = chineseText) { return value === 'male' ? t("samples.male51625d") : value === 'female' ? t("samples.female26bc84") : t("samples.unknownd9c32a"); }
 function comparisonLabel(value?: string, t: TextTranslator = chineseText) { return value === 'match' ? t("tasks.consistent5ab754") : value === 'mismatch' ? t("tasks.needsReviewd9e041") : t("tasks.insufficientInformation098237"); }
 
-export function SampleFamilyTable({ context }: { context: ResultContext }) {
+export type VerificationSample = Pick<SampleDetail, 'id' | 'internalId' | 'gender'>;
+
+export function SampleFamilyTable({ context, sample, sexMethod = 'sry' }: { context: ResultContext; sample?: VerificationSample|null; sexMethod?: 'sry'|'chrX' }) {
   const t = useText();
+  if (sexMethod === 'chrX') return <VCFSampleSexTable context={context} sample={sample}/>;
   const members = orderedMembers(context);
   const rows = [
     [t("tasks.memberc1ee9f"), t("history.sampleId6d686e"), t("tasks.registeredSex71ae63"), t("tasks.dataDerivedSex648644"), 'SRY reads', t("tasks.comparisond36792")],
@@ -143,5 +147,46 @@ export function QCAndFamilyTables({ context }: { context: ResultContext }) {
       </tr>)}</tbody>
     </table></div>}
     <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">{t("tasks.qcNoticesDoNotConstituteReportRelease6d6103")}</p>
+  </section>;
+}
+
+function VCFSampleSexTable({context,sample}:{context:ResultContext;sample?:VerificationSample|null}) {
+  const t=useText();
+  const inference=context.vcfAnnotation?.sex_inference;
+  const ratio=inference?.ratio;
+  const validRatio=typeof ratio==='number' && Number.isFinite(ratio) && ratio>=0 && ratio<=1;
+  const hasSites=typeof inference?.x_sum==='number' && inference.x_sum>0;
+  const predicted=validRatio && hasSites && ['male','female'].includes(inference?.sex??'') ? inference!.sex : 'unknown';
+  const members=context.members.length?context.members:sample?[{id:sample.id,sampleId:sample.id,role:'single'}]:[];
+  const comparisons=members.map(member=>{
+    const linkedSample=sample && (sample.id===member.id || sample.id===member.sampleId)?sample:null;
+    const declared=linkedSample?.gender??'unknown';
+    const inferred=members.length===1?predicted:'unknown';
+    const comparison=!['male','female'].includes(declared)||inferred==='unknown'?'unknown':declared===inferred?'match':'mismatch';
+    return {member,declared,inferred,comparison,label:linkedSample?.internalId||member.sampleId||member.id};
+  });
+  const ratioText=validRatio?ratio.toLocaleString(t.locale,{style:'percent',maximumFractionDigits:2}):t('history.notProvided071fb2');
+  const rows=[
+    [t('tasks.memberc1ee9f'),t('history.sampleId6d686e'),t('tasks.registeredSex71ae63'),t('tasks.dataDerivedSex648644'),t('vcfOverview.xRatio'),t('tasks.comparisond36792')],
+    ...comparisons.map(row=>[memberRoleLabel(row.member.role,t),row.label,genderLabel(row.declared,t),genderLabel(row.inferred,t),ratioText,comparisonLabel(row.comparison,t)]),
+  ];
+  const unknownReasons:Record<string,string>={no_x_variants:'noX',insufficient_x_variants:'insufficientX',ratio_in_uncertain_interval:'uncertainX'};
+  const reason=predicted==='unknown'?unknownReasons[inference?.reason??'']:undefined;
+  return <section aria-labelledby="overview-family-heading" className="overflow-hidden rounded-lg border border-border-default bg-canvas-default">
+    <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-default px-3 py-2">
+      <h3 id="overview-family-heading" className="text-sm font-semibold text-fg-default">{t('tasks.sampleAndSexVerification589a17')}</h3>
+      {members.length>0&&<CopyTableButton rows={rows} label={t('tasks.copy4edd1d')}/>}
+    </header>
+    {members.length===0?<p className="p-3 text-xs text-fg-muted">{t('tasks.memberInformationNotProvided375767')}</p>:<div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
+      <thead className="bg-canvas-subtle text-fg-muted"><tr>{rows[0].map(label=><th key={label} scope="col" className="whitespace-nowrap px-2 py-1.5 font-medium">{label}</th>)}</tr></thead>
+      <tbody>{comparisons.map((row,index)=><tr key={row.member.id} className="border-t border-border-default">{rows[index+1].map((value,column)=><td key={column} className={`px-2 py-1.5 ${column===1?'max-w-[160px] break-all':'whitespace-nowrap'} ${column===5&&row.comparison==='mismatch'?'bg-warning-subtle font-medium text-warning-fg':'text-fg-default'}`}>
+        {column===4?<HoverHint content={t('vcfOverview.ratioDefinition')}><span>{value}</span></HoverHint>:value}
+      </td>)}</tr>)}</tbody>
+    </table></div>}
+    <div className="space-y-1 border-t border-border-default px-3 py-2 text-[11px] leading-5 text-fg-muted">
+      <p>{t('vcfOverview.xSites')}: {typeof inference?.x_sum==='number'?inference.x_sum.toLocaleString(t.locale):t('history.notProvided071fb2')}</p>
+      {reason&&<p>{t('vcfAnnotation.'+reason)}</p>}
+      <p>{t('vcfOverview.sexNotice')}</p>
+    </div>
   </section>;
 }

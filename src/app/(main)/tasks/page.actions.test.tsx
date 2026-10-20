@@ -48,12 +48,33 @@ it.each(['running', 'terminating', 'release_failed'])('shows retry for a failed 
  expect(screen.getByRole('button',{name:'编辑'})).toBeEnabled();
 });
 
-it('preserves SaaS cancellation while a failed cloud task still owns its node', () => {
+it.each(['failed', 'cancelled'])('keeps %s cloud node cleanup read-only until the service confirms release', status => {
  mode.backend='squid';
  const onStop=vi.fn(),onRetry=vi.fn();
- render(<TaskActions task={normalizeTask({id:'task',status:'failed',execution_phase:'running'})} onDetails={vi.fn()} onView={vi.fn()} onStart={vi.fn()} onStop={onStop} onRetry={onRetry} onEdit={vi.fn()} onDelete={vi.fn()} isLoading={false}/>);
- fireEvent.click(screen.getByRole('button',{name:'取消'}));
- expect(onStop).toHaveBeenCalledWith('task');
+ render(<TaskActions task={normalizeTask({id:'task',status,execution_phase:'release_failed'})} onDetails={vi.fn()} onView={vi.fn()} onStart={vi.fn()} onStop={onStop} onRetry={onRetry} onEdit={vi.fn()} onDelete={vi.fn()} isLoading={false}/>);
+ const cleanup=screen.getByRole('button',{name:'系统自动回收节点'});
+ expect(cleanup).toBeDisabled();fireEvent.click(cleanup);
+ expect(screen.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
  expect(screen.queryByRole('button',{name:'重试'})).not.toBeInTheDocument();
- expect(onRetry).not.toHaveBeenCalled();
+ expect(onStop).not.toHaveBeenCalled();expect(onRetry).not.toHaveBeenCalled();
+});
+
+it.each(['running','archiving','terminating','release_failed','terminal'])('opens completed SaaS results during phase %s without a release button', phase => {
+ mode.backend='squid';
+ const onView=vi.fn(),onStop=vi.fn();
+ const callbacks={onDetails:vi.fn(),onView,onStart:vi.fn(),onStop,onRetry:vi.fn(),onEdit:vi.fn(),onDelete:vi.fn(),isLoading:false};
+ const {rerender}=render(<TaskActions task={normalizeTask({id:'task',template:'vcf2anno',status:'completed',execution_phase:phase})} {...callbacks}/>);
+ fireEvent.click(screen.getByRole('button',{name:'解读'}));
+ expect(onView).toHaveBeenCalledTimes(1);
+ expect(screen.queryByRole('button',{name:/释放节点|取消|系统自动回收节点/})).not.toBeInTheDocument();
+ expect(onStop).not.toHaveBeenCalled();
+ rerender(<TaskActions task={normalizeTask({id:'task',template:'single',status:'pending_interpretation',execution_phase:phase})} {...callbacks}/>);
+ expect(screen.getByRole('button',{name:'解读'})).toBeEnabled();
+ expect(screen.queryByRole('button',{name:/释放节点|取消/})).not.toBeInTheDocument();
+});
+
+it('keeps cancellation for an active SaaS analysis',()=>{
+ mode.backend='squid';const onStop=vi.fn();
+ render(<TaskActions task={normalizeTask({id:'task',status:'running',execution_phase:'running'})} onDetails={vi.fn()} onView={vi.fn()} onStart={vi.fn()} onStop={onStop} onRetry={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} isLoading={false}/>);
+ fireEvent.click(screen.getByRole('button',{name:'取消'}));expect(onStop).toHaveBeenCalledWith('task');
 });

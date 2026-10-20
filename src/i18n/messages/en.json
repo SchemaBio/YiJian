@@ -1241,6 +1241,7 @@
     "selectASampleToSeeDataReadiness9eb3aa": "Select a sample to see data readiness.",
     "addNotesForThisAnalysisTaskd56408": "Add notes for this analysis task",
     "enterOptionalNotes168748": "Enter optional notes",
+    "automaticNodeCleanup": "Automatic node cleanup",
     "releaseNode76fea1": "Release node",
     "startebd26d": "Start",
     "interpret10d345": "Interpret",
@@ -2907,6 +2908,27 @@
       "permission_denied": "Permissions changed; registration denied."
     }
   },
+  "vcfDownloads": {
+    "title": "VCF annotation results ZIP",
+    "subtitle": "Actual outputs from this VCF annotation run only",
+    "normalized": "Normalized VCF and TBI index",
+    "annotated": "VEP annotated VCF and TBI index",
+    "report": "SNP/InDel annotation report",
+    "statistics": "VCF preprocessing statistics",
+    "sex": "Inferred sex and explanation",
+    "summary": "Workflow summary"
+},
+  "vcfOverview": {
+    "xRatio": "chrX homozygous/haploid ratio",
+    "ratioDefinition": "Ratio = (diploid homozygous ALT sites + haploid ALT sites on chrX) / valid chrX variant sites. PAR is included; each original record is counted once before multiallelic splitting.",
+    "xSites": "Valid chrX variant sites",
+    "sexNotice": "Data-derived sex is inferred from chrX variant-site ratios in this VCF, for sample verification only; it does not replace registered sex. X chromosome structural variants, assay regions and variant detection methods may reduce accuracy. Insufficient sites or uncertain results are shown as unknown.",
+    "preprocessing": "VCF preprocessing statistics",
+    "recordCount": "Records",
+    "referenceExcluded": "Reference genotypes excluded",
+    "missingExcluded": "Missing or partial genotypes excluded",
+    "unsupportedExcluded": "Unsupported variant types excluded"
+},
   "vcfAnnotation": {
     "title": "VCF SNP/InDel annotation",
     "file": "VCF file",

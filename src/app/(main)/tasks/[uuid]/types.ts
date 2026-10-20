@@ -108,7 +108,7 @@ export interface ResultCount {
 
 export interface ResultContext {
  capabilities?: string[];
- vcfAnnotation?: {preprocessing?: Record<string,unknown>; sex_inference?: {x_sum:number;ratio:number|null;sex:string;warning?:string;reason?:string};summary?: Record<string,unknown>};
+ vcfAnnotation?: {preprocessing?: Record<string,unknown>; sex_inference?: {x_sum:number;ratio:number|null;sex:string;x_hom?:number;x_haploid_alt?:number;minimum_sites?:number;female_max_ratio?:number;male_min_ratio?:number;warning?:string;reason?:string};summary?: Record<string,unknown>};
   taskUuid: string;
   executionAttemptId: string;
   importBatchId?: number;

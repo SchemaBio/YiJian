@@ -22,13 +22,14 @@ interface Issued { kind?: string; id: string; url: string; filename: string; cre
 const gb = (size: number, t: TextTranslator = chineseText) => `${(size / 1_000_000_000).toLocaleString(t.locale, { maximumFractionDigits: 3 })} GB`;
 const labels: Record<string, string> = { mt_vcf: '线粒体 VCF', snp_indel: 'SNP/InDel 注释结果', mt: '线粒体注释结果', cnv_region: 'CNV 区域', cnv_gene: 'CNV 外显子', mei: 'MEI', upd: 'UPD', roh: 'ROH', qc_result: 'QC 报告', str: 'STR' };
 
-export function RawResultDownloads({ taskId }: { taskId: string }) {
-  return getRuntimeBackendFlavor() === 'squid' ? <ChargedResultDownloads taskId={taskId}/> : <SelfHostedResultDownloads taskId={taskId}/>;
+export function RawResultDownloads({ taskId, template }: { taskId: string; template?: string }) {
+  return getRuntimeBackendFlavor() === 'squid' ? <ChargedResultDownloads taskId={taskId} template={template}/> : <SelfHostedResultDownloads taskId={taskId}/>;
 }
 
-function ChargedResultDownloads({ taskId }: { taskId: string }) {
+function ChargedResultDownloads({ taskId, template }: { taskId: string; template?: string }) {
   const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const isVCF = template === 'vcf2anno';
   const [catalog, setCatalog] = React.useState<Catalog | null>(null);
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -113,13 +114,13 @@ function ChargedResultDownloads({ taskId }: { taskId: string }) {
       <div><h3 className="text-base font-semibold text-fg-default">{t("tasks.downloadArchivedFiles21d22a")}</h3><p className="mt-1 text-xs text-fg-muted">{t("tasks.reviewTheCostBeforeConfirmingALinkc7e48c")}</p></div>
       <span className="inline-flex items-center gap-1 rounded-full bg-accent-subtle px-3 py-1 text-xs text-accent-fg"><Clock3 className="h-3 w-3"/>{t("tasks.requestValidUpToHoursFreeLink08bdf4")}</span>
     </div>
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className={`grid gap-4 ${isVCF?'':'xl:grid-cols-2'}`}>
       <article className="flex flex-col rounded-xl border border-border-default bg-canvas-default p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3"><div className="rounded-lg bg-accent-subtle p-2.5 text-accent-fg"><FileArchive className="h-5 w-5"/></div><div><h4 className="font-semibold">{t("tasks.rawResultsZip7e2a74")}</h4><p className="mt-0.5 text-xs text-fg-muted">{t("tasks.vcfAndOriginalAnalysisReports6bb2b7")}</p></div></div>
+          <div className="flex items-center gap-3"><div className="rounded-lg bg-accent-subtle p-2.5 text-accent-fg"><FileArchive className="h-5 w-5"/></div><div><h4 className="font-semibold">{isVCF?t('vcfDownloads.title'):t("tasks.rawResultsZip7e2a74")}</h4><p className="mt-0.5 text-xs text-fg-muted">{isVCF?t('vcfDownloads.subtitle'):t("tasks.vcfAndOriginalAnalysisReports6bb2b7")}</p></div></div>
           <div className="shrink-0 text-right"><p className="text-xl font-semibold text-accent-fg">1 <span className="text-xs font-normal">{t("pipeline.creditsb3e265")}</span></p><p className="text-[11px] text-fg-muted">{t("tasks.perNewRequestf7fbd7")}</p></div>
         </div>
-        <div className="flex-1 text-sm leading-6 text-fg-muted"><p>{t("tasks.snpIndelVcfMitochondrialVcfAndIndexes18dd5a")}</p><p className="mt-2 text-xs">{t("tasks.onlyArchivedFilesFromThisExecutionExcludesb58697")}</p></div>
+        <div className="flex-1 text-sm leading-6 text-fg-muted">{isVCF?<ul className="list-disc space-y-1 pl-5">{['normalized','annotated','report','statistics','sex','summary'].map(key=><li key={key}>{t(`vcfDownloads.${key}`)}</li>)}</ul>:<p>{t("tasks.snpIndelVcfMitochondrialVcfAndIndexes18dd5a")}</p>}<p className="mt-2 text-xs">{t("tasks.onlyArchivedFilesFromThisExecutionExcludesb58697")}</p></div>
         {!!catalog?.missing.length && <details className="mt-3 rounded-md bg-canvas-subtle p-2.5 text-xs text-fg-muted"><summary className="cursor-pointer font-medium">{t("tasks.viewOmittedOutputs8b837d")}{catalog.missing.length} {t("tasks.items00cb6d")}</summary><ul className="mt-2 space-y-1 leading-5">{catalog.missing.map(item=><li key={item}>{item.replace(/^[a-z_]+/,key=>labels[key]||key)}</li>)}</ul></details>}
         {catalog?.zip_error&&<p role="alert" className="mt-3 text-xs text-danger-fg">{catalog.zip_error}</p>}
         <div className="mt-5 border-t border-border-subtle pt-4">
@@ -129,7 +130,7 @@ function ChargedResultDownloads({ taskId }: { taskId: string }) {
           <p className="mt-2 text-center text-xs text-fg-muted">{zipReady?t("tasks.confirmTheCostNextCreditIsCharged03a0cd"):t("tasks.confirmDownloadAfterPackagingFinishesPreparationIsd4568e")}</p>
         </div>
       </article>
-      {catalog?.bam_status !== 'not_provided' && <article className="flex flex-col rounded-xl border border-border-default bg-canvas-default p-5">
+      {!isVCF && catalog && catalog.bam_status !== 'not_provided' && <article className="flex flex-col rounded-xl border border-border-default bg-canvas-default p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3"><div className="rounded-lg bg-canvas-subtle p-2.5 text-accent-fg"><HardDrive className="h-5 w-5"/></div><div><h4 className="font-semibold">{t("tasks.deduplicatedBambf8124")}</h4><p className="mt-0.5 text-xs text-fg-muted">{t("tasks.requestObjectStorageDownloadLink3c0ebb")}</p></div></div>
           <div className="shrink-0 text-right"><p className="text-xl font-semibold text-accent-fg">1 <span className="text-xs font-normal">{t("tasks.creditsGba435e1")}</span></p><p className="text-[11px] text-fg-muted">{t("tasks.roundedUp7a59c9")}</p></div>

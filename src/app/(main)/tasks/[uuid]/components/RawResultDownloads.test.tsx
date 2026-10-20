@@ -43,3 +43,20 @@ it('keeps an expired link available for free refresh of the same paid grant', as
   await waitFor(() => expect(api.post).toHaveBeenCalledTimes(2));
   expect(api.post).toHaveBeenLastCalledWith('/v1/tasks/task/downloads/issue', { quote_id: 'paid-grant' });
 });
+
+it('shows VCF workflow outputs and hides BAM and WES content even while loading',async()=>{
+ let finish!:(catalog:unknown)=>void;
+ vi.mocked(api.get).mockImplementation(async path=>path.endsWith('/active')?[]:new Promise(resolve=>{finish=resolve;}));
+ render(<RawResultDownloads taskId="task" template="vcf2anno"/>);
+ expect(screen.queryByText('去重复 BAM')).not.toBeInTheDocument();
+ expect(screen.getByText('VCF 注释结果 ZIP')).toBeInTheDocument();
+ expect(screen.getByText('规范化 VCF 及 TBI 索引')).toBeInTheDocument();
+ expect(screen.getByText('VEP 注释 VCF 及 TBI 索引')).toBeInTheDocument();
+ expect(screen.getByText('VCF 预处理统计')).toBeInTheDocument();
+ expect(screen.getByText('性别推算结果及说明')).toBeInTheDocument();
+ expect(screen.getByText('流程摘要')).toBeInTheDocument();
+ finish({attempt_id:'attempt',zip_status:'ready',bams:[],missing:[],bam_status:'available'});
+ await screen.findByRole('button',{name:'下载原始 ZIP · 1 积分'});
+ expect(screen.queryByText('去重复 BAM')).not.toBeInTheDocument();
+ expect(screen.queryByText(/线粒体 VCF/)).not.toBeInTheDocument();
+});

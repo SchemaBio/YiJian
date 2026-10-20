@@ -1241,6 +1241,7 @@
     "selectASampleToSeeDataReadiness9eb3aa": "選擇樣本後顯示資料就緒狀態。",
     "addNotesForThisAnalysisTaskd56408": "補充記錄本次分析任務的說明資訊",
     "enterOptionalNotes168748": "請輸入備註資訊（可選）",
+    "automaticNodeCleanup": "系統自動回收節點",
     "releaseNode76fea1": "釋放節點",
     "startebd26d": "啓動",
     "interpret10d345": "解讀",
@@ -2907,6 +2908,27 @@
       "permission_denied": "權限已變更，無法登錄。"
     }
   },
+  "vcfDownloads": {
+    "title": "VCF 註釋結果 ZIP",
+    "subtitle": "僅包含本次 VCF 註釋流程的實際輸出",
+    "normalized": "正規化 VCF 及 TBI 索引",
+    "annotated": "VEP 註釋 VCF 及 TBI 索引",
+    "report": "SNP/InDel 註釋報表",
+    "statistics": "VCF 前處理統計",
+    "sex": "性別推算結果及說明",
+    "summary": "流程摘要"
+},
+  "vcfOverview": {
+    "xRatio": "chrX 純合／單倍體比例",
+    "ratioDefinition": "比例 =（chrX 二倍體純合 ALT 位點數 + 單倍體 ALT 位點數）/ chrX 有效變異位點數。包含 PAR 區域，多等位拆分前每條原始記錄僅計一次。",
+    "xSites": "chrX 有效變異位點數",
+    "sexNotice": "資料性別根據本次 VCF 的 chrX 變異位點比例推算，僅用於樣本核對，不取代登記性別。X 染色體結構變異、檢測區域及變異檢出方式可能降低推算準確率；位點不足或結果不確定時顯示未知。",
+    "preprocessing": "VCF 前處理統計",
+    "recordCount": "記錄數",
+    "referenceExcluded": "排除純參考基因型",
+    "missingExcluded": "排除缺失或不完整基因型",
+    "unsupportedExcluded": "排除不支援的變異類型"
+},
   "vcfAnnotation": {
     "title": "VCF SNP/InDel 註釋",
     "file": "VCF 檔案",

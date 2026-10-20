@@ -1241,6 +1241,7 @@
     "selectASampleToSeeDataReadiness9eb3aa": "选择样本后显示数据就绪状态。",
     "addNotesForThisAnalysisTaskd56408": "补充记录本次分析任务的说明信息",
     "enterOptionalNotes168748": "请输入备注信息（可选）",
+    "automaticNodeCleanup": "系统自动回收节点",
     "releaseNode76fea1": "释放节点",
     "startebd26d": "启动",
     "interpret10d345": "解读",
@@ -2907,6 +2908,27 @@
       "permission_denied": "权限已变更，无法登记。"
     }
   },
+  "vcfDownloads": {
+    "title": "VCF 注释结果 ZIP",
+    "subtitle": "仅包含本次 VCF 注释流程的实际输出",
+    "normalized": "规范化 VCF 及 TBI 索引",
+    "annotated": "VEP 注释 VCF 及 TBI 索引",
+    "report": "SNP/InDel 注释报表",
+    "statistics": "VCF 预处理统计",
+    "sex": "性别推算结果及说明",
+    "summary": "流程摘要"
+},
+  "vcfOverview": {
+    "xRatio": "chrX 纯合/单倍体比例",
+    "ratioDefinition": "比例 =（chrX 二倍体纯合 ALT 位点数 + 单倍体 ALT 位点数）/ chrX 有效变异位点数。包含 PAR 区域，多等位拆分前每条原始记录仅计一次。",
+    "xSites": "chrX 有效变异位点数",
+    "sexNotice": "数据性别根据本次 VCF 的 chrX 变异位点比例推算，仅用于样本核对，不替代登记性别。X 染色体结构变异、检测区域及变异检出方式可能降低推算准确率；位点不足或结果不确定时显示未知。",
+    "preprocessing": "VCF 预处理统计",
+    "recordCount": "记录数",
+    "referenceExcluded": "排除纯参考基因型",
+    "missingExcluded": "排除缺失或不完整基因型",
+    "unsupportedExcluded": "排除不支持的变异类型"
+},
   "vcfAnnotation": {
     "title": "VCF SNP/InDel 注释",
     "file": "VCF 文件",

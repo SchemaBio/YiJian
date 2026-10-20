@@ -1241,6 +1241,7 @@
     "selectASampleToSeeDataReadiness9eb3aa": "Selecciona una muestra para ver la disponibilidad de datos.",
     "addNotesForThisAnalysisTaskd56408": "Agrega notas para esta tarea de análisis",
     "enterOptionalNotes168748": "Ingresa notas opcionales",
+    "automaticNodeCleanup": "Liberación automática del nodo",
     "releaseNode76fea1": "Liberar nodo",
     "startebd26d": "Iniciar",
     "interpret10d345": "Interpretar",
@@ -2907,6 +2908,27 @@
       "permission_denied": "Los permisos cambiaron; registro denegado."
     }
   },
+  "vcfDownloads": {
+    "title": "Resultados de anotación VCF en ZIP",
+    "subtitle": "Solo resultados reales de esta ejecución de anotación VCF",
+    "normalized": "VCF normalizado e índice TBI",
+    "annotated": "VCF anotado con VEP e índice TBI",
+    "report": "Informe de anotación SNP/InDel",
+    "statistics": "Estadísticas de preprocesamiento VCF",
+    "sex": "Sexo inferido y explicación",
+    "summary": "Resumen del flujo"
+},
+  "vcfOverview": {
+    "xRatio": "Proporción homocigota/haploide de chrX",
+    "ratioDefinition": "Proporción = (sitios ALT homocigotos diploides + sitios ALT haploides de chrX) / sitios de variantes válidos de chrX. Incluye PAR; cada registro original se cuenta una vez antes de dividir los sitios multialélicos.",
+    "xSites": "Sitios de variantes válidos de chrX",
+    "sexNotice": "El sexo se infiere de las proporciones de sitios de variantes de chrX de este VCF, solo para verificar la muestra; no sustituye el sexo registrado. Las variantes estructurales del cromosoma X, las regiones analizadas y los métodos de detección pueden reducir la precisión. Los resultados inciertos o con sitios insuficientes se muestran como desconocidos.",
+    "preprocessing": "Estadísticas de preprocesamiento VCF",
+    "recordCount": "Registros",
+    "referenceExcluded": "Genotipos de referencia excluidos",
+    "missingExcluded": "Genotipos ausentes o parciales excluidos",
+    "unsupportedExcluded": "Tipos de variantes no compatibles excluidos"
+},
   "vcfAnnotation": {
     "title": "Anotación SNP/InDel de VCF",
     "file": "Archivo VCF",

@@ -51,14 +51,19 @@ export function TaskActionsCell({
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
     if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: t("tasks.done33246f"), action: 'lock' as ButtonAction, onClick: () => onView(task) };
-    if (executionInFlight && task.executionPhase === 'terminating') return null;
-    if (executionInFlight) {
+    // Node cleanup belongs to the service, never to the interpretation user.
+    // Completed results remain readable while asynchronous cleanup finishes.
+    if (executionInFlight && !['completed', 'pending_interpretation'].includes(task.status)) {
+      if (terminalStatus || ['terminating', 'release_failed'].includes(task.executionPhase ?? '')) {
+        return { label: t('tasks.automaticNodeCleanup'), action: 'wait' as ButtonAction, disabled: true };
+      }
       return {
-        label: task.status === 'completed' ? t("tasks.releaseNode76fea1") : t("admin.cancel4d0b46"),
+        label: t("admin.cancel4d0b46"),
         action: 'stop' as ButtonAction,
         onClick: () => onStop(task.id),
       };
     }
+
 	if (isFamilyAnalysis(task) && ['queued','waiting_for_data','failed','cancelled'].includes(task.status)) {
 		return {label:t('familyAnalysis.unavailable'), action:'wait' as ButtonAction, disabled:true};
 	}

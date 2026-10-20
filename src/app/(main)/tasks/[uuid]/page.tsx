@@ -248,7 +248,7 @@ export default function AnalysisDetailPage() {
     }
     switch (activeTab) {
 		case 'overview':
-			return resultContext ? <ResultOverview context={resultContext} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
+			return resultContext ? <ResultOverview context={resultContext} sample={sample} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
       case 'snv-indel':
         return (
           <SNVIndelTab
@@ -317,7 +317,7 @@ export default function AnalysisDetailPage() {
           />
         );
       case 'files':
-        return <FilesTab taskId={uuid} />;
+        return <FilesTab taskId={uuid} template={task.template} />;
       default:
         return null;
     }
