@@ -2804,7 +2804,7 @@
     "missingSample": "The linked sample has expired or is unavailable.",
     "focusVariant": "Focus variant",
     "unfocusVariant": "Remove focus",
-    "saasIntro": "Research analysis and annotation from FASTQ to results · RUO",
+    "saasIntro": "Whole-exome research analysis and annotation",
     "selfHostedIntro": "Bioinformatics analysis and variant annotation · Self-hosted",
     "title": "Product scope and intended use",
     "saasScope": "The hosted SaaS is for Research Use Only (RUO) and runs research workflows from FASTQ to results, with quality control, variant annotation and result browsing. ACMG preliminary assessments, HPO associations and AI assistance organize evidence and prioritize research candidates. They do not provide personal diagnoses, health-risk conclusions, treatment or medication advice, and must not be used for personal medical decisions.",

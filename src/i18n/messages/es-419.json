@@ -2804,7 +2804,7 @@
     "missingSample": "La muestra vinculada venció o no está disponible.",
     "focusVariant": "Marcar variante para seguimiento",
     "unfocusVariant": "Quitar seguimiento",
-    "saasIntro": "Análisis y anotación para investigación, de FASTQ a resultados · RUO",
+    "saasIntro": "Análisis y anotación del exoma completo para investigación",
     "selfHostedIntro": "Análisis bioinformático y anotación de variantes · Alojamiento propio",
     "title": "Alcance del producto y usos previstos",
     "saasScope": "El SaaS alojado es exclusivamente para investigación (Research Use Only, RUO) y ejecuta flujos de investigación de FASTQ a resultados, con control de calidad, anotación de variantes y consulta de resultados. Las evaluaciones preliminares ACMG, las asociaciones HPO y la asistencia de IA organizan evidencia y priorizan candidatos de investigación. No ofrecen diagnósticos personales, conclusiones sobre riesgos de salud ni recomendaciones de tratamiento o medicación, y no deben usarse para decisiones médicas personales.",

@@ -10,6 +10,7 @@ import { createTranslator } from 'next-intl';
 import metadata from '@/i18n/privacy-saas-messages.json';
 import policies from '@/i18n/privacy-saas.json';
 import type { Locale } from '@/i18n/locales';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 
 export function SaaSPrivacyDocument({ overrideLocale }: { overrideLocale?: Locale }) {
   const globalLocale = useAppLocale();
@@ -19,7 +20,8 @@ export function SaaSPrivacyDocument({ overrideLocale }: { overrideLocale?: Local
   const [contact, setContact] = useState('support@schema-bio.com');
   useEffect(() => { setContact(getRuntimeSupportEmail()); }, []);
 
-  return <div className="yj-modern yj-public-shell" lang={locale}>
+  return <div className="yj-modern yj-public-shell relative" lang={locale}>
+    <LanguageSwitcher locale={locale} policy />
     <div className="yj-legal-page">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link href={isAuthenticated ? '/dashboard' : '/login'} aria-disabled={isLoading}

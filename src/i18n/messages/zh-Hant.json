@@ -2804,7 +2804,7 @@
     "missingSample": "關聯樣本已到期或不可用。",
     "focusVariant": "關注變異",
     "unfocusVariant": "取消關注",
-    "saasIntro": "從 FASTQ 到分析結果的科研分析與註釋器 · RUO",
+    "saasIntro": "全外顯子科研分析與註釋",
     "selfHostedIntro": "生物資訊分析與變異註釋工具 · 自部署",
     "title": "產品定位與使用邊界",
     "saasScope": "SaaS 託管版僅用於科研（Research Use Only，RUO），執行從 FASTQ 到分析結果的科研工作流程，提供品管、變異註釋與結果瀏覽。ACMG 初評、HPO 關聯及 AI 輔助僅用於整理證據與篩選研究候選，不提供個人疾病診斷、健康風險結論、治療或用藥建議；不得用於個人醫療決策。",

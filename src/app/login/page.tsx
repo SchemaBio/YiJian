@@ -17,6 +17,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { DnaHelix } from '@/components/DnaHelix';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 
 export default function LoginPage() {
   const t = useText();
@@ -77,7 +78,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="yj-modern yj-public-shell flex min-h-screen">
+    <div className="yj-modern yj-public-shell relative flex min-h-screen">
+      <LanguageSwitcher />
       <div
         className="relative hidden items-center justify-center overflow-hidden bg-[var(--yj-panel-subtle)] lg:flex lg:w-1/2 xl:w-3/5"
         style={{ color: 'rgba(26, 127, 55, 0.28)' }}
@@ -85,7 +87,7 @@ export default function LoginPage() {
         <DnaHelix />
       </div>
 
-      <div className="flex flex-1 items-center justify-center bg-[var(--yj-panel-bg)] px-5 py-8 sm:p-8">
+      <div className="flex flex-1 items-center justify-center bg-[var(--yj-panel-bg)] px-5 py-20 sm:px-8">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="yj-brand-lockup mb-6">
@@ -94,8 +96,6 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">{t("auth.signIn21f1e8")}</h1>
             <p className="mt-2 text-sm text-[var(--yj-text-muted)]">{t(getRuntimeBackendFlavor() === 'squid' ? 'research.saasIntro' : 'research.selfHostedIntro')}</p>
-            {getRuntimeBackendFlavor() === 'squid' && <p className="mt-2 text-xs text-[var(--yj-text-muted)]">{t('research.audience')}</p>}
-            <p className="mt-3 text-xs leading-relaxed text-[var(--yj-text-muted)]">{t(getRuntimeBackendFlavor() === 'squid' ? 'research.saasScope' : 'research.selfHostedScope')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form space-y-5">

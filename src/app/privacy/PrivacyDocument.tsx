@@ -10,6 +10,7 @@ import { useAppLocale } from '@/components/providers/LocaleProvider';
 import { createTextTranslator } from '@/i18n/text';
 import type { Locale } from '@/i18n/locales';
 import { getPrivacySections } from '@/lib/privacy-policy';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 
 export function PrivacyDocument({ overrideLocale }: { overrideLocale?: Locale }) {
   return getRuntimeBackendFlavor() === 'squid' ? <SaaSPrivacyDocument overrideLocale={overrideLocale} /> : <SelfHostedPrivacyDocument overrideLocale={overrideLocale} />;
@@ -21,7 +22,8 @@ function SelfHostedPrivacyDocument({ overrideLocale }: { overrideLocale?: Locale
   const t = useMemo(() => createTextTranslator(locale), [locale]);
   const { isAuthenticated, isLoading } = useAuth();
 
-  return <div className="yj-modern yj-public-shell" lang={locale}>
+  return <div className="yj-modern yj-public-shell relative" lang={locale}>
+    <LanguageSwitcher locale={locale} policy />
     <div className="yj-legal-page">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link href={isAuthenticated ? '/dashboard' : '/login'} aria-disabled={isLoading}
