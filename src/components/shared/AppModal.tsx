@@ -33,6 +33,7 @@ export interface AppModalProps {
   footer?: React.ReactNode;
   /** Additional CSS classes for the modal content */
   className?: string;
+  bodyClassName?: string;
 }
 
 interface ModalSectionHeadingProps {
@@ -85,6 +86,7 @@ export function AppModal({
   children,
   footer,
   className,
+  bodyClassName,
 }: AppModalProps) {
   const t = useText();
   return (
@@ -103,7 +105,7 @@ export function AppModal({
         {title}
       </ModalHeader>
       {showCloseButton && <div className="absolute right-4 top-4"><Button action="close" iconOnly aria-label={t("common.closeDialog81f18d")} variant="ghost" onClick={() => onOpenChange(false)} /></div>}
-      <ModalBody>
+      <ModalBody className={bodyClassName}>
         {children}
       </ModalBody>
       {footer && (

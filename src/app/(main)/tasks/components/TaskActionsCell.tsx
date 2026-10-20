@@ -1,4 +1,5 @@
 'use client';
+import { isFamilyAnalysis } from '@/lib/analysis-availability';
 import { OperationScope } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
@@ -49,7 +50,7 @@ export function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
-    if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: t("tasks.done33246f"), action: 'completed' as ButtonAction, onClick: () => onView(task) };
+    if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: t("tasks.done33246f"), action: 'lock' as ButtonAction, onClick: () => onView(task) };
     if (executionInFlight && task.executionPhase === 'terminating') return null;
     if (executionInFlight) {
       return {
@@ -58,6 +59,9 @@ export function TaskActionsCell({
         onClick: () => onStop(task.id),
       };
     }
+	if (isFamilyAnalysis(task) && ['queued','waiting_for_data','failed','cancelled'].includes(task.status)) {
+		return {label:t('familyAnalysis.unavailable'), action:'wait' as ButtonAction, disabled:true};
+	}
     switch (task.status) {
       case 'waiting_for_data':
         return {
@@ -99,14 +103,14 @@ export function TaskActionsCell({
   };
 
   const primaryAction = getPrimaryAction();
-  const canEdit = !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
+  const canEdit = !isFamilyAnalysis(task) && !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
   const canDelete = !task.interpretationCompletedAt;
 
   return (
     <OperationScope permission={task.template === 'baseline_fix' ? 'baselines.manage' : 'tasks.manage'}>
       <TableActions>
-        {primaryAction && <TableAction action={primaryAction.action} label={translateUI(primaryAction.label, t)}
-          tone={primaryAction.action === 'stop' ? 'danger' : primaryAction.disabled || primaryAction.action === 'completed' ? 'default' : 'primary'}
+        {primaryAction && <TableAction action={primaryAction.action} permission={task.interpretationCompletedAt ? null : undefined} label={translateUI(primaryAction.label, t)}
+          tone={primaryAction.action === 'stop' ? 'danger' : primaryAction.disabled || task.interpretationCompletedAt || primaryAction.action === 'completed' ? 'default' : 'primary'}
           loading={isLoading} loadingLabel={t("tasks.processingfcb979")} disabled={isLoading || primaryAction.disabled} onClick={primaryAction.onClick} />}
         <TableAction action="view" label={t("tasks.details4f55ee")} disabled={!canInterpretTask(task)} hint={canInterpretTask(task) ? t("tasks.viewTaskDetailsfe0ccc") : t("tasks.cnvCalibrationTasksHaveNoVariantInterpretation699c4f")} aria-label={t("tasks.viewTaskDetailsf20ee8", {p0: String(task.internalId || task.id)})} onClick={() => onDetails(task)} />
         <TableAction action="edit" label={t("admin.edita7f814")} disabled={!canEdit || isLoading}

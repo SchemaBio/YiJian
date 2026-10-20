@@ -1,4 +1,6 @@
 'use client';
+import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import {TaskSamplePicker} from '@/components/shared/TaskSamplePicker';
 import {VCFTaskFields} from '@/components/shared/VCFTaskFields';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { LocalizedError } from '@/i18n/errors';
@@ -21,7 +23,6 @@ import { Coins } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
   pipelinesApi,
-  samplesApi,
   type TaskPipelineOption,
   type TaskSampleListItem,
 } from '@/lib/task-resources';
@@ -34,7 +35,6 @@ export default function NewAnalysisPage() {
   const t = useText();
   const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
-  const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
   const [pedigrees, setPedigrees] = React.useState<Pedigree[]>([]);
   const pedigreeCache = React.useRef<Pedigree[] | null>(null);
@@ -42,7 +42,7 @@ export default function NewAnalysisPage() {
   const [familyError, setFamilyError] = React.useState('');
   const [optionsRetry, setOptionsRetry] = React.useState(0);
   const [optionsLoading, setOptionsLoading] = React.useState(true);
-  const [selectedSample, setSelectedSample] = React.useState('');
+  const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem|null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
   const [selectedPedigree, setSelectedPedigree] = React.useState('');
   const [taskName, setTaskName] = React.useState('');
@@ -56,7 +56,7 @@ export default function NewAnalysisPage() {
   const [estimatedMinutes, setEstimatedMinutes] = React.useState(60);
   const [estimateStatus, setEstimateStatus] = React.useState<'idle' | 'loading' | 'ready' | 'fallback'>('idle');
 
-  const selectedSampleInfo = samples.find((sample) => sample.id === selectedSample);
+  const selectedSampleInfo = selectedSample;
   const selectedPipelineInfo = pipelines.find((pipeline) => pipeline.id === selectedPipeline);
   const selectedPedigreeInfo = pedigrees.find((pedigree) => pedigree.id === selectedPedigree);
   const [vcfAssetId,setVcfAssetId]=React.useState('');
@@ -70,14 +70,10 @@ export default function NewAnalysisPage() {
     async function loadOptions() {
       setOptionsLoading(true);
       try {
-        const [sampleOptions, pipelineOptions] = await Promise.all([
-          samplesApi.list({ page: 1, page_size: 100 }),
-          pipelinesApi.list(),
-        ]);
+        const pipelineOptions = await pipelinesApi.list();
         if (cancelled) return;
-        setSamples(sampleOptions);
         setPipelines(pipelineOptions);
-        setSelectedPipeline((current) => current || pipelineOptions[0]?.id || '');
+        setSelectedPipeline((current) => current || pipelineOptions.find(pipeline => !isFamilyAnalysis(pipeline))?.id || '');
         setLoadError('');
       } catch (err) {
         if (!cancelled) {
@@ -175,6 +171,7 @@ export default function NewAnalysisPage() {
   }, [isTrio, selectedPedigreeInfo, selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
+	if (isFamilyAnalysis(selectedPipelineInfo)) return;
     if ((isVCF && !vcfAssetId) || submitting || (isSaaS && !retentionAcknowledged)) return;
     setFormError('');
     if (!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)) {
@@ -228,19 +225,6 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {!isTrio && <FormItem label={t("history.sample610da8")} required>
-          <Select
-            options={samples.map((sample) => ({
-              value: sample.id,
-              label: `${sample.internalId || sample.id}${!sample.matchedPair ? t("tasks.awaitingSequencingData3a9d51") : t("tasks.rRReady51ae02")}`,
-            }))}
-            value={selectedSample}
-            onChange={(value) => setSelectedSample(Array.isArray(value) ? value[0] : value)}
-            placeholder={t("samples.selectSamplef0e89f")}
-            searchable
-          />
-        </FormItem>}
-
         {isTrio && <FormItem label={t("tasks.pedigreeParentsProband5d1fa4")} required>
           <Select
             options={pedigrees.map((pedigree) => {
@@ -262,7 +246,8 @@ export default function NewAnalysisPage() {
           <Select
             options={pipelines.map((pipeline) => ({
               value: pipeline.id,
-              label: `${pipelineDisplayName(pipeline.id, pipeline.name, t)}${pipeline.version ? ` (${pipeline.version})` : ''}`,
+              label: `${pipelineDisplayName(pipeline.id, pipeline.name, t)}${pipeline.version ? ` (${pipeline.version})` : ''}${isFamilyAnalysis(pipeline) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
+              disabled: isFamilyAnalysis(pipeline),
             }))}
             value={selectedPipeline}
             onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}
@@ -271,7 +256,10 @@ export default function NewAnalysisPage() {
           />
         </FormItem>
 
-        {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName}/>}
+        {!isTrio && <div className={`grid grid-cols-1 items-start gap-4 ${isVCF?'lg:grid-cols-2':''}`}>
+          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} showSequencingStatus={!isVCF} disabled={submitting}/>
+          {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName} disabled={submitting}/>}
+        </div>}
         <FormItem label={t("tasks.taskNotesd34f05")}>
           <Input
             aria-label={t("tasks.taskNotesd34f05")}
@@ -354,7 +342,7 @@ export default function NewAnalysisPage() {
 
             onClick={handleSubmit}
             loading={submitting}
-            disabled={(isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo) || (isSaaS && !retentionAcknowledged)}
+            disabled={isFamilyAnalysis(selectedPipelineInfo) || (isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo) || (isSaaS && !retentionAcknowledged)}
           >
             {submitting ? t("tasks.submitting3a1624") : t("tasks.submitTask09de9e")}
           </Button>

@@ -1,5 +1,4 @@
 'use client';
-import { VCFLocalImportModal } from './VCFLocalImportModal';
 import { LocalDataImportModal } from './LocalDataImportModal';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
 import {localDataTemplate} from '@/lib/local-data-import';
@@ -90,7 +89,6 @@ export default function DataCenterPage() {
   const [loadFailed, setLoadFailed] = React.useState(false);
   const [hasLoaded, setHasLoaded] = React.useState(false);
   const [vcfMode,setVcfMode]=React.useState(false);
- const [vcfImportOpen,setVcfImportOpen]=React.useState(false);
  const [typeFilter,setTypeFilter]=React.useState('');
  const [uploadOpen, setUploadOpen] = React.useState(false);
   const [cancelUploadConfirmOpen, setCancelUploadConfirmOpen] = React.useState(false);
@@ -496,9 +494,8 @@ export default function DataCenterPage() {
             </div>
             <HoverHint content={t("admin.refresh38108e")}><ActionButton size="small" iconOnly action="refresh" variant="ghost" type="button" className="rounded-md p-2 text-fg-muted hover:bg-canvas-subtle hover:text-fg-default"  aria-label={t("admin.refresh38108e")} onClick={() => void load(search)} /></HoverHint>
           </div>
-          <select aria-label={t('vcfAnnotation.allTypes')} className="rounded-md border border-border-default bg-canvas-default p-2 text-sm" value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">{t('vcfAnnotation.allTypes')}</option><option value="vcf">{t('vcfAnnotation.vcfOnly')}</option><option value="fastq">{t('vcfAnnotation.fastqOnly')}</option></select>
+          <select aria-label={t('vcfAnnotation.allTypes')} className="h-8 rounded-md border border-border-default bg-canvas-default px-3 py-0 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-emphasis" value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">{t('vcfAnnotation.allTypes')}</option><option value="vcf">{t('vcfAnnotation.vcfOnly')}</option><option value="fastq">{t('vcfAnnotation.fastqOnly')}</option></select>
           <Button action="upload" disabled={uploadBusy} onClick={()=>{setVcfMode(true);setRead1(null);setRead2(null);setUploadPolicyAcknowledged(false);setUploadOpen(true);}}>{t('vcfAnnotation.upload')}</Button>
-          {config?.local_import_directory && <Button permission={['data.manage','samples.write']} onClick={()=>setVcfImportOpen(true)}>{t('vcfAnnotation.import')}</Button>}
           {getRuntimeBackendFlavor() !== 'squid' && <>
            <Button permission={null} action="download" disabled={!config?.local_import_directory} onClick={downloadLocalTemplate}>{t('samples.downloadTemplatea3afb2')}</Button>
            <Button permission={['data.manage','samples.write']} action="upload" disabled={!config?.local_import_directory} onClick={()=>setLocalImportOpen(true)}>{t('localDataImport.title')}</Button>
@@ -520,7 +517,6 @@ export default function DataCenterPage() {
           <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? t("data.noMatchingDataAssets29b140") : t("data.noDataAssets5862af")}</p></div>
         )}
       </div>
-      {vcfImportOpen && <VCFLocalImportModal onClose={()=>setVcfImportOpen(false)} onImported={()=>void load(search)}/>}
       {localImportOpen && getRuntimeBackendFlavor() !== 'squid' && <LocalDataImportModal directory={config?.local_import_directory||''} onClose={()=>setLocalImportOpen(false)} onImported={()=>void load(search)}/>}
       <input ref={retryInputRef} type="file" className="hidden" onChange={(event) => void handleRetryFile(event.target.files?.[0])} />
 

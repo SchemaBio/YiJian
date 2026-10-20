@@ -2935,5 +2935,19 @@
     "noX": "沒有有效 X 染色體位點",
     "insufficientX": "有效 X 位點不足",
     "uncertainX": "比例處於未知區間"
-  }
+  },
+  "familyAnalysis": {"unavailable": "家系分析暫未開放"},
+  "resourcePicker": {
+  "sampleSearch": "搜尋樣本 UUID 或內部編號",
+  "vcfSearch": "搜尋 VCF UUID、內部編號或檔案名稱",
+  "selected": "已選擇",
+  "clearSelection": "清除選擇",
+  "loading": "正在搜尋…",
+  "retry": "重試",
+  "noResults": "沒有符合項目，請更換關鍵字",
+  "pageSummary": "第 {p0} / {p1} 頁 · 共 {p2} 筆",
+  "previous": "上一頁",
+  "next": "下一頁",
+  "searchAll": "搜尋涵蓋全部記錄"
+}
 }

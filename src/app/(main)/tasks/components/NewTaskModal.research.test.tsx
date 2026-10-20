@@ -5,11 +5,12 @@ import { NewTaskModal } from './NewTaskModal';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: vi.fn(() => 'squid') }));
-vi.mock('@/lib/task-resources', () => ({
+vi.mock('@/lib/task-resources', async importOriginal => ({...await importOriginal<typeof import('@/lib/task-resources')>(),
   samplesApi: { list: vi.fn(async () => [{ id: 'sample-1', internalId: 'research-001' }]) },
   pipelinesApi: { list: vi.fn(async () => [{ id: 'pipeline-1', name: 'Research pipeline', template: 'single' }]) },
   templatesApi: { list: vi.fn(async () => []) },
 }));
+vi.mock('@/lib/resource-pages',()=>({readResourcePage:vi.fn(async()=>({items:[{id:'sample-1',internal_id:'research-001'}],total:1}))}));
 vi.mock('@/lib/billing', () => ({
   getBillingBalance: vi.fn(async () => null),
   getBillingConfig: vi.fn(async () => null),

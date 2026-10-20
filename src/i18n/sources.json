@@ -2640,5 +2640,7 @@
   "SNP/InDel 注释结果": "display.snpIndelReportda28f8",
   "线粒体注释结果": "display.mitochondrialReport08c58c",
   "VCF SNP/InDel 注释（hg19）": "vcfAnnotation.hg19",
-  "VCF SNP/InDel 注释（hg38）": "vcfAnnotation.hg38"
+  "VCF SNP/InDel 注释（hg38）": "vcfAnnotation.hg38",
+  "家系分析暂未开放": "familyAnalysis.unavailable",
+  "family analysis is not available yet": "familyAnalysis.unavailable"
 }

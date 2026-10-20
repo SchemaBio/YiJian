@@ -230,6 +230,15 @@ function SubNavItemComponent({ item, collapsed, currentPath }: SubNavItemCompone
     : item.href === currentPath || currentPath.startsWith(`${item.href}/`);
   const Icon = item.icon;
 
+  if (item.disabled) {
+    return <li><Tooltip content={t('familyAnalysis.unavailable')} placement="right" variant="nav">
+      <span role="link" aria-disabled="true" tabIndex={0} className={`flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm text-fg-muted opacity-50 ${collapsed ? 'justify-center' : ''}`}>
+        {Icon && <Icon className="h-4 w-4 shrink-0" />}
+        {!collapsed && <span className="truncate">{translateUI(item.label, t)}</span>}
+      </span>
+    </Tooltip></li>;
+  }
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // 如果点击已激活的家系管理链接，强制刷新并添加 reset 参数
     if (item.href === '/samples/pedigree' && isActive) {

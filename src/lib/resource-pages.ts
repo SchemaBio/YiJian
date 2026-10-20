@@ -1,6 +1,20 @@
 import { LocalizedError } from '@/i18n/errors';
 import { api } from './api';
 
+export interface ResourcePage<T> {
+  items: T[];
+  total: number;
+}
+
+// Interactive selectors fetch one bounded page instead of collecting the catalog.
+export async function readResourcePage<T>(endpoint: string, params: Record<string,string> = {}, signal?: AbortSignal): Promise<ResourcePage<T>> {
+  const response = await api.get<T[] | {items?:T[];total?:number}>(endpoint, {
+    params: {page:'1',page_size:'20',...params}, signal, cache:'no-store',
+  });
+  const items = Array.isArray(response) ? response : response.items ?? [];
+  return {items, total: Array.isArray(response) ? items.length : response.total ?? items.length};
+}
+
 export async function readResourcePages<T>(endpoint: string, params: Record<string,string> = {}, signal?: AbortSignal): Promise<T[]> {
   const rows = new Map<string,T>();
   for (let page=1;page<=10000;page++) {

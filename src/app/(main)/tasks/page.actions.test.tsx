@@ -6,6 +6,17 @@ import { normalizeTask } from '@/lib/tasks';
 const mode = vi.hoisted(() => ({backend: 'octopus'}));
 vi.mock('@/lib/runtime-config', () => ({getRuntimeBackendFlavor: () => mode.backend}));
 beforeEach(() => {mode.backend = 'octopus';});
+it.each(['octopus','squid'])('disables queued family analysis but keeps historical results readable in %s', backend => {
+ mode.backend=backend;
+ const onStart=vi.fn(),onRetry=vi.fn(),onView=vi.fn();
+ const callbacks={onDetails:vi.fn(),onView,onStart,onStop:vi.fn(),onRetry,onEdit:vi.fn(),onDelete:vi.fn(),isLoading:false};
+ const {rerender}=render(<TaskActions task={normalizeTask({id:'family',template:'trio',status:'queued'})} {...callbacks}/>);
+ const unavailable=screen.getByRole('button',{name:'家系分析暂未开放'});
+ expect(unavailable).toBeDisabled();fireEvent.click(unavailable);
+ expect(onStart).not.toHaveBeenCalled();expect(onRetry).not.toHaveBeenCalled();
+ rerender(<TaskActions task={normalizeTask({id:'family',template:'trio',status:'completed'})} {...callbacks}/>);
+ fireEvent.click(screen.getByRole('button',{name:'解读'}));expect(onView).toHaveBeenCalled();
+});
 it('disables detail and interpretation for completed calibration jobs',()=>{
  const onDetails=vi.fn(),onView=vi.fn();
  render(<TaskActions task={normalizeTask({id:'task',template:'baseline_fix',status:'completed'})} onDetails={onDetails} onView={onView} onStart={vi.fn()} onStop={vi.fn()} onRetry={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} isLoading={false}/>);

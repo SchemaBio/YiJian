@@ -1,20 +1,31 @@
- 'use client';
+'use client';
 import * as React from 'react';
 import {useText} from '@/i18n/useText';
 import {type DataAsset} from '@/lib/data-assets';
-import {readResourcePages} from '@/lib/resource-pages';
+import {readResourcePage} from '@/lib/resource-pages';
 import {getRuntimeBackendFlavor} from '@/lib/runtime-config';
 import {Input} from '@schema/ui-kit';
+import {TaskResourcePicker,type ResourcePageRequest} from './TaskResourcePicker';
 
-export function VCFTaskFields({assetId, sampleName, onAssetChange, onSampleChange}: {assetId:string; sampleName:string; onAssetChange:(id:string)=>void; onSampleChange:(name:string)=>void}) {
- const t=useText(); const [assets,setAssets]=React.useState<DataAsset[]>([]); const [failed,setFailed]=React.useState(false); const [retry,setRetry]=React.useState(0);
- React.useEffect(()=>{let cancelled=false; setFailed(false);
- readResourcePages<DataAsset>('/v1/data/assets',{read_type:'vcf',status:'completed'}).then(items=>{if(!cancelled)setAssets(items.filter(a=>!a.expires_at||Date.parse(a.expires_at)>Date.now()));}).catch(()=>{if(!cancelled)setFailed(true);});
- return()=>{cancelled=true;};},[retry]);
- return <section className="space-y-3">
- <label className="block text-sm font-medium">{t('vcfAnnotation.file')}<select required className="mt-1 block w-full rounded-md border border-border-default bg-canvas-default p-2" value={assetId} onChange={e=>onAssetChange(e.target.value)}><option value="">{t('vcfAnnotation.selectFile')}</option>{assets.map(a=><option value={a.id} key={a.id}>{a.file_name} · {a.id}</option>)}</select></label>
- {failed&&<div role="alert"><button type="button" onClick={()=>setRetry(n=>n+1)}>{t('vcfAnnotation.loadError')}</button></div>}
- <label className="block text-sm font-medium">{t('vcfAnnotation.sampleName')}<Input value={sampleName} onChange={e=>onSampleChange(e.target.value)} maxLength={255}/></label>
- <p className="text-xs text-fg-muted">{t('vcfAnnotation.sampleHint')}</p>{getRuntimeBackendFlavor()==='squid' && <p className="text-xs text-fg-muted">{t('vcfAnnotation.timeBilling')}</p>}
+export function VCFTaskFields({assetId,sampleName,onAssetChange,onSampleChange,disabled=false}: {
+ assetId:string;sampleName:string;onAssetChange:(id:string)=>void;onSampleChange:(name:string)=>void;disabled?:boolean;
+}) {
+ const t=useText();const sampleInputId=React.useId();const [selected,setSelected]=React.useState<DataAsset|null>(null);
+ const loadPage=React.useCallback(async({search,page,pageSize,signal}:ResourcePageRequest)=>{
+  const result=await readResourcePage<DataAsset>('/v1/data/assets',{
+   read_type:'vcf',status:'completed',available_only:'true',search,page:String(page),page_size:String(pageSize)
+  },signal);
+  return {...result,items:result.items.filter(asset=>!asset.expires_at||Date.parse(asset.expires_at)>Date.now())};
+ },[]);
+ return <section className="min-w-0 space-y-3">
+  <TaskResourcePicker label={t('vcfAnnotation.file')} searchPlaceholder={t('resourcePicker.vcfSearch')}
+   value={assetId} selectedItem={selected?.id===assetId?selected:null} disabled={disabled} loadPage={loadPage}
+   onSelect={asset=>{setSelected(asset);onAssetChange(asset?.id??'');}}
+   title={asset=>asset.file_name}
+   details={asset=><>{asset.internal_id||'—'}{asset.file_size>0?` · ${(asset.file_size/1024/1024).toLocaleString(t.locale,{maximumFractionDigits:1})} MB`:''}</>}/>
+  <label className="block text-sm font-medium" htmlFor={sampleInputId}>{t('vcfAnnotation.sampleName')}</label>
+  <Input id={sampleInputId} value={sampleName} onChange={e=>onSampleChange(e.target.value)} maxLength={255} disabled={disabled}/>
+  <p className="text-xs text-fg-muted">{t('vcfAnnotation.sampleHint')}</p>
+  {getRuntimeBackendFlavor()==='squid'&&<p className="text-xs text-fg-muted">{t('vcfAnnotation.timeBilling')}</p>}
  </section>;
 }

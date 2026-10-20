@@ -1,4 +1,6 @@
 'use client';
+import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import {TaskSamplePicker} from '@/components/shared/TaskSamplePicker';
 import {VCFTaskFields} from '@/components/shared/VCFTaskFields';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { LocalizedError } from '@/i18n/errors';
@@ -15,11 +17,10 @@ import { ActionButton as Button } from '@/components/shared/ActionButton';
 import * as React from 'react';
 import Link from 'next/link';
 import { Input, Select } from '@schema/ui-kit';
-import { Coins, Search, Loader2, SlidersHorizontal, Database, FileText } from 'lucide-react';
+import { Coins, Loader2, SlidersHorizontal, Database, FileText } from 'lucide-react';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
 import {
   pipelinesApi,
-  samplesApi,
   templatesApi,
   type TaskPipelineOption,
   type TaskSampleListItem,
@@ -50,8 +51,6 @@ interface NewTaskModalProps {
 export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   const t = useText();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
-  const [sampleSearch, setSampleSearch] = React.useState('');
-  const [samples, setSamples] = React.useState<TaskSampleListItem[]>([]);
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
   const [templates, setTemplates] = React.useState<TaskTemplateOption[]>([]);
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem | null>(null);
@@ -77,16 +76,14 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       setLoadingResources(true);
       setResourceError('');
       try {
-        const [sampleItems, pipelineItems, templateItems] = await Promise.all([
-          samplesApi.list(),
+        const [pipelineItems, templateItems] = await Promise.all([
           pipelinesApi.list().catch(() => []),
           templatesApi.list().catch(() => []),
         ]);
         if (cancelled) return;
-        setSamples(sampleItems);
         setPipelines(pipelineItems);
         setTemplates(templateItems);
-        const firstValue = pipelineItems[0]?.id || templateItems[0]?.name || '';
+        const firstValue = pipelineItems.find(pipeline => !isFamilyAnalysis(pipeline))?.id || templateItems.find(template => !isFamilyAnalysis({ template: template.name }))?.name || '';
         setSelectedPipeline(prev => prev || firstValue);
         if (isSaaS) {
           const [nextBalance, nextConfig] = await Promise.all([getBillingBalance(), getBillingConfig()]);
@@ -109,25 +106,18 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     };
   }, [isOpen, isSaaS]);
 
-  // 筛选样本
-  const filteredSamples = React.useMemo(() => {
-    if (!sampleSearch) return samples;
-    const query = sampleSearch.toLowerCase();
-    return samples.filter(
-      s => s.id.toLowerCase().includes(query) || s.internalId.toLowerCase().includes(query)
-    );
-  }, [sampleSearch, samples]);
-
   const pipelineOptions = React.useMemo(() => {
     if (pipelines.length > 0) {
       return pipelines.map(p => ({
         value: p.id,
-        label: `${pipelineDisplayName(p.id, p.name, t)}${p.version ? ` (${p.version})` : ''}`,
+        label: `${pipelineDisplayName(p.id, p.name, t)}${p.version ? ` (${p.version})` : ''}${isFamilyAnalysis(p) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
+        disabled: isFamilyAnalysis(p),
       }));
     }
-    return templates.map(t => ({
-      value: t.name,
-      label: t.displayName && t.displayName !== t.name ? `${t.displayName} (${t.name})` : t.name,
+    return templates.map(template => ({
+      value: template.name,
+      label: `${template.displayName && template.displayName !== template.name ? `${template.displayName} (${template.name})` : template.name}${isFamilyAnalysis({ template: template.name }) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
+      disabled: isFamilyAnalysis({ template: template.name }),
     }));
   }, [pipelines, templates, t]);
 
@@ -198,6 +188,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   };
 
   const handleSubmit = async () => {
+	if (isFamilyAnalysis(pipelines.find(p => p.id === selectedPipeline) ?? {template: selectedPipeline})) return;
     if ((isVCF && !vcfAssetId) || !selectedSample || !selectedPipeline || submitting || (isSaaS && !retentionAcknowledged)) return;
 
     const pipeline = pipelines.find(p => p.id === selectedPipeline);
@@ -232,7 +223,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   const handleClose = () => {
     if (submitting) return;
-    setSampleSearch('');
     setSelectedSample(null);
     setSelectedPipeline('');
     setRemark(''); setVcfAssetId(''); setVcfSampleName('');
@@ -249,13 +239,15 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       onOpenChange={(open) => !open && handleClose()}
       title={t("tasks.newAnalysisTask1d4697")}
       size="large"
+      className="!w-[calc(100vw-2rem)] !max-w-[1280px]"
+      bodyClassName="!max-h-[calc(100vh-11rem)]"
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
           <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")}
             variant="primary"
             onClick={handleSubmit}
-            disabled={(isVCF && !vcfAssetId) || loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
+            disabled={isFamilyAnalysis(pipelines.find(p => p.id === selectedPipeline) ?? {template: selectedPipeline}) || (isVCF && !vcfAssetId) || loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
 
           >
             {t("tasks.createTaskcf42fd")}</Button>
@@ -263,7 +255,6 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
       }
     >
       <div className="space-y-6">
-        {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName}/>}
         <RetentionNotice kind="task" acknowledgement={{checked: retentionAcknowledged, onChange: setRetentionAcknowledged, disabled: submitting}} />
         {loadingResources && (
           <div className="flex items-center gap-2 text-sm text-fg-muted">
@@ -284,36 +275,13 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           />
           <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-fg-default mb-2">{t("tasks.selectSample47fc82")}</label>
-          <div className="relative mb-2">
-            <Input placeholder={t("tasks.searchSampleOrInternalId698a41")} value={sampleSearch} onChange={(e) => setSampleSearch(e.target.value)} leftElement={<Search className="w-4 h-4" />} />
-          </div>
-          <div className="border border-border rounded-md max-h-40 overflow-y-auto">
-            {filteredSamples.map(sample => (
-              <div
-                key={sample.id}
-                onClick={() => setSelectedSample(sample)}
-                className={`px-3 py-2 cursor-pointer transition-colors ${selectedSample?.id === sample.id ? 'bg-accent-subtle text-accent-fg' : 'hover:bg-canvas-subtle'}`}
-              >
-                <div className="text-sm font-mono">{sample.id.substring(0, 8)}...</div>
-                <div className="text-xs text-fg-muted">
-                  {sample.internalId}
-                  {isVCF ? '' : !sample.matchedPair ? t("tasks.awaitingSequencingData4671bd") : t("tasks.rRReady50a422")}
-                </div>
-              </div>
-            ))}
-            {filteredSamples.length === 0 && (
-              <div className="px-3 py-4 text-center text-sm text-fg-muted">{t("samples.noMatchingSamplesc0d84a")}</div>
-            )}
-          </div>
-          {selectedSample && !isVCF && (
-            <div className="mt-2 text-sm text-accent-fg">{t("tasks.selected34a0eb")}{selectedSample.internalId}</div>
-          )}
-        </div>
-
-        <div>
           <label className="block text-sm font-medium text-fg-default mb-2">{t("tasks.analysisPipeline22bb4b")}</label>
           <Select value={selectedPipeline} onChange={(v) => setSelectedPipeline(Array.isArray(v) ? v[0] : v)} options={pipelineOptions} placeholder={t("tasks.selectAnAnalysisPipeline6634d0")} />
+        </div>
+
+        <div className={`grid grid-cols-1 items-start gap-4 ${isVCF?'lg:grid-cols-2':''}`}>
+          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} showSequencingStatus={!isVCF} disabled={submitting}/>
+          {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName} disabled={submitting}/>}
         </div>
 
         <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">

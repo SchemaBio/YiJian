@@ -28,6 +28,7 @@ export interface NavItem {
 }
 
 export interface SidebarNavItem {
+  disabled?: boolean;
   label: string;
   href: string;
   icon?: LucideIcon;
@@ -67,7 +68,7 @@ export const sidebarNavConfig: SidebarNavConfig = {
   dashboard: [],
   samples: [
     { label: '样本列表', href: '/samples', icon: List },
-    { label: '家系管理', href: '/samples/pedigree', icon: GitBranch },
+    { label: '家系管理', href: '/samples/pedigree', icon: GitBranch, disabled: true },
   ],
   tasks: [],
 	data: [],

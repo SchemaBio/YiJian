@@ -2935,5 +2935,19 @@
     "noX": "Sin sitios válidos del cromosoma X",
     "insufficientX": "Sitios X válidos insuficientes",
     "uncertainX": "Proporción dentro del intervalo incierto"
-  }
+  },
+  "familyAnalysis": {"unavailable": "El análisis familiar aún no está disponible"},
+  "resourcePicker": {
+  "sampleSearch": "Buscar UUID o identificador interno de muestra",
+  "vcfSearch": "Buscar UUID, identificador interno o nombre de archivo VCF",
+  "selected": "Seleccionado",
+  "clearSelection": "Borrar selección",
+  "loading": "Buscando…",
+  "retry": "Reintentar",
+  "noResults": "Sin coincidencias. Prueba otra búsqueda.",
+  "pageSummary": "Página {p0} / {p1} · {p2} registros",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "searchAll": "La búsqueda abarca todos los registros"
+}
 }

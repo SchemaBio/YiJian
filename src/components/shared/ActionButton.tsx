@@ -7,14 +7,14 @@ import { translateUI } from '@/i18n/text';
 
 import * as React from 'react';
 import { Button as KitButton, type ButtonProps } from '@schema/ui-kit';
-import { Plus, Pencil, Save, RefreshCw, RotateCcw, Play, Square, Clock, Trash2, X, Copy, Check, Upload, Download, BookOpen, CheckCircle2, LockKeyhole, UnlockKeyhole, Sparkles, ExternalLink, MoreHorizontal, Loader2, Eye, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Plus, Pencil, Save, RefreshCw, RotateCcw, Play, Square, Clock, Trash2, X, Copy, Check, Upload, Download, BookOpen, CheckCircle2, Lock, Unlock, Sparkles, ExternalLink, MoreHorizontal, Loader2, Eye, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { HoverHint } from './HoverHint';
 
 export const ACTION_ICONS = {
   add: Plus, edit: Pencil, save: Save, refresh: RefreshCw, retry: RotateCcw,
   start: Play, stop: Square, wait: Clock, delete: Trash2, close: X,
   copy: Copy, copied: Check, upload: Upload, download: Download, export: Download,
-  interpret: BookOpen, completed: CheckCircle2, lock: LockKeyhole, unlock: UnlockKeyhole,
+  interpret: BookOpen, completed: CheckCircle2, lock: Lock, unlock: Unlock,
   ai: Sparkles, external: ExternalLink, more: MoreHorizontal, view: Eye,
   previous: ChevronLeft, next: ChevronRight,
 } satisfies Record<string, LucideIcon>;

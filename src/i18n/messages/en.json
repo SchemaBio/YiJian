@@ -2935,5 +2935,19 @@
     "noX": "No valid X chromosome sites",
     "insufficientX": "Insufficient valid X sites",
     "uncertainX": "Ratio within the uncertain interval"
-  }
+  },
+  "familyAnalysis": {"unavailable": "Family analysis is not available yet"},
+  "resourcePicker": {
+  "sampleSearch": "Search sample UUID or internal ID",
+  "vcfSearch": "Search VCF UUID, internal ID or filename",
+  "selected": "Selected",
+  "clearSelection": "Clear selection",
+  "loading": "Searching…",
+  "retry": "Retry",
+  "noResults": "No matches. Try another search.",
+  "pageSummary": "Page {p0} / {p1} · {p2} records",
+  "previous": "Previous",
+  "next": "Next",
+  "searchAll": "Search covers all records"
+}
 }

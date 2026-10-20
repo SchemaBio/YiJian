@@ -157,7 +157,7 @@ export const pipelinesApi = {
     const response = await readResourcePages<unknown>('/v1/pipelines');
     return response
       .map(normalizePipeline)
-      .filter(pipeline => pipeline.id && pipeline.name && pipeline.status !== 'inactive' && pipeline.resourceAvailable !== false);
+      .filter(pipeline => pipeline.id && pipeline.name && (isFamilyAnalysis(pipeline) || (pipeline.status !== 'inactive' && pipeline.resourceAvailable !== false)));
   },
 };
 
@@ -167,3 +167,4 @@ export const templatesApi = {
     return unwrapList(response).map(normalizeTemplate).filter(template => template.name);
   },
 };
+import { isFamilyAnalysis } from './analysis-availability';
