@@ -79,7 +79,7 @@ export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,o
   const update=(change:Partial<SVCv4Assessment>)=>{setDraft(old=>({...old,...change,confirmed:false,result:undefined}));setDirty(true);};
   const evidence=(key:string,value:unknown)=>update({inputs:{...draft.inputs,[key]:value}});
   const calculate=async()=>{setBusy(true);setError('');try{setDraft(await evaluateSVCv4(taskId,{...draft,confirmed:false}));setDirty(false);}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.calculationFailed95b6cf"));}finally{setBusy(false);}};
-  const save=async()=>{if(!onSave)return;if(!reason.trim()){setError(t("tasks.enterAReasonForThisEvidenceChangea9a698"));return;}setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.saveFailed40525a"));}finally{setBusy(false);}};
+  const save=async()=>{if(!onSave)return;setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.saveFailed40525a"));}finally{setBusy(false);}};
   const result=draft.result;
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.svcV6cd501")}</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',mode:'experimental',draftAssessment:svcExperimentalInput(draft),taskId,reference,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={setAIResult} /></div>
@@ -109,7 +109,7 @@ export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,o
       <details open><summary>{t("tasks.applicabilityAssumptionsAndCalculationBasis8b88a4")}</summary><ul className="list-disc space-y-1 pl-4 text-xs">{result.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>
       <label className="flex items-start gap-2"><input type="checkbox" disabled={readOnly||busy} checked={draft.confirmed} onChange={e=>setDraft(old=>({...old,confirmed:e.target.checked}))} /><span>{t("tasks.iVerifiedDiseaseEvidenceApplicabilityAndDraft24409b")}</span></label>
     </div>}
-    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label={t("tasks.reasonForNewEvidenceChange2775ba")} placeholder={t("tasks.reasonForThisNewEvidenceChangeRequiredb48796")} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><ActionButton action="save" variant="ghost" type="button" disabled={busy||dirty||!result} onClick={()=>void save()} className="rounded bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveNewAssessment62fa07")}</ActionButton></div>}
+    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label={t("tasks.reasonForNewEvidenceChange2775ba")} placeholder={t("tasks.reasonForNewEvidenceChangeOptional")} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><ActionButton action="save" variant="primary" type="button" disabled={busy||dirty||!result} onClick={()=>void save()}>{t("tasks.saveNewAssessment62fa07")}</ActionButton></div>}
     {error&&<p role="alert" className="text-sm text-danger-fg">{error}</p>}
   </div>;
 }

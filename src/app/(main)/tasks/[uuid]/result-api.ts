@@ -4,7 +4,7 @@ import { api, ApiError } from '@/lib/api';
 import {igvAPIURL} from '@/lib/igv-api-url';
 import {assessmentStatus} from '@/lib/assessment/client';
 import { queryBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
-import { optionalAnnotationNumber } from './utils/snv-annotations';
+import { clinvarReviewStars, optionalAnnotationNumber } from './utils/snv-annotations';
 import { resultFilterValue } from './utils/filter-values';
 import type {
   ACMGClassification,
@@ -344,6 +344,8 @@ function parentOfOrigin(value: unknown): UPDRegion['parentOfOrigin'] {
 }
 
 function mapSNV(row: BackendRow): SNVIndel {
+  const annotations = row.annotationValues && typeof row.annotationValues === 'object' ? row.annotationValues as Record<string, string> : undefined;
+  const reviewStatus = annotations?.ClinVar_RevStat ?? s(row.clinvarRevStat);
   const automaticAcmg = row.automaticAcmg && typeof row.automaticAcmg === 'object'
     ? row.automaticAcmg as SNVIndel['automaticAcmg']
     : undefined;
@@ -378,9 +380,9 @@ function mapSNV(row: BackendRow): SNVIndel {
     consequence: s(row.consequence, '-'),
     rsId: s(row.rsId),
     clinvarSignificance: s(row.clinvarSignificance),
-    clinvarReviewStatus: s(row.clinvarRevStat),
+    clinvarReviewStatus: reviewStatus,
     clinvarDisease: s(row.clinvarDn),
-    clinvarStars: s(row.clinvarStar),
+    clinvarStars: clinvarReviewStars(reviewStatus),
     annotationValues: row.annotationValues && typeof row.annotationValues === 'object' ? row.annotationValues as Record<string, string> : undefined,
     gnomadAF: optionalAnnotationNumber(row.gnomadAF),
     gnomadEasAF: optionalAnnotationNumber(row.gnomadEasAF),

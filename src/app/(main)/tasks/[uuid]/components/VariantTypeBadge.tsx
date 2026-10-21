@@ -3,7 +3,8 @@ import { ClinicalSignificanceBadge, type BadgeTone } from './ClinicalSignificanc
 
 const tones: Record<string, BadgeTone> = {
   SNP:'blue', SNV:'blue', LINE1:'blue', 'LINE-1':'blue',
-  INS:'teal', INSERTION:'teal', DUP:'teal', AMPLIFICATION:'teal', ALU:'teal',
+  INS:'teal', INSERTION:'teal', ALU:'teal',
+  DUP:'purple', AMPLIFICATION:'purple',
   DEL:'orange', DELETION:'orange', SVA:'orange',
   MNP:'amber', INDEL:'amber', COMPLEX:'amber',
   NORMAL:'green',

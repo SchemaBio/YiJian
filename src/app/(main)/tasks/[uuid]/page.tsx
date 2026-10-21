@@ -5,7 +5,7 @@ import { useText } from '@/i18n/useText';
 
 
 import { canInterpretTask, isTaskResultPreparing } from '@/lib/task-interpretation';
-import { ActionButton } from '@/components/shared/ActionButton';
+import { IconActionButton } from '@/components/shared/ActionButton';
 
 
 import * as React from 'react';
@@ -358,7 +358,7 @@ export default function AnalysisDetailPage() {
     <PageContent padded={false} className="h-full min-h-0 !overflow-hidden flex flex-col">
       <div className="shrink-0 border-b border-border-subtle bg-canvas-default px-3 pt-2 md:px-4">
       {/* 任务信息头部 */}
-      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <ActionButton iconOnly aria-label={t(task.interpretationCompletedAt ? "uploadExperience.interpretationDone" : "uploadExperience.interpretationOpen")} title={t(task.interpretationCompletedAt ? "uploadExperience.interpretationDone" : "uploadExperience.interpretationOpen")} action={task.interpretationCompletedAt ? 'lock' : 'unlock'} loading={completionSaving} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()}></ActionButton>} />
+      <TaskHeader task={task} onBack={handleBack} compact completionControl={(['completed', 'pending_interpretation'].includes(task.status) || task.interpretationCompletedAt) && <IconActionButton label={t(task.interpretationCompletedAt ? "uploadExperience.interpretationDone" : "uploadExperience.interpretationOpen")} action={task.interpretationCompletedAt ? 'lock' : 'unlock'} loading={completionSaving} variant="ghost" type="button" className="yj-tool-button" disabled={completionSaving} onClick={() => void setInterpretationCompleted()} />} />
       {task.interpretationCompletedAt && <p role="status" className="mb-2 rounded bg-canvas-subtle px-3 py-2 text-xs text-fg-muted">{t("tasks.interpretationIsCompleteAndReadOnlyReopen89d694")}</p>}
       {completionError && <p role="alert" className="mb-2 text-sm text-danger-fg">{completionError}</p>}
       {!sample && task.sampleId && <aside role="note" className="mb-4 rounded-lg border border-border-default p-4 text-sm text-fg-muted">{t("research.missingSample")}</aside>}

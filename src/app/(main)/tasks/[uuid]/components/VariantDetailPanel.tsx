@@ -22,7 +22,7 @@ import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-rea
 import { Tag } from '@/components/shared/Tag';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
-import { formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
+import { clinvarReviewStars, formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
@@ -149,7 +149,6 @@ function ACMGPointsEditor({
   const calculated = Object.values(evidence).some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, Object.keys(evidence).length);
   const effective = override || calculated;
   const auto = variant.automaticAcmg;
-  const changed = JSON.stringify(Object.values(evidence).sort((a, b) => a.code.localeCompare(b.code))) !== JSON.stringify([...initialEvidence].sort((a, b) => a.code.localeCompare(b.code))) || override !== (variant.acmgOverride ?? '') || overrideReason !== (variant.acmgOverrideReason ?? '');
 
   const toggle = (code: string, checked: boolean) => { setRestoreAutomatic(false); setEvidence(previous => {
     const next = { ...previous };
@@ -164,8 +163,6 @@ function ACMGPointsEditor({
   }); };
 
   const save = async () => {
-    if (override && !overrideReason.trim()) { setError(t("tasks.manualClassificationOverrideRequiresAReason4ce506")); return; }
-    if (changed && !reason.trim()) { setError(t("tasks.enterAReasonForThisChange1afb75")); return; }
     setSaving(true); setError('');
     try {
       await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim(), restoreAutomatic);
@@ -200,11 +197,11 @@ function ACMGPointsEditor({
     </section>)}
     <div className="rounded-lg border border-border-subtle bg-canvas-default p-3 text-sm"><div className="flex justify-between"><span>{t("tasks.evidencePoints76bde1")}</span><strong>{score}</strong></div><div className="mt-1 flex justify-between"><span>{t("tasks.pointBasedClassification845a04")}</span><strong>{calculated ? ACMG_CONFIG[calculated].label : t("tasks.insufficientEvidence70568c")}</strong></div></div>
     <div><label className="mb-1 block text-sm font-medium">{t("tasks.manualFinalClassificationOverridedb887b")}</label><select value={override} onChange={event => { setRestoreAutomatic(false); setOverride(event.target.value as ACMGClassification | ''); }} className="w-full rounded-md border border-border-default bg-canvas-default px-3 py-2 text-sm"><option value="">{t("tasks.showByEvidencePoints055e03")}</option>{Object.entries(ACMG_CONFIG).map(([key, config]) => <option key={key} value={key}>{translateUI(config.label, t)}</option>)}</select></div>
-    {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder={t("tasks.overrideReasonRequired0e9c5d")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
-    <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={changed ? t("tasks.evidenceChangeReasonRequired0498e1") : t("tasks.changeReasonIfAny8a124e")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
+    {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder={t("tasks.overrideReasonOptional")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
+    <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={t("tasks.evidenceChangeReasonOptional")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
     {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
     <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason(t("tasks.restoreCurrentAutomaticAssessmentBaselineffd9de")); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">{t("tasks.restoreAutomaticBaselineAndSave7ecc58")}</ActionButton>
-    <div className="flex gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost" type="button" disabled={saving} onClick={() => void save()} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveEvidenceAndClassificationd8ed29")}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
+    <div className="flex gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="primary" type="button" disabled={saving} onClick={() => void save()} className="flex-1">{t("tasks.saveEvidenceAndClassificationd8ed29")}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
   </div>;
 }
 
@@ -442,7 +439,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           <div className="space-y-0">
             <InfoItem label={t("tasks.clinicalSignificancecd0866")} value={<ClinVarBadge value={annotation('ClinVar_Sig', variant.clinvarSignificance)} />} />
             <InfoItem label={t("tasks.reviewStatusa62215")} value={annotation('ClinVar_RevStat', variant.clinvarReviewStatus)} />
-            <InfoItem label={t("tasks.reviewStars29d243")} value={annotation('ClinVar_Star', variant.clinvarStars)} />
+            <InfoItem label={t("tasks.reviewStars29d243")} value={clinvarReviewStars(annotation('ClinVar_RevStat', variant.clinvarReviewStatus))} />
             <InfoItem label={t("history.associatedDiseasea79330")} value={annotation('ClinVar_DN', variant.clinvarDisease)} />
           </div>
 

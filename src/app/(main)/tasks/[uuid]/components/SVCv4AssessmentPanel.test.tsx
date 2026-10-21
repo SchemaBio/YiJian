@@ -30,6 +30,8 @@ describe('SVCv4 guided assessment',()=>{
   await screen.findByText('意义未明 · VUS-low · 0 分');
   expect(evaluateSVCv4).toHaveBeenCalledWith('task',expect.objectContaining({disease:'OMIM:1',moi:'AD',confirmed:false}));
   fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button',{name:'保存新版评定'}));
+  await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),''));
   fireEvent.change(screen.getByLabelText('新版证据调整理由'),{target:{value:'核验后保存'}});
   fireEvent.click(screen.getByRole('button',{name:'保存新版评定'}));
   await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),'核验后保存'));

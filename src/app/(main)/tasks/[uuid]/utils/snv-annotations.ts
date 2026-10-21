@@ -1,6 +1,21 @@
 import type { SNVIndel } from '../types';
 import { chineseText, type TextTranslator } from '@/i18n/text';
 
+/** Derive review stars from status; missing or unrecognized status stays missing. */
+export function clinvarReviewStars(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const status = value.trim().toLowerCase().replace(/\s+/g, '_');
+  // Explicit priority keeps combined statuses deterministic.
+  const ratings = [
+    ['guideline', '4'],
+    ['reviewed_by_expert_panel', '3'],
+    ['_multiple_submitters', '2'],
+    ['_single_submitter', '1'],
+    ['conflicting', '1'],
+  ] as const;
+  return ratings.find(([key]) => status.includes(key))?.[1];
+}
+
 export function optionalAnnotationNumber(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '' || value === '.') return undefined;
   if (typeof value !== 'number' && typeof value !== 'string') return undefined;

@@ -18,6 +18,28 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it('derives ClinVar stars from review status even when the imported star is missing or stale', () => {
+    const props = { taskId: 'task', isOpen: true, onClose: vi.fn() };
+    const { rerender } = render(<VariantDetailPanel {...props} variant={{ ...variant('A'), clinvarStars: '.', annotationValues: { ClinVar_RevStat: 'reviewed_by_expert_panel' } }} />);
+    expect(screen.getByText('审核星级').parentElement).toHaveTextContent('3');
+    rerender(<VariantDetailPanel {...props} variant={{ ...variant('A'), clinvarStars: '4', annotationValues: { ClinVar_RevStat: 'criteria_provided,_single_submitter' } }} />);
+    expect(screen.getByText('审核星级').parentElement).toHaveTextContent('1');
+    rerender(<VariantDetailPanel {...props} variant={{ ...variant('A'), clinvarStars: '4', annotationValues: { ClinVar_RevStat: '.' } }} />);
+    expect(screen.getByText('审核星级').parentElement).toHaveTextContent('-');
+  });
+  it('saves changed ACMG evidence and a manual classification with both reasons empty', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    render(<VariantDetailPanel taskId="task" variant={variant('A')} isOpen onClose={vi.fn()} onUpdateClassification={save} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ACMG' }));
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择 ACMG 证据 PP3' }));
+    const override = screen.getByRole('option', { name: '按证据积分显示' }).parentElement!;
+    fireEvent.change(override, { target: { value: 'Pathogenic' } });
+    expect(screen.getByPlaceholderText('人工覆写理由（选填）')).toHaveValue('');
+    expect(screen.getByPlaceholderText('本次证据调整理由（选填）')).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: '保存证据与分类' }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PP3' })], 'Pathogenic', '', '', false));
+  });
   it('links each dbSNP identifier in the annotation tab and rejects non-rs values', () => {
     render(<VariantDetailPanel taskId="task" variant={{...variant('A'), rsId:'rs671;RS123', annotationValues:{dbSNP:'rs671&rs456&invalid'}}} isOpen onClose={vi.fn()} />);
     const identifiers = screen.getByRole('heading', {name:'变异标识'}).parentElement!;
