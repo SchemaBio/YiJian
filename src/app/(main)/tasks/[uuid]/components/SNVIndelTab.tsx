@@ -31,6 +31,7 @@ import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
 import { VariantTypeBadge } from './VariantTypeBadge';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
+import { ChromosomeFilter } from './ChromosomeFilter';
 
 interface SNVIndelTabProps {
   taskId: string;
@@ -439,6 +440,8 @@ export function SNVIndelTab({
               leftElement={<Search className="w-4 h-4" />}
             />
           </div>
+
+          <ChromosomeFilter column={result?.columns?.find(field => field === 'Chromosome' || result.columnAliases?.[field]?.includes('chromosome'))} state={filterState} onChange={setFilterState} />
 
           {/* 基因列表筛选 */}
           <div className="relative">

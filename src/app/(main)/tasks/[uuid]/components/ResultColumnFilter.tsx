@@ -15,7 +15,8 @@ const labels:Record<string,string>={Chromosome:'染色体',Position:'位置',Sta
 function ColumnFilter({fields,fieldLabels,types,state,onChange,cnvType=false,compactLabel}: {fieldLabels:Record<string,string>;compactLabel?:string;cnvType?:boolean;fields:string[];types?:PaginatedResult<unknown>['columnTypes'];state:TableFilterState;onChange:(state:TableFilterState)=>void}) {
   const t = useText();
  const [open,setOpen]=React.useState(false);
- const [field,setField]=React.useState(fields[0]??'');
+ const [selectedField,setField]=React.useState(fields[0]??'');
+ const field=fields.includes(selectedField)?selectedField:fields[0]??'';
  const current=state.columnFilters?.find(f=>f.column===field);
  const active=state.columnFilters?.some(f=>fields.includes(f.column));
  const defaultOp=(f:string):Operator=>cnvType&&f==='Col4'?'equals':types?.[f]==='number'?'between':types?.[f]==='boolean'||types?.[f]==='enum'?'equals':'contains';

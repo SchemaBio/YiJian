@@ -1,6 +1,10 @@
 import type { SNVIndel } from '../types';
 import { chineseText, type TextTranslator } from '@/i18n/text';
 
+export function formatPredictionLabel(value?: string): string | undefined {
+  return value?.replace(/(^|[&|;,])(\s*)([a-z])/g, (_, separator, space, letter) => separator + space + letter.toUpperCase());
+}
+
 /** Derive review stars from status; missing or unrecognized status stays missing. */
 export function clinvarReviewStars(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;

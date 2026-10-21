@@ -1,4 +1,6 @@
 {
+  "全部染色体": "tasks.allChromosomes",
+  "自定义染色体筛选": "tasks.customChromosomeFilter",
   "贻鉴": "about.yijian17bdf7",
   "专业的全外显子遗传病基因组分析系统": "common.appDescription",
   "界面语言": "settings.interfaceLanguage",

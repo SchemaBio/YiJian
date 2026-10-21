@@ -22,7 +22,7 @@ import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-rea
 import { Tag } from '@/components/shared/Tag';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
-import { clinvarReviewStars, formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
+import { clinvarReviewStars, formatPopulationFrequency, formatPredictionLabel, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
@@ -463,7 +463,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <InfoItem label="EVOScore2" value={annotation('EVOScore', variant.evoScore)} />
             <InfoItem label={t("tasks.evoscorePredictionLabel9c87e9")} value={annotation('EVOScore_AN', variant.evoAnnotation)} />
             <InfoItem label={t("tasks.alphamissenseScore84aae0")} value={annotation('AlphaMissense_AM', variant.alphaMissenseScore)} />
-            <InfoItem label={t("tasks.alphamissensePredictionLabel5a4a6e")} value={annotation('AlphaMissense_AMC', variant.alphaMissenseClass)} />
+            <InfoItem label={t("tasks.alphamissensePredictionLabel5a4a6e")} value={formatPredictionLabel(annotation('AlphaMissense_AMC', variant.alphaMissenseClass))} />
             <p className="mt-2 text-xs text-fg-muted">{t("tasks.workflowMultivaluesAndLabelsArePreservedFunctional8c01b5")}</p>
           </div>
 

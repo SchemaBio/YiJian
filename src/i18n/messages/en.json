@@ -1139,6 +1139,8 @@
     "turnaroundDays": "{p0, plural, one {# day} other {# days}}"
   },
   "tasks": {
+    "allChromosomes": "All chromosomes",
+    "customChromosomeFilter": "Custom chromosome filter",
     "uploadTaskInformation": "Upload information",
     "taskActions": "Task actions",
     "awaitingData85354f": "Awaiting data",

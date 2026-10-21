@@ -351,14 +351,28 @@ class BrowserTable {
             const selection = buildLocalSelection(q, this.raw);
             let total = this.counts.get(selection.where);
             if (total === undefined) {
-                total = Number((await this.rows('SELECT count(*) AS n ' + this.joined() + selection.where, signal))[0].n);
+                total = selection.where ? Number((await this.rows('SELECT count(*) AS n ' + this.joined() + selection.where, signal))[0].n) : this.info.dataset.rows;
                 if (this.counts.size >= 40)
                     this.counts.delete(this.counts.keys().next().value!);
                 this.counts.set(selection.where, total);
             }
             check(signal);
             const limit = Math.max(1, Math.min(200, q.limit)), offset = Math.max(0, q.offset);
-            const result = await this.rows(`SELECT t.*,o.payload AS __adjustments,COALESCE(o.version,0) AS __version,a.baseline AS __acmg ${this.joined()}${selection.where} ORDER BY ${selection.order} LIMIT ${limit} OFFSET ${offset}`, signal);
+            // Sort only row identities and effective sort keys. Carrying all
+            // annotations and assessment JSON through ORDER BY can exhaust WASM
+            // memory even when the page contains only twenty rows.
+            const keys = await this.rows(`SELECT t.file_row_number ${this.joined()}${selection.where} ORDER BY ${selection.order} LIMIT ${limit} OFFSET ${offset}`, signal);
+            check(signal);
+            const ordinals = keys.map(row => Number(row.file_row_number));
+            if (ordinals.some(ordinal => !Number.isSafeInteger(ordinal) || ordinal < 0) || ordinals.length > limit)
+                throw new Error('Invalid local result page identity');
+            const selected = ordinals.length ? await this.rows(`SELECT t.*,o.payload AS __adjustments,COALESCE(o.version,0) AS __version,a.baseline AS __acmg FROM (SELECT * FROM source WHERE file_row_number IN (${ordinals.join(',')})) t LEFT JOIN overlays o ON o.row_id=t.__row_id LEFT JOIN automatic a ON a.row_id=t.__row_id`, signal) : [];
+            const byOrdinal = new Map(selected.map(row => [Number(row.file_row_number), row]));
+            const result = ordinals.map(ordinal => {
+                const row = byOrdinal.get(ordinal);
+                if (!row) throw new Error('Local result page changed during loading');
+                return row;
+            });
             check(signal);
             const page = { items: result.map(row => this.normalize(row)), total, rowCount: this.info.dataset.rows, columns: [...new Set([...this.raw, ...OVERLAY_FIELDS.filter(field => field !== 'reviewed')])].sort(), columnTypes: Object.fromEntries([...this.raw, ...OVERLAY_FIELDS.filter(field => field !== 'reviewed')].map(s => [s, fieldType(s)])), columnAliases: this.info.aliases, fieldProfileVersion: 'parquet-fields-v2', version: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId, offset, limit };
             if (this.pages.size >= 20)

@@ -38,3 +38,21 @@ it('keeps different meanings of numbered columns in Region and Exon', () => {
   expect(resultColumnLabels([], { columns: ['Col5', 'Col8'] }, 'cnv-segment')).toMatchObject({ Col5: 'log2 ratio', Col8: '拷贝数' });
   expect(resultColumnLabels([], { columns: ['Col5', 'Col8'] }, 'cnv-exon')).toMatchObject({ Col5: '基因', Col8: '外显子数' });
 });
+
+it('initializes chromosome filtering when coordinate metadata arrives after loading', async () => {
+  const onChange = vi.fn();
+  function Header({ loaded }: { loaded: boolean }) {
+    const columns = filterableColumns([{ id: 'position', header: '变异位置', accessor: 'position' }],
+      loaded ? { columns: ['Chromosome', 'Position'], columnTypes: { Chromosome: 'text', Position: 'number' } } : null,
+      DEFAULT_FILTER_STATE, onChange, 'snv-indel');
+    return <>{columns[0].header as React.ReactNode}</>;
+  }
+  const { rerender } = render(<Header loaded={false} />);
+  rerender(<Header loaded />);
+  fireEvent.click(await screen.findByRole('button', { name: '染色体筛选' }));
+  expect(screen.getByLabelText('筛选字段')).toHaveValue('Chromosome');
+  fireEvent.change(screen.getByLabelText('筛选方式'), { target: { value: 'equals' } });
+  fireEvent.change(screen.getByRole('textbox', { name: '筛选值' }), { target: { value: 'chr1' } });
+  fireEvent.click(screen.getByRole('button', { name: '应用' }));
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ page: 1, columnFilters: [{ column: 'Chromosome', operator: 'equals', value: 'chr1' }] }));
+});

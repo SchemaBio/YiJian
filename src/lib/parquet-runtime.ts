@@ -21,5 +21,5 @@ export function awaitWorkerStartup(worker: Worker, initialize: (progress: () => 
 /** Load the pinned signed extensions from our own origin, then forbid autoload. */
 export async function configureBrowserRuntime(conn: Pick<AsyncDuckDBConnection, 'query'>, origin: string): Promise<void> {
   const repository = new URL('/duckdb/extensions', origin).href;
-  await conn.query(`SET memory_limit='512MB'; SET threads=1; SET custom_extension_repository=${literal(repository)}; LOAD parquet; LOAD json; SET autoinstall_known_extensions=false; SET autoload_known_extensions=false`);
+  await conn.query(`SET memory_limit='512MB'; SET threads=1; SET preserve_insertion_order=false; SET custom_extension_repository=${literal(repository)}; LOAD parquet; LOAD json; SET autoinstall_known_extensions=false; SET autoload_known_extensions=false`);
 }

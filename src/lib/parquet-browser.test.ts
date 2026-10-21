@@ -115,6 +115,25 @@ it.each(['api','signed'] as const)('reads other result tables during assessment 
  }
  expect(mocks.query).toHaveBeenCalledWith('DROP TABLE assessment_source');
 });
+it('sorts page identities before hydration and preserves the chosen order',async()=>{
+ const original=mocks.send.getMockImplementation()!;
+ mocks.send.mockImplementation(async(sql:string)=>{
+  if(sql.startsWith('SELECT t.file_row_number '))return (async function*(){yield {toArray:()=>[1,0].map(file_row_number=>({toJSON:()=>({file_row_number})}))};})();
+  return original(sql);
+ });
+ const pending=queryBrowserParquet('sorted-task','snv-indel',{offset:0,limit:20,sort:'Gene',direction:'desc'});
+ await vi.waitFor(()=>expect(assessmentStatus('sorted-task')?.state).toBe('loading'));
+ cancelAssessment('sorted-task');
+ const page=await pending;
+ expect(page.items.map(row=>row.gene)).toEqual(['SCN1A','BRCA1']);
+ const sqls=mocks.send.mock.calls.map(([sql])=>String(sql));
+ const selection=sqls.find(sql=>sql.startsWith('SELECT t.file_row_number '))!;
+ expect(selection).toContain('ORDER BY');
+ expect(selection).not.toContain('t.*');
+ const hydrated=sqls.find(sql=>sql.startsWith('SELECT t.*'))!;
+ expect(hydrated).toContain('file_row_number IN (1,0)');
+ expect(hydrated).not.toContain('ORDER BY');
+});
 it('projects the adopted draft without overwriting legacy evidence or the VUS filter category',async()=>{
  const overlay={acmgOverride:'Pathogenic',acmgEvidence:[],activeAcmgVersion:'svcv4',svcv4Assessment:{revision:'fixed',confirmed:true,result:{classification:'VUS',vusSubclass:'VUS-high',score:4}}};
  mocks.send.mockImplementation(async(sql:string)=>{

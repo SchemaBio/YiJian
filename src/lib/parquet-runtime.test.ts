@@ -25,6 +25,7 @@ it('loads only pinned same-origin Parquet and JSON extensions and forbids autolo
  const sql=query.mock.calls[0][0];
  expect(sql).toContain("custom_extension_repository='https://yijian.schema-bio.com/duckdb/extensions'");
  expect(sql).toContain('LOAD parquet; LOAD json');
+ expect(sql).toContain('preserve_insertion_order=false');
  expect(sql).toContain('autoload_known_extensions=false');
  expect(sql).toContain('autoinstall_known_extensions=false');
  expect(sql).not.toContain('extensions.duckdb.org');

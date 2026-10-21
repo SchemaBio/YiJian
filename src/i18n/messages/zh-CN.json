@@ -1139,6 +1139,8 @@
     "turnaroundDays": "{p0, plural, other {#天}}"
   },
   "tasks": {
+    "allChromosomes": "全部染色体",
+    "customChromosomeFilter": "自定义染色体筛选",
     "uploadTaskInformation": "上传信息",
     "taskActions": "任务操作",
     "awaitingData85354f": "等待数据",

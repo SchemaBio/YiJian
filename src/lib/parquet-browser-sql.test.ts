@@ -35,7 +35,8 @@ describe('browser effective Parquet query', () => {
     it('preserves multi-value any-match filters and minimum numeric sorting', () => {
         const q = buildLocalSelection({ offset: 0, limit: 20, sort: 'GnomAD_AF', filters: [{ column: 'GnomAD_AF', operator: 'between', value: ['0', '0.001'] }] }, raw);
         expect(q.where).toContain('UNNEST(string_split');
-        expect(q.order).toContain('min(TRY_CAST');
+        expect(q.order).toContain('list_min(list_transform(');
+        expect(q.order).not.toContain('SELECT min(');
         expect(q.order).toContain('t.file_row_number ASC');
     });
     it('rejects unknown fields and invalid bounds, quotes values safely', () => {

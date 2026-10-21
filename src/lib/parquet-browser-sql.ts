@@ -101,7 +101,9 @@ export function buildLocalSelection(q: LocalQuery, raw: string[]) {
             x = `CASE WHEN TRY_CAST(${v} AS INTEGER) IS NOT NULL THEN TRY_CAST(${v} AS INTEGER) WHEN ${v}='X' THEN 23 WHEN ${v}='Y' THEN 24 WHEN ${v} IN ('M','MT') THEN 25 ELSE 1000 END`;
         }
         else if (fieldType(q.sort) === 'number')
-            x = `(SELECT min(TRY_CAST(NULLIF(v,'.') AS DOUBLE)) FROM UNNEST(string_split(CAST(${x} AS VARCHAR),'&')) AS u(v))`;
+            // Scalar list reduction avoids a correlated UNNEST/grouping join for
+            // every coordinate. Multi-valued scores still sort by their minimum.
+            x = `list_min(list_transform(string_split(CAST(${x} AS VARCHAR),'&'), v -> TRY_CAST(NULLIF(v,'.') AS DOUBLE)))`;
         order = `CASE WHEN ${x} IS NULL OR CAST(${x} AS VARCHAR) IN ('','.') THEN 1 ELSE 0 END ASC, ${x} ${q.direction === 'desc' ? 'DESC' : 'ASC'}, t.file_row_number ASC`;
     }
     // Apply the current adjustment snapshot before pagination: marking a row

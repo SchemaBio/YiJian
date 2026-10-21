@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { clinvarReviewStars, formatPopulationFrequency, optionalAnnotationNumber, sourceAnnotation } from './snv-annotations';
+import { clinvarReviewStars, formatPopulationFrequency, formatPredictionLabel, optionalAnnotationNumber, sourceAnnotation } from './snv-annotations';
 import { getSNVIndels } from '../result-api';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { queryBrowserParquet } from '@/lib/parquet-browser';
@@ -7,6 +7,12 @@ import { queryBrowserParquet } from '@/lib/parquet-browser';
 vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserParquet:vi.fn(),updateBrowserOverlay:vi.fn()}));
 
 describe('workflow SNV annotations', () => {
+  it('capitalizes prediction labels without changing their annotation values or separators', () => {
+    expect(formatPredictionLabel('likely_pathogenic')).toBe('Likely_pathogenic');
+    expect(formatPredictionLabel('likely_benign&ambiguous|likely_pathogenic')).toBe('Likely_benign&Ambiguous|Likely_pathogenic');
+    expect(formatPredictionLabel('Ambiguous')).toBe('Ambiguous');
+    expect(formatPredictionLabel(undefined)).toBeUndefined();
+  });
   it.each([
     ['practice_guideline', '4'],
     ['reviewed_by_expert_panel', '3'],
