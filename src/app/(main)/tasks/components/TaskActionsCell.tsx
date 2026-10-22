@@ -5,7 +5,7 @@ import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
 import * as React from 'react';
-import { canInterpretTask, isTaskResultPreparing } from '@/lib/task-interpretation';
+import { canInterpretTask, isTaskResultPreparing, isTaskResultImportFailed } from '@/lib/task-interpretation';
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { type ButtonAction } from '@/components/shared/ActionButton';
 import { ConfirmDialog } from '@/components/shared';
@@ -50,6 +50,7 @@ export function TaskActionsCell({
   // 3. 解读 - 待解读(pending_interpretation)或已完成(completed)状态
   // 4. 重试 - 失败(failed)状态
   const getPrimaryAction = () => {
+    if (isTaskResultImportFailed(task)) return { label: t('tasks.resultImportFailed81188a'), action: 'view' as ButtonAction, onClick: () => onDetails(task) };
     if (isTaskResultPreparing(task)) return { label: t("uploadExperience.resultsPreparing"), action: "wait" as ButtonAction, disabled: true };
     if (task.interpretationCompletedAt) return { disabled: !canInterpretTask(task), label: t("tasks.done33246f"), action: 'lock' as ButtonAction, onClick: () => onView(task) };
     // Node cleanup belongs to the service, never to the interpretation user.

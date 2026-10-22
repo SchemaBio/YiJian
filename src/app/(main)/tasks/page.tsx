@@ -187,7 +187,7 @@ export default function AnalysisPage() {
   // Create fetcher function with current statusFilter
   const fetcher = React.useCallback(async () => {
     const params: Record<string, string> = { page: '1', page_size: '100' };
-    if (statusFilter !== 'all') params.status = statusFilter;
+    if (statusFilter !== 'all' && !['preparing_results', 'import_failed', 'interpretation_completed'].includes(statusFilter)) params.status = statusFilter;
     const data = await tasksApi.list(params);
     if (statusFilter === 'all') {
       const counts: Record<string, number> = { all: data.items.length };

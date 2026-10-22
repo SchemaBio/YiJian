@@ -4,7 +4,7 @@ import { errorText } from '@/i18n/errors';
 import { useText } from '@/i18n/useText';
 
 
-import { canInterpretTask, isTaskResultPreparing } from '@/lib/task-interpretation';
+import { canInterpretTask, isTaskResultPreparing, isTaskResultImportFailed } from '@/lib/task-interpretation';
 import { IconActionButton } from '@/components/shared/ActionButton';
 
 
@@ -92,11 +92,11 @@ export default function AnalysisDetailPage() {
       try {
         const taskData = await tasksApi.get(uuid);
         if (controller.signal.aborted) return;
-        if (!canInterpretTask(taskData) && !isTaskResultPreparing(taskData)) {
+        if (!canInterpretTask(taskData) && !isTaskResultPreparing(taskData) && !isTaskResultImportFailed(taskData)) {
           setNotFound(true); setTask(null); setSample(null); setResultContext(null);
           return;
         }
-        if (isTaskResultPreparing(taskData)) { setTask(taskData); setSample(null); setResultContext(null); return; }
+        if (isTaskResultPreparing(taskData) || isTaskResultImportFailed(taskData)) { setTask(taskData); setSample(null); setResultContext(null); return; }
         const [sampleData, contextData] = await Promise.all([
           tasksApi.getSample(uuid).catch(() => null),
 			getResultContext(uuid, controller.signal).catch(cause => {
@@ -211,14 +211,14 @@ export default function AnalysisDetailPage() {
 
   React.useEffect(()=>{if(task?.template==='vcf2anno' && !['overview','snv-indel','files'].includes(activeTab))setActiveTab('snv-indel');},[task?.template,activeTab,setActiveTab]);
   React.useEffect(() => {
-    if (!task || !isTaskResultPreparing(task)) return;
+    if (!task || (!isTaskResultPreparing(task) && !isTaskResultImportFailed(task))) return;
     let disposed = false, pending = false;
     const timer = window.setInterval(async () => {
       if (pending) return; pending = true;
       try {
         const next = await tasksApi.get(uuid);
         if (disposed) return;
-        if (!isTaskResultPreparing(next)) {
+        if (canInterpretTask(next)) {
           const [sampleData, contextData] = await Promise.all([tasksApi.getSample(uuid).catch(() => null), getResultContext(uuid)]);
           if (disposed) return;
           setSample(sampleData); setResultContext(contextData);
@@ -261,7 +261,7 @@ export default function AnalysisDetailPage() {
     return null;
   }
 
-  if (isTaskResultPreparing(task)) return <PageContent><div role="status" className="mx-auto max-w-xl space-y-4 py-16 text-center"><h2 className="text-xl font-semibold">{t('uploadExperience.resultsPreparing')}</h2><p className="text-fg-muted">{t('uploadExperience.resultsPreparingDetail')}</p><button type="button" className="text-accent-fg hover:underline" onClick={handleBack}>{t('tasks.backToTaskListcd3b22')}</button></div></PageContent>;
+  if (isTaskResultPreparing(task) || isTaskResultImportFailed(task)) return <PageContent><div role={isTaskResultImportFailed(task) ? 'alert' : 'status'} className="mx-auto max-w-xl space-y-4 py-16 text-center"><h2 className={`text-xl font-semibold ${isTaskResultImportFailed(task) ? 'text-danger-fg' : ''}`}>{t(isTaskResultImportFailed(task) ? 'tasks.resultImportFailed81188a' : 'uploadExperience.resultsPreparing')}</h2><p className="text-fg-muted">{t(isTaskResultImportFailed(task) ? 'tasks.archivedResultsAreNotFullyImportedRetryb18849' : 'uploadExperience.resultsPreparingDetail')}</p><button type="button" className="text-accent-fg hover:underline" onClick={handleBack}>{t('tasks.backToTaskListcd3b22')}</button></div></PageContent>;
 
   // 渲染当前标签页内容
   const renderTabContent = () => {

@@ -6,6 +6,13 @@ import { normalizeTask } from '@/lib/tasks';
 const mode = vi.hoisted(() => ({backend: 'octopus'}));
 vi.mock('@/lib/runtime-config', () => ({getRuntimeBackendFlavor: () => mode.backend}));
 beforeEach(() => {mode.backend = 'octopus';});
+it('opens import failure details without offering a paid task retry or interpretation', () => {
+ const onDetails=vi.fn(),onRetry=vi.fn(),onView=vi.fn();
+ render(<TaskActions task={normalizeTask({id:'task',status:'completed',result_import_status:'failed'})} onDetails={onDetails} onView={onView} onStart={vi.fn()} onStop={vi.fn()} onRetry={onRetry} onEdit={vi.fn()} onDelete={vi.fn()} isLoading={false}/>);
+ fireEvent.click(screen.getByRole('button',{name:'结果导入失败'}));
+ expect(onDetails).toHaveBeenCalled();expect(onRetry).not.toHaveBeenCalled();expect(onView).not.toHaveBeenCalled();
+ expect(screen.queryByRole('button',{name:'解读'})).not.toBeInTheDocument();
+});
 it.each(['octopus','squid'])('disables queued family analysis but keeps historical results readable in %s', backend => {
  mode.backend=backend;
  const onStart=vi.fn(),onRetry=vi.fn(),onView=vi.fn();

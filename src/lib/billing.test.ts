@@ -7,10 +7,10 @@ function row(id: number, type: string, amount: number, attempt: string, billing_
 }
 
 describe('task reservations across retries', () => {
-  it('shows only the retry reservation while preserving historical totals', () => {
+  it('shows only the current retry while leaving the input ledger intact', () => {
     const summary = summarizeTaskBilling('task', [row(3, 'pre_deduction', -77, 'new'),
       row(2, 'failure_refund', 77, 'old'), row(1, 'pre_deduction', -77, 'old')]);
-    expect(summary).toMatchObject({ preDeducted: 77, deducted: 154, refunded: 77, netCost: 77 });
+    expect(summary).toMatchObject({ preDeducted: 77, deducted: 77, refunded: 0, netCost: 77, transactionCount: 1 });
   });
   it('does not show a reservation after a full failure refund', () => {
     expect(summarizeTaskBilling('task', [row(1, 'pre_deduction', -77, 'old'),
@@ -19,6 +19,17 @@ describe('task reservations across retries', () => {
   it('does not confuse an old delayed refund with the current attempt', () => {
     expect(summarizeTaskBilling('task', [row(1, 'pre_deduction', -77, 'old'),
       row(2, 'pre_deduction', -77, 'new'), row(3, 'failure_refund', 77, 'old')]).preDeducted).toBe(77);
+  });
+  it('shows the settled retry refund of 16, excluding the previous failure refund of 112', () => {
+    const ledger = [row(1, 'pre_deduction', -112, 'old', 'task_estimate'), row(2, 'failure_refund', 112, 'old', 'task_refund'),
+      row(3, 'deduction', -112, 'new', 'task_estimate'), row(4, 'refund', 16, 'new', 'task_settlement')];
+    expect(summarizeTaskBilling('task', [...ledger].reverse())).toMatchObject({preDeducted: 0, deducted: 112, refunded: 16, netCost: 96, transactionCount: 2});
+    expect(ledger).toHaveLength(4);
+  });
+  it('does not select a late additional settlement of an old attempt', () => {
+    expect(summarizeTaskBilling('task', [row(1, 'pre_deduction', -112, 'old'), row(2, 'pre_deduction', -112, 'new'),
+      row(3, 'deduction', -10, 'old', 'task_settlement'), row(4, 'failure_refund', 112, 'old')]))
+      .toMatchObject({preDeducted: 112, deducted: 112, refunded: 0, netCost: 112});
   });
   it.each([
     [row(2, 'refund', 37, 'old'), 40],

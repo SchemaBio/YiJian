@@ -256,7 +256,7 @@ input.yj-history-search { padding-left: 2rem !important; }
 .yj-task-status-pending_interpretation { --task-state-color: #a16207; }
 .yj-task-status-completed { --task-state-color: #7c3aed; }
 .yj-task-status-interpretation_completed { --task-state-color: #15803d; }
-.yj-task-status-failed { --task-state-color: #dc2626; }
+.yj-task-status-failed, .yj-task-status-import_failed { --task-state-color: #dc2626; }
 .yj-task-status-waiting_for_data { --task-state-color: #c2410c; }
 .yj-task-status-cancelled { --task-state-color: #71717a; }
 [data-theme='dark'] .yj-task-status-queued { --task-state-color: #94a3b8; }
@@ -264,7 +264,7 @@ input.yj-history-search { padding-left: 2rem !important; }
 [data-theme='dark'] .yj-task-status-pending_interpretation { --task-state-color: #fbbf24; }
 [data-theme='dark'] .yj-task-status-completed { --task-state-color: #c4b5fd; }
 [data-theme='dark'] .yj-task-status-interpretation_completed { --task-state-color: #86efac; }
-[data-theme='dark'] .yj-task-status-failed { --task-state-color: #f87171; }
+[data-theme='dark'] .yj-task-status-failed, [data-theme='dark'] .yj-task-status-import_failed { --task-state-color: #f87171; }
 [data-theme='dark'] .yj-task-status-waiting_for_data { --task-state-color: #fb923c; }
 [data-theme='dark'] .yj-task-status-cancelled { --task-state-color: #a1a1aa; }
 .yj-task-state-label[data-status], .yj-task-status-tag { color: var(--task-state-color) !important; }

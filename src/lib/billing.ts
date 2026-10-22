@@ -81,11 +81,17 @@ export function summarizeTaskBilling(
     transaction.reference_id === taskId
     || transaction.reference_id?.startsWith(attemptPrefix)
   ));
+  // Settling a reservation can change its type to deduction. Select the
+  // latest initial charge, never a late refund from a previous attempt.
+  const charges = taskTransactions.filter(row => row.amount < 0 && ['pre_deduction', 'deduction'].includes(row.type))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+  const latest = charges.find(row => row.billing_basis !== 'task_settlement') ?? charges[0];
+  const current = latest ? taskTransactions.filter(row => row.reference_id === latest.reference_id) : [];
   let deducted = 0;
   let preDeducted = 0;
   let refunded = 0;
 
-  for (const transaction of taskTransactions) {
+  for (const transaction of current) {
     if (transaction.type === 'pre_deduction' && transaction.amount < 0) {
       deducted += -transaction.amount;
     } else if (transaction.type === 'deduction' && transaction.amount < 0) {
@@ -95,12 +101,7 @@ export function summarizeTaskBilling(
     }
   }
 
-  // Reservations belong to an execution attempt. Historical refunded
-  // attempts still contribute to the ledger totals, but are no longer held.
-  const latest = taskTransactions.filter((row) => row.type === 'pre_deduction').sort((a, b) => (
-    b.created_at.localeCompare(a.created_at) || b.id - a.id
-  ))[0];
-  const current = taskTransactions.filter((row) => row.reference_id === latest?.reference_id);
+  // Task cards describe one attempt; the billing ledger retains all attempts.
   const settled = current.some((row) => (
     row.type === 'failure_refund' || row.type === 'refund'
     || row.type === 'settlement' || row.billing_basis === 'task_settlement'
@@ -117,8 +118,8 @@ export function summarizeTaskBilling(
     deducted,
     refunded,
     netCost: Math.max(0, deducted - refunded),
-    transactionCount: taskTransactions.length,
-    lastTransactionAt: taskTransactions.reduce<string | undefined>((latest, transaction) => (
+    transactionCount: current.length,
+    lastTransactionAt: current.reduce<string | undefined>((latest, transaction) => (
       !latest || transaction.created_at > latest ? transaction.created_at : latest
     ), undefined),
   };
