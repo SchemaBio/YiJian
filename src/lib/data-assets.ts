@@ -51,6 +51,7 @@ interface AssetListResponse {
 export interface UploadStorageStats {
   total: number;
   total_bytes: number;
+  reserved_bytes: number;
 }
 
 export interface UploadFileProgress {

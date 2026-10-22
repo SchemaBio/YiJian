@@ -2973,7 +2973,8 @@
   "previous": "上一页",
   "next": "下一页",
   "searchAll": "搜索覆盖全部记录"
-},
+}
+,
   "uploadExperience": {
     "addToQueue": "加入上传队列",
     "queueHint": "可连续添加多组 FASTQ；同组双端并行上传，组间排队。等待中：{p0} 组。",
@@ -2984,5 +2985,14 @@
     "interpretationOpen": "解读未完成，点击完成",
     "downloadReady": "下载链接已就绪",
     "showDownload": "查看下载链接：{p0}"
+  },
+  "uploadCapacity": {
+    "used": "已使用",
+    "reserved": "上传中预留",
+    "available": "实际可用",
+    "checking": "检查容量中…",
+    "insufficient": "可用容量不足。已计入正在上传和排队文件的预留空间，请减少文件或删除不再需要的数据后重试。",
+    "unavailable": "暂时无法核实可用容量，请稍后重试。",
+    "hint": "容量仅包含数据中心文件，不含 BAM 等分析结果。预留包含排队、未完成及失败上传保留的额度，成功删除后释放。"
   }
 }

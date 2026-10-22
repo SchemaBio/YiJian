@@ -3,13 +3,14 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import DataCenterPage from './page';
 import type {GlobalUploadState} from '@/components/providers/UploadProvider';
-const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,cancelUpload:vi.fn(),pruneFiles:vi.fn(),clearUpload:vi.fn()}));
-const mode=vi.hoisted(()=>({backend:'octopus'}));
+import { LocalizedError } from '@/i18n/errors';
+const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,cancelUpload:vi.fn(),pruneFiles:vi.fn(),clearUpload:vi.fn(),refreshCapacity:vi.fn().mockResolvedValue({total:0,total_bytes:0,reserved_bytes:0,tracked_bytes:0}),startUpload:vi.fn()}));
+const mode=vi.hoisted(()=>({backend:'octopus',quota:0}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mode.backend}));
-beforeEach(()=>{mode.backend='octopus';uploads.activeUpload=null;uploads.cancelUpload.mockClear();});
+beforeEach(()=>{mode.backend='octopus';mode.quota=0;uploads.activeUpload=null;uploads.cancelUpload.mockClear();uploads.refreshCapacity.mockResolvedValue({total:0,total_bytes:0,reserved_bytes:0,tracked_bytes:0});uploads.startUpload.mockReset();});
 import { listDataAssets, getDataAssetUploadStatus } from '@/lib/data-assets';
-vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: null, hasPermission: () => true }) }));
-vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, cancelUpload: uploads.cancelUpload, pruneFiles: uploads.pruneFiles, clearUpload: uploads.clearUpload }) }));
+vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: mode.quota ? {id:'org',storageQuotaBytes:mode.quota} : null, hasPermission: () => true }) }));
+vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, cancelUpload: uploads.cancelUpload, pruneFiles: uploads.pruneFiles, clearUpload: uploads.clearUpload, refreshCapacity:uploads.refreshCapacity,startUpload:uploads.startUpload }) }));
 vi.mock('@/lib/data-assets', () => ({
   listDataAssets: vi.fn(), getDataAssetUploadStatus: vi.fn(),
   getDataCenterConfig: vi.fn().mockResolvedValue({ temporary: false, download_allowed: true,provider:"local",local_import_directory:"/data" }),
@@ -88,4 +89,32 @@ it('dismisses the recovery notice without discarding resumable metadata', async 
  expect(screen.queryByText(/上次上传在浏览器刷新/)).not.toBeInTheDocument();
  expect(uploads.clearUpload).not.toHaveBeenCalled();
  expect(uploads.activeUpload.files).toHaveLength(1);
+});
+
+it('shows used, reserved and genuinely available storage together', async () => {
+  mode.backend='squid'; mode.quota=30*1024**3;
+  uploads.refreshCapacity.mockResolvedValue({total:2,total_bytes:20*1024**3,reserved_bytes:9*1024**3,tracked_bytes:0});
+  vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
+  render(<DataCenterPage/>);
+  await screen.findByText('20.0 GB / 30.0 GB');
+  expect(screen.getByText('上传中预留')).toBeInTheDocument();
+  expect(screen.getByText('9.0 GB')).toBeInTheDocument();
+  expect(screen.getByText('实际可用')).toBeInTheDocument();
+  expect(screen.getByText('1.0 GB')).toBeInTheDocument();
+});
+
+it('keeps selected files and shows an admission error inside the upload window', async () => {
+  mode.backend='squid'; mode.quota=30*1024**3;
+  uploads.startUpload.mockRejectedValue(new LocalizedError('uploadCapacity.insufficient'));
+  vi.mocked(listDataAssets).mockResolvedValue({items:[],total:0,page:1,page_size:20,total_pages:0});
+  render(<DataCenterPage/>);
+  await screen.findByText('暂无数据资产');
+  fireEvent.click(screen.getByRole('button',{name:'上传数据'}));
+  const dialog=screen.getByRole('dialog');
+  const input=dialog.querySelector('input[type=file]')!;
+  fireEvent.change(input,{target:{files:[new File(['r1'],'selected_R1.fastq')]}});
+  fireEvent.click(within(dialog).getByRole('button',{name:'开始上传'}));
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('可用容量不足');
+  expect(within(dialog).getByText('selected_R1.fastq')).toBeInTheDocument();
+  expect(uploads.startUpload).toHaveBeenCalledWith(expect.objectContaining({quotaBytes:mode.quota}));
 });

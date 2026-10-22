@@ -2973,7 +2973,8 @@
   "previous": "Previous",
   "next": "Next",
   "searchAll": "Search covers all records"
-},
+}
+,
   "uploadExperience": {
     "addToQueue": "Add to upload queue",
     "queueHint": "Add multiple FASTQ pairs. Both reads upload together; pairs are queued. Waiting: {p0}.",
@@ -2984,5 +2985,14 @@
     "interpretationOpen": "Interpretation incomplete. Click to complete",
     "downloadReady": "Your download link is ready",
     "showDownload": "View download link: {p0}"
+  },
+  "uploadCapacity": {
+    "used": "Used",
+    "reserved": "Reserved for uploads",
+    "available": "Available",
+    "checking": "Checking capacity…",
+    "insufficient": "Insufficient available storage. Uploading and queued files already reserve space. Select fewer files or delete data you no longer need, then try again.",
+    "unavailable": "Available storage cannot be verified right now. Please try again later.",
+    "hint": "Capacity covers Data Center files only, excluding BAM and other analysis results. Reservations include queued, unfinished and failed uploads, and are released after successful deletion."
   }
 }

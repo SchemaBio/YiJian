@@ -10,6 +10,7 @@ export class LocalizedError extends Error {
 
 // Translate only known API messages; arbitrary server/user text stays intact.
 const backendMessages: Record<string, string> = {
+  'organization storage quota exceeded': 'uploadCapacity.insufficient',
   'password is too common': 'backendErrors.passwordTooCommon',
   'password must be at least 8 characters': 'backendErrors.passwordTooShort',
   'password must be at least 12 characters': 'backendErrors.adminPasswordTooShort',

@@ -2973,7 +2973,8 @@
   "previous": "上一頁",
   "next": "下一頁",
   "searchAll": "搜尋涵蓋全部記錄"
-},
+}
+,
   "uploadExperience": {
     "addToQueue": "加入上傳佇列",
     "queueHint": "可連續新增多組 FASTQ；同組雙端並行上傳，組間排隊。等待中：{p0} 組。",
@@ -2984,5 +2985,14 @@
     "interpretationOpen": "解讀未完成，點擊完成",
     "downloadReady": "下載連結已就緒",
     "showDownload": "查看下載連結：{p0}"
+  },
+  "uploadCapacity": {
+    "used": "已使用",
+    "reserved": "上傳中預留",
+    "available": "實際可用",
+    "checking": "檢查容量中…",
+    "insufficient": "可用容量不足。已計入正在上傳及排隊檔案的預留空間，請減少檔案或刪除不再需要的資料後重試。",
+    "unavailable": "暫時無法核實可用容量，請稍後重試。",
+    "hint": "容量僅包含資料中心檔案，不含 BAM 等分析結果。預留包含排隊、未完成及失敗上傳保留的額度，成功刪除後釋放。"
   }
 }

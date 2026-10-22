@@ -2973,7 +2973,8 @@
   "previous": "Anterior",
   "next": "Siguiente",
   "searchAll": "La búsqueda abarca todos los registros"
-},
+}
+,
   "uploadExperience": {
     "addToQueue": "Agregar a la cola de carga",
     "queueHint": "Agrega varios pares FASTQ. Ambas lecturas se cargan juntas; los pares esperan en cola. Pendientes: {p0}.",
@@ -2984,5 +2985,14 @@
     "interpretationOpen": "Interpretación incompleta. Haz clic para completar",
     "downloadReady": "El enlace de descarga está listo",
     "showDownload": "Ver enlace de descarga: {p0}"
+  },
+  "uploadCapacity": {
+    "used": "Utilizado",
+    "reserved": "Reservado para cargas",
+    "available": "Disponible",
+    "checking": "Verificando capacidad…",
+    "insufficient": "Espacio disponible insuficiente. Los archivos en carga y en cola ya reservan espacio. Selecciona menos archivos o elimina datos que ya no necesites e inténtalo de nuevo.",
+    "unavailable": "No se puede verificar el espacio disponible en este momento. Inténtalo más tarde.",
+    "hint": "La capacidad solo incluye archivos del Centro de datos, sin BAM ni otros resultados de análisis. Las reservas incluyen cargas en cola, incompletas y fallidas, y se liberan después de eliminarlas correctamente."
   }
 }

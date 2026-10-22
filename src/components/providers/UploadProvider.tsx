@@ -13,10 +13,13 @@ import {
   isUploadCancelled,
 } from '@/lib/api';
 import { STORAGE_KEYS } from '@/lib/storage';
+import { UploadCapacity } from '@/lib/upload-capacity';
 import {
   resumeDataFiles,
   retryDataAsset,
   uploadDataFiles,
+  getUploadStorageStats,
+  type UploadStorageStats,
   type UploadBatchResult,
   type UploadFileProgress,
   type UploadSignals,
@@ -43,9 +46,13 @@ interface StartUploadOptions {
   read2: File | null;
   uploadPolicyAcknowledged: boolean;
   internalId: string;
+  quotaBytes?: number | null;
+  onAccepted?: () => void;
 }
 
 interface UploadContextValue {
+  capacity: UploadStorageStats | null;
+  refreshCapacity: () => Promise<UploadStorageStats>;
   queuedCount: number;
   retries: Record<string, { progress: number; status: 'uploading' | 'completed' | 'failed'; error?: string }>;
   retryFile: (id: string, file: File) => Promise<void>;
@@ -116,6 +123,10 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const uploadRunRef = React.useRef<UploadRun | null>(null);
   const queueRef = React.useRef<Promise<void>>(Promise.resolve());
   const [queuedCount, setQueuedCount] = React.useState(0);
+  const [capacity, setCapacity] = React.useState<UploadStorageStats | null>(null);
+  const capacityRef = React.useRef<UploadCapacity | null>(null);
+  if (!capacityRef.current) capacityRef.current = new UploadCapacity(getUploadStorageStats, setCapacity);
+  const refreshCapacity = React.useCallback(() => capacityRef.current!.refresh(), []);
   const [retries, setRetries] = React.useState<UploadContextValue['retries']>({});
   const retryControllers = React.useRef(new Map<string, AbortController>());
 
@@ -195,7 +206,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     persist(activeUpload);
   }, [activeUpload, hydrated, persist]);
 
-  const executeUpload = React.useCallback(async ({ read1, read2, uploadPolicyAcknowledged, internalId }: StartUploadOptions) => {
+  const executeUpload = React.useCallback(async ({ read1, read2, uploadPolicyAcknowledged, internalId }: StartUploadOptions, ticket?: symbol) => {
     if (!read1 && !read2) throw new Error(t("common.selectAtLeastOneFile7487f9"));
     const initial: GlobalUploadState = {
       status: 'uploading',
@@ -258,6 +269,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       };
       const callbacks = {
         onStarted: (files: UploadFileProgress[]) => {
+          if (ticket) capacityRef.current!.registered(ticket);
           files.forEach((file) => {
             run.fileToReadType.set(file.fileId, file.readType as UploadReadType);
             if (file.jobId) run.jobId = file.jobId;
@@ -273,6 +285,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
           });
         },
         onFileProgress: (file: UploadFileProgress) => {
+          if (file.status === 'completed') void refreshCapacity().catch(() => undefined);
           updateUploadState((current) => {
             if (!current) return current;
             const existing = current.files.find((item) => item.fileId === file.fileId);
@@ -351,15 +364,25 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       uploadRunRef.current = null;
       throw error;
     }
-  }, [cleanupMultipartSessions, updateUploadState, t]);
+  }, [cleanupMultipartSessions, updateUploadState, refreshCapacity, t]);
 
-  const startUpload = React.useCallback((options: StartUploadOptions) => {
+  const startUpload = React.useCallback(async (options: StartUploadOptions) => {
+    // Resuming reuses the existing server reservation rather than charging
+    // the selected original files against the quota a second time.
+    const restoring = activeUploadRef.current?.status === 'needs_file';
+    const ticket = options.quotaBytes && options.quotaBytes > 0
+      ? await capacityRef.current!.admit(restoring ? 0 : (options.read1?.size ?? 0) + (options.read2?.size ?? 0), options.quotaBytes)
+      : undefined;
     setQueuedCount(count => count + 1);
     const pending = queueRef.current.catch(() => undefined).then(() => {
       setQueuedCount(count => count - 1);
-      return executeUpload(options);
+      if (ticket) capacityRef.current!.starting(ticket);
+      return executeUpload(options, ticket);
+    }).finally(() => {
+      if (ticket) capacityRef.current!.release(ticket);
     });
     queueRef.current = pending;
+    options.onAccepted?.();
     return pending;
   }, [executeUpload]);
 
@@ -473,7 +496,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     setActiveUpload(null);
   }, [cleanupMultipartSessions, persist]);
 
-  return <UploadContext.Provider value={{ queuedCount, retries, retryFile, activeUpload, canceling: activeUpload?.status === 'canceling', startUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload }}>{children}</UploadContext.Provider>;
+  return <UploadContext.Provider value={{ capacity, refreshCapacity, queuedCount, retries, retryFile, activeUpload, canceling: activeUpload?.status === 'canceling', startUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload }}>{children}</UploadContext.Provider>;
 }
 
 export function useUpload() {

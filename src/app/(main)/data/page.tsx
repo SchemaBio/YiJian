@@ -19,7 +19,7 @@ import * as React from 'react';
 import { Checkbox, DataTable, Input, type Column } from '@schema/ui-kit';
 import { AlertTriangle, CheckCircle2, Cloud, Database, HardDrive, Loader2, Search, Trash2, Upload, X, XCircle } from 'lucide-react';
 import {
-  deleteDataAsset, downloadDataAsset, getDataCenterConfig, getDataAssetUploadStatus, getUploadStorageStats, listDataAssets,
+  deleteDataAsset, downloadDataAsset, getDataCenterConfig, getDataAssetUploadStatus, listDataAssets,
   retryDataAsset, updateDataAsset, type DataAsset, type DataCenterConfig,
   type UploadStorageStats,
 } from '@/lib/data-assets';
@@ -81,7 +81,7 @@ export default function DataCenterPage() {
    try { await downloadImportWorkbook(localDataTemplate(t.locale,config?.local_import_directory||'/data'), 'local-data-import.xlsx'); }
    catch (cause) { setError(errorText(cause, t)); }
   };
-  const { activeUpload, queuedCount = 0, retries = {}, retryFile, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
+  const { capacity, refreshCapacity, activeUpload, queuedCount = 0, retries = {}, retryFile, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
   const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
@@ -93,6 +93,8 @@ export default function DataCenterPage() {
   const [vcfMode,setVcfMode]=React.useState(false);
  const [typeFilter,setTypeFilter]=React.useState('');
  const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [checkingCapacity, setCheckingCapacity] = React.useState(false);
+  const admissionRef = React.useRef(false);
   const [cancelUploadConfirmOpen, setCancelUploadConfirmOpen] = React.useState(false);
   const [recoveryChecking, setRecoveryChecking] = React.useState(false);
   const [recoveryLookupFailed, setRecoveryLookupFailed] = React.useState(false);
@@ -133,7 +135,7 @@ export default function DataCenterPage() {
       const [assetResult, configResult, statsResult] = await Promise.all([
         listDataAssets(query, typeFilter==='vcf'?{readType:'vcf'}:undefined),
         getDataCenterConfig(),
-        getUploadStorageStats(),
+        refreshCapacity(),
       ]);
       if (requestId !== loadRequestRef.current) return;
       // BED files are managed only in Workflow Center. Storage stats remain
@@ -149,9 +151,15 @@ export default function DataCenterPage() {
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
     }
-  }, [t,typeFilter]);
+  }, [t,typeFilter,refreshCapacity]);
 
   React.useEffect(() => { void load(''); }, [load]);
+  React.useEffect(() => {
+    const refresh = () => { void refreshCapacity().catch(() => undefined); };
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [refreshCapacity]);
 
   const retryStatusKey = Object.entries(retries).map(([id, item]) => `${id}:${item.status}`).join(',');
   React.useEffect(() => { if (retryStatusKey) void load(search); }, [retryStatusKey, load, search]);
@@ -212,15 +220,17 @@ export default function DataCenterPage() {
     return () => window.removeEventListener('beforeunload', warnAboutActiveUpload);
   }, [uploadBusy]);
 
-  const totalBytes = storageStats?.total_bytes ?? 0;
+  const totalBytes = (capacity ?? storageStats)?.total_bytes ?? 0;
+  const reservedBytes = (capacity ?? storageStats)?.reserved_bytes ?? 0;
   const readyCount = React.useMemo(() => assets.filter((asset) => asset.status === 'completed').length, [assets]);
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const storageQuotaBytes = isSaaS && (currentOrg?.storageQuotaBytes ?? 0) > 0
     ? currentOrg?.storageQuotaBytes ?? null
     : null;
   const storageQuotaLabel = storageQuotaBytes ? formatBytes(storageQuotaBytes, t) : t("data.unlimited725811");
-  const storageQuotaReached = storageQuotaBytes !== null && totalBytes >= storageQuotaBytes;
-  const storageUsagePercent = storageQuotaBytes === null ? null : (totalBytes / storageQuotaBytes) * 100;
+  const availableBytes = storageQuotaBytes === null ? null : Math.max(0, storageQuotaBytes - totalBytes - reservedBytes);
+  const storageQuotaReached = availableBytes === 0;
+  const storageUsagePercent = storageQuotaBytes === null ? null : ((totalBytes + reservedBytes) / storageQuotaBytes) * 100;
   const storageUsageTone = storageUsagePercent === null
     ? null
     : storageUsagePercent >= 90
@@ -246,27 +256,34 @@ export default function DataCenterPage() {
   };
 
   const handleUpload = async () => {
+    if (admissionRef.current) return;
     if (!read1 && !read2) { setError(t("data.selectAtLeastOneReadOrReadbc8cd9")); return; }
     if (config?.temporary && !uploadPolicyAcknowledged) { setError(t("data.selectIConfirmFirst4667d6")); return; }
     const oversizedFile = [read1, read2].find((file) => file && config?.temporary && config.max_file_size_bytes > 0 && file.size > config.max_file_size_bytes);
     if (oversizedFile) { setError(t("data.exceedsTheSaasLimitOfGbPer9884ea", {p0: String(oversizedFile.name)})); return; }
-    const selectedBytes = (read1?.size ?? 0) + (read2?.size ?? 0);
-    if (storageQuotaBytes !== null && totalBytes + selectedBytes > storageQuotaBytes) {
-      setError(t("data.selectedFilesExceedStorageCapacityUsedTotald237f7", {p0: String(formatBytes(totalBytes, t)), p1: String(formatBytes(storageQuotaBytes, t))}));
-      return;
-    }
     setError('');
+    admissionRef.current = true;
+    setCheckingCapacity(true);
+    let accepted = false;
     try {
-      const pending = runUpload({ read1, read2, uploadPolicyAcknowledged, internalId });
-      setUploadOpen(false);
-      setRead1(null);
-      setRead2(null);
-      setInternalId('');
-      setUploadPolicyAcknowledged(false);
-      await pending;
+      await runUpload({ read1, read2, uploadPolicyAcknowledged, internalId, quotaBytes: storageQuotaBytes, onAccepted: () => {
+        accepted = true;
+        setUploadOpen(false);
+        setRead1(null);
+        setRead2(null);
+        setInternalId('');
+        setUploadPolicyAcknowledged(false);
+        admissionRef.current = false;
+        setCheckingCapacity(false);
+      } });
       await load(search);
     } catch (err) {
       setError(err instanceof Error ? errorText(err, t) : t("data.uploadFaileda6f805"));
+    } finally {
+      if (!accepted) {
+        admissionRef.current = false;
+        setCheckingCapacity(false);
+      }
     }
   };
 
@@ -448,11 +465,11 @@ export default function DataCenterPage() {
           <h2 className="yj-page-title">{t("data.dataCenter189979")}</h2>
           <p className="mt-2 text-sm text-fg-muted">{t("data.manageOrganizationSequencingDataForSampleMatching655f38")}</p>
         </div>
-        <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:w-auto sm:grid-cols-3">
+        <div className="grid w-full grid-cols-2 gap-3 max-sm:[&>div:last-child]:col-span-2 sm:grid-cols-3 xl:grid-cols-5">
           <MetricTile label={t("data.dataAssetsbcb32e")} value={hasLoaded ? assets.length : '—'} icon={<Database className="h-4 w-4" />} />
           <MetricTile label={t("data.availableFiles98360c")} value={hasLoaded ? readyCount : '—'} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" />
           <MetricTile
-            label={t("data.usedSpaceCapacity2d423e")}
+            label={t("uploadCapacity.used")}
             value={hasLoaded ? `${formatBytes(totalBytes, t)} / ${storageQuotaLabel}` : '—'}
             icon={<HardDrive className="h-4 w-4" />}
             tone="info"
@@ -460,8 +477,11 @@ export default function DataCenterPage() {
               ? { percent: storageUsagePercent, tone: storageUsageTone }
               : undefined}
           />
+          <MetricTile label={t("uploadCapacity.reserved")} value={hasLoaded ? formatBytes(reservedBytes, t) : '—'} icon={<Upload className="h-4 w-4" />} tone="warning" />
+          <MetricTile label={t("uploadCapacity.available")} value={hasLoaded ? availableBytes === null ? t("data.unlimited725811") : formatBytes(availableBytes, t) : '—'} icon={<HardDrive className="h-4 w-4" />} tone="success" />
         </div>
       </div>
+      {isSaaS && <p className="mb-4 text-xs leading-5 text-fg-muted">{t("uploadCapacity.hint")}</p>}
 
       {config?.temporary && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
@@ -532,13 +552,14 @@ export default function DataCenterPage() {
           <>
             {uploading && <Button action="upload" variant="danger" disabled={canceling || !activeUploadJobId} onClick={() => setCancelUploadConfirmOpen(true)}>{t("data.cancelUpload6b9dee")}</Button>}
             <Button variant="secondary" disabled={canceling} onClick={() => { setUploadOpen(false); if (!uploadBusy) { setUploadPolicyAcknowledged(false); setInternalId(''); } }}>{uploadBusy ? t("data.hideInDataCenter16727b") : t("admin.cancel4d0b46")}</Button>
-            <Button action="upload" variant="primary" disabled={canceling || storageQuotaReached || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)}  onClick={() => void handleUpload()}>{canceling ? t("data.cancelingf44a50") : uploading ? t("uploadExperience.addToQueue") : t("data.startUpload456565")}</Button>
+            <Button action="upload" variant="primary" disabled={checkingCapacity || canceling || (storageQuotaReached && activeUpload?.status !== 'needs_file') || (!read1 && !read2) || Boolean(config?.temporary && !uploadPolicyAcknowledged)} onClick={() => void handleUpload()}>{checkingCapacity ? t("uploadCapacity.checking") : canceling ? t("data.cancelingf44a50") : uploading ? t("uploadExperience.addToQueue") : t("data.startUpload456565")}</Button>
           </>
         }
       >
         <div className="space-y-6">
+          {error && <div role="alert" className="rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
           {config?.temporary && <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{t("data.uploadedFilesAreDeletedAfter56abf0")}{config.retention_days} {t("data.daysSaasDoesNotOfferDownloadsMaximumab8001")}</span></div><Checkbox checked={uploadPolicyAcknowledged} disabled={canceling} onCheckedChange={(checked) => setUploadPolicyAcknowledged(checked === true)} label={t("data.iConfirm7bd7e7")} /></div>}
-          {isSaaS && <p className="text-xs text-fg-muted">{t("data.currentlyUseda80723")}{formatBytes(totalBytes, t)}{t("data.totalCapacityd83765")}{storageQuotaLabel}。</p>}
+          {isSaaS && <div className="space-y-2 text-xs text-fg-muted"><div className="flex flex-wrap gap-x-5 gap-y-2"><span>{t("uploadCapacity.used")}: {formatBytes(totalBytes, t)} / {storageQuotaLabel}</span><span>{t("uploadCapacity.reserved")}: {formatBytes(reservedBytes, t)}</span><span>{t("uploadCapacity.available")}: {availableBytes === null ? t("data.unlimited725811") : formatBytes(availableBytes, t)}</span></div><p>{t("uploadCapacity.hint")}</p></div>}
           <section>
             <ModalSectionHeading icon={<Upload className="h-4 w-4" />} title={vcfMode?t("vcfAnnotation.file"):t("data.sequencingFiles55cf00")} description={vcfMode?t("vcfAnnotation.sampleHint"):t("data.selectReadAndReadSeparatelyUploadingJustcdd8fe")} />
             <div className="mb-4">

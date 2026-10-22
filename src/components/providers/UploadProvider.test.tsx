@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import * as React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -7,12 +8,14 @@ const mocks = vi.hoisted(() => ({
   retryDataAsset: vi.fn(),
   deleteUploadJob: vi.fn(),
   abortMultipartUpload: vi.fn(),
+  getUploadStorageStats: vi.fn().mockResolvedValue({ total: 1, total_bytes: 20, reserved_bytes: 0, tracked_bytes: 0 }),
 }));
 
 vi.mock('@/lib/data-assets', () => ({
   uploadDataFiles: mocks.uploadDataFiles,
   resumeDataFiles: mocks.resumeDataFiles,
   retryDataAsset: mocks.retryDataAsset,
+  getUploadStorageStats: mocks.getUploadStorageStats,
 }));
 
 vi.mock('@/lib/api', async () => {
@@ -188,4 +191,35 @@ it('keeps paired retries independent across route content unmounts', async () =>
   view.rerender(<UploadProvider><RetryRoute /></UploadProvider>);
   await waitFor(() => expect(screen.getByTestId('retries')).toHaveTextContent('completed'));
   expect(screen.getByTestId('retries')).toHaveTextContent('"progress":100');
+});
+
+it('rejects an oversized second pair before acceptance without disturbing the first transfer', async () => {
+  window.localStorage.clear();
+  mocks.uploadDataFiles.mockReset();
+  const accepted = vi.fn();
+  let remoteReserved = 0;
+  mocks.getUploadStorageStats.mockImplementation(async () => ({
+    total: 1, total_bytes: 20, reserved_bytes: remoteReserved,
+  }));
+  mocks.uploadDataFiles.mockImplementation(async (...args: Parameters<typeof import('@/lib/data-assets')['uploadDataFiles']>) => {
+    remoteReserved = 9;
+    args[5]?.onStarted?.([{ fileId: 'quota-r1', jobId: 'quota-job', fileName: 'a.fastq', fileSize: 9, readType: 'read1', progress: 0, status: 'uploading' }]);
+    return new Promise(() => {});
+  });
+  function QuotaHarness() {
+    const upload = useUpload();
+    const [error, setError] = React.useState('');
+    const add = (size: number) => void upload.startUpload({ read1: new File(['x'.repeat(size)], 'a.fastq'), read2: null, internalId: '', uploadPolicyAcknowledged: false, quotaBytes: 30, onAccepted: accepted }).catch(cause => setError(cause.message));
+    return <><button onClick={() => add(9)}>add-nine</button><button onClick={() => add(10)}>add-ten</button><output data-testid="quota-error">{error}</output><output data-testid="reserved">{upload.capacity?.reserved_bytes}</output><output data-testid="queue-count">{upload.queuedCount}</output></>;
+  }
+  const view = render(<UploadProvider><QuotaHarness /></UploadProvider>);
+  fireEvent.click(screen.getByText('add-nine'));
+  await waitFor(() => expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByText('add-ten'));
+  await waitFor(() => expect(screen.getByTestId('quota-error')).toHaveTextContent('可用容量不足'));
+  expect(accepted).toHaveBeenCalledTimes(1);
+  expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('reserved')).toHaveTextContent('9');
+  expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
+  view.unmount();
 });
