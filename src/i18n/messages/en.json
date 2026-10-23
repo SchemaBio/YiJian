@@ -2994,5 +2994,25 @@
     "insufficient": "Insufficient available storage. Uploading and queued files already reserve space. Select fewer files or delete data you no longer need, then try again.",
     "unavailable": "Available storage cannot be verified right now. Please try again later.",
     "hint": "Capacity covers Data Center files only, excluding BAM and other analysis results. Reservations include queued, unfinished and failed uploads, and are released after successful deletion."
+  },
+  "registration": {
+    "verifyTitle": "Verify your email",
+    "sent": "Your request was received. If eligible, a verification email will be sent. Check your inbox and spam folder. Verification is followed by administrator review.",
+    "confirmHint": "Confirm that you submitted this registration. After email verification, an administrator will review your application.",
+    "confirm": "Confirm registration email",
+    "verified": "Email verified",
+    "pending": "Your application is awaiting administrator review. We will email you when it is approved or rejected.",
+    "email": "Email",
+    "resend": "Resend verification email",
+    "login": "Back to sign in",
+    "unavailable": "Registration is temporarily unavailable. Please try again later.",
+    "loading": "Checking registration availability…",
+    "challengeFailed": "Verification failed. Reload the challenge and try again.",
+    "linkInvalid": "This link is invalid, already used or expired. Request another verification email.",
+    "retryLater": "The request could not be completed. Please try again later.",
+    "retryChallenge": "Retry verification",
+    "ownerPassword": "Set sign-in password",
+    "ownerPasswordHint": "Enter the sign-in password you want to use, so the verified mailbox owner controls the account credentials.",
+    "passwordInvalid": "Invalid password. Use at least 8 characters, avoid common passwords, and stay within 72 UTF-8 bytes."
   }
 }

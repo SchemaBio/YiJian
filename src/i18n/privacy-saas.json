@@ -16,7 +16,8 @@
       "paragraphs": [
         "我们可从使用者、其所属机构及服务运行过程中取得：账户和机构信息；样本编号、性别、年龄、诊断和 HPO 表型；上传文件、序列、变异、基因及人工解读；任务、操作人、时间、审计、计费、支持和访问记录。遗传、医疗健康及部分未成年人信息可能属于敏感个人信息或特殊类别数据；样本化名不保证匿名。",
         "这些信息用于认证和权限管理、机构协作、执行分析、展示和保存结果、展示分析结果、处理支持请求、计费、安全防护、审计及履行法定义务。请提交完成所需功能必要的信息，避免在文件名或自由文本中添加无关身份信息。科研和模型训练等新的用途需要另行确定合法依据及必要告知、授权。",
-        "遗传与健康信息是完成所请求分析及解读的必要输入；不提供必要信息时，相关功能可能无法完成。泄露或不当使用可能影响个人隐私、家庭成员及其他权益。访问记录可能包含 IP 地址和浏览器信息。"
+        "遗传与健康信息是完成所请求分析及解读的必要输入；不提供必要信息时，相关功能可能无法完成。泄露或不当使用可能影响个人隐私、家庭成员及其他权益。访问记录可能包含 IP 地址和浏览器信息。",
+        "注册时，我们记录邮箱、姓名、机构、注册 IP、申请和邮箱验证时间及浏览器信息，用于人工审核、反滥用和安全审计。同一 IP 可以申请多个账号。邮箱验证与审核结果邮件由邮件服务商发送；Cloudflare Turnstile 用于防止自动化注册。审核备注仅供获授权管理员查看。"
       ]
     },
     {
@@ -87,7 +88,8 @@
       "paragraphs": [
         "我們可從使用者、其所屬機構及服務運行過程中取得：帳戶和機構資訊；樣本編號、性別、年齡、診斷和 HPO 表型；上傳檔案、序列、變異、基因及人工解讀；任務、操作人、時間、審計、計費、支持和訪問記錄。遺傳、醫療健康及部分未成年人資訊可能屬於敏感個人資訊或特殊類別資料；樣本化名不保證匿名。",
         "這些資訊用於認證和權限管理、機構協作、執行分析、展示和儲存結果、生成報告、處理支持請求、計費、安全防護、審計及履行法定義務。請提交完成所需功能必要的資訊，避免在檔案名或自由文本中添加無關身份資訊。科研和模型訓練等新的用途需要另行確定合法依據及必要告知、授權。",
-        "遺傳與健康資訊是完成所請求分析及解讀的必要輸入；不提供必要資訊時，相關功能可能無法完成。泄露或不當使用可能影響個人隱私、家庭成員及其他權益。訪問記錄可能包含 IP 地址和瀏覽器資訊。"
+        "遺傳與健康資訊是完成所請求分析及解讀的必要輸入；不提供必要資訊時，相關功能可能無法完成。泄露或不當使用可能影響個人隱私、家庭成員及其他權益。訪問記錄可能包含 IP 地址和瀏覽器資訊。",
+        "註冊時，我們記錄信箱、姓名、機構、註冊 IP、申請及信箱驗證時間與瀏覽器資訊，用於人工審核、防止濫用和安全稽核。同一 IP 可以申請多個帳號。信箱驗證與審核結果郵件由郵件服務商寄送；Cloudflare Turnstile 用於防止自動化註冊。審核備註僅供獲授權管理員查看。"
       ]
     },
     {
@@ -158,7 +160,8 @@
       "paragraphs": [
         "We may receive from users, their institutions and service operations: account and organization details; sample identifiers, sex, age, diagnoses and HPO terms; uploaded files, sequences, variants, genes, reports and interpretations; and task, operator, timestamp, audit, billing, support and access records. Genetic and health information, and certain children's information, may be sensitive or special-category data. Pseudonymous sample identifiers do not guarantee anonymity.",
         "We use this information for authentication, access control, collaboration, analysis, result storage and display, reports, support, billing, security, auditing and legal obligations. Submit only what the requested function needs and avoid unnecessary identifying details in filenames or free text. New research or model-training purposes require their own lawful basis and any required notices and authorizations.",
-        "Genetic and health information is necessary for the requested analysis and interpretation; missing necessary inputs may prevent those functions. Disclosure or misuse may affect privacy, family members and other rights. Access records may include IP addresses and browser details."
+        "Genetic and health information is necessary for the requested analysis and interpretation; missing necessary inputs may prevent those functions. Disclosure or misuse may affect privacy, family members and other rights. Access records may include IP addresses and browser details.",
+        "At registration we record your email, name, organization, signup IP, application and email verification times, and browser information for manual review, abuse prevention and security auditing. Multiple accounts may share an IP. Our email provider delivers verification and review result messages; Cloudflare Turnstile helps prevent automated signups. Review notes are visible only to authorized administrators."
       ]
     },
     {
@@ -229,7 +232,8 @@
       "paragraphs": [
         "Podemos recibir de los usuarios, sus instituciones y el funcionamiento del servicio: datos de cuentas e instituciones; identificadores de muestras, sexo, edad, diagnósticos y términos HPO; archivos cargados, secuencias, variantes, genes, informes e interpretaciones; y registros de tareas, operadores, fechas, auditoría, facturación, soporte y acceso. Los datos genéticos y de salud, así como ciertos datos de menores, pueden ser sensibles o pertenecer a categorías especiales. Usar seudónimos para las muestras no garantiza el anonimato.",
         "Usamos estos datos para autenticación, control de acceso, colaboración institucional, análisis, visualización y almacenamiento de resultados, elaboración de informes, soporte, facturación, seguridad, auditoría y cumplimiento de obligaciones legales. Envíe solo los datos necesarios para la función solicitada y evite identificadores innecesarios en nombres de archivos o texto libre. Los nuevos fines de investigación o entrenamiento de modelos requieren una base jurídica propia y los avisos y autorizaciones necesarios.",
-        "Los datos genéticos y de salud son necesarios para los análisis y las interpretaciones solicitados; la ausencia de datos necesarios puede impedir completar esas funciones. Su divulgación o uso indebido puede afectar la privacidad, a familiares y otros derechos. Los registros de acceso pueden incluir direcciones IP e información del navegador."
+        "Los datos genéticos y de salud son necesarios para los análisis y las interpretaciones solicitados; la ausencia de datos necesarios puede impedir completar esas funciones. Su divulgación o uso indebido puede afectar la privacidad, a familiares y otros derechos. Los registros de acceso pueden incluir direcciones IP e información del navegador.",
+        "Al registrarte, guardamos tu correo, nombre, organización, IP de registro, fechas de solicitud y verificación, e información del navegador para revisión manual, prevención de abuso y auditoría de seguridad. Varias cuentas pueden compartir una IP. Nuestro proveedor de correo envía la verificación y los resultados de la revisión; Cloudflare Turnstile ayuda a evitar registros automatizados. Solo administradores autorizados pueden ver las notas de revisión."
       ]
     },
     {

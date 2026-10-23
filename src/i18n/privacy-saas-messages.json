@@ -2,7 +2,7 @@
   "zh-CN": {
     "title": "隐私政策",
     "platform": "贻鉴 · 从 FASTQ 到分析结果的生物信息分析与变异注释工具",
-    "version": "更新日期：2026年10月14日 · 版本 2026-10-14",
+    "version": "更新日期：2026年10月23日 · 版本 2026-10-23",
     "back": "返回",
     "notice": "SaaS 托管版仅用于科研（Research Use Only，RUO），执行从 FASTQ 到分析结果的科研工作流，提供质控、变异注释和结果浏览。ACMG 初评、HPO 关联及 AI 辅助仅用于整理证据和筛选研究候选，不提供个人疾病诊断、健康风险结论、治疗或用药建议；不得用于个人医疗决策。 开源版由用户自行部署、配置并决定使用场景和结果用途。部署者负责数据授权、安全保护、结果验证及适用的资质和监管要求；软件及输出不自动构成经过验证的医疗产品或诊断结论。本说明不新增开源许可的用途限制。 禁止在样本编号、备注、表型描述、文件名等字段提交真实姓名、身份证件、联系方式或其他身份信息。创建样本前须确认遵守要求；该确认不表示平台已自动验证匿名性。使用化名的遗传及表型数据仍可能属于敏感个人信息。",
     "contactTitle": "隐私联系与权利请求",
@@ -13,7 +13,7 @@
   "zh-Hant": {
     "title": "隱私政策",
     "platform": "貽鑑 · 從 FASTQ 到分析結果的生物資訊分析與變異註釋工具",
-    "version": "更新日期：2026年10月14日 · 版本 2026-10-14",
+    "version": "更新日期：2026年10月23日 · 版本 2026-10-23",
     "back": "返回",
     "notice": "SaaS 託管版僅用於科研（Research Use Only，RUO），執行從 FASTQ 到分析結果的科研工作流程，提供品管、變異註釋與結果瀏覽。ACMG 初評、HPO 關聯及 AI 輔助僅用於整理證據與篩選研究候選，不提供個人疾病診斷、健康風險結論、治療或用藥建議；不得用於個人醫療決策。 開源版由使用者自行部署、配置並決定使用場景與結果用途。部署者負責資料授權、安全保護、結果驗證及適用的資格與監管要求；軟體及輸出不自動構成經過驗證的醫療產品或診斷結論。本說明不新增開源授權的用途限制。 禁止在樣本編號、備註、表型描述、檔案名稱等欄位提交真實姓名、身分證件、聯絡方式或其他身分資訊。建立樣本前須確認遵守要求；該確認不表示平台已自動驗證匿名性。使用化名的遺傳及表型資料仍可能屬於敏感個人資訊。",
     "contactTitle": "隱私聯繫與權利請求",
@@ -24,7 +24,7 @@
   "en": {
     "title": "Privacy Policy",
     "platform": "YiJian · Bioinformatics analysis and variant annotation tools, from FASTQ to results",
-    "version": "Updated: October 14, 2026 · Version 2026-10-14",
+    "version": "Updated: October 23, 2026 · Version 2026-10-23",
     "back": "Back",
     "notice": "The hosted SaaS is for Research Use Only (RUO) and runs research workflows from FASTQ to results, with quality control, variant annotation and result browsing. ACMG preliminary assessments, HPO associations and AI assistance organize evidence and prioritize research candidates. They do not provide personal diagnoses, health-risk conclusions, treatment or medication advice, and must not be used for personal medical decisions. Users deploy and configure the open-source edition and decide its use cases and how results are used. Deployers are responsible for data authorization, security, result validation and applicable qualification and regulatory requirements. The software and its outputs do not automatically constitute a validated medical product or diagnosis. This notice adds no use restrictions to the open-source license. Do not submit real names, identity documents, contact details or other identifying information in sample IDs, notes, phenotype descriptions, filenames or other fields. Sample creation requires an acknowledgment; this does not mean the platform has automatically verified anonymity. Genetic and phenotype data may remain sensitive personal information even when pseudonyms are used.",
     "contactTitle": "Contact and privacy requests",
@@ -35,7 +35,7 @@
   "es-419": {
     "title": "Política de privacidad",
     "platform": "YiJian · Herramientas de análisis bioinformático y anotación de variantes, de FASTQ a resultados",
-    "version": "Actualización: 14 de octubre de 2026 · Versión 2026-10-14",
+    "version": "Actualización: 23 de octubre de 2026 · Versión 2026-10-23",
     "back": "Volver",
     "notice": "El SaaS alojado es exclusivamente para investigación (Research Use Only, RUO) y ejecuta flujos de investigación de FASTQ a resultados, con control de calidad, anotación de variantes y consulta de resultados. Las evaluaciones preliminares ACMG, las asociaciones HPO y la asistencia de IA organizan evidencia y priorizan candidatos de investigación. No ofrecen diagnósticos personales, conclusiones sobre riesgos de salud ni recomendaciones de tratamiento o medicación, y no deben usarse para decisiones médicas personales. Los usuarios despliegan y configuran la edición de código abierto y deciden sus usos y el destino de los resultados. Quien la despliega es responsable de la autorización de datos, la seguridad, la validación de resultados y los requisitos profesionales y regulatorios aplicables. El software y sus resultados no constituyen automáticamente un producto médico validado ni un diagnóstico. Este aviso no agrega restricciones de uso a la licencia de código abierto. No envíe nombres reales, documentos de identidad, datos de contacto ni otros identificadores en los códigos de muestra, notas, descripciones fenotípicas, nombres de archivo u otros campos. Crear una muestra requiere una confirmación; esto no significa que la plataforma haya verificado automáticamente el anonimato. Los datos genéticos y fenotípicos pueden seguir siendo información personal sensible aunque se utilicen seudónimos.",
     "contactTitle": "Contacto y solicitudes de privacidad",

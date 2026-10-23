@@ -10,6 +10,9 @@ export class LocalizedError extends Error {
 
 // Translate only known API messages; arbitrary server/user text stays intact.
 const backendMessages: Record<string, string> = {
+  'registration unavailable': 'registration.unavailable',
+  'registration challenge failed': 'registration.challengeFailed',
+  'registration rate limit exceeded': 'registration.retryLater',
   'organization storage quota exceeded': 'uploadCapacity.insufficient',
   'password is too common': 'backendErrors.passwordTooCommon',
   'password must be at least 8 characters': 'backendErrors.passwordTooShort',

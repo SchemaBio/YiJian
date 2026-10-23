@@ -2994,5 +2994,25 @@
     "insufficient": "Espacio disponible insuficiente. Los archivos en carga y en cola ya reservan espacio. Selecciona menos archivos o elimina datos que ya no necesites e inténtalo de nuevo.",
     "unavailable": "No se puede verificar el espacio disponible en este momento. Inténtalo más tarde.",
     "hint": "La capacidad solo incluye archivos del Centro de datos, sin BAM ni otros resultados de análisis. Las reservas incluyen cargas en cola, incompletas y fallidas, y se liberan después de eliminarlas correctamente."
+  },
+  "registration": {
+    "verifyTitle": "Verifica tu correo",
+    "sent": "Recibimos tu solicitud. Si corresponde, enviaremos un correo de verificación. Revisa tu bandeja de entrada y spam. Después de verificar, un administrador revisará tu solicitud.",
+    "confirmHint": "Confirma que tú enviaste esta solicitud de registro. Después de verificar el correo, un administrador revisará tus datos.",
+    "confirm": "Confirmar correo de registro",
+    "verified": "Correo verificado",
+    "pending": "Tu solicitud está pendiente de revisión. Te avisaremos por correo si se aprueba o se rechaza.",
+    "email": "Correo electrónico",
+    "resend": "Reenviar correo de verificación",
+    "login": "Volver al inicio de sesión",
+    "unavailable": "El registro no está disponible temporalmente. Inténtalo más tarde.",
+    "loading": "Comprobando disponibilidad del registro…",
+    "challengeFailed": "Falló la verificación. Recarga el desafío e inténtalo de nuevo.",
+    "linkInvalid": "El enlace no es válido, ya se usó o venció. Solicita otro correo de verificación.",
+    "retryLater": "No se pudo completar la solicitud. Inténtalo más tarde.",
+    "retryChallenge": "Reintentar verificación",
+    "ownerPassword": "Establecer contraseña",
+    "ownerPasswordHint": "Ingresa la contraseña que quieres usar para que el titular del correo verificado controle las credenciales de la cuenta.",
+    "passwordInvalid": "Contraseña no válida. Usa al menos 8 caracteres, evita contraseñas comunes y no superes 72 bytes UTF-8."
   }
 }

@@ -14,6 +14,9 @@ import { Input } from '@schema/ui-kit';
 import { UserPlus } from 'lucide-react';
 import { api, ApiError, clearLegacyAuthTokens } from '@/lib/api';
 import { hashPassword } from '@/lib/crypto';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
+import { RegistrationChallenge, useRegistrationAvailability } from '@/components/auth/RegistrationChallenge';
+import { RegistrationVerification } from '@/components/auth/RegistrationVerification';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 const ORG_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
@@ -32,6 +35,10 @@ export default function RegisterPage() {
   const [error, setError] = React.useState('');
   const backendFlavor = getRuntimeBackendFlavor();
   const requireOrgFields = backendFlavor === 'squid';
+  const registrationConfig = useRegistrationAvailability(requireOrgFields);
+  const [challenge, setChallenge] = React.useState('');
+  const [generation, setGeneration] = React.useState(0);
+  const [submitted, setSubmitted] = React.useState(false);
 
   const handleChange = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -62,11 +69,13 @@ export default function RegisterPage() {
       return;
     }
 
+    if (requireOrgFields && (!registrationConfig?.enabled || !challenge)) { setError(t('registration.unavailable')); return; }
     setLoading(true);
     try {
       const hashedPassword = await hashPassword(password, email);
       const response = await api.post<{ access_token?: string; message?: string }>('/v1/auth/register', {
         email,
+        ...(requireOrgFields ? { turnstile_token: challenge, locale: t.locale } : {}),
         password: hashedPassword,
         name,
         ...(orgName ? { org_name: orgName } : {}),
@@ -75,6 +84,7 @@ export default function RegisterPage() {
 
       clearLegacyAuthTokens();
       if (!response?.access_token && response?.message) {
+        if (requireOrgFields) { setSubmitted(true); setLoading(false); return; }
         router.push('/login?registered=pending');
         return;
       }
@@ -86,12 +96,16 @@ export default function RegisterPage() {
       } else {
         setError(t("auth.networkErrorRetryLatereb9dcb"));
       }
+      setChallenge(''); setGeneration(value => value + 1);
       setLoading(false);
     }
   };
 
+  if (submitted) return <RegistrationVerification initialEmail={form.email.trim().toLowerCase()} submitted />;
+
   return (
     <div className="yj-modern yj-public-shell flex items-center justify-center px-4 py-8 sm:p-8">
+      <LanguageSwitcher />
       <div className="yj-panel yj-auth-card yj-auth-single">
         <div className="mb-8">
           <div className="yj-brand-lockup mb-8">
@@ -129,6 +143,7 @@ export default function RegisterPage() {
             id="register-email"
             aria-label={t("settings.email9ed627")}
             type="email"
+            maxLength={100}
             value={form.email}
             onChange={(e) => handleChange('email', e.target.value)}
             placeholder={t("auth.emailf1f231")}
@@ -172,7 +187,7 @@ export default function RegisterPage() {
             type="submit"
             variant="primary"
             className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
-            disabled={loading}
+            disabled={loading || (requireOrgFields && (!registrationConfig?.enabled || !challenge))}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
             {t("auth.registerda0e5f")}</Button>

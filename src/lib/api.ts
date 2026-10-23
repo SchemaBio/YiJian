@@ -238,6 +238,9 @@ function shouldAttemptAuthRefresh(endpoint: string): boolean {
   return ![
     '/v1/auth/login',
     '/v1/auth/register',
+    '/v1/auth/registration-config',
+    '/v1/auth/registration/resend',
+    '/v1/auth/registration/verify',
     '/v1/auth/refresh',
     '/v1/auth/logout',
     '/v1/auth/forgot-password',

@@ -142,6 +142,7 @@ export default function LoginPage() {
               </button>
             </div>
 
+            {getRuntimeBackendFlavor() === 'squid' ? <p className="text-sm"><Link href="/verify-email" className="text-success-fg hover:underline">{t('registration.resend')}</Link></p> : null}
             <div className="flex items-center justify-between text-sm">
               <label className="flex cursor-pointer items-center gap-2">
                 <input

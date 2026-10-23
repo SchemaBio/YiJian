@@ -49,7 +49,9 @@ export function contentSecurityPolicy(nonce: string, duckdbWorker = false) {
   const scriptSrc = isProduction
     ? [`'self'`, `'nonce-${nonce}'`, `'wasm-unsafe-eval'`, ...(duckdbWorker ? ["'unsafe-eval'"] : [])]
     : [`'self'`, `'nonce-${nonce}'`, `'unsafe-inline'`, `'unsafe-eval'`];
+  scriptSrc.push('https://challenges.cloudflare.com');
   const connectSrc = [
+    'https://challenges.cloudflare.com',
     `'self'`,
     apiConnectSource(),
     ...uploadConnectSources(),
@@ -66,7 +68,7 @@ export function contentSecurityPolicy(nonce: string, duckdbWorker = false) {
     `font-src 'self'`,
     `connect-src ${connectSrc}`,
     `worker-src 'self' blob:`,
-    `frame-src 'self'`,
+    `frame-src 'self' https://challenges.cloudflare.com`,
     `frame-ancestors 'none'`,
     `object-src 'none'`,
     `base-uri 'self'`,
