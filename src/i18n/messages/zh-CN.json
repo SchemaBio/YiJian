@@ -1,4 +1,8 @@
 {
+  "payments": {
+    "quantityError": "请输入 1～5000 的正整数。",
+    "quantityHelp": "每次可申请 1～5000 积分，数量必须为正整数。"
+  },
   "selfHostedDownloads": {
     "description": "准备结果包后下载，BAM 和索引等归档文件也可单独下载。",
     "resultZIP": "分析结果 ZIP",

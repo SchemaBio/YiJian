@@ -1,4 +1,8 @@
 {
+  "payments": {
+    "quantityError": "Enter a whole number from 1 to 5000.",
+    "quantityHelp": "Request 1–5000 credits at a time, in whole numbers only."
+  },
   "selfHostedDownloads": {
     "description": "Prepare a result package to download, or download archived files such as BAMs and indexes individually.",
     "resultZIP": "Analysis results ZIP",

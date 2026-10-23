@@ -1,4 +1,8 @@
 {
+  "payments": {
+    "quantityError": "Ingresa un número entero del 1 al 5000.",
+    "quantityHelp": "Solicita entre 1 y 5000 créditos por vez, solo en números enteros."
+  },
   "selfHostedDownloads": {
     "description": "Prepara un paquete de resultados para descargar o descarga por separado archivos como BAM e índices.",
     "resultZIP": "ZIP de resultados del análisis",

@@ -1,4 +1,8 @@
 {
+  "payments": {
+    "quantityError": "請輸入 1～5000 的正整數。",
+    "quantityHelp": "每次可申請 1～5000 積分，數量必須為正整數。"
+  },
   "selfHostedDownloads": {
     "description": "準備結果套件後下載，BAM 與索引等封存檔案也可單獨下載。",
     "resultZIP": "分析結果 ZIP",

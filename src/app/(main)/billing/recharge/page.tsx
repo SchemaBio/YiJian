@@ -17,6 +17,7 @@ import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { parseCreditQuantity } from '@/lib/payments';
 
 const PRESET_CREDITS = [100, 500, 1000, 5000];
 
@@ -27,7 +28,9 @@ export default function RechargePage() {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [balance, setBalance] = React.useState<BillingBalance | null>(null);
   const [config, setConfig] = React.useState<BillingConfig | null>(null);
-  const [amount, setAmount] = React.useState(500);
+  const [amountInput, setAmountInput] = React.useState('500');
+  const amount = parseCreditQuantity(amountInput);
+  const quantityError = amount === null ? t('payments.quantityError') : '';
   const [copied, setCopied] = React.useState(false);
   const [error, setError] = React.useState('');
   const [loadError, setLoadError] = React.useState('');
@@ -52,11 +55,12 @@ export default function RechargePage() {
 
   const minuteRate = config ? config.credits_per_minute * config.credit_rate_multiplier : null;
   const estimatedMinutes = minuteRate !== null && Number.isFinite(minuteRate) && minuteRate > 0
-    ? Math.floor(amount / minuteRate)
+    ? (amount === null ? null : Math.floor(amount / minuteRate))
     : null;
   const exampleTaskCost = calculateEstimatedCredits(60, config);
 
   const copyRequest = async () => {
+    if (amount === null) return;
     const request = [
       t("billing.schemabioSaasCreditRequest67d08d"),
       t("billing.organization7d9842", {p0: String(currentOrg?.name ?? '-'), p1: String(currentOrg?.id ?? '-')}),
@@ -110,7 +114,7 @@ export default function RechargePage() {
               <button
                 key={preset}
                 type="button"
-                onClick={() => setAmount(preset)}
+                onClick={() => { setAmountInput(String(preset)); setCopied(false); }}
                 aria-pressed={amount === preset}
                 className={`h-10 rounded-md border text-sm font-medium transition-colors ${
                   amount === preset
@@ -129,22 +133,29 @@ export default function RechargePage() {
               aria-label={t("billing.customCreditAmountc6dcf8")}
               type="number"
               min="1"
-              step="100"
-              value={amount}
-              onChange={(event) => setAmount(Math.max(1, Math.trunc(Number(event.target.value)) || 1))}
+              max="5000"
+              step="1"
+              value={amountInput}
+              aria-invalid={amount === null}
+              aria-describedby="recharge-quantity-help"
+              onChange={(event) => { setAmountInput(event.target.value); setCopied(false); }}
             />
+            <p id="recharge-quantity-help" role={quantityError ? 'alert' : undefined} className={`mt-2 text-sm ${quantityError ? 'text-danger-fg' : 'text-fg-muted'}`}>
+              {quantityError || t('payments.quantityHelp')}
+            </p>
           </div>
 
           <div className="mt-6 flex flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm text-fg-muted">{t("billing.requestedAmount2e583a")}</p>
-              <p className="text-2xl font-semibold text-fg-default">{amount} {t("billing.creditse6d317")}</p>
+              <p className="text-2xl font-semibold text-fg-default">{amount ?? '--'} {t("billing.creditse6d317")}</p>
             </div>
             <Button action="copy"
               variant="primary"
               className="w-full min-w-[168px] justify-center sm:w-auto"
 
               onClick={() => void copyRequest()}
+              disabled={amount === null}
             >
               {copied ? t("billing.copiede381a5") : t("billing.copyCreditRequeste67917")}
             </Button>
