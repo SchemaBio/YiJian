@@ -375,6 +375,7 @@
     "organizationEnabled7b2c48": "機構啓用"
   },
   "billing": {
+    "vcfReservation": "VCF 註釋預估約 25 分鐘，固定預扣 50 積分，最終按實際耗時結算。",
     "unableToLoadCreditAdditionInformation21a1a2": "載入充值資訊失敗",
     "schemabioSaasCreditRequest67d08d": "SchemaBio SaaS 積分充值申請",
     "organization7d9842": "機構：{p0} ({p1})",
@@ -1194,7 +1195,7 @@
     "invalidRowsda79eb": "錯誤行",
     "estimatedTotalRuntimeb46f2c": "預計總耗時",
     "estimatedTotalReservationf6d94f": "預計合計預扣 ",
-    "sumOfServerInputSizeEstimatesFinal35bfa2": "按各任務的後端資料量估算求和；最終按實際運行分鐘結算",
+    "sumOfServerInputSizeEstimatesFinal35bfa2": "VCF 註釋每個任務預扣 50 積分，其他任務按輸入資料量估算；最終按實際耗時結算。",
     "balance239d15": "餘額 ",
     "excelRow7dca4b": "Excel 行",
     "samplePedigree481e9d": "樣本/家系",

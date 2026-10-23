@@ -375,6 +375,7 @@
     "organizationEnabled7b2c48": "Organización habilitada"
   },
   "billing": {
+    "vcfReservation": "La anotación VCF se estima en unos 25 minutos y reserva 50 créditos. El cobro final depende del tiempo real.",
     "unableToLoadCreditAdditionInformation21a1a2": "No se pudo cargar la información de recarga",
     "schemabioSaasCreditRequest67d08d": "Solicitud de créditos de SchemaBio SaaS",
     "organization7d9842": "Organización: {p0} ({p1})",
@@ -1194,7 +1195,7 @@
     "invalidRowsda79eb": "Filas con errores",
     "estimatedTotalRuntimeb46f2c": "Tiempo total estimado",
     "estimatedTotalReservationf6d94f": "Reserva total estimada ",
-    "sumOfServerInputSizeEstimatesFinal35bfa2": "Suma de las estimaciones del servidor por tamaño de entrada; la liquidación final usa el tiempo real",
+    "sumOfServerInputSizeEstimatesFinal35bfa2": "Se reservan 50 créditos por tarea de anotación VCF; las demás se estiman según el tamaño de entrada. El cobro final depende del tiempo real.",
     "balance239d15": "Saldo ",
     "excelRow7dca4b": "Fila de Excel",
     "samplePedigree481e9d": "Muestra / árbol familiar",

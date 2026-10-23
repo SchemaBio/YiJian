@@ -375,6 +375,7 @@
     "organizationEnabled7b2c48": "机构启用"
   },
   "billing": {
+    "vcfReservation": "VCF 注释预估约 25 分钟，固定预扣 50 积分，最终按实际耗时结算。",
     "unableToLoadCreditAdditionInformation21a1a2": "加载充值信息失败",
     "schemabioSaasCreditRequest67d08d": "SchemaBio SaaS 积分充值申请",
     "organization7d9842": "机构：{p0} ({p1})",
@@ -1194,7 +1195,7 @@
     "invalidRowsda79eb": "错误行",
     "estimatedTotalRuntimeb46f2c": "预计总耗时",
     "estimatedTotalReservationf6d94f": "预计合计预扣 ",
-    "sumOfServerInputSizeEstimatesFinal35bfa2": "按各任务的后端数据量估算求和；最终按实际运行分钟结算",
+    "sumOfServerInputSizeEstimatesFinal35bfa2": "VCF 注释每个任务预扣 50 积分，其他任务按输入数据量估算；最终按实际耗时结算。",
     "balance239d15": "余额 ",
     "excelRow7dca4b": "Excel 行",
     "samplePedigree481e9d": "样本/家系",

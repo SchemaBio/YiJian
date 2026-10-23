@@ -128,7 +128,7 @@ export default function NewAnalysisPage() {
     const sampleId = isTrio ? undefined : selectedSampleInfo?.id;
     const pedigreeId = isTrio ? selectedPedigreeInfo?.id : undefined;
     if (!pipelineId || (isVCF && !vcfAssetId) || (!sampleId && !pedigreeId)) {
-      setEstimatedMinutes(60);
+      setEstimatedMinutes(isVCF ? 25 : 60);
       setEstimateStatus('idle');
       return;
     }
@@ -145,7 +145,7 @@ export default function NewAnalysisPage() {
       })
       .catch(() => {
         if (cancelled) return;
-        setEstimatedMinutes(60);
+        setEstimatedMinutes(isVCF ? 25 : 60);
         setEstimateStatus('fallback');
       });
 
@@ -156,7 +156,7 @@ export default function NewAnalysisPage() {
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
-    : calculateEstimatedCredits(estimatedMinutes, billingConfig);
+    : calculateEstimatedCredits(estimatedMinutes, billingConfig, isVCF ? 'vcf2anno' : undefined);
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
     : null;
@@ -307,7 +307,7 @@ export default function NewAnalysisPage() {
               <div>
                 <div className="text-sm font-medium text-fg-default">{t("tasks.estimatedReservationaa9641")}{estimatedCredits ?? '--'} {t("billing.creditse6d317")}</div>
                 <div className="text-xs text-fg-muted">
-                  {t("tasks.finalSettlementUsesActualRuntime296a82")}</div>
+                  {t(isVCF ? "billing.vcfReservation" : "tasks.finalSettlementUsesActualRuntime296a82")}</div>
               </div>
             </div>
             <div className="text-right">

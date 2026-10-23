@@ -77,7 +77,10 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
   }, [isOpen, isSaaS]);
 
   const estimatedCredits = preview
-    ? calculateEstimatedCredits(preview.total_estimated_minutes, billingConfig)
+    ? preview.rows.filter(row => row.valid).reduce<number | null>((total, row) => {
+        const credits = calculateEstimatedCredits(row.estimated_minutes, billingConfig, row.template);
+        return total === null || credits === null ? null : total + credits;
+      }, 0)
     : null;
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits

@@ -63,7 +63,8 @@ export function notifyBillingUpdated() {
   }
 }
 
-export function calculateEstimatedCredits(minutes: number, config: BillingConfig | null): number | null {
+export function calculateEstimatedCredits(minutes: number, config: BillingConfig | null, template?: string): number | null {
+  if (template === 'vcf2anno') return 50;
   if (!config) return null;
   const normalizedMinutes = Math.max(1, Math.trunc(minutes) || 1);
   const calculated = Math.round(

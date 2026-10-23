@@ -51,3 +51,11 @@ it('reads uncached organization rates rather than the platform administrator bas
   expect(api.get).toHaveBeenCalledWith('/v1/billing/effective-config', { coreApi: false, cache: 'no-store' });
   expect(calculateEstimatedCredits(60, config)).toBe(120);
 });
+
+it('reserves exactly 50 credits for VCF annotation regardless of estimate and rate', () => {
+  for (const minutes of [1, 25, 60, 999]) {
+    expect(calculateEstimatedCredits(minutes, null, 'vcf2anno')).toBe(50);
+    expect(calculateEstimatedCredits(minutes, { credits_per_minute: 7, credit_rate_multiplier: 3 } as never, 'vcf2anno')).toBe(50);
+  }
+  expect(calculateEstimatedCredits(60, { credits_per_minute: 1, credit_rate_multiplier: 2 } as never, 'single')).toBe(120);
+});

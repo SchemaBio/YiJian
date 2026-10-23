@@ -375,6 +375,7 @@
     "organizationEnabled7b2c48": "Organization enabled"
   },
   "billing": {
+    "vcfReservation": "VCF annotation is estimated at about 25 minutes with a fixed reservation of 50 credits. Final charges use actual runtime.",
     "unableToLoadCreditAdditionInformation21a1a2": "Unable to load credit addition information",
     "schemabioSaasCreditRequest67d08d": "SchemaBio SaaS credit request",
     "organization7d9842": "Organization: {p0} ({p1})",
@@ -1194,7 +1195,7 @@
     "invalidRowsda79eb": "Invalid rows",
     "estimatedTotalRuntimeb46f2c": "Estimated total runtime",
     "estimatedTotalReservationf6d94f": "Estimated total reservation ",
-    "sumOfServerInputSizeEstimatesFinal35bfa2": "Sum of server input-size estimates; final settlement uses actual runtime",
+    "sumOfServerInputSizeEstimatesFinal35bfa2": "Reserve 50 credits per VCF annotation task; other tasks are estimated from input size. Final charges use actual runtime.",
     "balance239d15": "Balance ",
     "excelRow7dca4b": "Excel row",
     "samplePedigree481e9d": "Sample / pedigree",
