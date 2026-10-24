@@ -49,13 +49,17 @@ const FALLBACK_HPO_TERMS: HpoTerm[] = [
   { id: 'HP:0000518', name: '白内障', nameEn: 'Cataract' },
 ];
 
+const cachedTermsById = new Map<string, HpoTerm>(
+  FALLBACK_HPO_TERMS.map((term) => [term.id, term])
+);
+
 let cachedTerms: HpoTerm[] | null = null;
 let loadingTerms: Promise<HpoTerm[]> | null = null;
 
 function normalizeHpoTerms(raw: unknown): HpoTerm[] {
   if (!raw || typeof raw !== 'object') return FALLBACK_HPO_TERMS;
 
-  return Object.entries(raw as Record<string, RawHpoTerm>)
+  const terms = Object.entries(raw as Record<string, RawHpoTerm>)
     .map(([key, value]) => {
       const id = value.id || key;
       const name = value.name_cn || value.name || id;
@@ -69,6 +73,12 @@ function normalizeHpoTerms(raw: unknown): HpoTerm[] {
       };
     })
     .filter((term) => term.id.startsWith('HP:') && !(raw as Record<string, RawHpoTerm>)[term.id]?.obsolete);
+
+  for (const term of terms) {
+    cachedTermsById.set(term.id, term);
+  }
+
+  return terms;
 }
 
 async function loadHpoTerms(): Promise<HpoTerm[]> {
@@ -134,12 +144,45 @@ export function searchHpoTerms(terms: HpoTerm[], query: string, limit = 20): Hpo
       if (id === normalizedQuery) return { term, score: 0 };
       if (id.startsWith(normalizedQuery)) return { term, score: 1 };
       if (name === normalizedQuery) return { term, score: 2 };
+      if (nameEn === normalizedQuery) return { term, score: 2.1 };
       if (name.includes(normalizedQuery)) return { term, score: 3 };
-      if (nameEn.includes(normalizedQuery)) return { term, score: 4 };
+      if (nameEn.includes(normalizedQuery)) return { term, score: 3.1 };
       return null;
     })
     .filter((match): match is { term: HpoTerm; score: number } => Boolean(match))
     .sort((a, b) => a.score - b.score || a.term.id.localeCompare(b.term.id));
 
   return matches.slice(0, limit).map((match) => match.term);
+}
+
+/**
+ * 判断当前语言是否应该显示为英语 HPO 术语。
+ * 设定规则：只要不是繁体中文和简体中文的语言下，HPO 均显示为英语。
+ */
+export function isHpoEnglishLocale(locale?: string): boolean {
+  if (!locale) return false;
+  return locale !== 'zh-CN' && locale !== 'zh-Hant' && !locale.startsWith('zh');
+}
+
+export function getCachedHpoTerm(id: string): HpoTerm | undefined {
+  return cachedTermsById.get(id);
+}
+
+/**
+ * 根据语言获取 HPO 术语的展示名称。
+ * 只要不是繁体中文和简体中文的语言下，优先显示英语名称；
+ * 繁体中文和简体中文下显示中文名称。
+ */
+export function getHpoTermName(
+  term: { id: string; name?: string; nameEn?: string },
+  locale?: string,
+  catalog?: HpoTerm[]
+): string {
+  const isEnglish = isHpoEnglishLocale(locale);
+  const found = (catalog ? catalog.find((item) => item.id === term.id) : null) ?? cachedTermsById.get(term.id);
+
+  if (isEnglish) {
+    return term.nameEn || found?.nameEn || term.name || term.id;
+  }
+  return found?.name || term.name || found?.nameEn || term.nameEn || term.id;
 }

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { NewSampleModal } from './NewSampleModal';
 const mode=vi.hoisted(()=>({backend:'squid'}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mode.backend}));
-vi.mock('@/lib/hpo-terms',()=>({useHpoTerms:()=>[],searchHpoTerms:()=>[]}));
+vi.mock('@/lib/hpo-terms', async (importOriginal) => { const actual = await importOriginal<typeof import('@/lib/hpo-terms')>(); return { ...actual, useHpoTerms: () => [], searchHpoTerms: () => [] }; });
 vi.mock('@/components/shared/AIDiagnosisField',()=>({AIDiagnosisField:()=>null}));
 // The shared checkbox measures its native input; jsdom has no layout observer.
 beforeEach(() => vi.stubGlobal('ResizeObserver', class {

@@ -1,4 +1,5 @@
 'use client';
+import { getHpoTermName } from '@/lib/hpo-terms';
 import {ParentSampleStatus} from '@/components/shared/SampleParentFields';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
 import { ImportSamplesModal } from './components/ImportSamplesModal';
@@ -103,7 +104,7 @@ function HpoCell({ hpoTerms }: { hpoTerms: { id: string; name: string }[] }) {
           {hpoTerms.map((term) => (
             <div key={term.id}>
               <span className="text-accent-fg font-mono">{term.id}</span>
-              <span className="text-fg-default ml-1">{term.name}</span>
+              <span className="text-fg-default ml-1">{getHpoTermName(term, t.locale)}</span>
             </div>
           ))}
         </div>

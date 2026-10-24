@@ -1,4 +1,5 @@
 'use client';
+import { getHpoTermName } from '@/lib/hpo-terms';
 import { useResearchExpiry } from '@/lib/research-retention';
 import { clearTaskBrowserResults } from '@/lib/parquet-browser';
 import { clearTaskRowSnapshots } from '../[uuid]/result-api';
@@ -296,7 +297,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
                 <span className="text-fg-muted shrink-0">HPO:</span>
                 <div className="flex flex-wrap gap-1">
                   {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
-                    <HoverHint content={hpo.name} key={i}><Tag key={i} variant="info" className="text-xs font-mono" >
+                    <HoverHint content={getHpoTermName(hpo, t.locale)} key={i}><Tag key={i} variant="info" className="text-xs font-mono" >
                       {hpo.id}
                     </Tag></HoverHint>
                   ))}

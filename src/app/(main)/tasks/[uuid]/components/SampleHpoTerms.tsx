@@ -6,7 +6,7 @@ import { useText } from '@/i18n/useText';
 import { errorText } from '@/i18n/errors';
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 import { HoverHint } from '@/components/shared/HoverHint';
-import { searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
+import { getHpoTermName, searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
 
 type Term = { id: string; name: string };
 
@@ -40,12 +40,12 @@ export function SampleHpoTerms({ terms, refreshing, onSave }: {
       {!editing && <ActionButton permission="samples.write" action="edit" size="small" variant="ghost" disabled={refreshing} onClick={() => { setDraft(terms.map(term => ({...term}))); setQuery(''); setError(''); setEditing(true); }}>{t('admin.edita7f814')}</ActionButton>}
     </div>
     <div className="flex flex-wrap gap-2">
-      {(editing ? draft : terms).map(term => <HoverHint key={term.id} content={term.name}><span className="inline-flex items-center gap-1"><Tag variant="info" className="font-mono">{term.id}</Tag>{editing && <IconActionButton action="close" size="small" variant="ghost" disabled={saving} label={t('samples.remove40a0d2', {p0:term.id})} onClick={() => setDraft(items => items.filter(item => item.id !== term.id))} />}</span></HoverHint>)}
+      {(editing ? draft : terms).map(term => <HoverHint key={term.id} content={getHpoTermName(term, t.locale, catalog)}><span className="inline-flex items-center gap-1"><Tag variant="info" className="font-mono">{term.id}</Tag>{editing && <IconActionButton action="close" size="small" variant="ghost" disabled={saving} label={t('samples.remove40a0d2', {p0:term.id})} onClick={() => setDraft(items => items.filter(item => item.id !== term.id))} />}</span></HoverHint>)}
       {!(editing ? draft : terms).length && <span className="text-xs text-fg-muted">{t('samples.noHpoTerms0cc1c0')}</span>}
     </div>
     {editing && <>
       <input aria-label={t('samples.searchHpoTermsEGHpOr746be4')} placeholder={t('samples.searchHpoTermsEGHpOr746be4')} value={query} disabled={saving} onChange={event => setQuery(event.target.value)} className="h-8 w-full rounded border border-border-default bg-canvas-default px-2 text-sm" />
-      {matches.length > 0 && <ul className="max-h-40 overflow-y-auto rounded border border-border-default">{matches.map(term => <li key={term.id}><button type="button" disabled={saving} className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-canvas-subtle disabled:opacity-50" onClick={() => { setDraft(items => items.some(item => item.id === term.id) ? items : [...items, {id:term.id, name:term.name}]); setQuery(''); }}><span className="font-mono text-accent-fg">{term.id}</span><span>{term.name}</span></button></li>)}</ul>}
+      {matches.length > 0 && <ul className="max-h-40 overflow-y-auto rounded border border-border-default">{matches.map(term => <li key={term.id}><button type="button" disabled={saving} className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-canvas-subtle disabled:opacity-50" onClick={() => { setDraft(items => items.some(item => item.id === term.id) ? items : [...items, {id:term.id, name:getHpoTermName(term, t.locale, catalog)}]); setQuery(''); }}><span className="font-mono text-accent-fg">{term.id}</span><span>{getHpoTermName(term, t.locale, catalog)}</span></button></li>)}</ul>}
       <div className="flex justify-end gap-2">
         <ActionButton size="small" disabled={saving} onClick={() => { setEditing(false); setQuery(''); setError(''); }}>{t('admin.cancel4d0b46')}</ActionButton>
         <ActionButton permission="samples.write" action="save" size="small" loading={saving} onClick={() => void save()}>{t('data.savefadf24')}</ActionButton>

@@ -16,7 +16,7 @@ import { Tag } from '@/components/shared/Tag';
 import { User, Stethoscope, FileText, FolderKanban, Users, Activity, Search } from 'lucide-react';
 import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { api } from '@/lib/api';
-import { searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
+import { getHpoTermName, searchHpoTerms, useHpoTerms } from '@/lib/hpo-terms';
 import { getSampleDetail, normalizeSampleDetail, sampleDetailPayload } from '@/lib/samples';
 import type { SampleDetail } from '../types';
 import { GENDER_CONFIG } from '../types';
@@ -118,13 +118,13 @@ function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) =
                   key={term.id}
                   className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
                   onClick={() => {
-                    onAdd({ id: term.id, name: term.name });
+                    onAdd({ id: term.id, name: getHpoTermName(term, t.locale, hpoTerms) });
                     setSearchQuery('');
                     setShowDropdown(false);
                   }}
                 >
                   <span className="font-mono text-xs text-blue-500">{term.id}</span>
-                  <span className="text-sm">{term.name}</span>
+                  <span className="text-sm">{getHpoTermName(term, t.locale, hpoTerms)}</span>
                 </button>
               ))}
             </div>
@@ -140,6 +140,7 @@ function HpoTermInput({ onAdd }: { onAdd: (term: { id: string; name: string }) =
 
 export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps) {
   const t = useText();
+  const hpoTerms = useHpoTerms();
   const [sample, setSample] = React.useState<SampleDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<TabType>('basic');
@@ -302,7 +303,7 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm border border-blue-200"
                       >
                         <span className="font-mono text-xs text-blue-500">{term.id}</span>
-                        <span>{term.name}</span>
+                        <span>{getHpoTermName(term, t.locale, hpoTerms)}</span>
                         {isEditing && (
                           <ActionButton size="small" iconOnly action="close" variant="ghost"
                             onClick={() => {

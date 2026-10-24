@@ -80,7 +80,6 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
     <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={t("assistance.aiGenerated7d0bf", {p0: String(label)})} hint={inactiveReason || t("assistance.aiGeneratedb4967", {p0: String(label), p1: String(deployment === 'saas' ? charge ? ` ${t('· 1 积分/次')}` : ` ${t('· 联调期间不扣费')}` : '')})}
       disabled={disabled || busy || unavailable} className="inline-flex shrink-0 items-center gap-1 rounded-md p-1.5 text-accent-fg transition-colors hover:bg-accent-subtle disabled:opacity-40"
       onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }} />
-    {inactiveReason && <span className="text-xs text-fg-muted">{inactiveReason}</span>}
     {deployment === 'saas' && !charge && !inactiveReason && <span className="text-xs text-fg-muted">{t("assistance.noChargeDuringIntegrationTestinge54a18")}</span>}
     {busy && serverRequestId && adapter.cancel && <ActionButton loading={cancelling} loadingLabel={t("assistance.cancelingb3f55e")} variant="ghost" type="button" disabled={cancelling} className="yj-tool-button" onClick={async () => { setCancelling(true); try { await adapter.cancel!(serverRequestId); } catch { setError(t("assistance.unableToCancelRequestRetryfca412")); setCancelling(false); } }}>{t("admin.cancel4d0b46")}</ActionButton>}
     {error && <p role="alert" className="basis-full text-xs leading-relaxed text-danger-fg">{error}</p>}

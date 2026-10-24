@@ -3,9 +3,36 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { AIAssistanceAdapter } from '@/lib/ai-assistance';
 import { AIAssistanceProvider } from '@/components/providers/AIAssistanceProvider';
+import { LocaleProvider } from '@/components/providers/LocaleProvider';
 import { AIDiagnosisField } from './AIDiagnosisField';
-const { terms } = vi.hoisted(() => ({ terms: [{ id: 'HP:0001250', name: '癫痫发作' }, { id: 'HP:0002315', name: '头痛' }, { id: 'HP:0001252', name: '肌张力减退', nameEn: 'Hypotonia' }, { id: 'HP:0010547', name: '肌张力减退', nameEn: 'Muscle flaccidity' }] }));
-vi.mock('@/lib/hpo-terms', () => ({ useHpoTerms: () => terms }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
+
+const { terms } = vi.hoisted(() => ({
+  terms: [
+    { id: 'HP:0001250', name: '癫痫发作', nameEn: 'Seizure' },
+    { id: 'HP:0002315', name: '头痛', nameEn: 'Headache' },
+    { id: 'HP:0001252', name: '肌张力减退', nameEn: 'Hypotonia' },
+    { id: 'HP:0010547', name: '肌张力减退', nameEn: 'Muscle flaccidity' },
+  ],
+}));
+
+vi.mock('@/lib/hpo-terms', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/hpo-terms')>();
+  return {
+    ...actual,
+    useHpoTerms: () => terms,
+  };
+});
+
+it('does not display the local description banner', async () => {
+  render(<AIDiagnosisField value="癫痫发作" onChange={vi.fn()} onTerms={vi.fn()} />);
+  await screen.findByRole('button', { name: /HP:0001250/ });
+  expect(screen.queryByText(/仅在本机拆词匹配内置术语/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Segments text against bundled terms/)).not.toBeInTheDocument();
+});
 
 it('extracts locally without AI configuration or calls and only adds reviewed candidates', async () => {
   const onTerms = vi.fn(), generate = vi.fn();
@@ -18,6 +45,19 @@ it('extracts locally without AI configuration or calls and only adds reviewed ca
   expect(onTerms).toHaveBeenCalledWith([{ id: 'HP:0001250', name: '癫痫发作' }]);
   rerender(<AIAssistanceProvider deployment="opensource" adapter={adapter}><AIDiagnosisField value="未知描述" onChange={vi.fn()} onTerms={onTerms} /></AIAssistanceProvider>);
   await waitFor(() => expect(screen.getByRole('button', { name: '添加本地候选（0）' })).toBeDisabled());
+});
+
+it('displays English HPO names when the active locale is not Simplified or Traditional Chinese', async () => {
+  const onTerms = vi.fn();
+  render(
+    <LocaleProvider initialLocale="en">
+      <AIDiagnosisField value="癫痫发作" onChange={vi.fn()} onTerms={onTerms} />
+    </LocaleProvider>
+  );
+  const choice = await screen.findByRole('button', { name: 'Seizure · HP:0001250' });
+  expect(choice).toBeInTheDocument();
+  fireEvent.click(choice);
+  expect(onTerms).toHaveBeenCalledWith([{ id: 'HP:0001250', name: 'Seizure' }]);
 });
 
 it('calls the AI adapter only when AI-assisted extraction is clicked', async () => {

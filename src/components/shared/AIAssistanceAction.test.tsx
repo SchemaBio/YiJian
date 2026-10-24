@@ -95,7 +95,7 @@ describe('AI generation confirmation and lifecycle', () => {
     const receive = vi.fn();
     render(<AIAssistanceProvider deployment="saas" adapter={pendingAIAssistanceAdapter}><AIAssistanceAction input={{ feature: 'cnv_loss', variant: { id: 'A' } }} onResult={receive} /></AIAssistanceProvider>);
     await waitFor(() => expect(screen.getByRole('button', { name: 'AI 生成CNV Loss 建议' })).toBeDisabled());
-    expect(screen.getByText('AI 服务暂不可用', { selector: '.text-xs' })).toBeVisible();
+    expect(screen.getByText('AI 服务暂不可用')).toBeInTheDocument();
     expect(receive).not.toHaveBeenCalled();
   });
 
@@ -105,12 +105,20 @@ describe('AI generation confirmation and lifecycle', () => {
     const button = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
     await waitFor(() => expect(button).toBeEnabled());
     expect(screen.getByRole('button', { name: 'AI 生成SVC v4.0 草案实验' })).toBeDisabled();
-    expect(screen.getByText('SVC 尚未开放', { selector: '.text-xs' })).toBeVisible();
+    expect(screen.getByText('SVC 尚未开放')).toBeInTheDocument();
     fireEvent.click(button);
     await waitFor(() => expect(client.generate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ confirmedCharge: false })));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('does not display disabled status text inline and provides it via button hover hint instead', async () => {
+    const client = adapter(false);
+    render(<AIAssistanceProvider deployment="opensource" adapter={client}><AIAssistanceAction input={{ feature: 'hpo', diagnosis: '癫痫' }} onResult={vi.fn()} /></AIAssistanceProvider>);
+    const button = await screen.findByRole('button', { name: 'AI 生成HPO 候选术语' });
+    expect(button).toBeDisabled();
+    expect(screen.queryByText(/AI 辅助功能未开启/i, { selector: '.text-xs' })).not.toBeInTheDocument();
+    expect(screen.getByText(/AI 辅助功能未开启/i)).toBeInTheDocument();
+  });
   it('collects missing clinical context before payment without inventing germline origin', async () => {
     const client = adapter(); client.getSettings = vi.fn().mockResolvedValue({ enabled: true, connected: true, configured: true, billingEnabled: true, capabilities: { acmg: { enabled: true } } });
     render(<AIAssistanceProvider deployment="saas" adapter={client}><AIAssistanceAction input={{ feature: 'acmg', taskId: 'task', reference: 'hg38', variant: { id: 'A' } }} onResult={vi.fn()} /></AIAssistanceProvider>);

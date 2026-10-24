@@ -14,7 +14,7 @@ import { Input, Select, TextArea } from '@schema/ui-kit';
 import { FileText, Search, Stethoscope, UserRound } from 'lucide-react';
 import { AIDiagnosisField } from '@/components/shared/AIDiagnosisField';
 import { AppModal, ModalSectionHeading } from '@/components/shared';
-import { searchHpoTerms, useHpoTerms, type HpoTerm } from '@/lib/hpo-terms';
+import { getHpoTermName, searchHpoTerms, useHpoTerms, type HpoTerm } from '@/lib/hpo-terms';
 import type { Gender, SampleType, Sample } from '../types';
 
 interface EditSampleModalProps {
@@ -101,7 +101,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
     if (!formData.hpoTerms.find(t => t.id === term.id)) {
       setFormData(prev => ({
         ...prev,
-        hpoTerms: [...prev.hpoTerms, { id: term.id, name: term.name }],
+        hpoTerms: [...prev.hpoTerms, { id: term.id, name: getHpoTermName(term, t.locale, hpoTerms) }],
       }));
     }
     setHpoSearchQuery('');
@@ -219,8 +219,8 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
                   {formData.hpoTerms.map((term) => (
                     <div key={term.id} className="inline-flex items-center gap-1.5 rounded-md border border-accent-muted bg-accent-subtle px-2.5 py-1.5 text-sm text-accent-fg">
                       <span className="font-mono text-xs text-accent-fg">{term.id}</span>
-                      <span>{term.name}</span>
-                      <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" onClick={() => removeHpoTerm(term.id)} className="ml-1 text-accent-fg hover:text-danger-fg" aria-label={t("samples.remove40a0d2", {p0: String(term.name)})} />
+                      <span>{getHpoTermName(term, t.locale, hpoTerms)}</span>
+                      <ActionButton size="small" iconOnly action="close" variant="ghost" type="button" onClick={() => removeHpoTerm(term.id)} className="ml-1 text-accent-fg hover:text-danger-fg" aria-label={t("samples.remove40a0d2", {p0: String(getHpoTermName(term, t.locale, hpoTerms))})} />
                     </div>
                   ))}
                 </div>
@@ -238,7 +238,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
                     {filteredHpoTerms.map((term) => (
                       <button key={term.id} type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-canvas-subtle" onClick={() => addHpoTerm(term)}>
                         <span className="font-mono text-xs text-accent-fg">{term.id}</span>
-                        <span className="text-sm">{term.name}</span>
+                        <span className="text-sm">{getHpoTermName(term, t.locale, hpoTerms)}</span>
                       </button>
                     ))}
                   </div>

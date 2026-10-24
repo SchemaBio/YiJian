@@ -1,11 +1,10 @@
 'use client';
 import { useText } from '@/i18n/useText';
 
-
 import * as React from 'react';
 import { TextArea } from '@schema/ui-kit';
 import { AIAssistanceAction } from './AIAssistanceAction';
-import { useHpoTerms } from '@/lib/hpo-terms';
+import { getHpoTermName, isHpoEnglishLocale, useHpoTerms } from '@/lib/hpo-terms';
 import { extractLocalHpo, type LocalHpoMatch } from '@/lib/hpo-extraction';
 
 export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }: {
@@ -14,6 +13,7 @@ export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }:
   const t = useText();
   const id = React.useId();
   const terms = useHpoTerms();
+  const isEnglish = isHpoEnglishLocale(t.locale);
   const [busy, setBusy] = React.useState(false), [message, setMessage] = React.useState('');
   const [local, setLocal] = React.useState<{ text: string; matches: LocalHpoMatch[] }>({ text: '', matches: [] });
   React.useEffect(() => {
@@ -24,7 +24,7 @@ export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }:
   const positive = matches.filter(match => match.polarity === 'present');
   const unambiguous = positive.filter(match => !match.ambiguous);
   const addLocal = () => {
-    onTerms(unambiguous.map(({ term }) => ({ id: term.id, name: term.name })));
+    onTerms(unambiguous.map(({ term }) => ({ id: term.id, name: getHpoTermName(term, t.locale, terms) })));
     setMessage(t('hpoExtraction.added', { p0: String(unambiguous.length) }));
   };
   return <div>
@@ -35,7 +35,10 @@ export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }:
           const canonical = new Map(terms.map(term => [term.id, term]));
           const generated = (result.hpoTerms ?? []).filter(term => !term.polarity || term.polarity === 'present');
           const unique = [...new Map(generated.map(term => [term.id, term])).values()];
-          const verified = unique.filter(term => canonical.has(term.id)).map(term => ({ id: term.id, name: canonical.get(term.id)!.name }));
+          const verified = unique.filter(term => canonical.has(term.id)).map(term => {
+            const canonicalTerm = canonical.get(term.id)!;
+            return { id: term.id, name: getHpoTermName(canonicalTerm, t.locale, terms) };
+          });
           onTerms(verified);
           setMessage(`${verified.length ? t("assistance.addedHpoTermsReviewBeforeSavingb9e09b", {p0: String(verified.length)}) : t("assistance.noUsableHpoTermsGeneratedae1ce3")}${verified.length < unique.length ? t("assistance.unknownIdentifiersWereIgnored2eadd5") : ''}${result.warnings?.length ? ` ${result.warnings.join('；')}` : ''}`);
         }} /></div>
@@ -46,9 +49,25 @@ export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }:
         <span className="text-xs font-medium text-fg-muted">{t('hpoExtraction.localTitle')}</span>
         <button type="button" className="yj-tool-button text-xs" disabled={disabled || busy || !unambiguous.length} onClick={addLocal}>{t('hpoExtraction.addCandidates', { p0: String(unambiguous.length) })}</button>
       </div>
-      <p className="text-xs text-fg-muted">{t('hpoExtraction.localDescription')}</p>
       <div className="flex flex-wrap gap-1.5" aria-label={t('hpoExtraction.candidates')}>
-        {positive.map(({ term, text, ambiguous }) => <button type="button" key={term.id} disabled={disabled || busy} onClick={() => { onTerms([{ id: term.id, name: term.name }]); setMessage(t('hpoExtraction.added', { p0: '1' })); }} className="rounded border border-border-default bg-canvas-default px-2 py-1 text-xs hover:bg-accent-subtle" title={text}>{term.name}{ambiguous && term.nameEn ? ` (${term.nameEn})` : ''} · {term.id}</button>)}
+        {positive.map(({ term, text, ambiguous }) => {
+          const displayName = getHpoTermName(term, t.locale, terms);
+          return (
+            <button
+              type="button"
+              key={term.id}
+              disabled={disabled || busy}
+              onClick={() => {
+                onTerms([{ id: term.id, name: displayName }]);
+                setMessage(t('hpoExtraction.added', { p0: '1' }));
+              }}
+              className="rounded border border-border-default bg-canvas-default px-2 py-1 text-xs hover:bg-accent-subtle"
+              title={text}
+            >
+              {displayName}{!isEnglish && ambiguous && term.nameEn ? ` (${term.nameEn})` : ''} · {term.id}
+            </button>
+          );
+        })}
         {local.text === value && !positive.length && <span className="text-xs text-fg-muted">{t('hpoExtraction.noMatch')}</span>}
       </div>
       {matches.length > positive.length && <p className="text-xs text-fg-muted">{t('hpoExtraction.excluded', { p0: String(matches.length - positive.length) })}</p>}

@@ -1,4 +1,5 @@
 'use client';
+import { getHpoTermName } from '@/lib/hpo-terms';
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
@@ -140,7 +141,7 @@ export function ClinicalInfoTab({ sample }: SampleInfoTabProps) {
                   <span className="text-xs text-fg-muted">{t("samples.hpoTerms294b0a")}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {sample.clinicalDiagnosis.hpoTerms.map((hpo, i) => (
-                      <HoverHint content={hpo.name} key={i}><Tag key={i} variant="info" className="font-mono" >
+                      <HoverHint content={getHpoTermName(hpo, t.locale)} key={i}><Tag key={i} variant="info" className="font-mono" >
                         {hpo.id}
                       </Tag></HoverHint>
                     ))}
