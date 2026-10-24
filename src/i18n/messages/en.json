@@ -3055,5 +3055,15 @@
     "badRelation": "Invalid trio relationship: self-links, identical parents and cycles are not allowed.",
     "idTooLong": "Parent internal sample IDs cannot exceed 100 characters.",
     "scopeMismatch": "Trio samples must belong to the same organization or permitted shared sample scope."
+  },
+  "hpoExtraction": {
+    "localTitle": "Automatic local HPO extraction",
+    "localDescription": "Segments text against bundled terms on this device without AI. Review candidates before adding. AI-assisted extraction calls the model separately.",
+    "addCandidates": "Add local candidates ({p0})",
+    "candidates": "Local HPO candidates",
+    "noMatch": "No clear terms matched. Edit the description, search manually, or use AI-assisted extraction.",
+    "excluded": "Excluded {p0} negated, uncertain, or family-history findings.",
+    "added": "Added {p0} local candidates. Review before saving.",
+    "ambiguous": "Some phrases match multiple IDs and are excluded from bulk adding. Review their English names and select individually."
   }
 }

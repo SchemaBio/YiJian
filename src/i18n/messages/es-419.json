@@ -3055,5 +3055,15 @@
     "badRelation": "Relación de trío no válida: no se permiten autorreferencias, padres idénticos ni ciclos.",
     "idTooLong": "Los identificadores internos parentales no pueden superar los 100 caracteres.",
     "scopeMismatch": "Las muestras del trío deben pertenecer a la misma organización o al ámbito compartido permitido."
+  },
+  "hpoExtraction": {
+    "localTitle": "Extracción automática local de HPO",
+    "localDescription": "Segmenta el texto y busca términos incluidos en este dispositivo sin IA. Revisa los candidatos antes de agregarlos. La extracción con IA llama al modelo por separado.",
+    "addCandidates": "Agregar candidatos locales ({p0})",
+    "candidates": "Candidatos locales de HPO",
+    "noMatch": "No se encontraron términos claros. Edita el texto, busca manualmente o usa la extracción con IA.",
+    "excluded": "Se excluyeron {p0} hallazgos negativos, inciertos o de antecedentes familiares.",
+    "added": "Se agregaron {p0} candidatos locales. Revisa antes de guardar.",
+    "ambiguous": "Algunas frases coinciden con varios identificadores y se excluyen de la selección masiva. Revisa sus nombres en inglés y selecciónalos individualmente."
   }
 }

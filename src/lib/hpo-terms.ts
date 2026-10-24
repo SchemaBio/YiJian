@@ -5,6 +5,7 @@ export type HpoTerm = {
   name: string;
   nameEn?: string;
   definition?: string;
+  synonyms?: string[];
 };
 
 type RawHpoTerm = {
@@ -13,6 +14,8 @@ type RawHpoTerm = {
   name_cn?: string;
   definition?: string;
   definition_cn?: string;
+  synonyms?: string[];
+  obsolete?: boolean;
 };
 
 const HPO_TERMS_PATH = '/hpo_terms_cn.json';
@@ -62,9 +65,10 @@ function normalizeHpoTerms(raw: unknown): HpoTerm[] {
         name,
         nameEn: value.name,
         definition: value.definition_cn || value.definition,
+        synonyms: value.synonyms,
       };
     })
-    .filter((term) => term.id.startsWith('HP:'));
+    .filter((term) => term.id.startsWith('HP:') && !(raw as Record<string, RawHpoTerm>)[term.id]?.obsolete);
 }
 
 async function loadHpoTerms(): Promise<HpoTerm[]> {
