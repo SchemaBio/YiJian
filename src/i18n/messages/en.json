@@ -2191,6 +2191,8 @@
     "localDevelopmentEnvironment77543d": "Local development environment"
   },
   "assistance": {
+    "aiCandidateClassification": "AI suggested classification (pending review): ",
+    "criterionStatus": { "met": "Met", "notMet": "Not met", "notApplicable": "Not applicable", "insufficient": "Insufficient evidence", "conflicting": "Conflicting evidence" },
     "aiAssistant5341ec": "AI assistant",
     "configureTheAiServiceFirst4a3222": "Configure the AI service first",
     "controlThePageWithNaturalLanguageInstructionsb52016": "Control the page with natural-language instructions, for example:",

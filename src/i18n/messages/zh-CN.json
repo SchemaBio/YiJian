@@ -2191,6 +2191,8 @@
     "localDevelopmentEnvironment77543d": "本地开发环境"
   },
   "assistance": {
+    "aiCandidateClassification": "AI 建议分类（待复核）：",
+    "criterionStatus": { "met": "满足", "notMet": "不满足", "notApplicable": "不适用", "insufficient": "证据不足", "conflicting": "证据冲突" },
     "aiAssistant5341ec": "AI 助手",
     "configureTheAiServiceFirst4a3222": "请先配置 AI 服务",
     "controlThePageWithNaturalLanguageInstructionsb52016": "您可以使用自然语言控制页面，例如：",

@@ -2191,6 +2191,8 @@
     "localDevelopmentEnvironment77543d": "本地開發環境"
   },
   "assistance": {
+    "aiCandidateClassification": "AI 建議分類（待覆核）：",
+    "criterionStatus": { "met": "滿足", "notMet": "不滿足", "notApplicable": "不適用", "insufficient": "證據不足", "conflicting": "證據衝突" },
     "aiAssistant5341ec": "AI 助手",
     "configureTheAiServiceFirst4a3222": "請先配置 AI 服務",
     "controlThePageWithNaturalLanguageInstructionsb52016": "您可以使用自然語言控制頁面，例如：",

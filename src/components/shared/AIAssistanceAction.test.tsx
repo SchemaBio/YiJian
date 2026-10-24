@@ -140,16 +140,15 @@ describe('AI generation confirmation and lifecycle', () => {
     expect(screen.queryByText(/AI 辅助功能未开启/i, { selector: '.text-xs' })).not.toBeInTheDocument();
     expect(screen.getByText(/AI 辅助功能未开启/i)).toBeInTheDocument();
   });
-  it('collects missing clinical context before payment without inventing germline origin', async () => {
+  it('charges for ACMG without requiring supplemental clinical context', async () => {
     const client = adapter(); client.getSettings = vi.fn().mockResolvedValue({ enabled: true, connected: true, configured: true, billingEnabled: true, capabilities: { acmg: { enabled: true } } });
     render(<AIAssistanceProvider deployment="saas" adapter={client}><AIAssistanceAction input={{ feature: 'acmg', taskId: 'task', reference: 'hg38', variant: { id: 'A' } }} onResult={vi.fn()} /></AIAssistanceProvider>);
     const button = screen.getByRole('button', { name: 'AI 生成ACMG 现版建议' }); await waitFor(() => expect(button).toBeEnabled()); fireEvent.click(button);
-    expect(screen.getByRole('dialog')).toHaveTextContent('补充 AI 评估上下文');
-    expect(client.generate).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('疾病标识'), { target: { value: 'MONDO:1' } }); fireEvent.change(screen.getByLabelText('遗传模式'), { target: { value: 'AD' } }); fireEvent.change(screen.getByLabelText('样本类型'), { target: { value: 'blood' } });
-    fireEvent.click(screen.getByRole('button', { name: '继续' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('每次消耗');
+    expect(client.generate).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('疾病标识')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '确认生成 · 1 积分' }));
-    await waitFor(() => expect(client.generate).toHaveBeenCalledWith(expect.objectContaining({ clinicalContext: expect.objectContaining({ diseaseId: 'MONDO:1', inheritance: 'AD', sampleType: 'blood', variantOrigin: 'unknown' }) }), expect.anything()));
+    await waitFor(() => expect(client.generate).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(client.generate).mock.calls[0][0].clinicalContext).toBeUndefined();
   });
 });

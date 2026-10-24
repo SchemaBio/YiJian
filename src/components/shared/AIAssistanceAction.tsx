@@ -28,7 +28,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const charge = deployment === 'saas' && settings.billingEnabled === true && !experimental && settings.capabilities?.[input.feature]?.billingEnabled !== false;
   const featureCapability = settings.capabilities?.[input.feature];
   const unavailable = !settings.enabled || !settings.connected || !settings.configured || featureCapability?.enabled === false;
-  const contextRequired = input.feature !== 'hpo' && !!settings.capabilities;
+  const contextRequired = input.feature !== 'hpo' && input.feature !== 'acmg' && !!settings.capabilities;
   const running = React.useRef(false);
   const controller = React.useRef<AbortController | null>(null);
   const scope = `${input.taskId ?? ''}:${input.feature}:${String(input.variant?.id ?? '')}`;
@@ -44,7 +44,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   }, [scope]);
   React.useEffect(() => { if (input.reference) setReference(input.reference); }, [input.reference]);
   React.useEffect(() => {
-    if (!input.taskId || !adapter.getClinicalContext) return;
+    if (input.feature === 'acmg' || !input.taskId || !adapter.getClinicalContext) return;
     const abort = new AbortController();
     void adapter.getClinicalContext(input.taskId, abort.signal).then(value => {
       if (!abort.signal.aborted) setContext(previous => ({ ...previous, sampleType: previous.sampleType || value.sampleType || '', hpoTerms: previous.hpoTerms ?? value.hpoTerms }));
@@ -107,6 +107,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
 }
 
 const CLASS_LABELS: Record<string, string> = { Pathogenic: '致病', Likely_Pathogenic: '可能致病', VUS: '意义未明', Likely_Benign: '可能良性', Benign: '良性', InsufficientEvidence: '证据不足' };
+const STATUS_KEYS: Record<string, string> = { met: 'met', not_met: 'notMet', not_applicable: 'notApplicable', insufficient_data: 'insufficient', conflicting: 'conflicting' };
 export function AIResultCard({ result, onUseInterpretation }: { result: AIAssistanceResult; onUseInterpretation?: () => void }) {
   const t = useText();
   const rule = result.ruleEngineResult && typeof result.ruleEngineResult === 'object' ? result.ruleEngineResult as Record<string, unknown> : undefined;
@@ -115,11 +116,12 @@ export function AIResultCard({ result, onUseInterpretation }: { result: AIAssist
   return <section aria-label={t("assistance.aiSuggestions89d49e")} className="space-y-3 rounded-lg border border-accent-subtle bg-accent-subtle/20 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="flex items-center gap-1.5 text-sm font-semibold"><Sparkles className="h-4 w-4 text-accent-fg" />{t("assistance.aiSuggestions89d49e")}</h4>{result.classification && <span className="text-sm font-medium">{translateUI(CLASS_LABELS[result.classification] ?? result.classification, t)}</span>}</div>
     <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{result.summary}</p>
+    {result.suggestedClassification && <p className="text-sm">{t('assistance.aiCandidateClassification')}{translateUI(CLASS_LABELS[result.suggestedClassification] ?? result.suggestedClassification, t)}</p>}
     {result.resultKind && <p className="text-xs text-fg-muted">{result.resultKind === 'experimental' ? t("assistance.draftExperimentUnverifiedInputNoClinicalUsea555f8") : result.resultKind === 'evidence_only' ? t("assistance.evidenceOrganizationSuggestionsNoFormalRuleClassificationfc1f1f") : result.resultKind === 'production' ? t("assistance.modelSuggestionsAndRuleResultsManualReview74dad3") : t("assistance.resultTyped3bde1", {p0: String(result.resultKind)})}</p>}
     {result.experimentalResult && <dl className="space-y-1 text-xs"><div>{t("assistance.experimentVersiona4948a")}{String(result.experimentalResult.version ?? t("samples.unknownd9c32a"))}</div><div>{t("assistance.draftClassificationdb633c")}{String(result.experimentalResult.classification ?? t("tasks.notAssessedd94e42"))} {t("assistance.score016cf6")}{String(result.experimentalResult.total_points ?? 'ND')}</div><div>{t("assistance.ruleHash93cea6")}{String(result.experimentalResult.ruleset_hash ?? t("samples.unknownd9c32a"))}</div></dl>}
     {rule && <div className="rounded border border-border-subtle p-2 text-xs"><span className="font-medium">{t("assistance.ruleEngineResulte92c5b")}</span><span className="ml-2">{result.classification ? t(CLASS_LABELS[result.classification] ?? result.classification) : t("assistance.noClassificationf11956")}{typeof score === 'number' || typeof score === 'string' ? t("assistance.score02fb3a", {p0: String(score)}) : ''}</span></div>}
     {reviewer && <div className="text-xs text-fg-muted">{t("assistance.manualDecision88c9c3")}{String(reviewer.classification ?? reviewer.decision ?? t("assistance.awaitingReview4607ba"))}{typeof reviewer.reason === 'string' ? ` · ${reviewer.reason}` : ''}</div>}
-    {!!result.evidence?.length && <dl className="space-y-2">{result.evidence.map((item, index) => <div key={`${item.code}-${index}`}><dt className="text-xs font-semibold">{item.code}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-fg-muted">{item.reason}</dd></div>)}</dl>}
+    {!!result.evidence?.length && <dl className="space-y-2">{result.evidence.map((item, index) => <div key={`${item.code}-${index}`} className="rounded border border-border-subtle p-2"><dt className="flex flex-wrap items-center gap-2 text-xs font-semibold"><span>{item.code}</span>{item.status && <span className="rounded bg-canvas-inset px-1.5 py-0.5 font-normal">{STATUS_KEYS[item.status] ? t(`assistance.criterionStatus.${STATUS_KEYS[item.status]}`) : item.status}</span>}{item.strength && <span className="font-normal text-fg-muted">{item.strength}</span>}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-fg-muted">{item.reason}</dd></div>)}</dl>}
     {!!result.warnings?.length && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{result.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{t("assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span>{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div>
   </section>;

@@ -34,8 +34,9 @@ export interface AIAssistanceResult {
   model?: string;
   generatedAt?: string;
   classification?: string;
+  suggestedClassification?: string;
   summary: string;
-  evidence?: Array<{ code: string; reason: string }>;
+  evidence?: Array<{ code: string; reason: string; status?: string; strength?: string }>;
   hpoTerms?: Array<{ id: string; name: string; polarity?: string; spanStart?: number; spanEnd?: number; spanUnit?: 'unicode_codepoint' | 'utf16' }>;
   warnings?: string[];
   agentProposal?: unknown;
@@ -65,5 +66,6 @@ export const pendingAIAssistanceAdapter: AIAssistanceAdapter = {
 export function formatAIInterpretation(result: AIAssistanceResult): string {
   if (result.resultKind === 'experimental' || result.experimentalResult) return 'SVC 草案实验结果禁止临床审核采纳。';
   return [`AI 辅助建议 · ${AI_FEATURE_LABELS[result.feature]}`, result.classification ? `建议分类：${result.classification}` : '', result.summary,
-    ...(result.evidence ?? []).map(item => `${item.code}：${item.reason}`), ...(result.warnings ?? []).map(item => `待复核：${item}`)].filter(Boolean).join('\n');
+    result.suggestedClassification ? `AI 建议分类（待复核）：${result.suggestedClassification}` : '',
+    ...(result.evidence ?? []).map(item => `${item.code}${item.status ? ` [${item.status}]` : ''}${item.strength ? ` (${item.strength})` : ''}：${item.reason}`), ...(result.warnings ?? []).map(item => `待复核：${item}`)].filter(Boolean).join('\n');
 }

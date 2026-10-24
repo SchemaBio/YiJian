@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { VariantDetailPanel } from './VariantDetailPanel';
 import type { SNVIndel } from '../types';
+import { AIAssistanceProvider } from '@/components/providers/AIAssistanceProvider';
+import type { AIAssistanceAdapter } from '@/lib/ai-assistance';
 vi.mock('@/lib/svcv4',()=>({getSVCv4Schema:vi.fn().mockResolvedValue({revision:'fixed',source:'https://example.org',moi:['AD'],geneDiseaseValidity:['MODERATE'],workflows:[],population:{type:'object',properties:{}},case:{type:'object',properties:{}},caseControl:{type:'object',properties:{}},unsupported:[]})}));
 
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => true }));
@@ -18,6 +20,30 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it('requests SepiLens AI for the selected variant and leaves adoption to the reviewer', async () => {
+    const save = vi.fn();
+    const client: AIAssistanceAdapter = {
+      getSettings: vi.fn().mockResolvedValue({ enabled: true, configured: true, connected: true, capabilities: { acmg: { enabled: true } } }),
+      saveSettings: vi.fn(),
+      getClinicalContext: vi.fn().mockResolvedValue({ sampleType: 'blood', hpoTerms: ['HP:0001250'] }),
+      generate: vi.fn().mockResolvedValue({ feature: 'acmg', summary: '合成测试结果', resultKind: 'evidence_only', suggestedClassification: 'VUS', evidence: [{ code: 'PM2', status: 'insufficient_data', strength: 'Supporting', reason: '覆盖度待核验' }] }),
+    };
+    const panel = (id: string) => <AIAssistanceProvider deployment="opensource" adapter={client}><VariantDetailPanel taskId="task" referenceGenome="hg38" variant={variant(id)} isOpen onClose={vi.fn()} onUpdateClassification={save} onSaveInterpretation={save} /></AIAssistanceProvider>;
+    const view = render(panel('A'));
+    fireEvent.click(screen.getByRole('tab', { name: 'ACMG' }));
+    const generate = screen.getByRole('button', { name: 'AI 生成ACMG 现版建议' });
+    await waitFor(() => expect(generate).toBeEnabled());
+    fireEvent.click(generate);
+    expect(screen.queryByRole('dialog', { name: '补充 AI 评估上下文' })).not.toBeInTheDocument();
+    await waitFor(() => expect(client.generate).toHaveBeenCalledWith(expect.objectContaining({ feature: 'acmg', taskId: 'task', reference: 'hg38', variant: expect.objectContaining({ gene: 'A', position: 100 }) }), expect.anything()));
+    expect(vi.mocked(client.generate).mock.calls[0][0].clinicalContext).toBeUndefined();
+    expect(await screen.findByText('覆盖度待核验')).toBeVisible();
+    expect(screen.getByText('Supporting')).toBeVisible();
+    expect(screen.getByText(/AI 建议分类（待复核）/)).toBeVisible();
+    expect(save).not.toHaveBeenCalled();
+    view.rerender(panel('B'));
+    expect(screen.queryByText('合成测试结果')).not.toBeInTheDocument();
+  });
   it('derives ClinVar stars from review status even when the imported star is missing or stale', () => {
     const props = { taskId: 'task', isOpen: true, onClose: vi.fn() };
     const { rerender } = render(<VariantDetailPanel {...props} variant={{ ...variant('A'), clinvarStars: '.', annotationValues: { ClinVar_RevStat: 'reviewed_by_expert_panel' } }} />);
