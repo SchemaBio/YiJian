@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { AIAssistanceAdapter } from '@/lib/ai-assistance';
 import { AIAssistanceProvider } from '@/components/providers/AIAssistanceProvider';
@@ -70,6 +70,10 @@ it('calls the AI adapter only when AI-assisted extraction is clicked', async () 
   expect(generate).not.toHaveBeenCalled();
   fireEvent.click(button);
   await waitFor(() => expect(generate).toHaveBeenCalledWith(expect.objectContaining({ feature: 'hpo', diagnosis: '头痛' }), expect.anything()));
+  const candidate = await within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).findByRole('button', { name: '头痛 · HP:0002315' });
+  expect(within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(onTerms).not.toHaveBeenCalled();
+  fireEvent.click(candidate);
   await waitFor(() => expect(onTerms).toHaveBeenCalledWith([{ id: 'HP:0002315', name: '头痛' }]));
 });
 
@@ -92,7 +96,53 @@ describe('AI HPO generation', () => {
     const button = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
-    await waitFor(() => expect(receive).toHaveBeenCalledWith([{ id: 'HP:0001250', name: '癫痫发作' }]));
-    expect(screen.getByRole('status')).toHaveTextContent('未收录的编号已忽略');
+    const candidate = await within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).findByRole('button', { name: '癫痫发作 · HP:0001250' });
+    expect(receive).not.toHaveBeenCalled();
+    expect(within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).queryByRole('button', { name: /HP:9999999/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/未收录的编号已忽略/)).toBeInTheDocument();
+    fireEvent.click(candidate);
+      await waitFor(() => expect(receive).toHaveBeenCalledWith([{ id: 'HP:0001250', name: '癫痫发作' }]));
   });
+});
+
+it('lets users confirm a subset and clears pending candidates when the phenotype changes', async () => {
+  const onTerms = vi.fn();
+  const client: AIAssistanceAdapter = { getSettings: vi.fn().mockResolvedValue({ enabled: true, connected: true, configured: true }), saveSettings: vi.fn(), generate: vi.fn().mockResolvedValue({ feature: 'hpo', summary: 'AI', hpoTerms: [{ id: 'HP:0001250', name: 'Seizure' }, { id: 'HP:0002315', name: 'Headache' }] }) };
+  const renderField = (value: string) => <AIAssistanceProvider deployment="opensource" adapter={client}><AIDiagnosisField value={value} onChange={vi.fn()} onTerms={onTerms} /></AIAssistanceProvider>;
+  const { rerender } = render(renderField('研究背景描述'));
+  const generate = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
+  await waitFor(() => expect(generate).toBeEnabled());
+  fireEvent.click(generate);
+  const seizure = await within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).findByRole('button', { name: '癫痫发作 · HP:0001250' });
+  expect(onTerms).not.toHaveBeenCalled();
+  expect(within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).queryByRole('checkbox')).not.toBeInTheDocument();
+  fireEvent.click(seizure);
+  expect(onTerms).toHaveBeenCalledTimes(1);
+  expect(onTerms).toHaveBeenCalledWith([{ id: 'HP:0001250', name: '癫痫发作' }]);
+  expect(within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).getByRole('button', { name: '头痛 · HP:0002315' })).toBeInTheDocument();
+  rerender(renderField('新的研究背景描述'));
+  expect(within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).queryByRole('button', { name: '头痛 · HP:0002315' })).not.toBeInTheDocument();
+  expect(onTerms).toHaveBeenCalledTimes(1);
+});
+
+it('restores saved candidates after reopening without generating or automatically adding terms', async () => {
+  const generate = vi.fn();
+  const getSavedHPO = vi.fn().mockResolvedValue({ feature: 'hpo', summary: 'saved', hpoTerms: [{ id: 'HP:0001250', name: 'Seizure' }] });
+  const client = { getSettings: vi.fn().mockResolvedValue({ enabled: false, connected: false, configured: false }), saveSettings: vi.fn(), getSavedHPO, generate };
+  const onTerms = vi.fn();
+  const field = () => <AIAssistanceProvider deployment="opensource" adapter={client}><AIDiagnosisField value="已保存的表型描述" onChange={vi.fn()} onTerms={onTerms} /></AIAssistanceProvider>;
+  const first = render(field());
+  let region = within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' }));
+  const candidate = await region.findByRole('button', { name: '癫痫发作 · HP:0001250' });
+  expect(generate).not.toHaveBeenCalled();
+  expect(onTerms).not.toHaveBeenCalled();
+  fireEvent.click(candidate);
+  expect(candidate).toBeInTheDocument();
+  first.unmount();
+  render(field());
+  region = within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' }));
+  await region.findByRole('button', { name: '癫痫发作 · HP:0001250' });
+  expect(getSavedHPO).toHaveBeenCalledTimes(2);
+  expect(generate).not.toHaveBeenCalled();
+  expect(onTerms).toHaveBeenCalledTimes(1);
 });

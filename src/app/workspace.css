@@ -56,6 +56,7 @@
 .yj-loading-label-active { justify-self: center; }
 @keyframes yj-button-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .yj-action-button svg { animation: none !important; } }
+.yj-ai-generation-button[aria-busy="true"] .yj-button-spinner { animation: yj-button-spin 1s linear infinite !important; }
 .yj-tool-popover {
   z-index: 80; width: min(360px, calc(100vw - 24px)); max-height: min(560px, var(--radix-popover-content-available-height));
   overflow: auto; padding: 16px; background: var(--yj-panel-bg); color: var(--yj-text-strong);

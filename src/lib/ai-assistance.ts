@@ -45,6 +45,7 @@ export interface AIAssistanceResult {
   experimentalResult?: Record<string, unknown>;
 }
 export interface AIAssistanceAdapter {
+  getSavedHPO?(diagnosis: string, signal: AbortSignal): Promise<AIAssistanceResult | null>;
   getClinicalContext?(taskId: string, signal: AbortSignal): Promise<Partial<AIClinicalContext>>;
   getSettings(deployment: AIDeployment, signal?: AbortSignal): Promise<AIAssistanceSettings>;
   saveSettings(draft: AISettingsDraft): Promise<AIAssistanceSettings>;

@@ -22,6 +22,7 @@ function pause(signal: AbortSignal): Promise<void> {
   });
 }
 export const httpAIAssistanceAdapter: AIAssistanceAdapter = {
+  getSavedHPO: (diagnosis, signal) => api.post<AIAssistanceResult | null>(`${ROOT}/hpo-cache`, { diagnosis }, { signal }),
   async getClinicalContext(taskId, signal) {
     const sample = await api.get<{ sample_type?: string; clinical_diagnosis?: { hpoTerms?: Array<{ id: string }> } }>(`/v1/tasks/${encodeURIComponent(taskId)}/sample`, { signal });
     const types: Record<string, string> = { 全血: 'blood', 唾液: 'saliva', 组织: 'tissue', 其他: 'other' };

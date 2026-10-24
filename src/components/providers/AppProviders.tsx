@@ -4,7 +4,6 @@ import * as React from 'react';
 import { ThemeProvider } from '@schema/ui-kit';
 import { AIAssistanceProvider } from './AIAssistanceProvider';
 import { AuthProvider, useAuth } from './AuthProvider';
-import { AIProvider } from './AIProvider';
 import { UploadProvider } from './UploadProvider';
 import { LocaleProvider } from './LocaleProvider';
 import { setAssessmentCacheScope } from '@/lib/assessment/cache';
@@ -19,7 +18,7 @@ interface AppProvidersProps {
  * AppProviders wraps the application with all necessary providers.
  * Includes ThemeProvider for theme management,
  * AuthProvider for authentication,
- * and AIProvider for AI assistant configuration.
+ * and AIAssistanceProvider for HPO extraction and evidence organization.
  */
 export function AppProviders({ children, locale }: AppProvidersProps) {
   return (
@@ -27,9 +26,7 @@ export function AppProviders({ children, locale }: AppProvidersProps) {
     <ThemeProvider defaultTheme="light" storageKey="germline-theme">
       <AuthProvider>
         <UploadProvider>
-          <AIProvider>
-            <AssistanceScope>{children}</AssistanceScope>
-          </AIProvider>
+          <AssistanceScope>{children}</AssistanceScope>
         </UploadProvider>
       </AuthProvider>
     </ThemeProvider>

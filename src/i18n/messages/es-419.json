@@ -3064,6 +3064,11 @@
     "noMatch": "No se encontraron términos claros. Edita el texto, busca manualmente o usa la extracción con IA.",
     "excluded": "Se excluyeron {p0} hallazgos negativos, inciertos o de antecedentes familiares.",
     "added": "Se agregaron {p0} candidatos locales. Revisa antes de guardar.",
-    "ambiguous": "Algunas frases coinciden con varios identificadores y se excluyen de la selección masiva. Revisa sus nombres en inglés y selecciónalos individualmente."
+    "ambiguous": "Algunas frases coinciden con varios identificadores y se excluyen de la selección masiva. Revisa sus nombres en inglés y selecciónalos individualmente.",
+    "aiTitle": "Extracción de HPO asistida por IA",
+    "aiDescription": "Haz clic en un candidato para agregarlo a los términos HPO.",
+    "aiCandidates": "Candidatos HPO de IA pendientes de confirmación",
+    "aiEmpty": "No hay candidatos de IA pendientes de confirmación.",
+    "aiAdded": "Se agregaron {p0} candidatos de IA confirmados."
   }
 }

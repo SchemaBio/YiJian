@@ -15,8 +15,6 @@ import { SidebarNav } from './SidebarNav';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MobileNav } from './MobileNav';
-import { AssistantButton } from '@/components/assistant';
-import { useAI } from '@/components/providers/AIProvider';
 import { ResearchUseBadge } from '@/components/shared/ResearchPolicy';
 import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
@@ -132,11 +130,6 @@ function getBreadcrumbs(pathname: string, t: TextTranslator = chineseText): Brea
  * Includes Sidebar with navigation and Main Content area.
  * Handles responsive behavior for different viewport sizes.
  */
-function shouldMountAIAssistant(pathname: string, isEnabled: boolean): boolean {
-  if (!isEnabled) return false;
-  return !pathname.startsWith('/admin') && !pathname.startsWith('/settings') && !pathname.startsWith('/billing');
-}
-
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   return <OperationScope permission={permissionForPath(pathname)}><AppShellContent>{children}</AppShellContent></OperationScope>;
@@ -145,8 +138,6 @@ function AppShellContent({ children }: AppShellProps) {
   const t = useText();
   const pathname = usePathname();
   const fixedTaskWorkspace = /^\/tasks\/[^/]+$/.test(pathname) || pathname === '/history';
-  const { isEnabled: aiAssistantEnabled } = useAI();
-  const showAssistant = shouldMountAIAssistant(pathname, aiAssistantEnabled);
   const { collapsed, setCollapsed } = useSidebarState();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1279px)');
@@ -202,7 +193,6 @@ function AppShellContent({ children }: AppShellProps) {
           />
         )}
         <main className={`min-h-0 flex-1 ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>{children}</main>
-        {showAssistant ? <AssistantButton /> : null}
       </div>
     );
   }
@@ -258,7 +248,6 @@ function AppShellContent({ children }: AppShellProps) {
         </main>
       </div>
 
-      {showAssistant ? <AssistantButton /> : null}
     </div>
   );
 }

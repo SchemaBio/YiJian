@@ -7,7 +7,7 @@ import { translateUI } from '@/i18n/text';
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 
 import * as React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { AppModal } from './AppModal';
 import { useAIAssistance } from '@/components/providers/AIAssistanceProvider';
 import { AIRequestError, AI_FEATURE_LABELS, type AIClinicalContext, type AIAssistanceInput, type AIAssistanceResult } from '@/lib/ai-assistance';
@@ -77,11 +77,14 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const continueGeneration = () => { if (charge && !skipConfirmation) setConfirmOpen(true); else void generate(charge); };
   const missingContext = !reference || !context.sampleType || (!context.diseaseId.trim() || !context.inheritance.trim()) || (experimental && context.variantOrigin !== 'germline_confirmed');
   return <>
-    <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={t("assistance.aiGenerated7d0bf", {p0: String(label)})} hint={inactiveReason || t("assistance.aiGeneratedb4967", {p0: String(label), p1: String(deployment === 'saas' ? charge ? ` ${t('· 1 积分/次')}` : ` ${t('· 联调期间不扣费')}` : '')})}
-      disabled={disabled || busy || unavailable} className="inline-flex shrink-0 items-center gap-1 rounded-md p-1.5 text-accent-fg transition-colors hover:bg-accent-subtle disabled:opacity-40"
-      onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }} />
+    {!(busy && serverRequestId && adapter.cancel) && <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={t("assistance.aiGenerated7d0bf", {p0: String(label)})} hint={inactiveReason || t("assistance.aiGeneratedb4967", {p0: String(label), p1: String(deployment === 'saas' ? charge ? ` ${t('· 1 积分/次')}` : ` ${t('· 联调期间不扣费')}` : '')})}
+      disabled={disabled || busy || unavailable} className="yj-ai-generation-button inline-flex shrink-0 items-center gap-1 rounded-md p-1.5 text-accent-fg transition-colors hover:bg-accent-subtle disabled:opacity-40"
+      onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }} />}
     {deployment === 'saas' && !charge && !inactiveReason && <span className="text-xs text-fg-muted">{t("assistance.noChargeDuringIntegrationTestinge54a18")}</span>}
-    {busy && serverRequestId && adapter.cancel && <ActionButton loading={cancelling} loadingLabel={t("assistance.cancelingb3f55e")} variant="ghost" type="button" disabled={cancelling} className="yj-tool-button" onClick={async () => { setCancelling(true); try { await adapter.cancel!(serverRequestId); } catch { setError(t("assistance.unableToCancelRequestRetryfca412")); setCancelling(false); } }}>{t("admin.cancel4d0b46")}</ActionButton>}
+    {busy && serverRequestId && adapter.cancel && <button type="button" disabled={cancelling} aria-busy={cancelling || undefined} className="yj-tool-button text-xs" onClick={async () => { setCancelling(true); try { await adapter.cancel!(serverRequestId); } catch { setError(t("assistance.unableToCancelRequestRetryfca412")); setCancelling(false); } }}>
+      <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+      {cancelling ? t("assistance.cancelingb3f55e") : t("admin.cancel4d0b46")}
+    </button>}
     {error && <p role="alert" className="basis-full text-xs leading-relaxed text-danger-fg">{error}</p>}
     <AppModal open={contextOpen} onOpenChange={setContextOpen} title={t("assistance.addAiAssessmentContext8bae3f")} size="small" footer={<><ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={() => setContextOpen(false)}>{t("admin.cancel4d0b46")}</ActionButton><ActionButton variant="ghost" type="button" className="yj-tool-button" disabled={missingContext} onClick={() => { setContextOpen(false); continueGeneration(); }}>{t("assistance.continue1fc1af")}</ActionButton></>}>
       <div className="space-y-3 text-sm">

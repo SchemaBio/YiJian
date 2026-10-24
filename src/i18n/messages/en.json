@@ -3064,6 +3064,11 @@
     "noMatch": "No clear terms matched. Edit the description, search manually, or use AI-assisted extraction.",
     "excluded": "Excluded {p0} negated, uncertain, or family-history findings.",
     "added": "Added {p0} local candidates. Review before saving.",
-    "ambiguous": "Some phrases match multiple IDs and are excluded from bulk adding. Review their English names and select individually."
+    "ambiguous": "Some phrases match multiple IDs and are excluded from bulk adding. Review their English names and select individually.",
+    "aiTitle": "AI-assisted HPO extraction",
+    "aiDescription": "Click a candidate to add it to HPO terms.",
+    "aiCandidates": "AI HPO candidates awaiting confirmation",
+    "aiEmpty": "No AI candidates awaiting confirmation.",
+    "aiAdded": "Added {p0} confirmed AI candidates."
   }
 }

@@ -9,6 +9,27 @@ function adapter(enabled = true): AIAssistanceAdapter {
   return { getSettings: vi.fn().mockResolvedValue({ enabled, connected: true, configured: true, billingEnabled: true }), saveSettings: vi.fn(),
     generate: vi.fn(async input => ({ feature: input.feature, classification: 'VUS', summary: '需要人工复核', hpoTerms: [] })) };
 }
+
+it('shows the running spinner to the left of the cancel button label', async () => {
+  const client = adapter();
+  let complete!: (result: AIAssistanceResult) => void;
+  client.cancel = vi.fn().mockResolvedValue(undefined);
+  client.generate = vi.fn((_input, options) => {
+    options.onRequest?.('running-hpo');
+    return new Promise<AIAssistanceResult>(resolve => { complete = resolve; });
+  });
+  render(<AIAssistanceProvider deployment="opensource" adapter={client}><AIAssistanceAction input={{ feature: 'hpo', diagnosis: '合成描述' }} onResult={vi.fn()} /></AIAssistanceProvider>);
+  const button = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+  expect(screen.queryByRole('button', { name: 'AI 生成HPO 候选术语' })).not.toBeInTheDocument();
+  const cancel = screen.getByRole('button', { name: '取消' });
+  expect(cancel.firstElementChild).toHaveClass('animate-spin');
+  expect(cancel).toBeEnabled();
+  await act(async () => { complete({ feature: 'hpo', summary: 'done', hpoTerms: [] }); });
+  expect(screen.getByRole('button', { name: 'AI 生成HPO 候选术语' })).toBeEnabled();
+  expect(screen.queryByRole('button', { name: '取消' })).not.toBeInTheDocument();
+});
 beforeEach(() => sessionStorage.clear());
 
 describe('AI generation confirmation and lifecycle', () => {
