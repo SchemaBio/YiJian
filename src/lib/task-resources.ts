@@ -1,3 +1,4 @@
+import {canonicalPipelineId} from './builtin-resources';
 import { api } from './api';
 import {readResourcePages} from './resource-pages';
 import type { SampleDetail } from '@/app/(main)/samples/types';
@@ -111,7 +112,7 @@ export function normalizeSampleDetail(rawValue: unknown): SampleDetail {
 function normalizePipeline(rawValue: unknown): TaskPipelineOption {
   const raw = (rawValue ?? {}) as Record<string, unknown>;
   return {
-    id: String(raw.id ?? ''),
+    id: canonicalPipelineId(String(raw.id ?? '')),
     name: String(raw.name ?? ''),
     version: String(raw.version ?? ''),
     baseType: valueOf<string | undefined>(raw, 'baseType', 'base_type', undefined),
@@ -157,7 +158,7 @@ export const pipelinesApi = {
     const response = await readResourcePages<unknown>('/v1/pipelines');
     return response
       .map(normalizePipeline)
-      .filter(pipeline => pipeline.id && pipeline.name && (isFamilyAnalysis(pipeline) || (pipeline.status !== 'inactive' && pipeline.resourceAvailable !== false)));
+      .filter(pipeline => pipeline.id && pipeline.name && pipeline.status !== 'inactive' && pipeline.resourceAvailable !== false);
   },
 };
 
@@ -167,4 +168,3 @@ export const templatesApi = {
     return unwrapList(response).map(normalizeTemplate).filter(template => template.name);
   },
 };
-import { isFamilyAnalysis } from './analysis-availability';

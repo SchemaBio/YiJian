@@ -1,4 +1,5 @@
 'use client';
+import {GenomeTag} from '@/components/shared/GenomeTag';
 import { formatNumericString } from '@/i18n/format';
 
 import { errorText } from '@/i18n/errors';
@@ -166,7 +167,7 @@ export default function BaselinePage() {
   const columns: Column<CNVBaseline>[] = [
     { id: 'id', header: t("pipeline.baselineId"), accessor: (row) => <IdCell id={row.id} full />, width: 310, align: 'left' },
     { id: 'name', header: t("pipeline.baselineName97a06f"), accessor: (row) => resourceDisplayName(row.id, row.name, t), width: 190, align: 'left' },
-    { id: 'reference', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => <Tag variant="info">{row.reference_genome}</Tag>, width: 120, align: 'center' },
+    { id: 'reference', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => <GenomeTag genome={row.reference_genome}/>, width: 120, align: 'center' },
     { id: 'data', header: t("pipeline.dataGroupse12c50"), accessor: (row) => row.is_builtin ? '-' : t("pipeline.rRPairs41bb65", {p0: String(row.read_pairs.length)}), width: 110, align: 'center' },
     ...(isSaaS ? [{ id: 'credits', header: t("pipeline.creditsb3e265"), accessor: (row: CNVBaseline) => row.is_builtin ? '-' : t("pipeline.credits0193ac", {p0: String(row.credits_charged || row.credit_cost)}), width: 90, align: 'center' as const }] : []),
     { id: 'bed', header: t("pipeline.bedFiles8ee058"), accessor: (row) => <HoverHint content={resourceDisplayName(row.bed.id, row.bed.file_name, t)}><span className="block truncate" >{resourceDisplayName(row.bed.id, row.bed.file_name, t)}</span></HoverHint>, width: 220, align: 'left' },

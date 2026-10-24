@@ -1,3 +1,4 @@
+import type {TrioMember} from '@/lib/sample-parents';
 export type TaskStatus =
   | 'waiting_for_data'
   | 'queued'
@@ -8,6 +9,7 @@ export type TaskStatus =
   | 'pending_interpretation';
 
 export interface AnalysisTask {
+ trioMembers?:TrioMember[];
   template?: string;
  resultCapabilities?: string[];
   id: string;
@@ -42,6 +44,7 @@ export interface AnalysisTask {
 }
 
 export interface AnalysisTaskDetail {
+ trioMembers?:TrioMember[];
   template?: string;
  resultCapabilities?: string[];
   id: string;

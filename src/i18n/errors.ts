@@ -10,6 +10,13 @@ export class LocalizedError extends Error {
 
 // Translate only known API messages; arbitrary server/user text stays intact.
 const backendMessages: Record<string, string> = {
+  'invalid parent affected status':'sampleParents.invalidStatus',
+  'trio samples must belong to the same sample scope':'sampleParents.scopeMismatch',
+  'parent internal ID exceeds 100 characters':'sampleParents.idTooLong',
+  'father and mother must be different samples':'sampleParents.badRelation',
+  'sample parent relationship contains a cycle':'sampleParents.badRelation',
+  'trio requires three different samples':'sampleParents.badRelation',
+  'trio members must use six different FASTQ assets':'sampleParents.badRelation',
   'registration unavailable': 'registration.unavailable',
   'registration challenge failed': 'registration.challengeFailed',
   'registration rate limit exceeded': 'registration.retryLater',
@@ -33,6 +40,10 @@ export function errorText(error: unknown, t: TextTranslator): string {
   if (error instanceof LocalizedError) return t(error.messageKey, error.values);
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : undefined;
   if (message === undefined) return t('未知错误');
+  const parentState=message.match(/^(proband|father|mother) sample (missing|ambiguous|unavailable)$/);
+  if(parentState)return t('sampleParents.'+parentState[1])+': '+t('sampleParents.'+parentState[2]);
+  const trioInput=message.match(/^(proband|father|mother) (sample (?:is missing, unavailable or ambiguous|is unavailable|not found|has expired)|requires complete R1\/R2 data|FASTQ asset (?:is unavailable|has invalid read type, size or expiry))$/);
+  if(trioInput)return t('sampleParents.inputUnavailable',{p0:t('sampleParents.'+trioInput[1])});
   const key = Object.prototype.hasOwnProperty.call(backendMessages, message) ? backendMessages[message] : undefined;
   return key ? t(key) : message;
 }

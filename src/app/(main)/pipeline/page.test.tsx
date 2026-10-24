@@ -29,13 +29,13 @@ it('keeps resource-load failures distinct from an empty pipeline list and suppor
 it('updates built-in table names and search when the interface language changes', async () => {
   vi.mocked(readResourcePages).mockResolvedValue([{ id: 'builtin-wes-single-hg38', name: 'WES单样本分析（hg38）', is_builtin: true, reference_genome: 'hg38' }]);
   const { rerender } = render(<PipelinePage />);
-  await screen.findByText('WES单样本分析（hg38）');
+  await screen.findByText('WES单样本分析_hg38');
   expect(screen.getByText('builtin-wes-single-hg38')).toBeInTheDocument();
   translator = createTextTranslator('en');
   rerender(<PipelinePage />);
-  await screen.findByText('WES single-sample analysis (hg38)');
+  await screen.findByText('WES single-sample analysis_hg38');
   fireEvent.change(screen.getByPlaceholderText(translator('pipeline.searchPipelinesa96425')), { target: { value: 'single-sample' } });
-  expect(screen.getByText('WES single-sample analysis (hg38)')).toBeInTheDocument();
+  expect(screen.getByText('WES single-sample analysis_hg38')).toBeInTheDocument();
 });
 
 it.each(['octopus', 'squid'])('shows and copies the actual full pipeline ID in %s', async backend => {

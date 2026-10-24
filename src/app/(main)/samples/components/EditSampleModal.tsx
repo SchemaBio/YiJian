@@ -1,4 +1,6 @@
 'use client';
+import {SampleParentFields} from '@/components/shared/SampleParentFields';
+import type {SampleParentValues} from '@/lib/sample-parents';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -22,7 +24,7 @@ interface EditSampleModalProps {
   sample: Sample | null;
 }
 
-export interface EditSampleFormData {
+export interface EditSampleFormData extends SampleParentValues {
   internalId: string;
   gender: Gender;
   age?: number;
@@ -53,6 +55,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [formData, setFormData] = React.useState<EditSampleFormData>({
+    fatherSampleInternalId:'',motherSampleInternalId:'',fatherAffectedStatus:'',motherAffectedStatus:'',
     internalId: '',
     gender: 'unknown',
     age: undefined,
@@ -73,6 +76,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
       setHpoSearchQuery('');
       setShowHpoDropdown(false);
       setFormData({
+        fatherSampleInternalId:sample.fatherSampleInternalId||'',motherSampleInternalId:sample.motherSampleInternalId||'',fatherAffectedStatus:sample.fatherAffectedStatus||'',motherAffectedStatus:sample.motherAffectedStatus||'',
         internalId: sample.internalId,
         gender: sample.gender,
         age: sample.age,
@@ -251,6 +255,7 @@ export function EditSampleModal({ isOpen, onClose, onSubmit, sample }: EditSampl
           />
           <TextArea value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder={t("samples.enterNotesacc063")} rows={2} />
         </section>
+      <SampleParentFields value={formData} onChange={parents=>setFormData(previous=>({...previous,...parents}))} internalId={formData.internalId} sampleId={sample?.id} disabled={submitting}/>
       </form>
     </AppModal>
   );

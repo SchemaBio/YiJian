@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import {NewTaskModal} from '../components/NewTaskModal';
 import NewAnalysisPage from './page';
+import {getTrioContext} from '@/lib/sample-parents';
 import { tasksApi } from '@/lib/tasks';
 import {readResourcePage} from '@/lib/resource-pages';
 
@@ -21,6 +22,7 @@ vi.mock('@/lib/task-resources', async importOriginal => ({...await importOrigina
   ]) },
 }));
 vi.mock('@/lib/resource-pages',()=>({readResourcePage:vi.fn(async(endpoint:string)=>({items:endpoint==='/v1/samples'?[{id:'business',internal_id:'BIZ-1'}]:[{id:'vcf-asset',file_name:'multi.vcf.gz'}],total:1}))}));
+vi.mock('@/lib/sample-parents',async original=>({...await original<typeof import('@/lib/sample-parents')>(),getTrioContext:vi.fn(async()=>({ready:true,members:[{role:'father',internal_id:'DAD',gender:'male',affected_status:'carrier'},{role:'mother',internal_id:'MOM',gender:'female',affected_status:''}],errors:[],warnings:[],estimated_minutes:100}))}));
 vi.mock('@/lib/tasks',()=>({tasksApi:{estimate:vi.fn(async()=>({estimated_minutes:60})),create:vi.fn(async()=>({id:'created'}))}}));
 vi.mock('@/lib/pedigrees', () => ({
   listPedigrees: vi.fn(async () => [{ id: 'family' }]),
@@ -36,11 +38,11 @@ vi.mock('@schema/ui-kit', async (importOriginal) => {
   ) };
 });
 
-it('shows family workflows as unavailable without requesting pedigree data', async () => {
+it('offers trio workflows without requesting pedigree data', async () => {
   render(<NewAnalysisPage />);
   const pipeline = await screen.findByRole('combobox', {name:'选择分析流程'});
   await waitFor(() => expect(pipeline).toHaveValue('single'));
-  expect(screen.getByRole('option', {name:/家系.*暂未开放/})).toBeDisabled();
+  expect(screen.getByRole('option', {name:'家系'})).toBeEnabled();
   expect(listPedigrees).not.toHaveBeenCalled();
   expect(getPedigree).not.toHaveBeenCalled();
 });
@@ -76,4 +78,26 @@ it('preserves VCF inputs in the existing task modal and hides FASTQ readiness',a
  expect(screen.queryByText('测序数据')).not.toBeInTheDocument();
  fireEvent.click(screen.getByRole('button',{name:'创建任务'}));
  await waitFor(()=>expect(submit).toHaveBeenCalledWith(expect.objectContaining({vcf_asset_id:'vcf-asset',vcf_sample_name:'S2',inputs:{}})));
+});
+
+it.each(['page','modal'])('submits a proband sample through the %s entrypoint',async entry=>{
+ const submit=vi.fn(async()=>{});
+ if(entry==='page')render(<NewAnalysisPage/>);else render(<NewTaskModal isOpen onClose={vi.fn()} onSubmit={submit}/>);
+ const pipeline=await screen.findByRole('combobox');await waitFor(()=>expect(pipeline).toHaveValue('single'));
+ fireEvent.change(pipeline,{target:{value:'trio'}});
+ fireEvent.click(await screen.findByRole('radio',{name:/BIZ-1/}));
+ await screen.findByText(/DAD/);
+ expect(screen.getByText(/携带者/)).toBeInTheDocument();
+ expect(getTrioContext).toHaveBeenCalledWith('business',expect.any(AbortSignal));
+ await waitFor(()=>expect(tasksApi.estimate).toHaveBeenCalledWith(expect.objectContaining({sampleId:'business',pipelineId:'trio'})));
+ expect(readResourcePage).toHaveBeenCalledWith('/v1/samples',expect.objectContaining({analysis_type:'trio'}),expect.any(AbortSignal));
+ fireEvent.click(screen.getByRole('button',{name:entry==='page'?'提交任务':'创建任务'}));
+ await waitFor(()=>expect(entry==='page'?tasksApi.create:submit).toHaveBeenCalledWith(expect.objectContaining({sampleId:'business',pipelineId:'trio'})));
+ const request=vi.mocked(entry==='page'?tasksApi.create:submit).mock.calls.at(-1)?.[0];expect(request).not.toHaveProperty('pedigreeId');
+});
+it('blocks trio submission when preflight reports incomplete data',async()=>{
+ vi.mocked(getTrioContext).mockResolvedValueOnce({ready:false,members:[],errors:['incomplete test input'],warnings:[],estimated_minutes:0});
+ render(<NewAnalysisPage/>);const pipeline=await screen.findByRole('combobox');await waitFor(()=>expect(pipeline).toHaveValue('single'));fireEvent.change(pipeline,{target:{value:'trio'}});
+ fireEvent.click(await screen.findByRole('radio',{name:/BIZ-1/}));await screen.findByText('incomplete test input');
+ expect(screen.getByRole('button',{name:'提交任务'})).toBeDisabled();
 });

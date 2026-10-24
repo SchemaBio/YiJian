@@ -1,5 +1,6 @@
 'use client';
-import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import {GenomeTag} from '@/components/shared/GenomeTag';
+import { isFamilyAnalysisUnavailable } from '@/lib/analysis-availability';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -23,10 +24,10 @@ import {readResourcePages} from '@/lib/resource-pages';
 import {ResourcePager} from '@/components/shared/ResourcePager';
 import { listAllBEDAssets, type DataAsset } from '@/lib/data-assets';
 import { listCNVBaselines, type CNVBaseline } from '@/lib/cnv-baselines';
-import { builtinBEDId, builtinBEDLabel, builtinCNVBaselineId, builtinCNVBaselineLabel, resourceDisplayName, pipelineDisplayName } from '@/lib/builtin-resources';
+import { builtinBEDId, builtinBEDLabel, builtinCNVBaselineId, builtinCNVBaselineLabel, resourceDisplayName, pipelineDisplayName, canonicalPipelineId } from '@/lib/builtin-resources';
 
 type BasePipelineType = 'wes_single' | 'wes_family' | 'vcf_annotation';
-type BuiltinPipelineID = 'builtin-vcf2anno-hg19' | 'builtin-vcf2anno-hg38' | 'builtin-wes-single' | 'builtin-wes-family' | 'builtin-wes-single-hg38' | 'builtin-wes-family-hg38';
+type BuiltinPipelineID = 'builtin-vcf2anno-hg19' | 'builtin-vcf2anno-hg38' | 'builtin-wes-single-hg19' | 'builtin-wes-family-hg19' | 'builtin-wes-single-hg38' | 'builtin-wes-family-hg38';
 type PipelineStatus = 'active' | 'inactive';
 type ReferenceGenome = 'hg19' | 'hg38';
 
@@ -60,13 +61,13 @@ type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] } };
 
 const BASE_OPTIONS = [
  {value:'builtin-vcf2anno-hg19',label:'VCF SNP/InDel 注释（hg19）'}, {value:'builtin-vcf2anno-hg38',label:'VCF SNP/InDel 注释（hg38）'},
-  { value: 'builtin-wes-single', label: 'WES单样本分析' },
-  { value: 'builtin-wes-family', label: 'WES家系分析' },
-  { value: 'builtin-wes-single-hg38', label: 'WES单样本分析（hg38）' },
-  { value: 'builtin-wes-family-hg38', label: 'WES家系分析（hg38）' },
+  { value: 'builtin-wes-single-hg19', label: 'WES单样本分析_hg19' },
+  { value: 'builtin-wes-family-hg19', label: 'WES家系分析_hg19' },
+  { value: 'builtin-wes-single-hg38', label: 'WES单样本分析_hg38' },
+  { value: 'builtin-wes-family-hg38', label: 'WES家系分析_hg38' },
 ];
 const EMPTY_FORM: PipelineFormData = {
-  name: '', basePipelineId: 'builtin-wes-single', description: '', bedAssetId: builtinBEDId('hg19'),
+  name: '', basePipelineId: 'builtin-wes-single-hg19', description: '', bedAssetId: builtinBEDId('hg19'),
   cnvBaselineId: builtinCNVBaselineId('hg19'),
 };
 
@@ -82,7 +83,7 @@ function builtinPipelineId(baseType: BasePipelineType, referenceGenome: Referenc
   if (referenceGenome === 'hg38') {
     return baseType === 'wes_family' ? 'builtin-wes-family-hg38' : 'builtin-wes-single-hg38';
   }
-  return baseType === 'wes_family' ? 'builtin-wes-family' : 'builtin-wes-single';
+  return baseType === 'wes_family' ? 'builtin-wes-family-hg19' : 'builtin-wes-single-hg19';
 }
 
 function unwrapList<T>(value: MaybeList<T>): T[] {
@@ -103,15 +104,15 @@ function normalizePipeline(value: unknown, t: TextTranslator = chineseText): Pip
   const base = stringOf(raw, 'baseType', 'base_type', 'wes_single');
   const genome = stringOf(raw, 'referenceGenome', 'reference_genome', 'hg19').toLowerCase();
   return {
-    id: String(raw.id ?? ''),resourceAvailable:raw.resource_available!==false,resourceError:String(raw.resource_error??''),
+    id: canonicalPipelineId(String(raw.id ?? '')),resourceAvailable:raw.resource_available!==false,resourceError:String(raw.resource_error??''),
     name: stringOf(raw, 'name', 'name'),
     basePipeline: base === 'vcf_annotation' ? 'vcf_annotation' : base === 'wes_family' ? 'wes_family' : 'wes_single',
     version: stringOf(raw, 'version', 'version'),
     description: stringOf(raw, 'description', 'description'),
-    bedFile: stringOf(raw, 'bedFile', 'bed_file', t("pipeline.builtInDefaultBed44f413")),
+    bedFile: stringOf(raw, 'bedFile', 'bed_file', base==='vcf_annotation'?'—':builtinBEDLabel(genome==='hg38'||genome==='grch38'?'hg38':'hg19',t)),
     bedAssetId: stringOf(raw, 'bedAssetId', 'bed_asset_id'),
     referenceGenome: genome === 'hg38' || genome === 'grch38' ? 'hg38' : 'hg19',
-    cnvBaseline: stringOf(raw, 'cnvBaseline', 'cnv_baseline', t("pipeline.builtInDefaultCnvBaselinea21291")),
+    cnvBaseline: stringOf(raw, 'cnvBaseline', 'cnv_baseline', base==='vcf_annotation'?'—':builtinCNVBaselineLabel(genome==='hg38'||genome==='grch38'?'hg38':'hg19',t)),
     cnvBaselineId: stringOf(raw, 'cnvBaselineId', 'cnv_baseline_id'),
     status: stringOf(raw, 'status', 'status') === 'inactive' ? 'inactive' : 'active',
     isBuiltin: Boolean(raw.isBuiltin ?? raw.is_builtin),
@@ -163,7 +164,7 @@ function PipelineFields({ form, setForm, beds, baselines }: {
       <div className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs font-medium text-fg-muted">{t("pipeline.basePipelined9745b")}</label>
-          <Select value={form.basePipelineId} options={BASE_OPTIONS.map(o=>({...o,disabled:isFamilyAnalysis({id:o.value}),label:(o.value.includes('vcf2anno')?t('vcfAnnotation.'+(o.value.endsWith('hg38')?'hg38':'hg19')):localizeDisplay(o.label,t))+(isFamilyAnalysis({id:o.value})?` · ${t('familyAnalysis.unavailable')}`:'')}))} onChange={(value) => {
+          <Select value={form.basePipelineId} options={BASE_OPTIONS.map(o=>({...o,disabled:isFamilyAnalysisUnavailable({id:o.value}),label:(o.value.includes('vcf2anno')?t('vcfAnnotation.'+(o.value.endsWith('hg38')?'hg38':'hg19')):pipelineDisplayName(o.value,o.label,t))+(isFamilyAnalysisUnavailable({id:o.value})?` · ${t('familyAnalysis.unavailable')}`:'')}))} onChange={(value) => {
             const basePipelineId = (Array.isArray(value) ? value[0] : value) as BuiltinPipelineID;
             const nextGenome = basePipelineDefinition(basePipelineId).referenceGenome;
             setForm((current) => ({ ...current, basePipelineId, bedAssetId: builtinBEDId(nextGenome), cnvBaselineId: builtinCNVBaselineId(nextGenome) }));
@@ -265,16 +266,16 @@ function PipelineListPageContent() {
   const filtered = pipelines.filter((item) => `${item.id} ${pipelineDisplayName(item.id, item.name, t)} ${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()));
   const columns: Column<Pipeline>[] = [
     { id: 'id', header: t("pipeline.pipelineId"), accessor: (row) => <IdCell id={row.id} full />, width: 310, align: 'left' },
-    { id: 'name', header: t("history.pipelineName323a83"), accessor: (row) => <div className="text-left"><div className={`font-medium ${isFamilyAnalysis(row) ? "text-fg-muted opacity-50" : "text-fg-default"}`}>{pipelineDisplayName(row.id, row.name, t)}</div>{row.isBuiltin && <div className="mt-0.5 text-xs text-fg-muted">{t("pipeline.systemBuiltInae8da0")}</div>}</div>, width: 210, align: 'left' },
+    { id: 'name', header: t("history.pipelineName323a83"), accessor: (row) => <div className="text-left"><div className={`font-medium ${isFamilyAnalysisUnavailable(row) ? "text-fg-muted opacity-50" : "text-fg-default"}`}>{pipelineDisplayName(row.id, row.name, t)}</div>{row.isBuiltin && <div className="mt-0.5 text-xs text-fg-muted">{t("pipeline.systemBuiltInae8da0")}</div>}</div>, width: 210, align: 'left' },
     { id: 'base', header: t("pipeline.basePipeline41689b"), accessor: (row) => <Tag variant="neutral">{row.basePipeline === 'vcf_annotation' ? t('vcfAnnotation.title') : row.basePipeline === 'wes_family' ? t("pipeline.wesFamilyAnalysise07024") : t("pipeline.wesSingleSampleAnalysis400a61")}</Tag>, width: 150, align: 'center' },
-    { id: 'genome', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => row.referenceGenome, width: 110, align: 'center' },
-    { id: 'bed', header: t("pipeline.bedFiles8ee058"), accessor: (row) => <HoverHint content={isFamilyAnalysis(row)?t("familyAnalysis.unavailable"):row.resourceError||row.bedFile}><span className="block truncate" >{resourceDisplayName(row.bedAssetId, row.bedFile, t)}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{isFamilyAnalysis(row)?t("familyAnalysis.unavailable"):row.resourceError}</span>}</span></HoverHint>, width: 210, align: 'left' },
+    { id: 'genome', header: t("pipeline.referenceGenome903ba5"), accessor: (row) => <GenomeTag genome={row.referenceGenome}/>, width: 110, align: 'center' },
+    { id: 'bed', header: t("pipeline.bedFiles8ee058"), accessor: (row) => <HoverHint content={isFamilyAnalysisUnavailable(row)?t("familyAnalysis.unavailable"):row.resourceError||row.bedFile}><span className="block truncate" >{resourceDisplayName(row.bedAssetId, row.bedFile, t)}{!row.resourceAvailable&&<span className="ml-2 text-danger-fg">{isFamilyAnalysisUnavailable(row)?t("familyAnalysis.unavailable"):row.resourceError}</span>}</span></HoverHint>, width: 210, align: 'left' },
     { id: 'cnv', header: t("pipeline.cnvBaselinefd84b0"), accessor: (row) => <HoverHint content={row.cnvBaseline}><span className="block truncate" >{resourceDisplayName(row.cnvBaselineId, row.cnvBaseline, t)}</span></HoverHint>, width: 210, align: 'left' },
-    { id: 'status', header: t("admin.status62e951"), accessor: (row) => <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>{isFamilyAnalysis(row) ? t("familyAnalysis.unavailable") : row.status === 'active' ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}</Tag>, width: 90, align: 'center' },
+    { id: 'status', header: t("admin.status62e951"), accessor: (row) => <Tag variant={row.status === 'active' ? 'success' : 'neutral'}>{isFamilyAnalysisUnavailable(row) ? t("familyAnalysis.unavailable") : row.status === 'active' ? t("admin.enabledd4e9ca") : t("admin.disabledd989e5")}</Tag>, width: 90, align: 'center' },
     { id: 'actions', header: t("admin.actionsf3ea6d"), accessor: (row) => row.isBuiltin ? <span className="text-xs text-fg-muted">{t("pipeline.readOnlyffc1d0")}</span> : <TableActions>
-      <TableAction action="edit" label={t("admin.edita7f814")} disabled={isFamilyAnalysis(row)} onClick={() => setEditing(row)} />
-      <TableAction permission="pipelines.manage" label={row.status === 'active' ? t("admin.disabledd989e5") : t("admin.enabledd4e9ca")} disabled={isFamilyAnalysis(row)} leftIcon={row.status === 'active' ? <Pause /> : <Play />} onClick={() => void toggle(row)} />
-      <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" disabled={isFamilyAnalysis(row)} onClick={() => setDeleting(row)} />
+      <TableAction action="edit" label={t("admin.edita7f814")} disabled={isFamilyAnalysisUnavailable(row)} onClick={() => setEditing(row)} />
+      <TableAction permission="pipelines.manage" label={row.status === 'active' ? t("admin.disabledd989e5") : t("admin.enabledd4e9ca")} disabled={isFamilyAnalysisUnavailable(row)} leftIcon={row.status === 'active' ? <Pause /> : <Play />} onClick={() => void toggle(row)} />
+      <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" disabled={isFamilyAnalysisUnavailable(row)} onClick={() => setDeleting(row)} />
     </TableActions>, width: 224, minWidth: 224, align: 'center', pinned: 'right' },
   ];
 

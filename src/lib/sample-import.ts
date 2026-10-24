@@ -47,13 +47,16 @@ export function parseSampleImport(text: string | {line:number;cells:string[]}[])
  }
  const header=all.shift()!.cells;
  const indexes=header.map(cell=>aliases.get(cell.trim().toLowerCase()));
- if(header.length!==6||new Set(indexes).size!==6||indexes.some(index=>index===undefined))throw new LocalizedError('sampleImport.headers');
+ if(![6,10].includes(header.length)||new Set(indexes).size!==header.length||indexes.some(index=>index===undefined)||![0,1,2,3,4,5].every(index=>indexes.includes(index)))throw new LocalizedError('sampleImport.headers');
  const rows:SampleImportRow[]=[], issues:SampleImportIssue[]=[];
  const seen=new Set<string>();
  for(const row of all) {
-  if(row.cells.length!==6){issues.push({line:row.line,key:'sampleImport.columns'});continue;}
-  const cells:string[]=Array(6).fill('');indexes.forEach((column,index)=>{cells[column!]=row.cells[index].trim();});
-  const [,internalId,sex,type,batch,clinicalDiagnosis]=cells;
+  if(row.cells.length!==header.length){issues.push({line:row.line,key:'sampleImport.columns'});continue;}
+  const cells:string[]=Array(10).fill('');indexes.forEach((column,index)=>{cells[column!]=row.cells[index].trim();});
+  const [,internalId,sex,type,batch,clinicalDiagnosis,fatherSampleInternalId,motherSampleInternalId,fatherStatus,motherStatus]=cells;
+  const stateValues:Record<string,''|'affected'|'unaffected'|'carrier'>={'':'',affected:'affected',unaffected:'unaffected',carrier:'carrier'};
+  for(const locale of locales){const t=createTextTranslator(locale);for(const state of ['affected','unaffected','carrier'] as const)stateValues[t('sampleParents.'+state).toLowerCase()]=state;}
+  const fatherAffectedStatus=stateValues[fatherStatus.toLowerCase()],motherAffectedStatus=stateValues[motherStatus.toLowerCase()];
   const gender=sex?genderValues[sex.toLowerCase()]:'unknown';
   const sampleType=type?typeValues[type.toLowerCase()]:'其他';
   let key='';
@@ -62,9 +65,10 @@ export function parseSampleImport(text: string | {line:number;cells:string[]}[])
   else if(!gender)key='sampleImport.gender';
   else if(!sampleType)key='sampleImport.type';
   else if(batch.length>100)key='sampleImport.batch';
+  else if(fatherAffectedStatus===undefined||motherAffectedStatus===undefined)key='sampleParents.invalidStatus';
   seen.add(internalId);
   if(key){issues.push({line:row.line,key});continue;}
-  rows.push({line:row.line,data:{internalId,gender,sampleType,batch,clinicalDiagnosis,hpoTerms:[],remark:''}});
+  rows.push({line:row.line,data:{fatherSampleInternalId,motherSampleInternalId,fatherAffectedStatus,motherAffectedStatus,internalId,gender,sampleType,batch,clinicalDiagnosis,hpoTerms:[],remark:''}});
  }
  return {rows,issues};
 }

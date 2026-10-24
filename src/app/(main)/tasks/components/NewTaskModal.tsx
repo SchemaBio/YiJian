@@ -1,5 +1,5 @@
 'use client';
-import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import { isFamilyAnalysis, isFamilyAnalysisUnavailable } from '@/lib/analysis-availability';
 import {TaskSamplePicker} from '@/components/shared/TaskSamplePicker';
 import {VCFTaskFields} from '@/components/shared/VCFTaskFields';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
@@ -29,6 +29,7 @@ import {
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { tasksApi } from '@/lib/tasks';
+import {TrioSummary,useTrioContext} from '@/components/shared/TrioSummary';
 
 export interface NewTaskFormData {
  vcf_asset_id?: string; vcf_sample_name?: string;
@@ -83,7 +84,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         if (cancelled) return;
         setPipelines(pipelineItems);
         setTemplates(templateItems);
-        const firstValue = pipelineItems.find(pipeline => !isFamilyAnalysis(pipeline))?.id || templateItems.find(template => !isFamilyAnalysis({ template: template.name }))?.name || '';
+        const firstValue = pipelineItems.find(pipeline => !isFamilyAnalysisUnavailable(pipeline))?.id || templateItems.find(template => !isFamilyAnalysisUnavailable({ template: template.name }))?.name || '';
         setSelectedPipeline(prev => prev || firstValue);
         if (isSaaS) {
           const [nextBalance, nextConfig] = await Promise.all([getBillingBalance(), getBillingConfig()]);
@@ -110,18 +111,20 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     if (pipelines.length > 0) {
       return pipelines.map(p => ({
         value: p.id,
-        label: `${pipelineDisplayName(p.id, p.name, t)}${p.version ? ` (${p.version})` : ''}${isFamilyAnalysis(p) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
-        disabled: isFamilyAnalysis(p),
+        label: `${pipelineDisplayName(p.id, p.name, t)}${p.version ? ` (${p.version})` : ''}${isFamilyAnalysisUnavailable(p) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
+        disabled: isFamilyAnalysisUnavailable(p),
       }));
     }
     return templates.map(template => ({
       value: template.name,
-      label: `${template.displayName && template.displayName !== template.name ? `${template.displayName} (${template.name})` : template.name}${isFamilyAnalysis({ template: template.name }) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
-      disabled: isFamilyAnalysis({ template: template.name }),
+      label: `${template.displayName && template.displayName !== template.name ? `${template.displayName} (${template.name})` : template.name}${isFamilyAnalysisUnavailable({ template: template.name }) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
+      disabled: isFamilyAnalysisUnavailable({ template: template.name }),
     }));
   }, [pipelines, templates, t]);
 
   const isVCF = pipelines.find(p=>p.id===selectedPipeline)?.baseType==='vcf_annotation' || pipelines.find(p=>p.id===selectedPipeline)?.template==='vcf2anno';
+  const isTrio=isFamilyAnalysis(pipelines.find(p=>p.id===selectedPipeline)??{template:selectedPipeline});
+ const trioState=useTrioContext(selectedSample?.id,isTrio);
   const resolveTemplate = (pipeline: TaskPipelineOption | undefined) => {
     if (pipeline?.template) return pipeline.template;
     const byBaseType: Record<string, string> = {
@@ -144,7 +147,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   React.useEffect(() => {
     const pipeline = pipelines.find(item => item.id === selectedPipeline);
-    if ((isVCF && !vcfAssetId) || !selectedSample?.id || !pipeline?.id) {
+    if ((isTrio&&!trioState.context?.ready) || (isVCF && !vcfAssetId) || !selectedSample?.id || !pipeline?.id) {
       setEstimatedMinutes(isVCF ? 25 : 60);
       setEstimateStatus('idle');
       return;
@@ -169,7 +172,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
     return () => {
       cancelled = true;
     };
-  }, [pipelines, selectedPipeline, selectedSample?.id, isVCF, vcfAssetId, vcfSampleName]);
+  }, [pipelines, selectedPipeline, selectedSample?.id, isTrio, trioState.context?.ready, isVCF, vcfAssetId, vcfSampleName]);
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
@@ -188,8 +191,8 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
   };
 
   const handleSubmit = async () => {
-	if (isFamilyAnalysis(pipelines.find(p => p.id === selectedPipeline) ?? {template: selectedPipeline})) return;
-    if ((isVCF && !vcfAssetId) || !selectedSample || !selectedPipeline || submitting || (isSaaS && !retentionAcknowledged)) return;
+	if (isFamilyAnalysisUnavailable(pipelines.find(p => p.id === selectedPipeline) ?? {template: selectedPipeline})) return;
+    if ((isTrio&&!trioState.context?.ready) || (isVCF && !vcfAssetId) || !selectedSample || !selectedPipeline || submitting || (isSaaS && !retentionAcknowledged)) return;
 
     const pipeline = pipelines.find(p => p.id === selectedPipeline);
     const template = resolveTemplate(pipeline);
@@ -247,7 +250,7 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
           <Button action="add" loading={submitting} loadingLabel={t("pipeline.creating8c6348")}
             variant="primary"
             onClick={handleSubmit}
-            disabled={isFamilyAnalysis(pipelines.find(p => p.id === selectedPipeline) ?? {template: selectedPipeline}) || (isVCF && !vcfAssetId) || loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
+            disabled={(isTrio&&!trioState.context?.ready) || isFamilyAnalysisUnavailable(pipelines.find(p => p.id === selectedPipeline) ?? {template: selectedPipeline}) || (isVCF && !vcfAssetId) || loadingResources || submitting || !selectedSample || !selectedPipeline || (isSaaS && !retentionAcknowledged)}
 
           >
             {t("tasks.createTaskcf42fd")}</Button>
@@ -280,10 +283,11 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
         </div>
 
         <div className={`grid grid-cols-1 items-start gap-4 ${isVCF?'lg:grid-cols-2':''}`}>
-          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} showSequencingStatus={!isVCF} disabled={submitting}/>
+          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} trioOnly={isTrio} showSequencingStatus={!isVCF} disabled={submitting}/>
           {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName} disabled={submitting}/>}
         </div>
 
+        {isTrio&&<TrioSummary state={trioState}/>}
         <div className="rounded-md border border-border-default bg-canvas-subtle px-3 py-2.5">
           <p className="text-sm font-medium text-fg-default">{t("tasks.estimatedRuntime46b89b")}</p>
           <p className="mt-1 text-xs leading-5 text-fg-muted">

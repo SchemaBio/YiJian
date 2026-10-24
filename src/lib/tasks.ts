@@ -1,3 +1,4 @@
+import type {TrioMember} from './sample-parents';
 import { api } from './api';
 import type {
   AnalysisTask,
@@ -13,6 +14,7 @@ import type { SampleDetail } from '@/app/(main)/samples/types';
 import { normalizeSampleDetail } from './samples';
 
 interface RawTask {
+ trio_members?:TrioMember[];
  result_capabilities?: string[];
   template?: string;
   id?: string;
@@ -96,6 +98,7 @@ function normalizeStatus(value: unknown): TaskStatus {
 export function normalizeTask(rawValue: unknown): AnalysisTask {
   const raw = asRawTask(rawValue);
   return {
+    trioMembers:raw.trio_members,
     id: String(raw.id ?? ''),
     name: typeof raw.name === 'string' ? raw.name : undefined,
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),
@@ -133,6 +136,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
 export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
   const raw = asRawTask(rawValue);
   return {
+    trioMembers:raw.trio_members,
     id: String(raw.id ?? ''),
     name: String(raw.name ?? raw.id ?? ''),
     sampleId: String(raw.sampleId ?? raw.sample_id ?? ''),

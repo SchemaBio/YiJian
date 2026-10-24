@@ -1,4 +1,5 @@
 'use client';
+import {SampleParentFields,ParentSampleStatus} from '@/components/shared/SampleParentFields';
 import { useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
@@ -399,6 +400,9 @@ export function SampleDetailPanel({ sampleId, onClose }: SampleDetailPanelProps)
       case 'family':
         return (
           <div className="space-y-4">
+            {isEditing ? <SampleParentFields value={{...sample,...editData}} sampleId={sample.id} internalId={editData.internalId??sample.internalId} onChange={parents=>setEditData(previous=>({...previous,...parents}))}/> : <InfoCard title={t('sampleParents.title')}>
+              {(['father','mother'] as const).map(role=><div key={role} className="mb-3 text-sm"><p>{t(`sampleParents.${role}Sample`)}: {(role==='father'?sample.fatherSampleInternalId:sample.motherSampleInternalId)||'—'}</p><ParentSampleStatus info={sample[role]}/><p>{t(`sampleParents.${role}Status`)}: {t(`sampleParents.${(role==='father'?sample.fatherAffectedStatus:sample.motherAffectedStatus)||'unknown'}`)}</p></div>)}
+            </InfoCard>}
             <InfoCard title={t("samples.familyHistoryOverview911c3c")}>
               <InfoItem
                 label={t("samples.familyHistoryPresentdd7a14")}

@@ -1,3 +1,4 @@
+import type {SampleParentValues} from '@/lib/sample-parents';
 // 样本相关类型定义
 
 export type Gender = 'male' | 'female' | 'unknown';
@@ -11,7 +12,7 @@ export interface MatchedPair {
   r2Path: string;  // R2文件路径
 }
 
-export interface Sample {
+export interface Sample extends SampleParentValues {
   id: string;
   internalId: string;  // 内部编号
   gender: Gender;
@@ -30,7 +31,7 @@ export interface Sample {
   updatedAt: string;
 }
 
-export interface SampleDetail {
+export interface SampleDetail extends SampleParentValues {
   // 基本信息
   id: string;
   internalId: string;

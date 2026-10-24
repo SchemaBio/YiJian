@@ -1,4 +1,5 @@
 'use client';
+import {GenomeTag} from '@/components/shared/GenomeTag';
 import { formatNumericString } from '@/i18n/format';
 
 import { errorText } from '@/i18n/errors';
@@ -183,7 +184,7 @@ function BedFilesPageContent() {
     },
     {
       id: 'referenceGenome', header: t("pipeline.referenceGenome903ba5"), width: 130, align: 'center',
-      accessor: (row) => <Tag variant="neutral">{row.reference_genome || '-'}</Tag>,
+      accessor: (row) => <GenomeTag genome={row.reference_genome}/>,
     },
     { id: 'size', header: t("pipeline.fileSize2ad8b0"), width: 110, align: 'right', accessor: (row) => row.is_builtin ? '-' : formatBytes(row.file_size, t) },
     {

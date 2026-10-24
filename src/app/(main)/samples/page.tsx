@@ -1,4 +1,5 @@
 'use client';
+import {ParentSampleStatus} from '@/components/shared/SampleParentFields';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
 import { ImportSamplesModal } from './components/ImportSamplesModal';
 import { useLiveRetention } from '@/lib/research-retention';
@@ -51,6 +52,12 @@ function areSamplesEqual(previous: Sample[], next: Sample[]): boolean {
 
     return sample.id === candidate.id
       && sample.internalId === candidate.internalId
+      && sample.fatherSampleInternalId === candidate.fatherSampleInternalId
+      && sample.motherSampleInternalId === candidate.motherSampleInternalId
+      && sample.fatherAffectedStatus === candidate.fatherAffectedStatus
+      && sample.motherAffectedStatus === candidate.motherAffectedStatus
+      && JSON.stringify(sample.father) === JSON.stringify(candidate.father)
+      && JSON.stringify(sample.mother) === JSON.stringify(candidate.mother)
       && sample.gender === candidate.gender
       && sample.age === candidate.age
       && sample.sampleType === candidate.sampleType
@@ -311,6 +318,7 @@ export default function SamplesPage() {
   };
 
   const columns: Column<Sample>[] = [
+
     ...(getRuntimeBackendFlavor() === 'squid' ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:Sample)=><ExpiryCell value={row.expiresAt} />,width:170}] : []),
     {
       id: 'internalId',
@@ -416,6 +424,10 @@ export default function SamplesPage() {
       maxWidth: 150,
       align: 'center',
     },
+    ...(['father','mother'] as const).flatMap(role => [
+      {id:role+'Sample',header:t(`sampleParents.${role}Sample`),width:210,accessor:(row:Sample)=><div><span>{(role==='father'?row.fatherSampleInternalId:row.motherSampleInternalId)||'—'}</span><ParentSampleStatus info={row[role]}/></div>},
+      {id:role+'Status',header:<span className="whitespace-nowrap">{t(`sampleParents.${role}Status`)}</span>,width:110,minWidth:110,accessor:(row:Sample)=>{const state=role==='father'?row.fatherAffectedStatus:row.motherAffectedStatus;return state?t(`sampleParents.${state}`):'—';}},
+    ]),
     {
       id: 'remark',
       header: t("admin.notese03614"),

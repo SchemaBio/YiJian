@@ -1,6 +1,8 @@
 import {fireEvent,render,screen,within} from '@testing-library/react';
 import {beforeEach,expect,it,vi} from 'vitest';
 import TasksPage from './page';
+import {downloadImportWorkbook} from '@/lib/import-workbook';
+vi.mock('@/lib/import-workbook',()=>({downloadImportWorkbook:vi.fn(async()=>{})}));
 import {BusinessPermissionContext} from '@/components/providers/BusinessPermissionProvider';
 const state=vi.hoisted(()=>({backend:'octopus',tasks:[],refetch:vi.fn()}));
 vi.mock('next/navigation',()=>({useRouter:()=>({push:vi.fn()})}));
@@ -26,9 +28,9 @@ it.each(['octopus','squid'])('groups download, upload and new task at the table 
  expect(screen.getByText('New task form')).toBeInTheDocument();
 });
 it('keeps template downloads available to a self-hosted reader',()=>{
- const click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});
+
  render(<BusinessPermissionContext.Provider value={()=>false}><TasksPage/></BusinessPermissionContext.Provider>);
  expect(screen.getByRole('button',{name:'上传信息'})).toBeDisabled();
  expect(screen.getByRole('button',{name:'新建任务'})).toBeDisabled();
- fireEvent.click(screen.getByRole('button',{name:'下载模板'}));expect(click).toHaveBeenCalledOnce();click.mockRestore();
+ fireEvent.click(screen.getByRole('button',{name:'下载模板'}));expect(downloadImportWorkbook).toHaveBeenCalledWith(expect.stringContaining('PROBAND-001,builtin-wes-family-hg19'), 'task-batch-import-template.xlsx','批量任务');
 });

@@ -13,14 +13,12 @@ it('opens import failure details without offering a paid task retry or interpret
  expect(onDetails).toHaveBeenCalled();expect(onRetry).not.toHaveBeenCalled();expect(onView).not.toHaveBeenCalled();
  expect(screen.queryByRole('button',{name:'解读'})).not.toBeInTheDocument();
 });
-it.each(['octopus','squid'])('disables queued family analysis but keeps historical results readable in %s', backend => {
+it.each(['octopus','squid'])('allows queued trio analysis and keeps historical results readable in %s', backend => {
  mode.backend=backend;
  const onStart=vi.fn(),onRetry=vi.fn(),onView=vi.fn();
  const callbacks={onDetails:vi.fn(),onView,onStart,onStop:vi.fn(),onRetry,onEdit:vi.fn(),onDelete:vi.fn(),isLoading:false};
  const {rerender}=render(<TaskActions task={normalizeTask({id:'family',template:'trio',status:'queued'})} {...callbacks}/>);
- const unavailable=screen.getByRole('button',{name:'家系分析暂未开放'});
- expect(unavailable).toBeDisabled();fireEvent.click(unavailable);
- expect(onStart).not.toHaveBeenCalled();expect(onRetry).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'启动'}));expect(onStart).toHaveBeenCalled();
  rerender(<TaskActions task={normalizeTask({id:'family',template:'trio',status:'completed'})} {...callbacks}/>);
  fireEvent.click(screen.getByRole('button',{name:'解读'}));expect(onView).toHaveBeenCalled();
 });

@@ -14,6 +14,7 @@ export type AnalysisStatus =
 
 // ============ 分析任务详情 ============
 export interface AnalysisTaskDetail {
+ trioMembers?:import('@/lib/sample-parents').TrioMember[];
   template?: string;
  resultCapabilities?: string[];
   id: string;                    // UUID

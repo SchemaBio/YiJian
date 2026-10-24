@@ -221,7 +221,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
                 <thead className="sticky top-0 z-10 bg-canvas-subtle text-left text-xs text-fg-muted">
                   <tr>
                     <th className="px-3 py-2 font-medium">{t("tasks.excelRow7dca4b")}</th>
-                    <th className="px-3 py-2 font-medium">{t("tasks.samplePedigree481e9d")}</th>
+                    <th className="px-3 py-2 font-medium">{t("tasks.selectSample47fc82")}</th>
                     <th className="px-3 py-2 font-medium">{t("tasks.analysisPipelinef22c14")}</th>
                     <th className="px-3 py-2 font-medium">{t("tasks.estimatedRuntime22cbce")}</th>
                     <th className="px-3 py-2 font-medium">{t("tasks.validationResult804e07")}</th>

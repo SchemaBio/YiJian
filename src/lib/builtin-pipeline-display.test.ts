@@ -7,10 +7,12 @@ it.each(['zh-CN', 'zh-Hant', 'en', 'es-419'] as const)('localizes all four built
   for (const [id, key] of [
     ['builtin-wes-single', 'pipeline.wesSingleSampleAnalysis400a61'],
     ['builtin-wes-family', 'pipeline.wesFamilyAnalysise07024'],
+    ['builtin-wes-single-hg19', 'pipeline.wesSingleSampleAnalysis400a61'],
+    ['builtin-wes-family-hg19', 'pipeline.wesFamilyAnalysise07024'],
     ['builtin-wes-single-hg38', 'pipeline.wesSingleSampleAnalysisHg188750'],
     ['builtin-wes-family-hg38', 'pipeline.wesFamilyAnalysisHg97410c'],
   ]) {
-    expect(pipelineDisplayName(id, 'backend name', t)).toBe(t(key));
+    expect(pipelineDisplayName(id, 'backend name', t)).toBe(id.endsWith('hg38')?t(key):t(key)+'_hg19');
   }
 });
 

@@ -6,14 +6,12 @@ export type BuiltinGenome = 'hg19' | 'hg38';
 
 /** Translate reserved built-in IDs at display time; never rename custom pipelines. */
 export function pipelineDisplayName(id: string, original: string, t: TextTranslator): string {
-  const labels: Record<string, string> = {
- 'builtin-vcf2anno-hg19':'vcfAnnotation.hg19', 'builtin-vcf2anno-hg38':'vcfAnnotation.hg38',
-    'builtin-wes-single': 'pipeline.wesSingleSampleAnalysis400a61',
-    'builtin-wes-family': 'pipeline.wesFamilyAnalysise07024',
-    'builtin-wes-single-hg38': 'pipeline.wesSingleSampleAnalysisHg188750',
-    'builtin-wes-family-hg38': 'pipeline.wesFamilyAnalysisHg97410c',
-  };
-  return Object.hasOwn(labels, id) ? t(labels[id]) : original;
+  const canonical=canonicalPipelineId(id);
+  const match=/^builtin-wes-(single|family)-(hg19|hg38)$/.exec(canonical);
+  if(match)return `${t(match[1]==='single'?'pipeline.wesSingleSampleAnalysis400a61':'pipeline.wesFamilyAnalysise07024')}_${match[2]}`;
+  if(canonical==='builtin-vcf2anno-hg19')return `${t('vcfAnnotation.title')}_hg19`;
+  if(canonical==='builtin-vcf2anno-hg38')return `${t('vcfAnnotation.title')}_hg38`;
+  return original;
 }
 
 export function builtinBEDId(genome: BuiltinGenome): string {
@@ -69,3 +67,5 @@ export const BUILTIN_CNV_BASELINES: CNVBaseline[] = (['hg19', 'hg38'] as const).
   updated_at: '',
   is_builtin: true,
 }));
+
+export function canonicalPipelineId(id:string):string {return id==='builtin-wes-single'?'builtin-wes-single-hg19':id==='builtin-wes-family'?'builtin-wes-family-hg19':id;}

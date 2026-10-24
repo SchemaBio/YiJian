@@ -1,5 +1,5 @@
 'use client';
-import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import { isFamilyAnalysis, isFamilyAnalysisUnavailable } from '@/lib/analysis-availability';
 import {TaskSamplePicker} from '@/components/shared/TaskSamplePicker';
 import {VCFTaskFields} from '@/components/shared/VCFTaskFields';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
@@ -28,23 +28,23 @@ import {
 } from '@/lib/task-resources';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
-import { getPedigree, listPedigrees } from '@/lib/pedigrees';
-import type { Pedigree } from '@/app/(main)/samples/pedigree/types';
+import {TrioSummary,useTrioContext} from '@/components/shared/TrioSummary';
+
 
 export default function NewAnalysisPage() {
   const t = useText();
   const router = useRouter();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const [pipelines, setPipelines] = React.useState<TaskPipelineOption[]>([]);
-  const [pedigrees, setPedigrees] = React.useState<Pedigree[]>([]);
-  const pedigreeCache = React.useRef<Pedigree[] | null>(null);
+
+
   const [loadError, setLoadError] = React.useState('');
-  const [familyError, setFamilyError] = React.useState('');
+
   const [optionsRetry, setOptionsRetry] = React.useState(0);
   const [optionsLoading, setOptionsLoading] = React.useState(true);
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem|null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
-  const [selectedPedigree, setSelectedPedigree] = React.useState('');
+
   const [taskName, setTaskName] = React.useState('');
   const [enableCNV, setEnableCNV] = React.useState(true);
   const [enableSV, setEnableSV] = React.useState(false);
@@ -58,11 +58,12 @@ export default function NewAnalysisPage() {
 
   const selectedSampleInfo = selectedSample;
   const selectedPipelineInfo = pipelines.find((pipeline) => pipeline.id === selectedPipeline);
-  const selectedPedigreeInfo = pedigrees.find((pedigree) => pedigree.id === selectedPedigree);
+
   const [vcfAssetId,setVcfAssetId]=React.useState('');
  const [vcfSampleName,setVcfSampleName]=React.useState('');
  const isVCF=selectedPipelineInfo?.baseType==='vcf_annotation' || selectedPipelineInfo?.template==='vcf2anno';
- const isTrio = selectedPipelineInfo?.baseType === 'wes_family' || selectedPipelineInfo?.template === 'trio';
+ const isTrio = isFamilyAnalysis(selectedPipelineInfo);
+ const trioState=useTrioContext(selectedSampleInfo?.id,isTrio);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -73,7 +74,7 @@ export default function NewAnalysisPage() {
         const pipelineOptions = await pipelinesApi.list();
         if (cancelled) return;
         setPipelines(pipelineOptions);
-        setSelectedPipeline((current) => current || pipelineOptions.find(pipeline => !isFamilyAnalysis(pipeline))?.id || '');
+        setSelectedPipeline((current) => current || pipelineOptions.find(pipeline => !isFamilyAnalysisUnavailable(pipeline))?.id || '');
         setLoadError('');
       } catch (err) {
         if (!cancelled) {
@@ -89,24 +90,6 @@ export default function NewAnalysisPage() {
       cancelled = true;
     };
   }, [optionsRetry]);
-
-  React.useEffect(() => {
-    if (!isTrio || pedigreeCache.current !== null) return;
-    let cancelled = false;
-    setFamilyError('');
-    listPedigrees()
-      .then(items => Promise.all(items.map(item => getPedigree(item.id))))
-      .then(items => {
-        if (cancelled) return;
-        const details = items.filter((item): item is Pedigree => item !== null);
-        pedigreeCache.current = details;
-        setPedigrees(details);
-      })
-      .catch(err => {
-        if (!cancelled) setFamilyError(err instanceof Error ? errorText(err, t) : t("tasks.unableToLoadPedigreeOptionsc1568c"));
-      });
-    return () => { cancelled = true; };
-  }, [isTrio, optionsRetry]);
 
   React.useEffect(() => {
     if (!isSaaS) return;
@@ -125,9 +108,9 @@ export default function NewAnalysisPage() {
 
   React.useEffect(() => {
     const pipelineId = selectedPipelineInfo?.id;
-    const sampleId = isTrio ? undefined : selectedSampleInfo?.id;
-    const pedigreeId = isTrio ? selectedPedigreeInfo?.id : undefined;
-    if (!pipelineId || (isVCF && !vcfAssetId) || (!sampleId && !pedigreeId)) {
+    const sampleId = selectedSampleInfo?.id;
+
+    if (!pipelineId || (isVCF && !vcfAssetId) || !sampleId) {
       setEstimatedMinutes(isVCF ? 25 : 60);
       setEstimateStatus('idle');
       return;
@@ -135,7 +118,7 @@ export default function NewAnalysisPage() {
 
     let cancelled = false;
     setEstimateStatus('loading');
-    tasksApi.estimate({ sampleId, pedigreeId, pipelineId, ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}) })
+    tasksApi.estimate({ sampleId, pipelineId, ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}) })
       .then((estimate) => {
         if (cancelled) return;
         const minutes = Math.max(1, Math.ceil(Number(estimate.estimated_minutes)));
@@ -152,7 +135,7 @@ export default function NewAnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, [isTrio, isVCF, vcfAssetId, vcfSampleName, selectedPedigreeInfo?.id, selectedPipelineInfo?.id, selectedSampleInfo?.id]);
+  }, [isTrio, isVCF, vcfAssetId, vcfSampleName, selectedPipelineInfo?.id, selectedSampleInfo?.id]);
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
@@ -164,26 +147,25 @@ export default function NewAnalysisPage() {
     && projectedBalance < billingConfig.min_balance;
 
   React.useEffect(() => {
-    const subject = isTrio ? selectedPedigreeInfo?.internalId : (selectedSampleInfo?.internalId || selectedSampleInfo?.id);
+    const subject = selectedSampleInfo?.internalId || selectedSampleInfo?.id;
     if (subject && selectedPipelineInfo) {
       setTaskName(t("tasks.analysis8a0847", {p0: String(subject), p1: String(selectedPipelineInfo.name)}));
     }
-  }, [isTrio, selectedPedigreeInfo, selectedSampleInfo, selectedPipelineInfo]);
+  }, [isTrio, selectedSampleInfo, selectedPipelineInfo]);
 
   const handleSubmit = async () => {
-	if (isFamilyAnalysis(selectedPipelineInfo)) return;
-    if ((isVCF && !vcfAssetId) || submitting || (isSaaS && !retentionAcknowledged)) return;
+	if (isFamilyAnalysisUnavailable(selectedPipelineInfo)) return;
+    if ((isTrio && !trioState.context?.ready) || (isVCF && !vcfAssetId) || submitting || (isSaaS && !retentionAcknowledged)) return;
     setFormError('');
-    if (!selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo)) {
-      setFormError(isTrio ? t("tasks.selectAPedigreeContainingParentsAndProbandc87287") : t("tasks.selectASampleAndAnalysisPipeline53d997"));
+    if (!selectedPipelineInfo || !selectedSampleInfo) {
+      setFormError(t("tasks.selectASampleAndAnalysisPipeline53d997"));
       return;
     }
     setSubmitting(true);
     try {
       const task = await tasksApi.create({
-        sampleId: isTrio ? '' : selectedSampleInfo!.id,
-        pedigreeId: isTrio ? selectedPedigreeInfo!.id : undefined,
-        internalId: isTrio ? selectedPedigreeInfo!.internalId : selectedSampleInfo!.internalId,
+        sampleId: selectedSampleInfo!.id,
+        internalId: selectedSampleInfo!.internalId,
         pipelineId: selectedPipelineInfo.id,
  ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}),
         pipelineName: selectedPipelineInfo.name,
@@ -212,9 +194,9 @@ export default function NewAnalysisPage() {
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="yj-panel min-w-0 space-y-5 p-5">
-        {(loadError || (isTrio && familyError)) && (
+        {loadError && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
-            <span>{loadError || familyError}</span>
+            <span>{loadError}</span>
             <Button permission={null} action="retry" variant="secondary" size="small" disabled={optionsLoading} onClick={() => setOptionsRetry(value => value + 1)}>{t("billing.retryLoading7b4939")}</Button>
           </div>
         )}
@@ -225,29 +207,12 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {isTrio && <FormItem label={t("tasks.pedigreeParentsProband5d1fa4")} required>
-          <Select
-            options={pedigrees.map((pedigree) => {
-              const proband = pedigree.members.find((member) => member.id === pedigree.probandId || member.relation === 'proband');
-              const father = pedigree.members.find((member) => member.id === proband?.fatherId);
-              const mother = pedigree.members.find((member) => member.id === proband?.motherId);
-              const ready = Boolean(proband?.sampleId && father?.sampleId && mother?.sampleId);
-              return { value: pedigree.id, label: `${pedigree.internalId}${ready ? t("tasks.threeSamplesLinked6adf03") : t("tasks.incompletePedigree17b6c3")}`, disabled: !ready };
-            })}
-            value={selectedPedigree}
-            onChange={(value) => setSelectedPedigree(Array.isArray(value) ? value[0] : value)}
-            placeholder={t("tasks.selectAnExistingParentsProbandPedigree0bd878")}
-            searchable
-          />
-          <div className="mt-2 text-xs text-fg-muted">{t("tasks.sequencingDataFromTheProbandAndBoth16349c")}</div>
-        </FormItem>}
-
         <FormItem label={t("tasks.analysisPipelinef22c14")} required>
           <Select
             options={pipelines.map((pipeline) => ({
               value: pipeline.id,
-              label: `${pipelineDisplayName(pipeline.id, pipeline.name, t)}${pipeline.version ? ` (${pipeline.version})` : ''}${isFamilyAnalysis(pipeline) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
-              disabled: isFamilyAnalysis(pipeline),
+              label: `${pipelineDisplayName(pipeline.id, pipeline.name, t)}${pipeline.version ? ` (${pipeline.version})` : ''}${isFamilyAnalysisUnavailable(pipeline) ? ` · ${t('familyAnalysis.unavailable')}` : ''}`,
+              disabled: isFamilyAnalysisUnavailable(pipeline),
             }))}
             value={selectedPipeline}
             onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}
@@ -256,10 +221,11 @@ export default function NewAnalysisPage() {
           />
         </FormItem>
 
-        {!isTrio && <div className={`grid grid-cols-1 items-start gap-4 ${isVCF?'lg:grid-cols-2':''}`}>
-          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} showSequencingStatus={!isVCF} disabled={submitting}/>
+        {<div className={`grid grid-cols-1 items-start gap-4 ${isVCF?'lg:grid-cols-2':''}`}>
+          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} trioOnly={isTrio} showSequencingStatus={!isVCF} disabled={submitting}/>
           {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName} disabled={submitting}/>}
         </div>}
+        {isTrio&&<TrioSummary state={trioState}/>}
         <FormItem label={t("tasks.taskNotesd34f05")}>
           <Input
             aria-label={t("tasks.taskNotesd34f05")}
@@ -342,7 +308,7 @@ export default function NewAnalysisPage() {
 
             onClick={handleSubmit}
             loading={submitting}
-            disabled={isFamilyAnalysis(selectedPipelineInfo) || (isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || (isTrio ? !selectedPedigreeInfo : !selectedSampleInfo) || (isSaaS && !retentionAcknowledged)}
+            disabled={(isTrio&&!trioState.context?.ready) || isFamilyAnalysisUnavailable(selectedPipelineInfo) || (isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || !selectedSampleInfo || (isSaaS && !retentionAcknowledged)}
           >
             {submitting ? t("tasks.submitting3a1624") : t("tasks.submitTask09de9e")}
           </Button>

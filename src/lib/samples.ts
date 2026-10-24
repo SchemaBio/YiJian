@@ -1,4 +1,5 @@
 import { LocalizedError } from '@/i18n/errors';
+import {normalizeParentFields,parentPayload,type SampleParentValues} from './sample-parents';
 import { api } from './api';
 import type { Sample, SampleDetail } from '@/app/(main)/samples/types';
 import type { DataAsset } from './data-assets';
@@ -8,7 +9,7 @@ export function getSampleDataLink(id: string, signal?: AbortSignal): Promise<{ r
 }
 
 type MaybeList<T> = T[] | { items?: T[]; data?: T[] | { items?: T[] }; total?: number };
-type SampleFormPayload = {
+type SampleFormPayload = SampleParentValues & {
   identityPolicyAcknowledged?: boolean;
   identityPolicyVersion?: string;
   internalId: string;
@@ -69,6 +70,7 @@ export function normalizeSample(rawValue: unknown): Sample {
   const raw = asRecord(rawValue);
   const clinical = raw.clinicalDiagnosis ?? raw.clinical_diagnosis;
   return {
+    ...normalizeParentFields(raw),
     id: String(raw.id ?? ''),
     internalId: rawString(raw, 'internalId', 'internal_id'),
     gender: (raw.gender === 'male' || raw.gender === 'female' || raw.gender === 'unknown') ? raw.gender : 'unknown',
@@ -160,6 +162,7 @@ export function samplePayload(data: SampleFormPayload) {
     throw new LocalizedError("interface.rAndRFastqPathsMustBeProvidedTogetherddfa6e", undefined, "R1 and R2 FASTQ paths must be provided together");
   }
   return {
+    ...parentPayload(data),
     identity_policy_acknowledged: data.identityPolicyAcknowledged,
     identity_policy_version: data.identityPolicyVersion,
     internal_id: data.internalId,
@@ -182,6 +185,7 @@ export function sampleDetailPayload(data: Partial<SampleDetail>) {
     throw new LocalizedError("interface.rAndRFastqPathsMustBeProvidedTogetherddfa6e", undefined, "R1 and R2 FASTQ paths must be provided together");
   }
   return {
+    ...parentPayload(data),
     internal_id: data.internalId ?? '',
     gender: data.gender ?? 'unknown',
     age: data.age ?? null,

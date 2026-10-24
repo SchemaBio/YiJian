@@ -1,5 +1,5 @@
 'use client';
-import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import { isFamilyAnalysisUnavailable } from '@/lib/analysis-availability';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -126,7 +126,7 @@ export default function PipelineConfigPage() {
                 onChange={(value) => setSelectedId(Array.isArray(value) ? value[0] : value)}
                 options={pipelines.map(item => ({
                   value: item.id,
-                  disabled: isFamilyAnalysis(item),
+                  disabled: isFamilyAnalysisUnavailable(item),
                   label: `${pipelineDisplayName(item.id, item.name, t)} (${item.version || t("pipeline.versionUnspecifiedfb6d6c")})`,
                 }))}
               />

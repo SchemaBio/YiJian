@@ -1,5 +1,5 @@
 'use client';
-import { isFamilyAnalysis } from '@/lib/analysis-availability';
+import { isFamilyAnalysisUnavailable } from '@/lib/analysis-availability';
 import { OperationScope } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
@@ -66,7 +66,7 @@ export function TaskActionsCell({
       };
     }
 
-	if (isFamilyAnalysis(task) && ['queued','waiting_for_data','failed','cancelled'].includes(task.status)) {
+	if (isFamilyAnalysisUnavailable(task) && ['queued','waiting_for_data','failed','cancelled'].includes(task.status)) {
 		return {label:t('familyAnalysis.unavailable'), action:'wait' as ButtonAction, disabled:true};
 	}
     switch (task.status) {
@@ -110,7 +110,7 @@ export function TaskActionsCell({
   };
 
   const primaryAction = getPrimaryAction();
-  const canEdit = !isFamilyAnalysis(task) && !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
+  const canEdit = !isFamilyAnalysisUnavailable(task) && !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
   const canDelete = !task.interpretationCompletedAt;
 
   return (

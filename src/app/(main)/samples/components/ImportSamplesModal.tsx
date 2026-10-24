@@ -21,7 +21,7 @@ export function ImportSamplesModal({onClose,onImported}:{onClose:()=>void;onImpo
   setFile(selected);setRows([]);setIssues([]);setError('');setReading(true);
   try {
    if(selected.size>MAX_SAMPLE_IMPORT_BYTES)throw new Error(t('sampleImport.tooLarge'));
-   const parsed=parseSampleImport(await readImportWorkbook(selected, 6));
+   const parsed=parseSampleImport(await readImportWorkbook(selected, 0));
    if(current===generation.current){setRows(parsed.rows.map(row=>({...row,status:'pending'})));setIssues(parsed.issues);}
   }catch(cause){if(current===generation.current)setError(errorText(cause,t));}
   finally{if(current===generation.current)setReading(false);}

@@ -5,22 +5,22 @@ export const XLSX_ACCEPT = '.xlsx,application/vnd.openxmlformats-officedocument.
 
 // Generate the workbook in the browser so translated headers and the configured
 // container paths always match the current deployment.
-export async function createImportWorkbook(template: string): Promise<Blob> {
+export async function createImportWorkbook(template: string, sheet = 'Import'): Promise<Blob> {
   const { default: writeXlsxFile } = await import('write-excel-file/universal');
   const records = parseCSVRecords(template);
   return writeXlsxFile(records.map((row, index) => row.cells.map(value => ({
     value, type: String, format: '@',
     ...(index === 0 ? { fontWeight: 'bold' as const, backgroundColor: '#E8EFF8' } : {}),
   }))), {
-    sheet: 'Import',
+    sheet,
     columns: records[0].cells.map((_, index) => ({
       width: Math.min(80, Math.max(24, ...records.map(row => (row.cells[index]?.length ?? 0) + 4))),
     })),
   }).toBlob();
 }
 
-export async function downloadImportWorkbook(template: string, filename: string) {
-  const blob = await createImportWorkbook(template);
+export async function downloadImportWorkbook(template: string, filename: string, sheet = 'Import') {
+  const blob = await createImportWorkbook(template, sheet);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -41,7 +41,7 @@ export async function readImportWorkbook(file: File, columns: number) {
     // are omitted by readers and need padding for optional template columns.
     return data.map((row, index) => ({
       line: index + 1,
-      cells: Array.from({ length: Math.max(columns, row.length) }, (_, column) => {
+      cells: Array.from({ length: Math.max(columns || data[0]?.length || 0, row.length) }, (_, column) => {
         const cell = row[column];
         if (cell instanceof Date) throw new Error('Unexpected date cell');
         return cell == null ? '' : String(cell);

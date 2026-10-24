@@ -1,4 +1,6 @@
 'use client';
+import {SampleParentFields} from '@/components/shared/SampleParentFields';
+import type {SampleParentValues} from '@/lib/sample-parents';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { errorText } from '@/i18n/errors';
 
@@ -23,7 +25,7 @@ interface NewSampleModalProps {
   onSubmit: (data: NewSampleFormData) => void | Promise<void>;
 }
 
-export interface NewSampleFormData {
+export interface NewSampleFormData extends SampleParentValues {
   identityPolicyAcknowledged?: boolean;
   identityPolicyVersion?: string;
   internalId: string;
@@ -55,6 +57,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
   const requiresIdentityConfirmation = getRuntimeBackendFlavor() === 'squid';
   const hpoTerms = useHpoTerms(isOpen);
   const [formData, setFormData] = React.useState<NewSampleFormData>({
+    fatherSampleInternalId:'',motherSampleInternalId:'',fatherAffectedStatus:'',motherAffectedStatus:'',
     internalId: '',
     gender: 'unknown',
     age: undefined,
@@ -104,7 +107,8 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
       onClose();
       // Reset form only after the backend confirms creation.
       setFormData({
-        internalId: '',
+        fatherSampleInternalId:'',motherSampleInternalId:'',fatherAffectedStatus:'',motherAffectedStatus:'',
+    internalId: '',
         gender: 'unknown',
         age: undefined,
         sampleType: '全血',
@@ -293,6 +297,7 @@ export function NewSampleModal({ isOpen, onClose, onSubmit }: NewSampleModalProp
             rows={2}
           />
         </section>
+      <SampleParentFields value={formData} onChange={parents=>setFormData(previous=>({...previous,...parents}))} internalId={formData.internalId} disabled={submitting}/>
       </form>
     </AppModal>
   );
