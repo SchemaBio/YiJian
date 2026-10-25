@@ -1,5 +1,5 @@
 'use client';
-import { formatNumericString } from '@/i18n/format';
+import { snvSampleColumns } from './SNVSampleColumns';
 
 import { errorText } from '@/i18n/errors';
 
@@ -36,6 +36,7 @@ import { ChromosomeFilter } from './ChromosomeFilter';
 interface SNVIndelTabProps {
   taskId: string;
   referenceGenome?: string;
+  family?: boolean;
   filterState?: TableFilterState;
   onFilterChange?: (state: TableFilterState) => void;
 }
@@ -43,6 +44,7 @@ interface SNVIndelTabProps {
 export function SNVIndelTab({
   taskId,
   referenceGenome,
+  family,
   filterState: externalFilterState,
   onFilterChange
 }: SNVIndelTabProps) {
@@ -330,30 +332,7 @@ export function SNVIndelTab({
       width: 80,
       align: 'center',
     },
-    {
-      id: 'zygosity',
-      header: t("tasks.zygosity50c147"),
-      accessor: (row) => {
-        const labels = { Heterozygous: t("tasks.heterozygous0eee7c"), Homozygous: t("tasks.homozygousf691c3"), Hemizygous: t("tasks.hemizygous75566a"), Unknown: t("history.notProvided071fb2") };
-        const colors = {
-          Heterozygous: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
-          Homozygous: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200',
-          Hemizygous: 'border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200',
-          Unknown: 'border-border-default bg-canvas-inset text-fg-muted',
-        };
-        return <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${colors[row.zygosity]}`}>{labels[row.zygosity]}</span>;
-      },
-      width: 80,
-      align: 'center',
-    },
-    {
-      id: 'alleleFrequency',
-      header: 'VAF',
-      accessor: (row) => <span className="font-mono tabular-nums text-accent-fg">{formatNumericString((row.alleleFrequency * 100).toFixed(1), t.locale)}%</span>,
-      width: 80,
-      align: 'center',
-      sortable: true,
-    },
+    ...snvSampleColumns(family ?? Boolean(result?.columns?.some(field => /_(father|mother)$/.test(field)) || sortedData.some(row => row.father || row.mother)), t),
     {
       id: 'depth',
       header: t("tasks.deptha1128a"),

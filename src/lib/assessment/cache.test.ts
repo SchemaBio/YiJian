@@ -1,6 +1,6 @@
 import { webcrypto } from 'node:crypto';
 import { afterEach, expect, it, vi } from 'vitest';
-import { assessmentCacheKey, setAssessmentCacheScope } from './cache';
+import { assessmentCacheKey, setAssessmentCacheScope, readAssessmentCache, writeAssessmentCache, removeAssessmentCache } from './cache';
 import type { AssessmentContext } from './types';
 afterEach(() => { setAssessmentCacheScope('anonymous'); vi.unstubAllGlobals(); });
 it('isolates saved assessments by account, organization, attempt, rules, HPO and reference context', async () => {
@@ -13,4 +13,27 @@ it('isolates saved assessments by account, organization, attempt, rules, HPO and
   setAssessmentCacheScope('user2:org1'); expect(await assessmentCacheKey(context)).not.toBe(first);
   setAssessmentCacheScope('user1:org2'); expect(await assessmentCacheKey(context)).not.toBe(first);
   setAssessmentCacheScope('anonymous'); expect(await assessmentCacheKey(context)).toBeNull();
+});
+
+it('canonicalizes HPO sets, member order and JSON object key order',async()=>{
+ vi.stubGlobal('crypto',webcrypto);
+ const one={taskId:'task',attemptId:'one',hpo:['HP:2','HP:1'],members:[{id:'b',role:'father'},{id:'a',role:'proband'}],proofs:{one:{reference:'hg19',qualityPassed:true}},pack:{version:'rules'}} as unknown as AssessmentContext;
+ setAssessmentCacheScope('user:org');
+ const key=await assessmentCacheKey(one);
+ expect(await assessmentCacheKey({...one,hpo:['HP:1','HP:2','HP:1'],members:[...one.members].reverse(),proofs:{one:{qualityPassed:true,reference:'hg19'}}})).toBe(key);
+});
+it('reuses completed results when IndexedDB is unavailable, isolates organizations and purges on logout',async()=>{
+ vi.stubGlobal('crypto',webcrypto);vi.stubGlobal('indexedDB',undefined);
+ const ctx={taskId:'task',attemptId:'a',hpo:[],pack:{version:'v'}} as unknown as AssessmentContext;
+ setAssessmentCacheScope('user:org1');const key=await assessmentCacheKey(ctx);
+ expect(key).not.toBeNull();await writeAssessmentCache(key,[]);
+ setAssessmentCacheScope('user:org2');expect(await readAssessmentCache(await assessmentCacheKey(ctx))).toBeNull();
+ setAssessmentCacheScope('user:org1');expect(await readAssessmentCache(key)).toEqual([]);
+ await removeAssessmentCache('another');expect(await readAssessmentCache(key)).toEqual([]);
+ setAssessmentCacheScope('anonymous');expect(await readAssessmentCache(key)).toBeNull();
+});
+it('expires the memory fallback and removes results for explicit reassessment',async()=>{
+ vi.stubGlobal('indexedDB',undefined);vi.useFakeTimers();
+ try{await writeAssessmentCache('scope/task/a',[]);await removeAssessmentCache('task');expect(await readAssessmentCache('scope/task/a')).toBeNull();
+ await writeAssessmentCache('scope/task/a',[]);vi.advanceTimersByTime(24*60*60*1000+1);expect(await readAssessmentCache('scope/task/a')).toBeNull();}finally{vi.useRealTimers();}
 });

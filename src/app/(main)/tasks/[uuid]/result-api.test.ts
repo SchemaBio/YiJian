@@ -74,3 +74,15 @@ describe('versioned Parquet adjustments', () => {
     await expect(reviewVariant('task-conflict', 'snv-indel', 'row', true)).rejects.toThrow('409 conflict');
   });
 });
+
+
+describe('family SNP/InDel sample values',()=>{
+ it('maps missing raw VAF using individual AD, keeps unknown missing, and sorts the displayed VAF',async()=>{
+  vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[{id:'family',genotype:'0/1',vaf:'.',annotationValues:{Genotype:'0/1',Zygosity:'Het',VAF:'.',AD:'60,46',Genotype_father:'1/1',Zygosity_father:'Hom',VAF_father:'.',AD_father:'0,88',Genotype_mother:'./.',VAF_mother:'.',AD_mother:'.'}}],total:1,rowCount:1,columns:['VAF','AD','VAF_father','VAF_mother','Sample_VAF'],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});
+  const page=await getSNVIndels('family-metrics',{...DEFAULT_FILTER_STATE,sortColumn:'alleleFrequency',sortDirection:'desc'});
+  expect(page.data[0]).toMatchObject({zygosity:'Heterozygous',alleleFrequency:46/106,father:{zygosity:'Homozygous',alleleFrequency:1},mother:{zygosity:'Unknown'}});
+  expect(page.data[0].mother?.alleleFrequency).toBeUndefined();
+  expect(page.data[0].annotationValues?.VAF).toBe('.');
+  expect(queryBrowserParquet).toHaveBeenLastCalledWith('family-metrics','snv-indel',expect.objectContaining({sort:'Sample_VAF'}),undefined);
+ });
+});

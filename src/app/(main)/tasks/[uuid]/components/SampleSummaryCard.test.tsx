@@ -84,4 +84,20 @@ describe('task sample HPO editing', () => {
     await waitFor(() => expect(screen.getByRole('button', {name:'编辑'})).toBeEnabled());
     expect(api.put).toHaveBeenLastCalledWith('/v1/samples/sample%2Fid', {hpo_terms:[]});
   });
+  it('shows diagnosis, family and full-width HPO without submission or quality metadata',async()=>{
+    const sample={...normalizeSampleDetail(raw()),submissionInfo:{submissionDate:'2026-01-01',sampleCollectionDate:'2026-01-02',sampleReceiveDate:'2026-01-03',sampleQuality:'good' as const},projectInfo:{projectId:'project',projectName:'Study',testItems:[],panel:'Panel',priority:'normal' as const,turnaroundDays:30},familyHistory:{hasHistory:true,affectedMembers:[{relation:'父亲',condition:'家族表型说明'}]}};
+    vi.mocked(api.get).mockResolvedValue({...raw(),family_history:sample.familyHistory});
+    render(<SampleSummaryCard sample={sample} />);
+    fireEvent.click(screen.getByRole('button',{name:'样本详情'}));
+    expect(screen.getByRole('heading',{name:'已知诊断'})).toBeInTheDocument();
+    expect(screen.getByRole('heading',{name:'家族史'})).toBeInTheDocument();
+    expect(screen.getByText('家族表型说明')).toBeInTheDocument();
+    for(const label of ['送检日期','采样日期','收样日期','样本质量','承诺周期','2026-01-01','2026-01-02','2026-01-03'])expect(screen.queryByText(label)).not.toBeInTheDocument();
+    expect(screen.queryByText(/用户提供/)).not.toBeInTheDocument();
+    const diagnosis=screen.getByRole('heading',{name:'已知诊断'});
+    const hpo=screen.getByText(oldTerm.id);
+    expect(diagnosis.parentElement?.parentElement?.contains(hpo)).toBe(false);
+    await waitFor(()=>expect(screen.getByRole('button',{name:'编辑'})).toBeEnabled());
+  });
+
 });

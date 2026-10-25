@@ -1,3 +1,4 @@
+import { readSNVSample } from '@/lib/snv-sample-metrics';
 import { LocalizedError } from '@/i18n/errors';
 import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
@@ -253,7 +254,7 @@ function variantType(type: unknown): SNVIndel['variantType'] {
   return 'SNV';
 }
 
-function zygosity(value: unknown): SNVIndel['zygosity'] {
+function zygosity(value: unknown): MEIVariant['zygosity'] {
   const normalized = s(value).toLowerCase();
   if (normalized.includes('hom') || normalized === '1/1') return 'Homozygous';
   if (normalized.includes('hemi')) return 'Hemizygous';
@@ -346,6 +347,9 @@ function parentOfOrigin(value: unknown): UPDRegion['parentOfOrigin'] {
 function mapSNV(row: BackendRow): SNVIndel {
   const annotations = row.annotationValues && typeof row.annotationValues === 'object' ? row.annotationValues as Record<string, string> : undefined;
   const reviewStatus = annotations?.ClinVar_RevStat ?? s(row.clinvarRevStat);
+  const source = {...row, ...annotations};
+  const proband = readSNVSample(source);
+  const hasRole = (role: string) => Object.keys(source).some(key => /^(Genotype|Zygosity|VAF|AD)_/.test(key) && key.endsWith('_'+role));
   const automaticAcmg = row.automaticAcmg && typeof row.automaticAcmg === 'object'
     ? row.automaticAcmg as SNVIndel['automaticAcmg']
     : undefined;
@@ -358,8 +362,11 @@ function mapSNV(row: BackendRow): SNVIndel {
     ref: s(row.ref, '-'),
     alt: s(row.alt, '-'),
     variantType: variantType(row.variantType),
-    zygosity: zygosity(row.zygosity ?? row.genotype),
-    alleleFrequency: n(row.alleleFrequency ?? row.vaf),
+    zygosity: proband.zygosity,
+    alleleFrequency: proband.alleleFrequency,
+    proband,
+    father: hasRole('father') ? readSNVSample(source, 'father') : undefined,
+    mother: hasRole('mother') ? readSNVSample(source, 'mother') : undefined,
     depth: n(row.depth),
     acmgClassification: acmg(row.acmgClassification ?? row.acmgClassificationComputed),
     automaticAcmg,
@@ -608,7 +615,7 @@ function parquetColumn(type: ResultQueryType, column: string): string {
   const aliases: Record<string, string> = {
     chromosome: 'Chromosome', chr: 'Chr', position: 'Position', startPosition: 'Start', begin: 'Begin',
     endPosition: 'End', variantType: 'Type', type: type === 'cnv-segment' || type === 'cnv-exon' ? 'Col4' : 'Type',
-    zygosity: 'Zygosity', genotype: 'Genotype', alleleFrequency: 'VAF', depth: 'Depth',
+    zygosity: 'Zygosity', genotype: 'Genotype', alleleFrequency: 'Sample_VAF', fatherAlleleFrequency: 'Sample_VAF_father', motherAlleleFrequency: 'Sample_VAF_mother', fatherZygosity:'Zygosity_father', motherZygosity:'Zygosity_mother', depth: 'Depth',
     gnomadAF: 'GnomAD_AF', gnomadEasAF: 'GnomAD_AF_EAS', clinvarSignificance: 'ClinVar_Sig',
     pathogenicity: 'ClinVar_Sig', status: 'Status', teType: 'TE_Family', acmgClassification: 'acmgClassification',
     gene: 'Gene', pinned: 'pinned', reviewed: 'reviewed', focused: 'focused',

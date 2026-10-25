@@ -1,4 +1,6 @@
 'use client';
+import { readSNVSample } from '@/lib/snv-sample-metrics';
+import { formatSampleVaf, sampleZygosityLabel } from './SNVSampleColumns';
 import { formatNumericString } from '@/i18n/format';
 
 import { errorText } from '@/i18n/errors';
@@ -22,7 +24,7 @@ import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-rea
 import { Tag } from '@/components/shared/Tag';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
-import { clinvarReviewStars, formatPopulationFrequency, formatPredictionLabel, optionalAnnotationNumber, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
+import { clinvarReviewStars, formatPopulationFrequency, formatPredictionLabel, sourceAnnotation, transcriptLocation } from '../utils/snv-annotations';
 import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '../result-api';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
@@ -281,7 +283,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
   const dbSnpIds = dbSnpIdentifiers(variant);
-  const vaf = optionalAnnotationNumber(sourceAnnotation(variant, 'VAF'));
+  const proband = variant.proband ?? readSNVSample({...variant, ...variant.annotationValues});
   const transcriptInfo = transcriptLocation(variant);
 
   // 保存 ACMG 分类
@@ -443,7 +445,12 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {/* 测序质量 */}
           <SectionTitle icon={FileText} title={t("tasks.sequencingQuality74e3b6")} />
           <div className="space-y-0">
-            <InfoItem label="VAF" value={vaf === undefined || vaf < 0 || vaf > 1 ? t("history.notProvided071fb2") : `${formatNumericString((vaf * 100).toFixed(1), t.locale)}%`} />
+            <InfoItem label="VAF" value={formatSampleVaf(proband.alleleFrequency, t)} />
+            {proband.vafSource==='ad' && <p className="text-xs text-fg-muted">{t('tasks.sampleVafFromAd',{p0:proband.alleleDepth ?? '-'})}</p>}
+            {(['father','mother'] as const).map(role => variant[role] && <React.Fragment key={role}>
+              <InfoItem label={t('tasks.'+role+'Zygosity')} value={sampleZygosityLabel(variant[role]!.zygosity,t)} />
+              <InfoItem label={t('tasks.'+role+'Vaf')} value={formatSampleVaf(variant[role]!.alleleFrequency,t)} />
+            </React.Fragment>)}
             <InfoItem label="QUAL" value={annotation('Quality') ?? t("history.notProvided071fb2")} />
             <InfoItem label="FILTER" value={annotation('Filter') ?? t("history.notProvided071fb2")} />
             <InfoItem label={t("tasks.dpReadDepth438651")} value={annotation('Depth') ?? t("history.notProvided071fb2")} />

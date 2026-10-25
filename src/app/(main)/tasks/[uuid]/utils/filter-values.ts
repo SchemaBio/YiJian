@@ -11,7 +11,7 @@ const classifications: Term[] = [
 ];
 const dictionaries: Record<string, Term[]> = {
   classification: classifications,
-  zygosity: [[['杂合'], ['Het', 'Heterozygous']], [['纯合'], ['Hom', 'Homozygous']], [['半合', '半合子'], ['Hemi', 'Hemizygous']]],
+  zygosity: [[['杂合'], ['Het', 'Heterozygous']], [['纯合'], ['Hom', 'Homozygous']], [['半合', '半合子'], ['Hemi', 'Hemizygous']], [['tasks.referenceGenotype'], ['WT', 'Reference', 'HomRef']]],
   str: [[['正常'], ['Normal']], [['前突变'], ['Premutation']], [['全突变'], ['FullMutation', 'Full mutation']]],
   upd: [[['等位UPD', '同源UPD'], ['Isodisomy']], [['异位UPD', '异源UPD'], ['Heterodisomy']]],
   parent: [[['母源'], ['Maternal', 'Mother']], [['父源'], ['Paternal', 'Father']]],
@@ -28,7 +28,7 @@ const translators = locales.map(createTextTranslator);
 function dictionary(table: string, column: string): Term[] {
   const field = column.replaceAll('_', '').toLowerCase();
   if (['acmgclassification', 'cnvclassification', 'clinvarsig', 'pathogenicity', 'clinvarsignificance'].includes(field)) return dictionaries.classification;
-  if (field === 'zygosity') return dictionaries.zygosity;
+  if (['zygosity','zygosityfather','zygositymother','fatherzygosity','motherzygosity'].includes(field)) return dictionaries.zygosity;
   if (['strstatus', 'status'].includes(field) && table === 'str') return dictionaries.str;
   if (['parentoforigin', 'parentorigin'].includes(field)) return dictionaries.parent;
   if (['confidencelabel', 'confidence', 'col18'].includes(field) && table === 'cnv-exon') return dictionaries.confidence;

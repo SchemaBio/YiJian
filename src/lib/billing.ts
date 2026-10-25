@@ -13,6 +13,7 @@ export type BillingTransactionType =
   | 'failure_refund'
   | 'adjust'
   | 'download'
+  | 'settlement'
   | string;
 
 export interface BillingTransaction {
@@ -25,6 +26,7 @@ export interface BillingTransaction {
   related_task_id?: string;
   description?: string;
   billing_basis?: string;
+  billing_state?: 'reserved' | 'settled' | 'refunded';
   created_by: number;
   created_at: string;
 }

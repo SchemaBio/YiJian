@@ -17,6 +17,7 @@ import type { Column } from '@schema/ui-kit';
 import { Clock3, Coins, CreditCard, Gauge, Loader2, ShieldCheck } from 'lucide-react';
 import {
   billingReferenceTaskId,
+  BILLING_UPDATED_EVENT,
   getBillingBalance,
   getBillingConfig,
   getBillingTransactions,
@@ -24,6 +25,7 @@ import {
   type BillingConfig,
   type BillingTransaction,
 } from '@/lib/billing';
+import { billingDisplayType, billingTransactionLabel, billingTransactionDescription } from '@/lib/billing-presentation';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { MetricTile } from '@/components/shared';
 import { SupportDialog } from '@/components/support/SupportDialog';
@@ -35,26 +37,6 @@ function formatTime(value: string, t: TextTranslator = chineseText): string {
   return date.toLocaleString(t.locale, { hour12: false });
 }
 
-function transactionLabel(type: string, t: TextTranslator = chineseText): string {
-  switch (type) {
-    case 'recharge':
-      return t("billing.addCreditsfa03c4");
-    case 'pre_deduction':
-      return t("settings.reservedCharge813760");
-    case 'deduction':
-      return t("settings.chargeb04d6f");
-    case 'refund':
-      return t("settings.refundb82ef8");
-    case 'failure_refund':
-      return t("settings.failureRefund390d28");
-    case 'adjust':
-      return t("settings.adjustment0a4d26");
-    case 'download':
-      return t("settings.downloadChargef8580c");
-    default:
-      return type || '-';
-  }
-}
 
 function formatCredits(value: number | null | undefined, t: TextTranslator = chineseText): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '--';
@@ -75,8 +57,8 @@ export default function BillingSettingsPage() {
 
   const pageSize = 20;
 
-  const loadData = React.useCallback(async (nextPage = page) => {
-    setIsLoading(true);
+  const loadData = React.useCallback(async (nextPage = page, silent = false) => {
+    if (!silent) setIsLoading(true);
     setError(null);
     try {
       const [nextBalance, nextConfig, nextTransactions] = await Promise.all([
@@ -96,7 +78,7 @@ export default function BillingSettingsPage() {
       setTransactions([]);
       setTotal(0);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [page, t]);
 
@@ -110,18 +92,32 @@ export default function BillingSettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSaaS, router]);
 
+  React.useEffect(() => {
+    if (!isSaaS) return;
+    const refresh = () => void loadData(page, true);
+    window.addEventListener(BILLING_UPDATED_EVENT, refresh);
+    window.addEventListener('focus', refresh);
+    const pending = transactions.some(row => row.billing_basis === 'ai_assistance' && row.billing_state === 'reserved');
+    const interval = pending ? window.setInterval(refresh, 3000) : undefined;
+    return () => {
+      window.removeEventListener(BILLING_UPDATED_EVENT, refresh);
+      window.removeEventListener('focus', refresh);
+      if (interval !== undefined) window.clearInterval(interval);
+    };
+  }, [isSaaS, loadData, page, transactions]);
+
   const columns: Column<BillingTransaction>[] = [
     {
       id: 'type',
       header: t("history.typee4e46c"),
-      accessor: (row) => <span className="yj-transaction-tag" data-type={row.type}>{transactionLabel(row.type, t)}</span>,
+      accessor: (row) => <span className="yj-transaction-tag" data-type={billingDisplayType(row)}>{billingTransactionLabel(row, t)}</span>,
       width: 110,
       align: 'center',
     },
     {
       id: 'amount',
       header: t("settings.creditChange01fe0c"),
-      accessor: (row) => <span className={`font-medium tabular-nums ${row.amount >= 0 ? 'text-success-fg' : 'text-warning-fg'}`}>{row.amount > 0 ? '+' : ''}{formatCredits(row.amount, t)}</span>,
+      accessor: (row) => <span className={`font-medium tabular-nums ${row.amount === 0 ? 'text-fg-muted' : row.amount > 0 ? 'text-success-fg' : 'text-warning-fg'}`}>{row.amount > 0 ? '+' : ''}{formatCredits(row.amount, t)}</span>,
       width: 120,
       align: 'center',
     },
@@ -137,7 +133,7 @@ export default function BillingSettingsPage() {
       width: 300,
       align: 'center',
     },
-    { id: 'description', header: t("settings.details26670d"), accessor: (row) => row.description || '-', width: 260, align: 'center' },
+    { id: 'description', header: t("settings.details26670d"), accessor: (row) => billingTransactionDescription(row, t), width: 260, align: 'center' },
     { id: 'created_at', header: t("settings.occurredAt51f85a"), accessor: (row) => formatTime(row.created_at, t), width: 180, align: 'center' },
   ];
 

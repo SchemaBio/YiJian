@@ -2,14 +2,14 @@
 import { useText } from '@/i18n/useText';
 import { translateUI } from '@/i18n/text';
 
-import { getSampleQualityDisplay, getSamplePriorityLabel, getFamilyHistoryLabel, formatTurnaroundDays } from '@/lib/sample-display';
+import { getSamplePriorityLabel, getFamilyHistoryLabel } from '@/lib/sample-display';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import * as React from 'react';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
 import { Tag } from '@/components/shared/Tag';
-import { User, Calendar, HeartPulse, Users } from 'lucide-react';
+import { User, HeartPulse, Users } from 'lucide-react';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import { GENDER_CONFIG } from '@/app/(main)/samples/types';
 import { getSampleDetail, updateSampleHpoTerms } from '@/lib/samples';
@@ -19,35 +19,6 @@ import { SampleHpoTerms } from './SampleHpoTerms';
 interface SampleSummaryCardProps {
   sample: SampleDetail;
   onSampleChange?: (sample: SampleDetail) => void;
-}
-
-function InfoSection({
-  icon,
-  title,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <div className="flex items-center gap-1 text-fg-muted min-w-[100px]">
-        {icon}
-        <span className="text-xs">{title}</span>
-      </div>
-      <div className="min-w-0 flex-1 text-sm text-fg-default">{children}</div>
-    </div>
-  );
-}
-
-function InfoItem({ label, value, className = '' }: { label: string; value: React.ReactNode; className?: string }) {
-  return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span className="text-xs text-fg-muted min-w-[60px]">{label}</span>
-      <span className="text-sm text-fg-default">{value || '-'}</span>
-    </div>
-  );
 }
 
 function SampleDetails({ sample, refreshing, onHpoSave }: {
@@ -99,73 +70,27 @@ function SampleDetails({ sample, refreshing, onHpoSave }: {
         )}
       </div>
 
-      {/* 第二行：送检信息 */}
-      {sample.submissionInfo && (
-        <div className="flex items-center gap-6 mb-3 pb-3 border-b border-border-default text-xs">
-          <div className="flex items-center gap-1 text-fg-muted">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>{t("tasks.submissionDate06730a")}</span>
-            <span className="text-fg-default">{sample.submissionInfo.submissionDate || '—'}</span>
+      <section className="space-y-4" aria-label={t('samples.clinicalDiagnosis654a81')}>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-fg-default"><HeartPulse className="h-4 w-4 text-fg-muted" />{t('samples.clinicalDiagnosis654a81')}</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="min-w-0 space-y-3 rounded-md border border-border-default bg-canvas-default p-3">
+            <h4 className="text-xs font-medium text-fg-muted">{t('samples.primaryDiagnosisc93efa')}</h4>
+            <p className="whitespace-pre-wrap break-words text-sm leading-6 text-fg-default">{sample.clinicalDiagnosis?.mainDiagnosis || t('history.notProvided071fb2')}</p>
+            {!!sample.clinicalDiagnosis?.symptoms?.length && <div className="space-y-2">
+              <h5 className="text-xs text-fg-muted">{t('samples.symptoms233c5d')}</h5>
+              <div className="flex flex-wrap gap-1.5">{sample.clinicalDiagnosis.symptoms.map((symptom,i)=><Tag key={i} variant="neutral">{symptom}</Tag>)}</div>
+            </div>}
           </div>
-          <div className="flex items-center gap-1 text-fg-muted">
-            <span>{t("tasks.collectionDated4fc24")}</span>
-            <span className="text-fg-default">{sample.submissionInfo.sampleCollectionDate || '—'}</span>
+          <div className="min-w-0 space-y-3 rounded-md border border-border-default bg-canvas-default p-3">
+            <h4 className="flex items-center gap-1.5 text-xs font-medium text-fg-muted"><Users className="h-3.5 w-3.5" />{t('samples.familyHistory35fef1')}</h4>
+            <p className="text-sm leading-6 text-fg-default">{getFamilyHistoryLabel(sample.familyHistory?.hasHistory,t)}</p>
+            {sample.familyHistory?.hasHistory && !!sample.familyHistory.affectedMembers?.length && <ul className="space-y-2 text-sm">
+              {sample.familyHistory.affectedMembers.map((member,i)=><li key={i} className="flex flex-wrap items-start gap-x-2 gap-y-1"><span className="shrink-0 font-medium text-fg-default">{member.relation}</span><span className="min-w-0 whitespace-pre-wrap break-words text-fg-muted">{member.condition}</span></li>)}
+            </ul>}
           </div>
-          <div className="flex items-center gap-1 text-fg-muted">
-            <span>{t("tasks.receiptDate9a39e8")}</span>
-            <span className="text-fg-default">{sample.submissionInfo.sampleReceiveDate || '—'}</span>
-          </div>
-          <div className="flex items-center gap-1 text-fg-muted">
-            <span>{t("tasks.sampleQuality08347c")}</span>
-            <Tag
-              variant={getSampleQualityDisplay(sample.submissionInfo.sampleQuality, t).variant}
-            >
-              {translateUI(getSampleQualityDisplay(sample.submissionInfo.sampleQuality, t).label, t)}
-            </Tag>
-          </div>
-          {sample.projectInfo && (
-            <div className="flex items-center gap-1 text-fg-muted">
-              <span>{t("tasks.expectedTurnaround8c768a")}</span>
-              <span className="text-fg-default">{formatTurnaroundDays(sample.projectInfo.turnaroundDays, t)}</span>
-            </div>
-          )}
         </div>
-      )}
-
-      {/* 第三行：临床诊断 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <InfoSection icon={<HeartPulse className="w-3.5 h-3.5" />} title={t("samples.clinicalDiagnosis654a81")}>
-          <div className="space-y-1">
-            <InfoItem label={t("samples.primaryDiagnosisc93efa")} value={sample.clinicalDiagnosis?.mainDiagnosis} />
-            {sample.clinicalDiagnosis?.symptoms && sample.clinicalDiagnosis.symptoms.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-fg-muted min-w-[60px]">{t("samples.symptoms233c5d")}</span>
-                <div className="flex flex-wrap gap-1">
-                  {sample.clinicalDiagnosis.symptoms.map((s, i) => (
-                    <Tag key={i} variant="neutral">{s}</Tag>
-                  ))}
-                </div>
-              </div>
-            )}
-            <SampleHpoTerms terms={sample.clinicalDiagnosis?.hpoTerms ?? []} refreshing={refreshing} onSave={onHpoSave} />
-          </div>
-        </InfoSection>
-
-        <InfoSection icon={<Users className="w-3.5 h-3.5" />} title={t("samples.familyHistory35fef1")}>
-          <div className="space-y-1">
-            <span>{getFamilyHistoryLabel(sample.familyHistory?.hasHistory, t)}</span>
-            {sample.familyHistory?.hasHistory && sample.familyHistory.affectedMembers && (
-              <div className="flex flex-wrap gap-1">
-                {sample.familyHistory.affectedMembers.map((member, i) => (
-                  <Tag key={i} variant="warning">
-                    {member.relation}: {member.condition}
-                  </Tag>
-                ))}
-              </div>
-            )}
-          </div>
-        </InfoSection>
-      </div>
+        <SampleHpoTerms terms={sample.clinicalDiagnosis?.hpoTerms ?? []} refreshing={refreshing} onSave={onHpoSave} />
+      </section>
     </div>
   );
 }

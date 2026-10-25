@@ -276,6 +276,7 @@ export default function AnalysisDetailPage() {
         return (
           <SNVIndelTab
             taskId={uuid}
+            family={task.template ? task.template === 'trio' || Boolean(task.trioMembers?.length) : undefined}
             referenceGenome={resultContext?.reference.declaredId}
             filterState={getFilterState('snv-indel')}
             onFilterChange={(state) => setFilterState('snv-indel', state)}

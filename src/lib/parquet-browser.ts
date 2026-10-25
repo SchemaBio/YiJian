@@ -1,4 +1,5 @@
 'use client';
+import { sampleVafSQL, sampleRoleSQL, type SampleColumnRoles } from './snv-sample-metrics';
 import { LocalizedError } from '@/i18n/errors';
 
 import { api, ApiError } from './api';
@@ -12,6 +13,7 @@ import type { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 interface DatasetInfo {
 	transport?: 'api';
     dataset: {
+        sampleColumnRoles?: SampleColumnRoles;
         id: string;
         executionAttemptId: string;
         dataVersion: string;
@@ -204,6 +206,18 @@ class BrowserTable {
             if (count !== this.info.dataset.rows || (this.info.dataset.expectedRows !== undefined && count !== this.info.dataset.expectedRows))
                 throw new LocalizedError("display.parquetRowCountValidationFailedContactThe9f4807");
             this.raw = (await this.rows('DESCRIBE source')).map(row => String(row.column_name)).filter(s => s !== 'file_row_number' && s !== '__row_id');
+            if (this.table === 'snv-indel') {
+                const mapping=sampleRoleSQL(this.raw,this.info.dataset.sampleColumnRoles);
+                if(mapping)await this.conn.query(mapping);
+                for (const role of ['', 'father', 'mother'] as const) {
+                    const suffix = role ? '_'+role : '';
+                    if (role && !this.raw.some(field => field.endsWith(suffix))) continue;
+                    const field = 'Sample_VAF'+suffix;
+                    await this.conn.query(`ALTER TABLE source ADD COLUMN ${ident(field)} DOUBLE; UPDATE source SET ${ident(field)}=${sampleVafSQL(this.raw, role)}`);
+                    this.raw.push(field);
+                    this.info.aliases[field] = [role ? role+'AlleleFrequency' : 'alleleFrequency'];
+                }
+            }
             // Interval length is displayed from endpoints. Register the same
             // expression locally so its header filters the displayed value.
             if (['cnv-segment', 'cnv-exon', 'upd'].includes(this.table) && !this.raw.some(f => this.info.aliases[f]?.includes('length'))) {
@@ -271,6 +285,11 @@ class BrowserTable {
             const seed=info.dataset.id+'/'+info.dataset.objectSha256+'/';
             await this.conn.query(`CREATE TEMP TABLE assessment_source AS SELECT *,sha256(${literal(seed)}||CAST(file_row_number AS VARCHAR)) AS __row_id FROM read_parquet(${literal(assessmentFile)},file_row_number=true)`);
             relation='assessment_source';temporary=true;
+            if(table==='snv-indel'){
+                const raw=(await this.rows('DESCRIBE assessment_source',combined)).map(row=>String(row.column_name));
+                const mapping=sampleRoleSQL(raw,info.dataset.sampleColumnRoles,'assessment_source');
+                if(mapping)await this.conn.query(mapping);
+            }
             const count=Number((await this.rows('SELECT count(*) AS n FROM assessment_source'))[0].n);
             if(count!==info.dataset.rows || (info.dataset.expectedRows!==undefined&&count!==info.dataset.expectedRows))throw new LocalizedError("display.assessmentRowCountValidationFailedce2e06");
         }
@@ -397,7 +416,7 @@ class BrowserTable {
             row.acmgClassification = auto.classification;
             row.acmgClassificationComputed = auto.classification;
             row.acmgAssessmentSource = hasAutomatic?'automatic':undefined;
-            row.alleleFrequency = source.VAF;
+            row.alleleFrequency = source.Sample_VAF;
             row.vaf = source.VAF;
         }
         if (this.table === 'cnv-segment' || this.table === 'cnv-exon') {

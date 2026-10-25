@@ -1,5 +1,6 @@
 import {afterAll,afterEach,beforeAll,beforeEach,expect,it,vi} from 'vitest';
 import {api} from './api';
+import {DEFAULT_FILTER_STATE} from '@/app/(main)/tasks/[uuid]/types';
 import {getSNVIndels} from '@/app/(main)/tasks/[uuid]/result-api';
 import {assessmentStatus,cancelAssessment} from './assessment/client';
 import {clearBrowserResults,queryBrowserParquet} from './parquet-browser';
@@ -60,7 +61,7 @@ it('downloads self-hosted descriptors with query parameters through the real aut
  vi.mocked(api.download).mockImplementation(actual.api.download);
  vi.mocked(fetch).mockResolvedValue(new Response(new Uint8Array([1]),{headers:{'Content-Type':'application/vnd.apache.parquet'}}));
  const pending=queryBrowserParquet('local-task','snv-indel',{offset:0,limit:20});
- await vi.waitFor(()=>expect(assessmentStatus('local-task')?.state).toBe('loading'));
+ await vi.waitFor(()=>expect(assessmentStatus('local-task')?.state).toBe('checking'));
  cancelAssessment('local-task');
  await expect(pending).resolves.toMatchObject({total:2});
  expect(api.download).toHaveBeenCalledWith(url.split('?')[0],undefined,expect.objectContaining({method:'GET',params:{attemptId:'attempt',datasetVersion:'v1'}}));
@@ -122,7 +123,7 @@ it('sorts page identities before hydration and preserves the chosen order',async
   return original(sql);
  });
  const pending=queryBrowserParquet('sorted-task','snv-indel',{offset:0,limit:20,sort:'Gene',direction:'desc'});
- await vi.waitFor(()=>expect(assessmentStatus('sorted-task')?.state).toBe('loading'));
+ await vi.waitFor(()=>expect(assessmentStatus('sorted-task')?.state).toBe('checking'));
  cancelAssessment('sorted-task');
  const page=await pending;
  expect(page.items.map(row=>row.gene)).toEqual(['SCN1A','BRCA1']);
@@ -141,7 +142,7 @@ it('projects the adopted draft without overwriting legacy evidence or the VUS fi
   return (async function*(){yield {toArray:()=>rows.map(row=>({toJSON:()=>row}))};})();
  });
  const pending=queryBrowserParquet('draft-task','snv-indel',{offset:0,limit:20});
- await vi.waitFor(()=>expect(assessmentStatus('draft-task')?.state).toBe('loading'));
+ await vi.waitFor(()=>expect(assessmentStatus('draft-task')?.state).toBe('checking'));
  cancelAssessment('draft-task');
  const page=await pending;
  expect(page.items[0]).toMatchObject({activeAcmgVersion:'svcv4',acmgClassification:'VUS',acmgVusSubclass:'VUS-high',acmgScore:4,pinned:false,acmgOverride:'Pathogenic',acmgEvidence:[]});
@@ -150,7 +151,7 @@ it('projects the adopted draft without overwriting legacy evidence or the VUS fi
 });
 it('keeps the loaded table queryable with saved interpretation after cancelling assessment',async()=>{
  const pending=queryBrowserParquet('task','snv-indel',{offset:0,limit:20});
- await vi.waitFor(()=>expect(assessmentStatus('task')?.state).toBe('loading'));
+ await vi.waitFor(()=>expect(assessmentStatus('task')?.state).toBe('checking'));
  cancelAssessment('task');
  const page=await pending;
  expect(page.total).toBe(2);
@@ -165,4 +166,23 @@ it('keeps the loaded table queryable with saved interpretation after cancelling 
  expect(mapped.data[1].acmgCriteria).toBeUndefined();
  expect(mapped.data[0].interpretation).toBe('已保存的解读');
  expect(assessmentStatus('task')?.state).toBe('cancelled');
+});
+
+
+it('materializes all trio VAF columns and carries individual AD through the browser mapper',async()=>{
+ const raw=['Gene','Alt','Genotype','Zygosity','VAF','AD','Genotype_father','Zygosity_father','VAF_father','AD_father','Genotype_mother','Zygosity_mother','VAF_mother','AD_mother'];
+ mocks.send.mockImplementation(async(sql:string)=>{
+  const sample={Gene:'TEST',Alt:'G',Genotype:'0/1',Zygosity:'Het',VAF:'.',AD:'60,46',Genotype_father:'1/1',Zygosity_father:'Hom',VAF_father:'.',AD_father:'0,88',Genotype_mother:'0/0',Zygosity_mother:'WT',VAF_mother:'.',AD_mother:'50,0',Sample_VAF:46/106,Sample_VAF_father:1,Sample_VAF_mother:0,__row_id:'row-1',file_row_number:0,__version:0,__acmg:null,__adjustments:null};
+  const rows=sql==='DESCRIBE source'?raw.map(column_name=>({column_name})):sql.startsWith('SELECT count')?[{n:2}]:[sample,{...sample,__row_id:'row-2',file_row_number:1}];
+  return (async function*(){yield {toArray:()=>rows.map(row=>({toJSON:()=>row}))};})();
+ });
+ const pending=getSNVIndels('trio-browser', {...DEFAULT_FILTER_STATE,sortColumn:'alleleFrequency',sortDirection:'desc'});
+ await vi.waitFor(()=>expect(assessmentStatus('trio-browser')?.state).toBe('checking'));cancelAssessment('trio-browser');
+ const page=await pending;
+ expect(page.data[0]).toMatchObject({alleleFrequency:46/106,proband:{zygosity:'Heterozygous'},father:{zygosity:'Homozygous',alleleFrequency:1},mother:{zygosity:'Reference',alleleFrequency:0}});
+ expect(page.data[0].annotationValues?.VAF).toBe('.');
+ for(const name of ['Sample_VAF','Sample_VAF_father','Sample_VAF_mother']){
+  expect(mocks.query.mock.calls.some(([sql])=>String(sql).includes('ADD COLUMN "'+name+'" DOUBLE'))).toBe(true);
+  expect(page.columns).toContain(name);
+ }
 });

@@ -220,3 +220,11 @@ describe('same-screen interpretation', () => {
     await waitFor(() => expect(editor).toHaveValue('B 解读'));
   });
 });
+
+
+it('shows AD-derived VAF in the detail panel and identifies its source',()=>{
+ render(<VariantDetailPanel taskId="test" variant={{...variant('AD sample'),annotationValues:{VAF:'.',AD:'60,46',Genotype:'0/1'}}} isOpen onClose={vi.fn()}/>);
+ fireEvent.click(screen.getByRole('tab',{name:'证据'}));
+ expect(screen.getByText('43.4%')).toBeVisible();
+ expect(screen.getByText(/原始 VAF 缺失，按 AD/)).toBeVisible();
+});

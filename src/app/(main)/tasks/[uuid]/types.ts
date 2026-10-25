@@ -1,3 +1,4 @@
+import type { SNVSampleMetrics, SNVZygosity } from '@/lib/snv-sample-metrics';
 /**
  * 分析结果详情页类型定义
  */
@@ -240,8 +241,11 @@ export interface SNVIndel extends VariantReviewStatus {
   ref: string;                   // 参考碱基
   alt: string;                   // 变异碱基
   variantType: 'SNV' | 'Insertion' | 'Deletion' | 'Complex';
-  zygosity: 'Heterozygous' | 'Homozygous' | 'Hemizygous' | 'Unknown';
-  alleleFrequency: number;       // 等位基因频率
+  zygosity: SNVZygosity;
+  proband?: SNVSampleMetrics;
+  father?: SNVSampleMetrics;
+  mother?: SNVSampleMetrics;
+  alleleFrequency?: number;       // 等位基因频率
   depth: number;                 // 覆盖深度
   acmgClassification?: ACMGClassification;
   automaticAcmg?: AutomaticACMGAssessment;
