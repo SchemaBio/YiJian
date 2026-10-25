@@ -27,7 +27,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const charge = deployment === 'saas' && settings.billingEnabled === true && !experimental && settings.capabilities?.[input.feature]?.billingEnabled !== false;
   const featureCapability = settings.capabilities?.[input.feature];
   const unavailable = !settings.enabled || !settings.connected || !settings.configured || featureCapability?.enabled === false;
-  const contextRequired = input.feature !== 'hpo' && input.feature !== 'acmg' && !!settings.capabilities;
+  const contextRequired = (input.feature === 'cnv_gain' || input.feature === 'cnv_loss') && !!settings.capabilities;
   const running = React.useRef(false);
   const controller = React.useRef<AbortController | null>(null);
   const scope = `${input.taskId ?? ''}:${input.feature}:${String(input.variant?.id ?? '')}`;
@@ -43,7 +43,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   }, [scope]);
   React.useEffect(() => { if (input.reference) setReference(input.reference); }, [input.reference]);
   React.useEffect(() => {
-    if (input.feature === 'acmg' || !input.taskId || !adapter.getClinicalContext) return;
+    if (input.feature === 'acmg' || input.feature === 'svcv4' || !input.taskId || !adapter.getClinicalContext) return;
     const abort = new AbortController();
     void adapter.getClinicalContext(input.taskId, abort.signal).then(value => {
       if (!abort.signal.aborted) setContext(previous => ({ ...previous, sampleType: previous.sampleType || value.sampleType || '', hpoTerms: previous.hpoTerms ?? value.hpoTerms }));

@@ -140,6 +140,17 @@ describe('AI generation confirmation and lifecycle', () => {
     expect(screen.queryByText(/AI 辅助功能未开启/i, { selector: '.text-xs' })).not.toBeInTheDocument();
     expect(screen.getByText(/AI 辅助功能未开启/i)).toBeInTheDocument();
   });
+  it('generates an experimental SVC suggestion directly with no clinical-context form or sample fetch', async () => {
+    const client = adapter();
+    client.getClinicalContext = vi.fn();
+    client.getSettings = vi.fn().mockResolvedValue({ enabled:true, connected:true, configured:true, billingEnabled:true, capabilities:{svcv4:{enabled:true,mode:'experimental'}} });
+    render(<AIAssistanceProvider deployment="saas" adapter={client}><AIAssistanceAction input={{feature:'svcv4',mode:'experimental',taskId:'task',reference:'hg38',variant:{id:'A'}}} onResult={vi.fn()}/></AIAssistanceProvider>);
+    const button=screen.getByRole('button',{name:'AI 生成SVC v4.0 草案实验'});
+    await waitFor(()=>expect(button).toBeEnabled());fireEvent.click(button);
+    await waitFor(()=>expect(client.generate).toHaveBeenCalledWith(expect.objectContaining({feature:'svcv4',mode:'experimental'}),expect.objectContaining({confirmedCharge:false})));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();expect(client.getClinicalContext).not.toHaveBeenCalled();
+    expect(vi.mocked(client.generate).mock.calls[0][0].clinicalContext).toBeUndefined();
+  });
   it('charges for ACMG without requiring supplemental clinical context', async () => {
     const client = adapter(); client.getSettings = vi.fn().mockResolvedValue({ enabled: true, connected: true, configured: true, billingEnabled: true, capabilities: { acmg: { enabled: true } } });
     render(<AIAssistanceProvider deployment="saas" adapter={client}><AIAssistanceAction input={{ feature: 'acmg', taskId: 'task', reference: 'hg38', variant: { id: 'A' } }} onResult={vi.fn()} /></AIAssistanceProvider>);
