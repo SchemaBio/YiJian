@@ -1,6 +1,6 @@
 # AI 辅助功能接入交接
 
-2026-10-11。YiJian 与 Cuttlefish 已从待接入适配器切换至 Octopus 的 SepiLens 接口。本轮真实收费关闭，未部署；SepiLens 引擎和结算约定由其项目独立维护。
+更新于 2026-10-25。YiJian 与 Cuttlefish 经 Octopus 接入独立 SepiLens 服务。SaaS 临床信息 HPO 已按每次 1 积分生产计费并部署；其他 AI 收费开关保持原状。当前服务器连接、认证、部署源码与回滚位置见 [远端交接](REMOTE_SERVER_SESSION_HANDOFF.md)。下文 RC2 接入说明属于早期流程背景，当前逐引擎能力与上下文协议以接口和源码为准。
 
 ## 页面与接口
 
@@ -24,11 +24,13 @@ HPO 原文只在后台执行内存驻留；恢复原文失败时显示不确定�
 
 ## SaaS 费用
 
-HPO、SVC 实验及 evidence_only 收费尚未启用。正式变异结算还需同时符合平台策略与上游 production + delivered + settlement_eligible；真实收费本轮全部关闭。
+SaaS HPO 每次预扣 1 积分，独立于其他 AI 的全局收费开关。服务端要求 confirmedCharge；仅非降级真实模型生成的有效候选结果结算，失败、取消、降级及空结果按现有终态规则退还。读取已保存候选、本地术语匹配及自部署模式不收平台积分。重复请求沿用幂等键，不重复扣款。
+
+SVC 实验及 evidence_only 不启用收费。其他正式变异结算仍需收费开关开启，并同时符合平台策略与上游 production + delivered + settlement_eligible；本次未开启其他功能收费。
 
 Cuttlefish 管理员可明确发起模型能力测试，先确认可能产生模型服务商费用，不扣平台积分。测试不在保存配置时自动执行；supported/unsupported/unknown 分别显示，HTTP 200 不代表能力全部支持。管理接口沿用 {data: ...} 包装，由 HTTP 客户端解包。
 
-真实收费关闭时显示“联调期间不扣费”，不弹扣费确认。结算约定对齐并开启后恢复 1 积分确认和“本次会话不再提示”；sessionStorage 偏好按用户/机构隔离，所有入口共享，不豁免扣费。
+临床信息 AI 点击后显示 1 积分确认，可勾选“本次浏览器会话不再提示”；sessionStorage 偏好按用户/机构隔离，所有收费入口共享，不豁免扣费。取消弹窗不请求模型、不保存免提示偏好。前端以 HPO 的 capability.billingEnabled 为准，计费能力未就绪时禁用该操作，不回退到免费联调。四种语言提示已适配。
 
 Squid 的 AI 账目使用独立请求引用；费用中心通过 related_task_id 显示完整关联任务 UUID，不混入分析任务的结算或退款。浏览器不能决定实际扣费。
 

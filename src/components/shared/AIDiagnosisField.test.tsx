@@ -77,6 +77,28 @@ it('calls the AI adapter only when AI-assisted extraction is clicked', async () 
   await waitFor(() => expect(onTerms).toHaveBeenCalledWith([{ id: 'HP:0002315', name: '头痛' }]));
 });
 
+it('requires the one-credit confirmation for SaaS clinical extraction while local extraction remains free', async () => {
+  sessionStorage.clear();
+  const generate = vi.fn().mockResolvedValue({ feature: 'hpo', summary: 'AI', hpoTerms: [{ id: 'HP:0002315', name: 'Headache', polarity: 'present' }] });
+  const adapter = { getSettings: vi.fn().mockResolvedValue({ enabled: true, connected: true, configured: true, billingEnabled: false, capabilities: { hpo: { enabled: true, mode: 'candidate', billingEnabled: true } } }), saveSettings: vi.fn(), generate };
+  const onTerms = vi.fn();
+  render(<AIAssistanceProvider deployment="saas" adapter={adapter} scope="clinical-production"><AIDiagnosisField value="头痛" onChange={vi.fn()} onTerms={onTerms} /></AIAssistanceProvider>);
+  const local = await screen.findByRole('button', { name: '添加本地候选（1）' });
+  fireEvent.click(local);
+  expect(generate).not.toHaveBeenCalled();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  const ai = screen.getByRole('button', { name: 'AI 生成HPO 候选术语' });
+  await waitFor(() => expect(ai).toBeEnabled());
+  fireEvent.click(ai);
+  expect(screen.getByRole('dialog')).toHaveTextContent('1 积分');
+  expect(screen.getByLabelText('本次浏览器会话不再提示')).not.toBeChecked();
+  expect(generate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: '确认生成 · 1 积分' }));
+  await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
+  expect(generate).toHaveBeenCalledWith(expect.objectContaining({ feature: 'hpo', diagnosis: '头痛' }), expect.objectContaining({ confirmedCharge: true }));
+  expect(await within(screen.getByRole('region', { name: 'AI 辅助提取 HPO' })).findByRole('button', { name: '头痛 · HP:0002315' })).toBeVisible();
+});
+
 it('requires an explicit choice for ambiguous translations instead of bulk adding both IDs', async () => {
   const onTerms = vi.fn();
   render(<AIDiagnosisField value="肌张力减退" onChange={vi.fn()} onTerms={onTerms} />);

@@ -2192,6 +2192,8 @@
     "localDevelopmentEnvironment77543d": "本地开发环境"
   },
   "assistance": {
+    "hpoBillingNotReady": "HPO 积分计费尚未就绪，请联系管理员。",
+    "hpoProductionPricing": "HPO 候选提取每次消耗 1 积分；恢复已保存结果不收费。其他 AI 功能的收费规则以操作前提示为准。",
     "modelOutputInvalid": "模型输出未通过结构化校验，本次未采纳；可重新生成，管理员可按请求编号查看失败原因。",
     "modelProviderUnavailable": "模型调用失败或超时，请检查模型服务连接后重试。",
     "modelToolBudgetExceeded": "本次联网检索或工具调用达到限额，未交付有效评估；请稍后重新生成。",
@@ -2262,7 +2264,7 @@
     "eachGenerationCosts1acbf6": "，每次消耗 ",
     "credit07b109": "1 积分",
     "generatedResultsRequireManualReviewOnlyThisb946e6": "AI 用于提取 HPO 候选术语、整理注释证据和研究候选建议；结果须人工核验，不构成个人诊断或医疗建议。仅发送本次输入及相关注释。",
-    "doNotAskAgainThisSession556519": "本次会话不再提示",
+    "doNotAskAgainThisSession556519": "本次浏览器会话不再提示",
     "eachGenerationStillCostsCreditOnlyThe1adeb6": "勾选后仍按每次 1 积分计费，仅省略确认弹窗。",
     "aiSuggestions89d49e": "AI 研究候选建议",
     "draftExperimentUnverifiedInputNoClinicalUsea555f8": "草案实验 · 输入未核验 · 禁止临床用途 · 不计费",

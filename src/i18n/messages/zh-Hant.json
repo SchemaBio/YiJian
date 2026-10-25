@@ -2192,6 +2192,8 @@
     "localDevelopmentEnvironment77543d": "本地開發環境"
   },
   "assistance": {
+    "hpoBillingNotReady": "HPO 積分計費尚未就緒，請聯絡管理員。",
+    "hpoProductionPricing": "HPO 候選擷取每次消耗 1 積分；恢復已儲存結果不收費。其他 AI 功能的收費規則以操作前提示為準。",
     "modelOutputInvalid": "模型輸出未通過結構化校驗，本次未採納；可重新生成，管理員可依請求編號查看失敗原因。",
     "modelProviderUnavailable": "模型呼叫失敗或逾時，請檢查模型服務連線後重試。",
     "modelToolBudgetExceeded": "本次聯網檢索或工具呼叫達到限額，未交付有效評估；請稍後重新生成。",
@@ -2262,7 +2264,7 @@
     "eachGenerationCosts1acbf6": "，每次消耗 ",
     "credit07b109": "1 積分",
     "generatedResultsRequireManualReviewOnlyThisb946e6": "AI 用於提取 HPO 候選術語、整理註釋證據與研究候選建議；結果須人工核驗，不構成個人診斷或醫療建議。僅傳送本次輸入及相關註釋。",
-    "doNotAskAgainThisSession556519": "本次會話不再提示",
+    "doNotAskAgainThisSession556519": "本次瀏覽器工作階段不再提示",
     "eachGenerationStillCostsCreditOnlyThe1adeb6": "勾選後仍按每次 1 積分計費，僅省略確認彈窗。",
     "aiSuggestions89d49e": "AI 研究候選建議",
     "draftExperimentUnverifiedInputNoClinicalUsea555f8": "草案實驗 · 輸入未覈驗 · 禁止臨牀用途 · 不計費",

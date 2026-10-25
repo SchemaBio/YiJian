@@ -2192,6 +2192,8 @@
     "localDevelopmentEnvironment77543d": "Local development environment"
   },
   "assistance": {
+    "hpoBillingNotReady": "HPO credit billing is not ready. Contact your administrator.",
+    "hpoProductionPricing": "Each HPO candidate extraction costs 1 credit. Restoring saved results is free. Charges for other AI features are shown before use.",
     "modelOutputInvalid": "The model output failed structured validation and was not adopted. Regenerate or ask an administrator to inspect the request audit.",
     "modelProviderUnavailable": "The model request failed or timed out. Check the model connection and retry.",
     "modelToolBudgetExceeded": "The retrieval or tool-call budget was exceeded. No valid assessment was delivered; regenerate later.",
@@ -2262,7 +2264,7 @@
     "eachGenerationCosts1acbf6": "; each generation costs ",
     "credit07b109": "1 credit",
     "generatedResultsRequireManualReviewOnlyThisb946e6": "AI extracts candidate HPO terms and organizes annotation evidence and research candidate suggestions. Outputs require manual verification and are not personal diagnoses or medical advice. Only this input and related annotations are sent.",
-    "doNotAskAgainThisSession556519": "Do not ask again this session",
+    "doNotAskAgainThisSession556519": "Do not ask again during this browser session",
     "eachGenerationStillCostsCreditOnlyThe1adeb6": "Each generation still costs 1 credit; only the confirmation dialog is skipped.",
     "aiSuggestions89d49e": "AI research candidate suggestions",
     "draftExperimentUnverifiedInputNoClinicalUsea555f8": "Draft experiment · unverified input · no clinical use · no charge",

@@ -10,6 +10,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { AppModal } from './AppModal';
 import { useAIAssistance } from '@/components/providers/AIAssistanceProvider';
 import { AIRequestError, AI_FEATURE_LABELS, type AIClinicalContext, type AIAssistanceInput, type AIAssistanceResult } from '@/lib/ai-assistance';
+import { notifyBillingUpdated } from '@/lib/billing';
 
 export function AIAssistanceAction({ input, disabled = false, onResult, onBusyChange }: {
   input: AIAssistanceInput; disabled?: boolean; onResult: (result: AIAssistanceResult) => void; onBusyChange?: (busy: boolean) => void;
@@ -24,9 +25,13 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const [serverRequestId, setServerRequestId] = React.useState('');
   const [cancelling, setCancelling] = React.useState(false);
   const experimental = input.feature === 'svcv4';
-  const charge = deployment === 'saas' && settings.billingEnabled === true && !experimental && settings.capabilities?.[input.feature]?.billingEnabled !== false;
   const featureCapability = settings.capabilities?.[input.feature];
-  const unavailable = !settings.enabled || !settings.connected || !settings.configured || featureCapability?.enabled === false;
+  const hpoProduction = deployment === 'saas' && input.feature === 'hpo';
+  const charge = deployment === 'saas' && !experimental && (hpoProduction
+    ? featureCapability?.billingEnabled === true
+    : settings.billingEnabled === true && featureCapability?.billingEnabled !== false);
+  const billingUnavailable = hpoProduction && !charge;
+  const unavailable = !settings.enabled || !settings.connected || !settings.configured || featureCapability?.enabled === false || billingUnavailable;
   const contextRequired = (input.feature === 'cnv_gain' || input.feature === 'cnv_loss') && !!settings.capabilities;
   const running = React.useRef(false);
   const controller = React.useRef<AbortController | null>(null);
@@ -68,18 +73,18 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
       if (!nextController.signal.aborted && scopeRef.current === originalScope && cause instanceof AIRequestError && cause.safeToRegenerate) request.current = undefined;
       if (!nextController.signal.aborted && scopeRef.current === originalScope) setError(cause instanceof Error ? errorText(cause, t) : t("assistance.aiGenerationFailedRetryLater8bf8b5"));
     } finally {
-      if (controller.current === nextController) { running.current = false; setBusy(false); setServerRequestId(''); setCancelling(false); onBusyChange?.(false); }
+      if (controller.current === nextController) { running.current = false; setBusy(false); setServerRequestId(''); setCancelling(false); onBusyChange?.(false); if (charge) notifyBillingUpdated(); }
     }
   };
   const label = t(AI_FEATURE_LABELS[input.feature]);
-  const inactiveReason = !settings.enabled ? t("assistance.aiAssistanceIsDisabledAskAnAdministratorfe2e3b") : !settings.connected ? t("assistance.aiServiceUnavailable6c7c68") : !settings.configured ? t("assistance.aiModelNotConfigured138bde") : featureCapability?.enabled === false ? featureCapability.reason ?? t("assistance.thisEngineIsNotAvailableYetfc2caa") : '';
+  const inactiveReason = !settings.enabled ? t("assistance.aiAssistanceIsDisabledAskAnAdministratorfe2e3b") : !settings.connected ? t("assistance.aiServiceUnavailable6c7c68") : !settings.configured ? t("assistance.aiModelNotConfigured138bde") : featureCapability?.enabled === false ? featureCapability.reason ?? t("assistance.thisEngineIsNotAvailableYetfc2caa") : billingUnavailable ? t('assistance.hpoBillingNotReady') : '';
   const continueGeneration = () => { if (charge && !skipConfirmation) setConfirmOpen(true); else void generate(charge); };
   const missingContext = !reference || !context.sampleType || (!context.diseaseId.trim() || !context.inheritance.trim()) || (experimental && context.variantOrigin !== 'germline_confirmed');
   return <>
     {!(busy && serverRequestId && adapter.cancel) && <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={t("assistance.aiGenerated7d0bf", {p0: String(label)})} hint={inactiveReason || t("assistance.aiGeneratedb4967", {p0: String(label), p1: String(deployment === 'saas' ? charge ? ` ${t('· 1 积分/次')}` : ` ${t('· 联调期间不扣费')}` : '')})}
       disabled={disabled || busy || unavailable} className="yj-ai-generation-button inline-flex shrink-0 items-center gap-1 rounded-md p-1.5 text-accent-fg transition-colors hover:bg-accent-subtle disabled:opacity-40"
       onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }} />}
-    {deployment === 'saas' && !charge && !inactiveReason && <span className="text-xs text-fg-muted">{t("assistance.noChargeDuringIntegrationTestinge54a18")}</span>}
+    {deployment === 'saas' && !hpoProduction && !charge && !inactiveReason && <span className="text-xs text-fg-muted">{t("assistance.noChargeDuringIntegrationTestinge54a18")}</span>}
     {busy && serverRequestId && adapter.cancel && <button type="button" disabled={cancelling} aria-busy={cancelling || undefined} className="yj-tool-button text-xs" onClick={async () => { setCancelling(true); try { await adapter.cancel!(serverRequestId); } catch { setError(t("assistance.unableToCancelRequestRetryfca412")); setCancelling(false); } }}>
       <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
       {cancelling ? t("assistance.cancelingb3f55e") : t("admin.cancel4d0b46")}

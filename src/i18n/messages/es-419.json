@@ -2192,6 +2192,8 @@
     "localDevelopmentEnvironment77543d": "Entorno de desarrollo local"
   },
   "assistance": {
+    "hpoBillingNotReady": "El cobro de créditos de HPO aún no está listo. Contacta al administrador.",
+    "hpoProductionPricing": "Cada extracción de candidatos HPO cuesta 1 crédito. Restaurar resultados guardados es gratis. Los cargos de otras funciones de IA se indican antes de usarlas.",
     "modelOutputInvalid": "La salida del modelo no superó la validación estructurada y no se adoptó. Regenere o solicite a un administrador que revise la auditoría de la solicitud.",
     "modelProviderUnavailable": "La solicitud al modelo falló o agotó el tiempo. Revise la conexión del modelo y reintente.",
     "modelToolBudgetExceeded": "Se superó el límite de consultas o llamadas a herramientas. No se entregó una evaluación válida; regenere más tarde.",
@@ -2262,7 +2264,7 @@
     "eachGenerationCosts1acbf6": "; cada generación cuesta ",
     "credit07b109": "1 crédito",
     "generatedResultsRequireManualReviewOnlyThisb946e6": "La IA extrae términos HPO candidatos y organiza evidencia de anotación y sugerencias de candidatos de investigación. Los resultados requieren verificación manual y no son diagnósticos personales ni recomendaciones médicas. Solo se envían esta entrada y las anotaciones relacionadas.",
-    "doNotAskAgainThisSession556519": "No preguntar de nuevo en esta sesión",
+    "doNotAskAgainThisSession556519": "No volver a preguntar durante esta sesión del navegador",
     "eachGenerationStillCostsCreditOnlyThe1adeb6": "Cada generación sigue costando 1 crédito; solo se omite la confirmación.",
     "aiSuggestions89d49e": "Sugerencias de candidatos de investigación con IA",
     "draftExperimentUnverifiedInputNoClinicalUsea555f8": "Experimento preliminar · entrada sin verificar · sin uso clínico · sin cargo",
