@@ -4,7 +4,7 @@
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
 
-**2026-10-25 后续修复：HPO 计费缺少 Overlay HMAC 签名的问题已修复并上线。Octopus 当前为 `trio-sample-roles-20261025t101022z`，YiJian 为 `assessment-cache-layout-20261025t131447z`，保留历史家系样本角色纠正；Squid 为 `hpo-settlement-display-20261025t092458z`，Cuttlefish 仍使用原镜像。后续修复已按仓库本地提交，尚未 push；详见第 8、9、11、12、13 节，旧 HEAD 仍不能直接重建。**
+**2026-10-25 当前线上：Octopus / YiJian / SepiLens / Squid 均为 `svc-billing-confirmations-20261025t154057z`。ACMG 与 SVC v4 AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复；CNV 开关未变。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
 
 ## 1. 新对话先读
 
@@ -301,3 +301,85 @@ sudo python3 /home/ubuntu/schema/backups/hpo-production-20261025T082212Z/rollbac
 ## 14. 2026-10-25 本次会话提交状态
 
 第 8–13 节后续修复已分别在 YiJian、Octopus、Squid、schema-germline 本地提交，未 push。此前各发布段落中“尚未提交”的描述记录当时状态，以本节为最新状态；生产运行镜像与源码快照位置保持第 12、13 节所述。schema-germline 的上游脚本虽已提交，计算镜像仍未构建/发布，不能据此认定未来任务的原报告已修复。忽略目录 .gotmp 中运维脚本、数据副本和凭据不纳入提交。
+
+
+## 15. 2026-10-25 ACMG AI disabled 链路及家系分析模式修复（当前状态）
+
+### 原因与开放范围
+
+线上 SepiLens 原为 `SEPILENS_AI_MODE=enabled`、`SEPILENS_AI_ONLY=true`、`SEPILENS_REQUIRE_RULE_APPROVAL=true`；HPO、SVC 可用，但 ACMG 的 `ai_available=false`，Octopus 因而显示“引擎状态：disabled”。模型配置和网络链路正常，直接将医学规则 enabled 改为 true 不是本次修复。
+
+SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence_only AI。生产仅配置 `acmg_amp_2015`，正式规则批准要求保持 true，ACMG `enabled=false` 但 `ai_available=true`。能力查询、请求提交及后台执行使用同一按引擎检查；其他未批准引擎默认继续关闭。Octopus 现返回 ACMG `enabled=true, mode=candidate, billingEnabled=false`。CNV 能力、SVC 实验边界及 HPO 收费均未改变；不伪造批准材料，不自动保存或覆盖人工判读。
+
+### 家系上下文
+
+- Octopus 在任务/样本权限校验后，按任务 Template 补入 `sample.analysis_mode=single|trio|unknown`；不根据样本当前是否关联父母来猜测任务模式。存在任务创建快照时，父母 affected_status 按快照角色取值，避免用当前样本关系替代当次分析背景。
+- YiJian 向选定位点输入增加命名 `sampleGenotypes.proband/father/mother`，仅包含 GT、杂合性、AD、VAF 及 VAF 来源。Octopus 再做角色和字段白名单、数值范围校验；样本身份和文件信息不进入此字段。
+- SepiLens 接收 `analysis_mode`，模型提示区分执行方式 `mode=ai_assisted` 与分析设计 `trio`，按明确角色名比较三人的位点数据。真实 0 VAF 保留，缺失仍未知；trio、本人的叙述或这些未验证输入都不自动证明亲子关系、新生突变、相位、共分离或 PP4。未知遗传模式与胚系来源继续为 unknown。
+- 指定任务 `8f7cd22b-c171-4cdb-97e6-d5802964560f` 线上模板仍为 trio；SNP/InDel 43,592 行、原摘要及第 12 节角色映射保持。当前任务 AI 的执行方式为 ai_assisted、分析设计为 trio。
+
+### 构建、验证与资料
+
+当前镜像：`schemabio/{sepilens,octopus,yijian}:acmg-trio-ai-20261025t142021z`，三者均 healthy，网关检查并重载。其他服务容器未替换。
+
+源码基础：SepiLens 的干净 `cdb6d7309666b8c9ae0ab4865ac5682350b49761`（与旧运行镜像 revision 相同），Octopus 第 12 节快照，YiJian 第 13 节快照，再精确 overlay 本次文件。构建时默认 Alpine/Go 模块源在该主机不可达，第一次主动取消停滞构建，第二次 Go 模块源超时；改用服务器既有腾讯镜像源后成功，改动记录进构建源码和清单。failure.txt 是这些历史构建记录，以最终 result.json 和 preflight-acceptance.json 为准。业务镜像仅在所有验证通过后切换。
+
+本地及服务器通过 SepiLens config / assessment / api 回归（含合成模型 HTTP 调用）、Octopus ACMG / SVC / HPO 相关回归；前端服务器 4 个文件、34 项测试，类型检查及生产构建通过。覆盖候选按引擎隔离、正式门禁、任务 trio 模式、父母子命名基因型及真实零/缺失 VAF。线上能力经 SepiLens 和 Squid→Octopus 两层确认；合成 single/trio 请求均通过严格输入与候选能力校验，到刻意不存在的 provider 查询处停止，未创建 job，未调用真实模型。不能把此预检描述为已在生产真实模型上生成 ACMG 结果。
+
+发布前后任务数据集、人工调整、账本、余额、账户、任务数量及业务配置摘要一致，模型和计算调用数为 0。备份 `/home/ubuntu/schema/backups/acmg-trio-ai-20261025T142021Z` 包含原环境/Compose、当前 SepiLens SQLite 一致性备份、三仓库源码与清单、基线、日志、result.json、preflight-acceptance.json 和 rollback.py（语法核验）。本次无 schema 迁移，完整业务库备份复用第 12 节；不恢复数据库来回退代码。回退脚本恢复原三个镜像、环境及 Compose，只有用户授权才执行；回退后 ACMG 候选也将重新关闭。
+
+本次修改尚未提交或 push；此前第 14 节提交保留。SepiLens 本地 `docs/openapi.yaml` 已生成并通过 drift 校验，增加可选 analysis_mode 字段；这是构建后更新的文档文件，不包含在本次镜像源码清单内。生产代码以保护快照清单为准，后续同步源码需连同此文档更新。上游计算镜像仍遵守第 12 节未发布边界。
+
+
+## 16. 2026-10-25 ACMG 正式商业计费与联调文案清理（当前状态）
+
+用户要求按正式版本测试。第 15 节仅恢复候选 AI、没有开放商业计费，前端因此仍显示“联调期间不扣费”；该遗漏已修正，不以仅改文案冒充收费链路。
+
+- SepiLens 增加 `SEPILENS_ACMG_BILLING_ENABLED=true` 和逐引擎 billing_available。只有实际有效 ACMG AI 交付（有摘要和条款）才明确 settlement_eligible；失败、无效、取消、外部检索不可用等分支保持不结算。此商业交付资格不替代医学规则批准，正式规则 enabled 仍为 false；SVC、CNV 不因此开放收费。
+- Octopus 与 Squid 分别显式启用 `AI_ASSISTANCE_ACMG_BILLING_ENABLED=true`，不打开其他 AI 全局收费开关。每次 1 积分；客户端必须 confirmedCharge，先预扣，成功结算，失败/不具资格退款；同一请求幂等且不重复扣款。
+- Octopus 使用请求自身 BillingEnabled 快照接收 ACMG evidence_only 商业交付资格，不能追溯重定价旧免费请求；仍要求上游明确交付及 settlement_eligible。能力检查同时确认上游可计费，未就绪不开放正式收费调用。
+- YiJian 以逐功能 billingEnabled 为准，ACMG/HPO 正式收费未就绪时不免费放行。四语言去掉“联调期间”字样；ACMG 显示 1 积分确认，其他保持免费的功能只显示“不收平台积分”，不暗示当前部署仍是联调。
+- 当前四镜像：`schemabio/{sepilens,octopus,squid,yijian}:acmg-production-billing-20261025t151144z`，均 healthy，源码清单与镜像标签核验，网关检查并重载。其余服务未替换。Compose 增加三项服务对应商业计费变量，保留第 15 节仅开放 ACMG 候选的设置及正式审批 true。
+
+服务器独立临时 PostgreSQL 和私有 Docker 网络已实际运行 Octopus 确认/预扣/成功结算/失败退款/无效交付/预扣失败/重复调用测试，Squid 并发结算与退款和历史账单状态测试。测试使用隔离 schema 和合成模型/账本；测试库容器、网络已清理。SepiLens config / assessment / api 回归通过（包括付费成功与检索缺失不结算），前端 5 个文件、46 项测试、类型检查和生产构建通过，OpenAPI 生成且含 billing_available 及 analysis_mode。
+
+发布期间生产账本、余额、账户、任务数、任务数据集和人工调整摘要一致，未产生真实扣费或模型调用。保护资料 `/home/ubuntu/schema/backups/acmg-production-billing-20261025T151144Z` 含四仓库完整构建源码与清单、原部署/Compose、SepiLens SQLite 一致性备份、基线、隔离测试日志、result.json、rollback.py（语法核验）；业务库完整备份复用第 12 节。回退代码和环境不恢复数据库，也不会自动撤销用户之后正常支付的请求。
+
+### 待用户明确授权的真实家系测试
+
+已经准备一次真实验收：任务 `8f7cd22b-c171-4cdb-97e6-d5802964560f`、位点 `1:65099775 C>T`，1 积分，明确 confirmedCharge。尝试查询该位点的通用 Go query API 返回 500；未继续修改该独立问题，改从第 12 节已做全量 VCF 身份核验的原报告保护副本提取，校验报告与当前 Parquet 摘要绑定并按角色纠正所有 GT/AD/DP/PS 等输入。先证者 `1|0`、父亲 `0/0`、母亲 `0/1` 再次通过断言；不把旧报告未经重映射的字段直接发给模型。保护输入是验收材料，不保存人工判读。
+
+真实调用启动操作被自动审批审查拒绝：用户虽然要求正式测试，但尚未明确授权将真实家系遗传数据披露给具体外部接收方。随后只读核对当前接收方为 **api.deepseek.com，模型 deepseek-flash**。必须先向用户明确请求授权，将该家系临床/表型背景及父母子位点数据发给该接收方，并成功扣 1 积分。不得换途径绕过此拒绝。该真实测试尚未发出，没有 request ID，也未扣费；不能宣称真实模型收费验收已完成。
+
+授权后可用本机忽略目录 `.gotmp/acmg-paid-real-test-launch.py` 进行一次测试；其运行脚本、输入及幂等键位于该保护备份目录，首个 request ID 一旦生成即保存，必须先检查原请求再重试，不自动换键。监测脚本 `.gotmp/acmg-paid-real-test-monitor.py`；只输出请求状态和流水摘要，不打印临床内容或凭据。若用户拒绝，保持已上线的正常费用确认入口，不执行这个真实数据测试。
+
+本节及第 15 节源码尚未提交或 push；第 14 节提交不包含这些后续变化。
+
+
+### 用户后续决定：自行测试
+
+用户明确表示“你配置好链路就行了，我会自行测试”。正式收费链路已配置并上线，真实测试由用户自行在页面发起。智能体不再请求代测授权，也不执行上述 real-test 启动脚本；此前自动审批拒绝仅作为历史审计记录，不代表线上配置仍未完成。没有代发真实请求、没有新增测试扣费。用户页面仍按正常流程确认每次 1 积分，再预扣、交付结算或失败退款。
+
+
+## 17. 2026-10-25 SVC v4 同步计费及各功能独立会话确认（当前状态）
+
+用户反馈 ACMG 首次扣费提示被样本管理 HPO 的免提示设置跳过，并要求 SVC v4 与 ACMG 一起接通。本次同时修正两项：
+
+- YiJian 将免提示偏好由共享布尔值改为按功能存储。键为 `yijian:ai-charge-confirmation:v2:<用户:机构>:<feature>`，HPO、ACMG、SVC 各自首次确认；一个功能勾选记住不会跳过其他功能。旧共享键不能证明同意任何具体功能，因此不迁移；升级刷新后会分别重新确认一次。仍只使用 sessionStorage，并按账户/机构隔离；取消不保存记住选项，不触发请求。
+- 四语言勾选说明改为“本次浏览器会话内，此功能不再提示”，仍明确每次操作照常收费。已验证功能间双向隔离、取消、旧共享偏好不跳过首次确认、同功能会话内记住及换账户/会话重新确认。
+- SVC AI 服务同步每次 1 积分、确认、预扣、有效交付结算和失败/不具资格退款。新增 Octopus / Squid `AI_ASSISTANCE_SVC_BILLING_ENABLED=true` 与 SepiLens `SEPILENS_SVC_BILLING_ENABLED=true`；保留 ACMG 已有收费配置，不开启 CNV 或其他全局收费。
+- SepiLens 对 SVC 有效 AI 摘要及条款的交付明确提供 billing_available / settlement_eligible；检索不可用、失败等仍不结算。Octopus 仅按请求的 BillingEnabled 快照接受此商业交付资格，旧免费 SVC 请求不重新计费。
+- 商业服务收费不将 SVC 医学规则伪装成正式版本：SVC status=experimental、enabled=false，结果仍为 experimental，正式规则结论与临床采纳限制保留；输入模式仍为 ai_assisted + allow_experimental，trio 身份与上下文沿用第 15 节。AI 服务可收费与草案规则正式批准是不同状态。
+
+当前四服务镜像：`schemabio/{sepilens,octopus,squid,yijian}:svc-billing-confirmations-20261025t154057z`，均 healthy；源自第 16 节当前镜像对应的完整源码快照再精确 overlay，源码清单与镜像标签核验通过。网关检查并重载，其余服务未替换。线上 SepiLens 和平台能力均确认 ACMG/SVC 已开启计费、SVC 草案状态保持；前端部署包已包含 v2 独立确认键。
+
+本地及服务器 SepiLens config / assessment / api 回归通过（付费/免费边界、SVC 成功和检索缺失不结算）；Octopus 在隔离 PostgreSQL 中实际运行 SVC/ACMG 确认、成功、无资格、无效、预扣失败退款及重复请求幂等；Squid 隔离库并发结算/退款覆盖 HPO、ACMG、SVC。前端服务器 5 个文件、50 项测试通过，类型检查及生产构建通过。测试临时容器和私有网络已清理。没有代发真实模型请求，没有新增真实扣费。
+
+发布资料：`/home/ubuntu/schema/backups/svc-billing-confirmations-20261025T154057Z`，含四仓库完整源码与清单、原部署/Compose、SepiLens SQLite 一致性备份、基线、构建/隔离测试日志、result.json、final-acceptance.json 和 rollback.py（语法核验）。发布前后账本、余额、账户、任务数、数据集和人工调整摘要一致，原角色映射保持。无 schema 迁移，完整业务库备份继续复用第 12 节。仅用户明确授权时回退代码/环境，不恢复数据库，不自动撤销用户正常请求。
+
+第 15–17 节后续修改仍未提交或 push；真实测试由用户自行发起，沿用第 16 节最后的用户决定，不启动旧 real-test 脚本。前述章节关于 SVC 免费、共享免提示的内容仅记录当时状态，以本节为准。
+
+
+## 18. 2026-10-25 本轮本地提交状态
+
+第 15–17 节的 ACMG/SVC AI 链路、trio 上下文、正式商业计费、独立会话扣费确认及对应测试，已分别在 YiJian、Octopus、Squid、SepiLens 本地提交，未 push。前文“尚未提交”记录当时状态，以本节为最新提交状态。当前运行镜像、源码快照、测试和回退资料仍以第 17 节为准；用户自行测试的决定不变，智能体未代发真实模型请求或扣费。忽略目录中的运维脚本、验收数据和凭据不纳入提交。

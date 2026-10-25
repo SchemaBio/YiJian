@@ -27,10 +27,8 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const experimental = input.feature === 'svcv4';
   const featureCapability = settings.capabilities?.[input.feature];
   const hpoProduction = deployment === 'saas' && input.feature === 'hpo';
-  const charge = deployment === 'saas' && !experimental && (hpoProduction
-    ? featureCapability?.billingEnabled === true
-    : settings.billingEnabled === true && featureCapability?.billingEnabled !== false);
-  const billingUnavailable = hpoProduction && !charge;
+  const charge = deployment === 'saas' && (featureCapability?.billingEnabled ?? settings.billingEnabled) === true;
+  const billingUnavailable = deployment === 'saas' && (input.feature === 'hpo' || input.feature === 'acmg' || input.feature === 'svcv4') && !charge;
   const unavailable = !settings.enabled || !settings.connected || !settings.configured || featureCapability?.enabled === false || billingUnavailable;
   const contextRequired = (input.feature === 'cnv_gain' || input.feature === 'cnv_loss') && !!settings.capabilities;
   const running = React.useRef(false);
@@ -77,11 +75,11 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
     }
   };
   const label = t(AI_FEATURE_LABELS[input.feature]);
-  const inactiveReason = !settings.enabled ? t("assistance.aiAssistanceIsDisabledAskAnAdministratorfe2e3b") : !settings.connected ? t("assistance.aiServiceUnavailable6c7c68") : !settings.configured ? t("assistance.aiModelNotConfigured138bde") : featureCapability?.enabled === false ? featureCapability.reason ?? t("assistance.thisEngineIsNotAvailableYetfc2caa") : billingUnavailable ? t('assistance.hpoBillingNotReady') : '';
-  const continueGeneration = () => { if (charge && !skipConfirmation) setConfirmOpen(true); else void generate(charge); };
+  const inactiveReason = !settings.enabled ? t("assistance.aiAssistanceIsDisabledAskAnAdministratorfe2e3b") : !settings.connected ? t("assistance.aiServiceUnavailable6c7c68") : !settings.configured ? t("assistance.aiModelNotConfigured138bde") : featureCapability?.enabled === false ? featureCapability.reason ?? t("assistance.thisEngineIsNotAvailableYetfc2caa") : billingUnavailable ? t(input.feature === 'hpo' ? 'assistance.hpoBillingNotReady' : input.feature === 'svcv4' ? 'assistance.svcBillingNotReady' : 'assistance.acmgBillingNotReady') : '';
+  const continueGeneration = () => { if (charge && !skipConfirmation(input.feature)) setConfirmOpen(true); else void generate(charge); };
   const missingContext = !reference || !context.sampleType || (!context.diseaseId.trim() || !context.inheritance.trim()) || (experimental && context.variantOrigin !== 'germline_confirmed');
   return <>
-    {!(busy && serverRequestId && adapter.cancel) && <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={t("assistance.aiGenerated7d0bf", {p0: String(label)})} hint={inactiveReason || t("assistance.aiGeneratedb4967", {p0: String(label), p1: String(deployment === 'saas' ? charge ? ` ${t('· 1 积分/次')}` : ` ${t('· 联调期间不扣费')}` : '')})}
+    {!(busy && serverRequestId && adapter.cancel) && <IconActionButton loading={busy} action="ai" variant="ghost" type="button" label={t("assistance.aiGenerated7d0bf", {p0: String(label)})} hint={inactiveReason || t("assistance.aiGeneratedb4967", {p0: String(label), p1: String(deployment === 'saas' ? charge ? ` ${t('· 1 积分/次')}` : ` ${t('assistance.noChargeDuringIntegrationTesting4f1828')}` : '')})}
       disabled={disabled || busy || unavailable} className="yj-ai-generation-button inline-flex shrink-0 items-center gap-1 rounded-md p-1.5 text-accent-fg transition-colors hover:bg-accent-subtle disabled:opacity-40"
       onClick={() => { setError(''); if (contextRequired && (missingContext || experimental)) setContextOpen(true); else continueGeneration(); }} />}
     {deployment === 'saas' && !hpoProduction && !charge && !inactiveReason && <span className="text-xs text-fg-muted">{t("assistance.noChargeDuringIntegrationTestinge54a18")}</span>}
@@ -101,7 +99,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
       </div>
     </AppModal>
     <AppModal open={confirmOpen} onOpenChange={setConfirmOpen} title={t("assistance.generateWithAiAssistance080e66")} size="small"
-      footer={<><ActionButton variant="ghost" type="button" onClick={() => setConfirmOpen(false)} className="yj-tool-button">{t("admin.cancel4d0b46")}</ActionButton><button type="button" disabled={disabled || busy} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40" onClick={() => { if (remember) setSkipConfirmation(true); setConfirmOpen(false); void generate(true); }}>{t("assistance.confirmGenerationCredit23464d")}</button></>}>
+      footer={<><ActionButton variant="ghost" type="button" onClick={() => setConfirmOpen(false)} className="yj-tool-button">{t("admin.cancel4d0b46")}</ActionButton><button type="button" disabled={disabled || busy} className="inline-flex items-center justify-center rounded-md bg-accent-emphasis px-3 py-2 text-sm font-medium text-fg-on-emphasis disabled:opacity-40" onClick={() => { if (remember) setSkipConfirmation(input.feature, true); setConfirmOpen(false); void generate(true); }}>{t("assistance.confirmGenerationCredit23464d")}</button></>}>
       <p className="text-sm leading-relaxed">{t("assistance.generateWithAi61271c")}{label}{t("assistance.eachGenerationCosts1acbf6")}<strong>{t("assistance.credit07b109")}</strong>。</p>
       <p className="mt-2 text-xs leading-relaxed text-fg-muted">{t("assistance.generatedResultsRequireManualReviewOnlyThisb946e6")}</p>
       <label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)} />{t("assistance.doNotAskAgainThisSession556519")}</label>
