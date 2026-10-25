@@ -391,6 +391,14 @@ export function SNVIndelTab({
       sortable: true,
     },
     {
+      id: 'priorityScore',
+      header: t('phenotype.priorityScore'),
+      accessor: row => <HoverHint content={t('phenotype.priorityHelp')}><span className="inline-flex flex-col items-center gap-1"><span className="font-mono tabular-nums">{row.automaticAcmg?.priorityScore??'—'}<span className="text-fg-muted"> / 100</span></span>{row.automaticAcmg?.phenotypeMatch&&<span className="text-xs text-fg-muted">{row.automaticAcmg.phenotypeMatch.gene} · {(row.automaticAcmg.phenotypeMatch.score*100).toFixed(1)}%</span>}{row.automaticAcmg?.criteria?.length ? <span className="text-xs text-fg-muted">ACMG: {row.automaticAcmg.score}</span> : null}</span></HoverHint>,
+      width: 140,
+      align: 'center',
+      sortable: true,
+    },
+    {
       id: 'transcript',
       header: t("history.transcript96b6d7"),
       accessor: 'transcript',

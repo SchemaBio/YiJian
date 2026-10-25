@@ -5,6 +5,7 @@ import { calculateLossTotal } from '@/app/(main)/tasks/[uuid]/utils/loss-calcula
 import { calculateGainTotal } from '@/app/(main)/tasks/[uuid]/utils/gain-calculator';
 import { screenSNV } from './snv-screen';
 import { annotationGenes } from './row-annotations';
+import { explicitQualityFailure, priorityScore } from './priority';
 
 const pathogenic = (s?: string) => s === 'Pathogenic' || s === 'Likely_Pathogenic';
 const number = (v: unknown): number | undefined => v === undefined || v === null || String(v).trim() === '' || v === '.' || !Number.isFinite(Number(v)) ? undefined : Number(v);
@@ -153,7 +154,7 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
     if (rule?.pathogenicMin !== undefined && values.some(v=>(number(v)??-1)>=rule.pathogenicMin!)) {result.pinned=true;result.pinReasons.push('疾病阈值');}
     else result.pending.push('重复次数跨阈值或缺少已核验位点/疾病阈值');
   }
-  if (pathogenic(result.classification) && quality(row,p)) {result.pinned=true;result.pinReasons.push('致病初评');}
+  if (pathogenic(result.classification) && !explicitQualityFailure(row,p)) {result.pinned=true;result.pinReasons.push('致病初评');}
   if (!quality(row,p)) result.pending.push('质量未通过或必要质量信息缺失，不自动置顶');
   if (ctx.hpo.length && result.gene && quality(row,p) && !['Benign','Likely_Benign'].includes(result.classification??'')) {
     for (const disease of index(ctx).genes.get(result.gene)??[]) {
@@ -190,26 +191,26 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
       const background=(ctx.supplement.background[best.gene]??[]).find(record=>record.id===best.diseaseId)??ctx.supplement.background[best.gene]?.[0];
       result.phenotypeMatch=background?{...best,geneBackground:background}:best;result.referenceVersion=ctx.supplement.resourceVersion;result.phenotypeResource=ctx.supplement.version;
       if(best.eligible&&pathogenic(result.classification)&&result.classificationBasis!=='screening_conflict'){
-        const filter=text(read(row.values,'Filter','FILTER','filter'));
-        const depth=p?.proband?.dp??number(read(row.values,'Depth','depth'));
-        const gq=p?.proband?.gq??number(row.values.GQ);
-        const genotype=p?.proband?.gt??text(row.values.Genotype);
-        const explicitFail=p?.qualityPassed===false || !!filter&&filter!=='PASS' && filter!=='.' || depth!==undefined&&depth<10 || gq!==undefined&&gq<20 || /^(0[|/]0|0)$/.test(genotype) || p?.proband?.ad!==undefined&&(p.proband.ad[1]??0)<3;
+        const explicitFail=explicitQualityFailure(row,p);
         if(!explicitFail){result.phenotypePriority=true;result.pinned=true;result.state='evaluated';result.pinReasons.push('HPO 相关且初评致病/可能致病');}
+      }
+      if(row.table==='snv-indel'&&best.eligible&&result.classification==='VUS'&&result.classificationBasis!=='screening_conflict'&&!explicitQualityFailure(row,p)){
+        result.phenotypeCandidate=true;result.gene=best.gene;result.diseaseId=best.diseaseId;
       }
       if(!p?.proband?.gq)result.pending.push('phenotype.gqPending');
       if(!p?.frequency?.length)result.pending.push('phenotype.frequencyPending');
       if(!p?.pedigreeVerified)result.pending.push('phenotype.familyPending');
     }
   }
-  if(result.phenotypePriority)result.pending=result.pending.filter(note=>note!=='质量未通过或必要质量信息缺失，不自动置顶');
+  result.priorityScore=explicitQualityFailure(row,p)?0:priorityScore(row,result);
+  if(result.pinned||result.phenotypeCandidate)result.pending=result.pending.filter(note=>note!=='质量未通过或必要质量信息缺失，不自动置顶');
   if (!ctx.pack.licenses.length) result.pending.push('本地参考证据包尚未发布');
   return result;
 }
 // This function runs after all rows have been evaluated. It never selects the
 // first page, and a paired candidate is admitted or rejected as one group.
 export function selectCandidates(rows: {row:AssessmentRow;assessment:AutomaticAssessment}[],context?:AssessmentContext) {
-  const candidates=rows.filter(x=>x.assessment.phenotypeScore>=.5 && !x.assessment.pinned).sort((a,b)=>b.assessment.phenotypeScore-a.assessment.phenotypeScore||b.assessment.familySupport-a.assessment.familySupport||a.row.id.localeCompare(b.row.id));
+  const candidates=rows.filter(x=>(x.assessment.phenotypeCandidate||x.assessment.phenotypeScore>=.5) && !x.assessment.pinned).sort((a,b)=>(b.assessment.priorityScore??0)-(a.assessment.priorityScore??0)||b.assessment.phenotypeScore-a.assessment.phenotypeScore||b.assessment.familySupport-a.assessment.familySupport||a.row.id.localeCompare(b.row.id));
   const genes=new Set<string>(), admitted=new Set<string>();let n=0;
   const byID=new Map(rows.map(x=>[x.row.id,x]));
   for (const item of candidates) {
@@ -219,7 +220,7 @@ export function selectCandidates(rows: {row:AssessmentRow;assessment:AutomaticAs
     if(item.assessment.pairId && (!pair || pair.row.id===item.row.id || pair.assessment.pairId!==item.row.id || pair.assessment.phenotypeScore<.5 || pair.assessment.gene!==gene || pair.assessment.diseaseId!==item.assessment.diseaseId))continue;
     const group=pair?[item,pair]:[item];const count=group.filter(x=>!admitted.has(x.row.id)&&!x.assessment.pinned).length;if(n+count>100)continue;
     genes.add(gene);n+=count;
-    for(const x of group){admitted.add(x.row.id);x.assessment.pinned=true;x.assessment.state='evaluated';x.assessment.pinReasons.push('表型候选');if(x.assessment.familySupport>0)x.assessment.pinReasons.push('家系候选');}
+    for(const x of group){admitted.add(x.row.id);x.assessment.pinned=true;x.assessment.state='evaluated';if(x.assessment.phenotypeCandidate)x.assessment.phenotypePriority=true;x.assessment.pinReasons.push('表型候选');if(x.assessment.familySupport>0)x.assessment.pinReasons.push('家系候选');}
   }
   if(context)for(const x of rows.filter(x=>x.row.table==='roh')){
     const region=context.proofs[x.row.id]?.interval;

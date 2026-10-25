@@ -10,7 +10,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{taskId:
   const token=request.cookies.get('access_token')?.value;
   if(!token)return reply({error:'UNAUTHORIZED'},401);
   if(Number(request.headers.get('content-length'))>65536)return reply({error:'REQUEST_TOO_LARGE'},413);
-  let body:{contextVersion?:string;genes?:string[];cursor?:number;resourceVersion?:string};
+  let body:{contextVersion?:string;genes?:string[];cursor?:number;resourceVersion?:string;rank?:boolean};
   try{const raw=await request.text();if(raw.length>65536)return reply({error:'REQUEST_TOO_LARGE'},413);body=JSON.parse(raw);}catch{return reply({error:'INVALID_REQUEST'},400);}
   if(!body.contextVersion||!Array.isArray(body.genes)||body.genes.length>512||body.genes.some(g=>typeof g!=='string'||g.length>80||!g.trim())||body.cursor!==undefined&&(!Number.isInteger(body.cursor)||body.cursor<0||body.cursor>body.genes.length))return reply({error:'INVALID_REQUEST'},400);
   // Fixed administrator-configured origin; never forward cookies to an incoming Host.
@@ -24,7 +24,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{taskId:
     if(!active||active.taskId!==taskId||active.version!==body.contextVersion)return reply({error:'CONTEXT_CHANGED'},409);
     const resourceVersion=active.referenceVersion;
     if(!resourceVersion || body.resourceVersion&&body.resourceVersion!==resourceVersion)return reply({error:'REFERENCE_VERSION_CHANGED'},409);
-    const value=await queryReferences({genes:body.genes,hpo:active.hpo??[],cursor:body.cursor,resourceVersion});
+    const value=await queryReferences({genes:body.genes,hpo:active.hpo??[],cursor:body.cursor,resourceVersion,rank:body.rank===true});
     return reply(value);
   }catch(error){return error instanceof Error&&error.message==='REFERENCE_VERSION_CHANGED'?reply({error:'REFERENCE_VERSION_CHANGED'},409):reply({error:'REFERENCE_UNAVAILABLE'},503);}
 }

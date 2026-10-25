@@ -27,6 +27,7 @@ import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '..
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
+import { aiACMGReviewCandidates } from '../utils/ai-acmg';
 import { SVCv4AssessmentPanel } from './SVCv4AssessmentPanel';
 import type { SVCv4Assessment } from '@/lib/svcv4';
 
@@ -126,18 +127,20 @@ function ACMGPointsEditor({
   onSave,
   onCancel,
   renderAIAction,
+  aiDraft,
 }: {
+  aiDraft?: { evidence: ACMGEvidenceEntry[]; reason: string };
   renderAIAction?: (calculator: unknown) => React.ReactNode;
   variant: SNVIndel;
   onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
   onCancel: () => void;
 }) {
   const t = useText();
-  const initialEvidence = variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
+  const initialEvidence = aiDraft?.evidence ?? variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
   const [evidence, setEvidence] = React.useState<Record<string, ACMGEvidenceEntry>>(() => Object.fromEntries(initialEvidence.map(item => [item.code, item])));
-  const [override, setOverride] = React.useState<ACMGClassification | ''>(variant.acmgOverride ?? '');
-  const [overrideReason, setOverrideReason] = React.useState(variant.acmgOverrideReason ?? '');
-  const [reason, setReason] = React.useState('');
+  const [override, setOverride] = React.useState<ACMGClassification | ''>(aiDraft ? '' : variant.acmgOverride ?? '');
+  const [overrideReason, setOverrideReason] = React.useState(aiDraft ? '' : variant.acmgOverrideReason ?? '');
+  const [reason, setReason] = React.useState(aiDraft?.reason ?? '');
   const [restoreAutomatic, setRestoreAutomatic] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -174,6 +177,7 @@ function ACMGPointsEditor({
   };
 
   return <div className="space-y-4">
+    {aiDraft && <p role="note" className="rounded-md border border-accent-subtle bg-accent-subtle/20 p-3 text-sm">{t('assistance.acmgReviewDraftNotice')}</p>}
     {renderAIAction && <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.generatedFromCurrentEditedEvidence1c1c7c")}</span>{renderAIAction({ evidence: Object.values(evidence), override, overrideReason, score })}</div>}
     <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{t("tasks.automaticAssessmentc4ff36")}{auto?.profile ?? 'acmg-snv-points-v2'}</span><span>{t("tasks.automaticClassification8daa4b")}{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : t("tasks.insufficientEvidence70568c")} · {auto?.score ?? 0} {t("tasks.pointsdecb3b")}</span></div>
@@ -188,7 +192,7 @@ function ACMGPointsEditor({
             <input type="checkbox" checked={Boolean(item)} onChange={event => toggle(code, event.target.checked)} aria-label={t("tasks.selectAcmgEvidencef17a92", {p0: String(code)})} />
             <span className="w-12 shrink-0 text-xs font-semibold">{code}</span>
             {item && code !== 'BA1' && <select value={item.strength} onChange={event => { setRestoreAutomatic(false); setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } })); }} aria-label={t("tasks.strengthc0b275", {p0: String(code)})} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
-              {(code === 'PVS1' ? [['very_strong', t("tasks.veryStrong103c20")]]:[['supporting',t("tasks.supportinga9aab1")],['moderate',t("tasks.moderate839de2")],['strong',t("tasks.strong275680")],...(code.startsWith('P') ? [['very_strong',t("tasks.veryStrong103c20")]] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} {t("tasks.points505d62")}</option>)}
+              {([['supporting',t("tasks.supportinga9aab1")],['moderate',t("tasks.moderate839de2")],['strong',t("tasks.strong275680")],...(code.startsWith('P') ? [['very_strong',t("tasks.veryStrong103c20")]] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} {t("tasks.points505d62")}</option>)}
             </select>}
             {item && code === 'BA1' && <span className="text-xs text-success-fg">{t("tasks.independentBenignEvidence8ecbad")}</span>}
           </div>;
@@ -214,6 +218,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
   const [localClassification, setLocalClassification] = React.useState<ACMGClassification | null>(null);
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
+  const [localEvidence, setLocalEvidence] = React.useState<ACMGEvidenceEntry[] | null>(null);
+  const [localSource, setLocalSource] = React.useState<SNVIndel['acmgAssessmentSource']>();
+  const [aiDraft, setAIDraft] = React.useState<{ key: string; evidence: ACMGEvidenceEntry[]; reason: string }>();
   const [interpretation, setInterpretation] = React.useState('');
   const [versionBusy,setVersionBusy]=React.useState(false);
   const [versionError,setVersionError]=React.useState('');
@@ -232,11 +239,12 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
+    setLocalEvidence(null); setLocalSource(undefined); setAIDraft(undefined);
     setInterpretation(variant?.interpretation ?? '');
     setVersionError('');setVersionBusy(false);
     setInterpretationError('');
     setInterpretationSaving(false);
-  }, [variant?.id]);
+  }, [taskId, variant?.id]);
 
   React.useEffect(() => {
     if (!variant) { setAdjustmentHistory([]); return; }
@@ -251,6 +259,10 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   const currentClassification = localClassification ?? (variant.activeAcmgVersion==='svcv4'?variant.legacyAcmgClassification:variant.acmgClassification);
   const currentCriteria = localCriteria ?? variant.acmgCriteria ?? [];
+  const currentEvidence = localEvidence ?? variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
+  const assessmentSource = localSource ?? variant.acmgAssessmentSource ?? 'automatic';
+  const currentScore = assessmentSource === 'automatic' ? variant.automaticAcmg?.score : currentEvidence.reduce((sum, item) => sum + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
+  const aiCandidates = aiResult ? aiACMGReviewCandidates(aiResult) : [];
   const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
   const activeClassification=variant.activeAcmgVersion==='svcv4'?variant.svcv4Assessment?.result?.classification:currentClassification;
   const activeConfig=activeClassification?ACMG_CONFIG[activeClassification]:undefined;
@@ -287,6 +299,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     const score = evidence.reduce((total, item) => total + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
     setLocalClassification(override || (evidence.some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, evidence.length)) || null);
     setLocalCriteria(evidence.map(item => item.code));
+    setLocalEvidence(evidence);
+    setLocalSource(reset ? 'automatic' : override ? 'manual_override' : 'manual_evidence');
+    setAIDraft(undefined);
     setIsEditingACMG(false);
   };
 
@@ -370,7 +385,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 <span className="text-sm font-semibold">{t("tasks.currentAcmgEdition8379ee")}</span>
                 {!isEditingACMG && <AIAssistanceAction key={`${taskId}/${variant.id}/acmg`} disabled={readOnly} input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride } }} onResult={setAIResult} />}
               </div>
-              {aiResult && <AIResultCard result={aiResult} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
+              {aiResult && <AIResultCard result={aiResult} humanReviewSaved={Boolean(aiResult.requestId && currentEvidence.some(item => item.source === 'sepilens_ai_reviewed' && item.note?.includes(`AI request: ${aiResult.requestId}`)))} onReviewEvidence={canEditACMG && aiCandidates.length > 0 ? () => { setAIDraft({ key: crypto.randomUUID(), evidence: aiCandidates, reason: `${t('assistance.acmgAIReviewReason')}${aiResult.requestId ? ` (${aiResult.requestId})` : ''}` }); setIsEditingACMG(true); } : undefined} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
               {/* ACMG 分类 */}
               <SectionTitle
                 icon={FileText}
@@ -378,7 +393,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 action={
                   canEditACMG && !isEditingACMG && (
                     <ActionButton action="edit" variant="ghost"
-                      onClick={() => setIsEditingACMG(true)}
+                      onClick={() => { setAIDraft(undefined); setIsEditingACMG(true); }}
                       className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
                     >
 
@@ -389,7 +404,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               <div className="space-y-0">
                 {isEditingACMG ? (
                   <ACMGPointsEditor
-                    variant={variant}
+                    key={aiDraft?.key ?? 'manual'}
+                    variant={{ ...variant, acmgEvidence: localEvidence ?? variant.acmgEvidence }}
+                    aiDraft={aiDraft}
                     onSave={handleSaveACMG}
                     renderAIAction={calculator => <AIAssistanceAction disabled={readOnly} input={{feature:'acmg',taskId,reference:referenceGenome,variant:aiVariantContext(variant),calculator}} onResult={setAIResult} />}
                   onCancel={() => setIsEditingACMG(false)}
@@ -397,11 +414,11 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 ) : (
                   <>
                     <InfoItem label={t("tasks.classification435c52")} value={acmgConfig ? <ClinicalSignificanceBadge value={currentClassification}>{acmgConfig.label}</ClinicalSignificanceBadge> : t("tasks.notAssessedd94e42")} />
-                    <InfoItem label={t("tasks.assessmentSource3f01c0")} value={variant.acmgAssessmentSource === 'manual_override' ? t("tasks.manualOverrideef74b5") : variant.acmgAssessmentSource === 'manual_evidence' ? t("tasks.savedEvidencePoints874a14") : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? t("tasks.quickAssessmentClinvarReferenceb1b550") : variant.automaticAcmg?.classificationBasis === 'population_screening' ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f") : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? t("tasks.quickAssessmentConflictNeedsReviewf3c456") : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? t("tasks.quickAssessmentVusNeedsReview79d7da") : t("tasks.automaticEvidencePointsb87a06")} />
-                    {variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
+                    <InfoItem label={t("tasks.assessmentSource3f01c0")} value={assessmentSource === 'manual_override' ? t("tasks.manualOverrideef74b5") : assessmentSource === 'manual_evidence' ? t("tasks.savedEvidencePoints874a14") : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? t("tasks.quickAssessmentClinvarReferenceb1b550") : variant.automaticAcmg?.classificationBasis === 'population_screening' ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f") : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? t("tasks.quickAssessmentConflictNeedsReviewf3c456") : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? t("tasks.quickAssessmentVusNeedsReview79d7da") : t("tasks.automaticEvidencePointsb87a06")} />
+                    {assessmentSource === 'automatic' && variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
                     <PhenotypeSummary assessment={variant.automaticAcmg} />
                     <AnnotationScreeningNotes details={variant.automaticAcmg?.annotationDetails} />
-                    <InfoItem label={t("tasks.automaticEvidencePointsb87a06")} value={variant.automaticAcmg ? t("tasks.pointsc91542", {p0: String(variant.automaticAcmg.score)}) : undefined} />
+                    <InfoItem label={t(assessmentSource === 'automatic' ? "tasks.automaticEvidencePointsb87a06" : "tasks.evidencePoints76bde1")} value={currentScore !== undefined ? t("tasks.pointsc91542", {p0: String(currentScore)}) : undefined} />
                     {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">{t("tasks.currentAnnotationsCannotEstablishAnAcmgClassification3d8581")}</p>}
                     <InfoItem
                       label={t("tasks.evidenceItem13948e")}

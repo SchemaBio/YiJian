@@ -30,6 +30,7 @@ export interface AIAssistanceInput {
   clinicalContext?: AIClinicalContext;
 }
 export interface AIAssistanceResult {
+  requestId?: string;
   feature: AIFeature;
   model?: string;
   generatedAt?: string;

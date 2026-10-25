@@ -2,6 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { buildLocalSelection, effectiveField, localPredicate, literal } from './parquet-browser-sql';
 describe('browser effective Parquet query', () => {
     const raw = ['Chromosome', 'Position', 'Gene', 'GnomAD_AF', 'Transcript'];
+    it('orders the entire dataset by triage score before stable genomic ties and preserves an explicit unpin',()=>{
+        const q=buildLocalSelection({offset:0,limit:20},raw);
+        expect(q.order).toContain("json_extract_string(a.baseline,'$.priorityScore') AS DOUBLE),0) DESC, t.file_row_number ASC");
+        expect(effectiveField('pinned',raw).startsWith("COALESCE(json_extract_string(o.payload, '$.pinned'),")).toBe(true);
+        expect(effectiveField('priorityScore',raw)).toBe("json_extract_string(a.baseline,'$.priorityScore')");
+    });
     it('promotes focused rows ahead of pinned-only rows before user sorting and pagination', () => {
         const focused = `COALESCE(TRY_CAST(${effectiveField('focused', raw)} AS BOOLEAN), FALSE)`;
         const pinned = `COALESCE(TRY_CAST(${effectiveField('pinned', raw)} AS BOOLEAN), FALSE)`;

@@ -211,6 +211,8 @@ export interface ACMGEvidenceEntry {
 }
 
 export interface AutomaticACMGAssessment {
+  priorityScore?:number;
+  phenotypeCandidate?:boolean;
   annotationDetails?:{field:string;value:string}[];
   phenotypeMatch?:import('@/lib/assessment/types').PhenotypeMatch;
   phenotypePriority?:boolean;

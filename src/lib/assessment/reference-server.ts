@@ -2,7 +2,7 @@ import { Worker } from 'node:worker_threads';
 import path from 'node:path';
 import type { ReferenceSupplement } from './types';
 
-type Request = {genes:string[];hpo:string[];cursor?:number;resourceVersion?:string};
+type Request = {genes:string[];hpo:string[];cursor?:number;resourceVersion?:string;rank?:boolean};
 let worker: Worker | undefined, sequence=0;
 const pending=new Map<number,{resolve:(value:ReferenceSupplement)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
 function fail(error:Error){for(const call of pending.values()){clearTimeout(call.timer);call.reject(error);}pending.clear();const old=worker;worker=undefined;void old?.terminate();}

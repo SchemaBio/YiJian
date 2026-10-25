@@ -1,10 +1,36 @@
 # Indexed phenotype supplements
 
-The v3 initial assessment retains v2 ACMG evidence and automatic candidate rules.
-Supplementary HPO relevance is calculated independently of quality, population
-and pedigree verification. An eligible match and an effective P/LP conclusion
-add priority only when no explicit quality failure exists. HPO never adds ACMG
-points. Manual pins, cancellation and classifications remain authoritative.
+The v4 assessment computes local HPO → disease → gene priorities using
+information-content-weighted Lin similarity and bidirectional best-match averages.
+It uses ontology ancestors, so a related, more specific term can contribute even
+without an exact HPO match. It does not run Phenolyzer or infer gene networks.
+An eligible match requires similarity ≥0.5 and at least two informative patient
+terms (IC ≥2), or one specific term (IC ≥4). The candidate-gene toolbar lists the
+best eligible disease per gene, up to 200 genes, with scores and provenance.
+This list is independent of whether the task contains a variant in each gene.
+
+Variant triage scores (0–100) combine P=60 / LP=50, HPO similarity ×30,
+reported AF ≤0.001 (+5), and coding/splice functional impact (+5), capped at100.
+Benign/likely-benign, conflicting, and explicitly failed-quality rows score0.
+These are transparent ranking heuristics, neither calibrated probabilities nor
+ACMG evidence points. AF annotations alone never create PM2/PVS1 or P/LP labels.
+
+P/LP variants are automatically pinned unless an explicit quality failure exists.
+Missing GQ/AN does not veto triage; missing clinical prerequisites remain pending.
+HPO-related SNV/indel VUS are also candidates: select the highest scores across
+the entire task, at most 20 genes / 100 candidate variants. Frequency and
+functional impact contribute ranking points rather than act as mandatory gates;
+noncoding variants and unknown AF can therefore be prioritized for review.
+Benign/conflicting annotations and explicit quality failures are excluded.
+VUS candidates remain VUS. No de novo, trans, or inheritance fact is inferred.
+Functional impact includes stop gained, frameshift, canonical splice, missense,
+start/stop lost and in-frame coding changes; this is not verified PVS1 evidence.
+
+SQL applies focus/pin priority before pagination. Within automatic pins, HPO-related
+P/LP precede other P/LP and VUS candidates; unpinned rows default to triage score
+then stable source order. Explicit user sorting is retained within these groups.
+Manual pins, explicit unpins and classifications remain authoritative. Scores and
+HPO matches are displayed separately from ACMG evidence points.
 
 ## Reproducible resources
 
@@ -49,7 +75,8 @@ association is silently truncated. Workers process existing batches of at most
 
 A dedicated SQLite thread uses prepared statements, a 4 MiB page cache per
 database, a bounded 8 MiB public term cache and at most eight queued requests.
-Patient-specific scores are released after each query. Responses are paginated
+A rank request scans all public disease–gene associations once and returns up to
+200 eligible gene matches. Patient-specific scores are released after each query. Responses are paginated
 below 1 MB. Resource errors remove supplementary priority and keep the legacy
 assessment available; a version mismatch aborts publication of mixed results.
 

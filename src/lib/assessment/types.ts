@@ -1,10 +1,11 @@
-export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v3-hpo-priority';
+export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v4-hpo-gene-ranking';
 export interface PhenotypeMatch {
   geneBackground?:{id:string;validity:string;inheritance:string;source?:string};
   gene:string; diseaseId:string; diseaseName?:string; score:number; eligible:boolean;
   matched:{id:string;name?:string}[]; source:string;
 }
 export interface ReferenceSupplement {
+  geneRanking?: PhenotypeMatch[];
   resourceVersion:string; version:string; canonical:Record<string,string|null>;
   matches:Record<string,PhenotypeMatch[]>;
   background:Record<string,{id:string;validity:string;inheritance:string;source?:string}[]>;
@@ -55,6 +56,9 @@ export interface AssessmentContext {
 }
 export interface AssessmentRow { id: string; table: ResultTable; values: Record<string, unknown>; }
 export interface AutomaticAssessment {
+  /** Research triage (0–100), never ACMG evidence points or a probability. */
+  priorityScore?:number;
+  phenotypeCandidate?:boolean;
   annotationDetails?:{field:string;value:string}[];
   /** Used only to restore the original baseline when supplementary queries fail. */
   legacyPinned?:boolean;

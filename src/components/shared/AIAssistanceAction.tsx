@@ -2,7 +2,6 @@
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
-import { translateUI } from '@/i18n/text';
 
 import { ActionButton, IconActionButton } from '@/components/shared/ActionButton';
 
@@ -107,22 +106,36 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
 }
 
 const CLASS_LABELS: Record<string, string> = { Pathogenic: '致病', Likely_Pathogenic: '可能致病', VUS: '意义未明', Likely_Benign: '可能良性', Benign: '良性', InsufficientEvidence: '证据不足' };
+function classificationLabel(value: string): string {
+  const normalized = value.replace(/[^a-z]/gi, '').toLowerCase();
+  const aliases: Record<string, string> = { pathogenic: 'Pathogenic', likelypathogenic: 'Likely_Pathogenic', vus: 'VUS', uncertainsignificance: 'VUS', uncertainsignificancevus: 'VUS', variantofuncertainsignificance: 'VUS', likelybenign: 'Likely_Benign', benign: 'Benign' };
+  return normalized === 'insufficientdata' ? 'assistance.verifiedEvidenceInsufficient' : CLASS_LABELS[aliases[normalized] ?? value] ?? value;
+}
 const STATUS_KEYS: Record<string, string> = { met: 'met', not_met: 'notMet', not_applicable: 'notApplicable', insufficient_data: 'insufficient', conflicting: 'conflicting' };
-export function AIResultCard({ result, onUseInterpretation }: { result: AIAssistanceResult; onUseInterpretation?: () => void }) {
+export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, humanReviewSaved = false }: { result: AIAssistanceResult; onUseInterpretation?: () => void; onReviewEvidence?: () => void; humanReviewSaved?: boolean }) {
   const t = useText();
   const rule = result.ruleEngineResult && typeof result.ruleEngineResult === 'object' ? result.ruleEngineResult as Record<string, unknown> : undefined;
   const reviewer = result.reviewerDecision && typeof result.reviewerDecision === 'object' ? result.reviewerDecision as Record<string, unknown> : undefined;
   const score = rule?.total_score ?? rule?.totalScore ?? rule?.score;
+  const ruleCriteria = Array.isArray(rule?.criteria) ? rule.criteria as Array<Record<string, unknown>> : [];
+  const proposal = result.agentProposal && typeof result.agentProposal === 'object' ? result.agentProposal as Record<string, unknown> : undefined;
+  const reconciled = Array.isArray(proposal?.reconciliation) ? proposal.reconciliation as Array<Record<string, unknown>> : [];
   return <section aria-label={t("assistance.aiSuggestions89d49e")} className="space-y-3 rounded-lg border border-accent-subtle bg-accent-subtle/20 p-3">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="flex items-center gap-1.5 text-sm font-semibold"><Sparkles className="h-4 w-4 text-accent-fg" />{t("assistance.aiSuggestions89d49e")}</h4>{result.classification && <span className="text-sm font-medium">{translateUI(CLASS_LABELS[result.classification] ?? result.classification, t)}</span>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="flex items-center gap-1.5 text-sm font-semibold"><Sparkles className="h-4 w-4 text-accent-fg" />{t("assistance.aiSuggestions89d49e")}</h4>{result.classification && result.feature !== 'acmg' && <span className="text-sm font-medium">{t(classificationLabel(result.classification))}</span>}</div>
     <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{result.summary}</p>
-    {result.suggestedClassification && <p className="text-sm">{t('assistance.aiCandidateClassification')}{translateUI(CLASS_LABELS[result.suggestedClassification] ?? result.suggestedClassification, t)}</p>}
+    {result.suggestedClassification && <p className="text-sm">{t('assistance.aiCandidateClassification')}{t(classificationLabel(result.suggestedClassification))}</p>}
     {result.resultKind && <p className="text-xs text-fg-muted">{result.resultKind === 'experimental' ? t("assistance.draftExperimentUnverifiedInputNoClinicalUsea555f8") : result.resultKind === 'evidence_only' ? t("assistance.evidenceOrganizationSuggestionsNoFormalRuleClassificationfc1f1f") : result.resultKind === 'production' ? t("assistance.modelSuggestionsAndRuleResultsManualReview74dad3") : t("assistance.resultTyped3bde1", {p0: String(result.resultKind)})}</p>}
     {result.experimentalResult && <dl className="space-y-1 text-xs"><div>{t("assistance.experimentVersiona4948a")}{String(result.experimentalResult.version ?? t("samples.unknownd9c32a"))}</div><div>{t("assistance.draftClassificationdb633c")}{String(result.experimentalResult.classification ?? t("tasks.notAssessedd94e42"))} {t("assistance.score016cf6")}{String(result.experimentalResult.total_points ?? 'ND')}</div><div>{t("assistance.ruleHash93cea6")}{String(result.experimentalResult.ruleset_hash ?? t("samples.unknownd9c32a"))}</div></dl>}
-    {rule && <div className="rounded border border-border-subtle p-2 text-xs"><span className="font-medium">{t("assistance.ruleEngineResulte92c5b")}</span><span className="ml-2">{result.classification ? t(CLASS_LABELS[result.classification] ?? result.classification) : t("assistance.noClassificationf11956")}{typeof score === 'number' || typeof score === 'string' ? t("assistance.score02fb3a", {p0: String(score)}) : ''}</span></div>}
-    {reviewer && <div className="text-xs text-fg-muted">{t("assistance.manualDecision88c9c3")}{String(reviewer.classification ?? reviewer.decision ?? t("assistance.awaitingReview4607ba"))}{typeof reviewer.reason === 'string' ? ` · ${reviewer.reason}` : ''}</div>}
-    {!!result.evidence?.length && <dl className="space-y-2">{result.evidence.map((item, index) => <div key={`${item.code}-${index}`} className="rounded border border-border-subtle p-2"><dt className="flex flex-wrap items-center gap-2 text-xs font-semibold"><span>{item.code}</span>{item.status && <span className="rounded bg-canvas-inset px-1.5 py-0.5 font-normal">{STATUS_KEYS[item.status] ? t(`assistance.criterionStatus.${STATUS_KEYS[item.status]}`) : item.status}</span>}{item.strength && <span className="font-normal text-fg-muted">{item.strength}</span>}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-fg-muted">{item.reason}</dd></div>)}</dl>}
+    {rule && <div className="rounded border border-border-subtle p-2 text-xs"><span className="font-medium">{t(result.feature === 'acmg' ? 'assistance.acmgRuleCheck' : 'assistance.ruleEngineResulte92c5b')}</span><span className="ml-2">{result.classification ? t(classificationLabel(result.classification)) : t("assistance.noClassificationf11956")}{typeof score === 'number' || typeof score === 'string' ? t("assistance.score02fb3a", {p0: String(score)}) : ''}</span></div>}
+    {reviewer && !humanReviewSaved && <div className="text-xs text-fg-muted">{t("assistance.manualDecision88c9c3")}{String(reviewer.classification ?? reviewer.decision ?? t("assistance.awaitingReview4607ba"))}{typeof reviewer.reason === 'string' ? ` · ${reviewer.reason}` : ''}</div>}
+    {!!result.evidence?.length && <dl className="space-y-2">{result.evidence.map((item, index) => {
+      const checked = ruleCriteria.find(criterion => criterion.code === item.code);
+      const decision = reconciled.find(criterion => criterion.code === item.code);
+      const status = typeof checked?.status === 'string' ? checked.status : undefined;
+      return <div key={`${item.code}-${index}`} className="rounded border border-border-subtle p-2"><dt className="flex flex-wrap items-center gap-2 text-xs font-semibold"><span>{item.code}</span>{item.status && <span className="rounded bg-canvas-inset px-1.5 py-0.5 font-normal">{STATUS_KEYS[item.status] ? t(`assistance.criterionStatus.${STATUS_KEYS[item.status]}`) : item.status}</span>}{item.strength && <span className="font-normal text-fg-muted">{item.strength}</span>}</dt><dd className="mt-1 space-y-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-fg-muted"><p>{item.reason}</p>{result.feature === 'acmg' && status && <p>{t('assistance.criterionRuleStatus', { p0: STATUS_KEYS[status] ? t(`assistance.criterionStatus.${STATUS_KEYS[status]}`) : status })}{typeof checked?.reason === 'string' ? ` · ${checked.reason}` : ''}</p>}{result.feature === 'acmg' && decision?.accepted === false && <p>{t('assistance.criterionNotAccepted')}</p>}</dd></div>;
+    })}</dl>}
+    {result.feature === 'acmg' && <p className="text-xs text-fg-muted">{t('assistance.acmgHumanReviewNotice')}</p>}
     {!!result.warnings?.length && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{result.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{t("assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span>{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{t(humanReviewSaved ? "assistance.acmgHumanReviewSaved" : "assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span><div className="flex flex-wrap gap-2">{onReviewEvidence && result.feature === 'acmg' && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="primary" type="button" className="yj-tool-button" onClick={onReviewEvidence}>{t('assistance.acmgReviewAction')}</ActionButton>}{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div></div>
   </section>;
 }

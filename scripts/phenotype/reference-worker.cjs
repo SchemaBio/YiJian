@@ -72,6 +72,17 @@ parentPort.on('message', ({ id, request }) => {
     }
     const matches = {}, canonical = {}, background = {};
     const match=matcher(sample);
+    if(request.rank){
+      // Scan public associations once per authorized context, retaining only
+      // the strongest disease per gene. No patient scores survive this request.
+      const best=new Map();
+      if(sample.length)for(const disease of hpo.prepare('SELECT gene,id,name,hpo,source FROM diseases ORDER BY gene,id').iterate()){
+        const result=match(JSON.parse(disease.hpo).map(term).filter(Boolean));
+        if(result.eligible && (!best.has(disease.gene)||best.get(disease.gene).score<result.score))best.set(disease.gene,{...result,gene:disease.gene,diseaseId:disease.id,diseaseName:disease.name,source:disease.source});
+      }
+      const geneRanking=[...best.values()].sort((a,b)=>b.score-a.score||a.gene.localeCompare(b.gene)).slice(0,200);
+      parentPort.postMessage({id,value:{resourceVersion:manifest.digest,version:manifest.version,canonical,matches,background,warnings,geneRanking}});return;
+    }
     // Cursor is a gene offset; a gene's complete disease result is never truncated.
     let next = request.cursor || 0, used = 0;
     for (; next < request.genes.length; next++) {

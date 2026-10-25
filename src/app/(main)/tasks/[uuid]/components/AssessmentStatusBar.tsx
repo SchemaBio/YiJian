@@ -11,7 +11,7 @@ import * as React from 'react';
 import {assessmentStatus,cancelAssessment,type AssessmentStatus} from '@/lib/assessment/client';
 import {reevaluateBrowserResults,retryBrowserAssessment} from '@/lib/parquet-browser';
 import { ToolbarPopover } from '@/components/shared/ToolbarPopover';
-import { Info } from 'lucide-react';
+import { Info, Dna } from 'lucide-react';
 import { TaskNavigationCollapsed } from './TaskNavigation';
 export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}){
   const t = useText();
@@ -32,9 +32,18 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
      <section><h4 className="mb-1 font-semibold">{t("tasks.resourceVersion0c7595")}</h4><p className="break-words text-fg-muted">{status.packVersion && status.packVersion !== 'unavailable' ? `Human Phenotype Ontology、ClinGen、Mondo · ${status.packVersion}` : t("tasks.assessmentResourcesUnavailableOrNotLoaded700183")}</p></section>
    </div>
  </ToolbarPopover>
+ {status.geneRanking&&<ToolbarPopover wide iconOnly={compact} label={t('phenotype.geneList')} icon={<Dna size={14}/>}>
+   <p className="mb-3 text-xs text-fg-muted">{t('phenotype.geneListHelp')}</p>
+   <div className="max-h-80 overflow-auto">
+     <table className="w-full text-left text-xs"><thead><tr><th className="p-2">#</th><th className="p-2">{t('phenotype.gene')}</th><th className="p-2">{t('phenotype.similarity')}</th><th className="p-2">{t('phenotype.disease')}</th></tr></thead>
+       <tbody>{status.geneRanking.map((gene,index)=><tr key={gene.gene} className="border-t border-border-default" title={`${gene.source}\n${gene.matched.map(term=>term.name??term.id).join('；')}`}><td className="p-2 tabular-nums">{index+1}</td><td className="p-2 font-semibold">{gene.gene}</td><td className="p-2 tabular-nums">{(gene.score*100).toFixed(1)}%</td><td className="p-2">{gene.diseaseName??gene.diseaseId}<span className="block text-fg-muted">{gene.diseaseId}</span></td></tr>)}</tbody>
+     </table>
+     {!status.geneRanking.length&&<p className="p-2 text-xs text-fg-muted">{t('phenotype.noCandidates')}</p>}
+   </div>
+ </ToolbarPopover>}
  {status.state==='loading'&&<ActionButton iconOnly={compact} aria-label={t("tasks.cancelInitialAssessment38256e")} action="stop" variant="ghost" type="button" className="yj-tool-button" onClick={()=>cancelAssessment(taskId)}>{!compact && t("tasks.cancelInitialAssessment38256e")}</ActionButton>}
  {(status.state==='error'||status.state==='cancelled')&&<ActionButton iconOnly={compact} aria-label={t("tasks.retryLocalAssessment3192ee")} loading={busy} loadingLabel={compact ? undefined : t("tasks.preparinge25f6e")} action="retry" variant="ghost" type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await retryBrowserAssessment(taskId);}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.retryFailed8af761"));}finally{setBusy(false);}}}>{!compact && t("tasks.retryLocalAssessment3192ee")}</ActionButton>}
- {!readOnly&&status.reassessmentAvailable&&<ActionButton iconOnly={compact} aria-label={t("tasks.evidenceUpdatedReassessc59c30")} action="refresh" loading={busy} loadingLabel={compact ? undefined : t("tasks.preparinge25f6e")} variant="ghost" type="button" disabled={busy||status.state==='loading'} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.reassessmentFailed1f0dc8"));}finally{setBusy(false);}}}>{!compact && t("tasks.evidenceUpdatedReassessc59c30")}</ActionButton>}
+ {!readOnly&&status.state==='ready'&&<ActionButton iconOnly={compact} aria-label={t(status.reassessmentAvailable?"tasks.evidenceUpdatedReassessc59c30":"tasks.reassessInitialAssessment")} action="refresh" loading={busy} loadingLabel={compact ? undefined : t("tasks.preparinge25f6e")} variant="ghost" type="button" disabled={busy} className="yj-tool-button" onClick={async()=>{setBusy(true);setError('');try{await reevaluateBrowserResults(taskId);}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.reassessmentFailed1f0dc8"));}finally{setBusy(false);}}}>{!compact && t(status.reassessmentAvailable?"tasks.evidenceUpdatedReassessc59c30":"tasks.reassessInitialAssessment")}</ActionButton>}
  {(status.error||error)&&<span className={compact ? "sr-only" : "text-danger-fg"}>{error||status.error}</span>}
  </div>;
 }

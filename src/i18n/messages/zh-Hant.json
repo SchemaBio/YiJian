@@ -2146,7 +2146,8 @@
     "clickToIncludeInFocusd66934": "點擊選入關注",
     "unableToSaveFocusSelection594b1f": "關注標記儲存失敗",
     "reportSnapshotca5ad0": "報告快照",
-    "reportSnapshotVFixesSelectedLociLatest5987ef": "報告快照 v2 在產生時固定關注變異、目前人工解讀及質控資訊。"
+    "reportSnapshotVFixesSelectedLociLatest5987ef": "報告快照 v2 在產生時固定關注變異、目前人工解讀及質控資訊。",
+    "reassessInitialAssessment": "重新初評"
   },
   "auth": {
     "recoverPassword86c096": "找回密碼",
@@ -2191,8 +2192,26 @@
     "localDevelopmentEnvironment77543d": "本地開發環境"
   },
   "assistance": {
+    "modelOutputInvalid": "模型輸出未通過結構化校驗，本次未採納；可重新生成，管理員可依請求編號查看失敗原因。",
+    "modelProviderUnavailable": "模型呼叫失敗或逾時，請檢查模型服務連線後重試。",
+    "modelToolBudgetExceeded": "本次聯網檢索或工具呼叫達到限額，未交付有效評估；請稍後重新生成。",
+    "acmgHumanReviewSaved": "已儲存人工覆核證據；原 AI 建議與規則校驗結果保留供追溯。",
+    "acmgReviewDraftNotice": "已載入 AI 判為滿足的結構化候選。請覆核或取消證據；確認儲存後重新計分並取代目前評估。AI 建議分類不會自動覆寫人工分類。",
+    "acmgAIReviewReason": "人工覆核採納 SepiLens AI 候選證據",
+    "acmgReviewAction": "覆核並套用 ACMG 證據",
+    "acmgRuleCheck": "已核實證據的規則校驗",
+    "verifiedEvidenceInsufficient": "已核實證據不足",
+    "criterionRuleStatus": "規則校驗：{p0}",
+    "criterionNotAccepted": "規則校驗未採納該 AI 建議，仍需人工覆核。",
+    "acmgHumanReviewNotice": "AI「滿足」僅為候選建議。覆核並確認儲存後，才依所選證據重新計分。",
     "aiCandidateClassification": "AI 建議分類（待覆核）：",
-    "criterionStatus": { "met": "滿足", "notMet": "不滿足", "notApplicable": "不適用", "insufficient": "證據不足", "conflicting": "證據衝突" },
+    "criterionStatus": {
+      "met": "滿足",
+      "notMet": "不滿足",
+      "notApplicable": "不適用",
+      "insufficient": "證據不足",
+      "conflicting": "證據衝突"
+    },
     "aiAssistant5341ec": "AI 助手",
     "configureTheAiServiceFirst4a3222": "請先配置 AI 服務",
     "controlThePageWithNaturalLanguageInstructionsb52016": "您可以使用自然語言控制頁面，例如：",
@@ -2780,7 +2799,7 @@
   },
   "phenotype": {
     "title": "HPO 表型相關性",
-    "priority": "HPO 相關且初評致病／可能致病",
+    "priority": "已納入表型優先檢視",
     "relevanceOnly": "表型相關性參考",
     "similarity": "相似度（非致病機率）",
     "matches": "達到表型匹配閾值",
@@ -2799,7 +2818,14 @@
     "annotationLimits": "這些疾病、遺傳模式及預測註釋用於篩查；未核驗的關聯和未校準的預測值不產生 ACMG 條款。",
     "geneBackground": "ClinGen 基因層面背景（不代表上述疾病已獲相同結論）",
     "acknowledgement": "表型關聯使用 Human Phenotype Ontology（HPO）；基因標識使用 HGNC。",
-    "negatedHPO": "明確否定或排除的 HPO 術語未參與表型匹配。"
+    "negatedHPO": "明確否定或排除的 HPO 術語未參與表型匹配。",
+    "geneList": "HPO 候選基因",
+    "geneListHelp": "依本機 HPO 疾病–基因關聯與本體語義相似度排序，最多顯示 200 個相關基因。基因相關性不等於檢出致病變異，列表包含尚未檢出變異的基因。表型候選最多自動置頂 20 個基因、100 個位點；初評 P/LP 另行置頂。",
+    "gene": "基因",
+    "disease": "相關疾病",
+    "noCandidates": "目前 HPO 未匹配到達到門檻的候選基因。",
+    "priorityScore": "初評優先級",
+    "priorityHelp": "0–100 優先級分數，用於排序，並非致病機率或 ACMG 分數：P 60 / LP 50，表型相似度 ×30，報告 AF ≤0.001 加5，功能影響加5，最高100。良性、衝突或明確品質失敗為0。"
   },
   "research": {
     "expiresAt": "到期時間",

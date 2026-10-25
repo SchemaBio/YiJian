@@ -5,6 +5,12 @@ vi.mock('./api', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 
 describe('SepiLens platform adapter', () => {
+  it('shows the specific structured-output failure without substituting a baseline', async () => {
+    vi.mocked(api.post).mockResolvedValue({ requestId: 'request-invalid', status: 'failed', errorCode: 'AI_OUTPUT_INVALID' });
+    await expect(httpAIAssistanceAdapter.generate({ feature: 'acmg', taskId: 'task' }, { requestId: 'key', confirmedCharge: false, signal: new AbortController().signal })).rejects.toThrow('模型输出未通过结构化校验');
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.get).not.toHaveBeenCalled();
+  });
   it('submits once with the idempotency key and polls the platform request', async () => {
     vi.useFakeTimers();
     vi.mocked(api.post).mockResolvedValue({ requestId: 'request', status: 'queued' });
@@ -12,7 +18,7 @@ describe('SepiLens platform adapter', () => {
     const notify = vi.fn();
     const result = httpAIAssistanceAdapter.generate({ feature: 'acmg', taskId: 'task' }, { requestId: 'stable-key', confirmedCharge: false, signal: new AbortController().signal, onRequest: notify });
     await vi.advanceTimersByTimeAsync(2000);
-    expect(await result).toMatchObject({ feature: 'acmg', summary: 'review', ruleEngineResult: null });
+    expect(await result).toMatchObject({ requestId: 'request', feature: 'acmg', summary: 'review', ruleEngineResult: null });
     expect(api.post).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledWith('/v1/ai-assistance/requests', expect.objectContaining({ confirmedCharge: false }), expect.objectContaining({ headers: { 'Idempotency-Key': 'stable-key' } }));
     expect(notify).toHaveBeenCalledWith('request');

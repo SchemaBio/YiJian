@@ -2146,7 +2146,8 @@
     "clickToIncludeInFocusd66934": "Click to include in focus",
     "unableToSaveFocusSelection594b1f": "Unable to save focus selection",
     "reportSnapshotca5ad0": "Report snapshot",
-    "reportSnapshotVFixesSelectedLociLatest5987ef": "Report snapshot v2 captures focused variants, current interpretations and quality control when a report is generated."
+    "reportSnapshotVFixesSelectedLociLatest5987ef": "Report snapshot v2 captures focused variants, current interpretations and quality control when a report is generated.",
+    "reassessInitialAssessment": "Reassess"
   },
   "auth": {
     "recoverPassword86c096": "Recover password",
@@ -2191,8 +2192,26 @@
     "localDevelopmentEnvironment77543d": "Local development environment"
   },
   "assistance": {
+    "modelOutputInvalid": "The model output failed structured validation and was not adopted. Regenerate or ask an administrator to inspect the request audit.",
+    "modelProviderUnavailable": "The model request failed or timed out. Check the model connection and retry.",
+    "modelToolBudgetExceeded": "The retrieval or tool-call budget was exceeded. No valid assessment was delivered; regenerate later.",
+    "acmgHumanReviewSaved": "Human-reviewed evidence saved; original AI suggestions and rule checks remain available for audit.",
+    "acmgReviewDraftNotice": "Structured AI candidates marked as met have been loaded. Review or deselect the evidence. Saving recalculates the score and replaces the current assessment; the AI classification does not override the human classification.",
+    "acmgAIReviewReason": "Human review of SepiLens AI evidence candidates",
+    "acmgReviewAction": "Review and apply ACMG evidence",
+    "acmgRuleCheck": "Rule checks on verified evidence",
+    "verifiedEvidenceInsufficient": "Insufficient verified evidence",
+    "criterionRuleStatus": "Rule check: {p0}",
+    "criterionNotAccepted": "The rule check did not accept this AI suggestion; human review is required.",
+    "acmgHumanReviewNotice": "AI met assertions are candidates. Scoring uses only the evidence you review and confirm by saving.",
     "aiCandidateClassification": "AI suggested classification (pending review): ",
-    "criterionStatus": { "met": "Met", "notMet": "Not met", "notApplicable": "Not applicable", "insufficient": "Insufficient evidence", "conflicting": "Conflicting evidence" },
+    "criterionStatus": {
+      "met": "Met",
+      "notMet": "Not met",
+      "notApplicable": "Not applicable",
+      "insufficient": "Insufficient evidence",
+      "conflicting": "Conflicting evidence"
+    },
     "aiAssistant5341ec": "AI assistant",
     "configureTheAiServiceFirst4a3222": "Configure the AI service first",
     "controlThePageWithNaturalLanguageInstructionsb52016": "Control the page with natural-language instructions, for example:",
@@ -2780,7 +2799,7 @@
   },
   "phenotype": {
     "title": "HPO phenotype relevance",
-    "priority": "HPO-related with pathogenic/likely pathogenic initial assessment",
+    "priority": "Prioritized for phenotype review",
     "relevanceOnly": "Phenotype relevance reference",
     "similarity": "Similarity (not pathogenicity probability)",
     "matches": "Phenotype match threshold met",
@@ -2799,7 +2818,14 @@
     "annotationLimits": "Disease, inheritance and prediction annotations support screening. Unverified associations and uncalibrated predictions do not generate ACMG criteria.",
     "geneBackground": "ClinGen gene-level background (may concern a different disease)",
     "acknowledgement": "Phenotype associations use the Human Phenotype Ontology (HPO); gene identifiers use HGNC.",
-    "negatedHPO": "Explicitly negated or excluded HPO terms were not used for phenotype matching."
+    "negatedHPO": "Explicitly negated or excluded HPO terms were not used for phenotype matching.",
+    "geneList": "HPO candidate genes",
+    "geneListHelp": "Up to 200 genes ranked using local HPO disease–gene associations and ontology semantic similarity. Gene relevance does not establish a pathogenic variant; genes without detected variants are included. Phenotype candidates pin up to 20 genes / 100 variants; initial P/LP variants are pinned separately.",
+    "gene": "Gene",
+    "disease": "Associated disease",
+    "noCandidates": "No genes meet the matching threshold for the current HPO terms.",
+    "priorityScore": "Triage priority",
+    "priorityHelp": "0–100 ranking score, not pathogenicity probability or ACMG points: P 60 / LP 50, phenotype similarity ×30, reported AF ≤0.001 +5, functional impact +5, capped at100. Benign, conflicting, or explicit quality failures score0."
   },
   "research": {
     "expiresAt": "Expires at",

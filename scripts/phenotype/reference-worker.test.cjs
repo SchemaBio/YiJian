@@ -15,6 +15,8 @@ test('indexed matching, aliases, broad/obsolete terms and pinned versions',async
  const query=request=>new Promise((resolve,reject)=>{const key=++id;const handler=message=>{if(message.id!==key)return;worker.off('message',handler);message.error?reject(Error(message.error)):resolve(message.value);};worker.on('message',handler);worker.once('error',reject);worker.postMessage({id:key,request});});
  try{
   const result=await query({genes:['OLD','AMBIGUOUS'],hpo:['HP:0000002'],resourceVersion:digest});assert.equal(result.canonical.OLD,'GENE');assert.equal(result.canonical.AMBIGUOUS,null);assert.equal(result.matches.GENE[0].score,1);assert.equal(result.matches.GENE[0].eligible,true);
+  const ranked=await query({genes:[],hpo:['HP:0000002'],rank:true});assert.equal(ranked.geneRanking.length,1);assert.equal(ranked.geneRanking[0].gene,'GENE');assert.equal(ranked.geneRanking[0].score,1);
+  const emptyRank=await query({genes:[],hpo:['HP:0000001'],rank:true});assert.deepEqual(emptyRank.geneRanking,[]);
   const broad=await query({genes:['GENE'],hpo:['HP:0000001']});assert.equal(broad.matches.GENE.length,0);
   const obsolete=await query({genes:['GENE'],hpo:['HP:0000003','HP:9999999']});assert.equal(obsolete.matches.GENE[0].eligible,true);assert.equal(obsolete.warnings.length,2);
   await assert.rejects(query({genes:['GENE'],hpo:['HP:0000002'],resourceVersion:'old'}),/REFERENCE_VERSION_CHANGED/);

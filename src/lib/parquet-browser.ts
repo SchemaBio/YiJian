@@ -389,7 +389,7 @@ class BrowserTable {
         const auto = object(source.__acmg), overlay = object(source.__adjustments);
         const hasAutomatic=Object.keys(auto).length>0;
         row.automaticAssessment=hasAutomatic?auto:undefined;
-        row.pinReasons=auto.pinReasons;
+        row.pinReasons=auto.pinReasons;row.priorityScore=auto.priorityScore;
         Object.assign(row, { id: source.__row_id, rowId: source.__row_id, rowOrdinal: Number(source.file_row_number), reviewed: false, focused: false, adjustments: overlay, adjustmentVersion: Number(source.__version), datasetVersion: this.info.dataset.dataVersion, attemptId: this.info.dataset.executionAttemptId });
         if (this.table === 'snv-indel') {
             row.annotationValues = Object.fromEntries(this.raw.map(s => [s, source[s]]));

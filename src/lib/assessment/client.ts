@@ -4,9 +4,9 @@ import { LocalizedError } from '@/i18n/errors';
 import {api} from '../api';
 import { assessmentCacheKey, readAssessmentCache, writeAssessmentCache, removeAssessmentCache, setAssessmentCacheScope } from './cache';
 export { setAssessmentCacheScope } from './cache';
-import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable} from './types';
+import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable, PhenotypeMatch} from './types';
 import { loadReferences, referenceGenes } from './reference-client';
-export interface AssessmentStatus {taskId:string;state:'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
+export interface AssessmentStatus {geneRanking?:PhenotypeMatch[];taskId:string;state:'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
 interface Envelope {active?:AssessmentContext;latestVersion:string;reassessmentAvailable:boolean}
 interface Session {worker:Worker;promise:Promise<Entry[]>;byRow?:Map<string,AutomaticAssessment>;context?:AssessmentContext;status:AssessmentStatus;controller:AbortController;timer?:ReturnType<typeof setTimeout>}
@@ -35,7 +35,15 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     session.context=context;
     publish(session,{version:context.version,packVersion:context.referenceVersion?`${context.pack.version} · HPO/HGNC/ClinGen ${context.referenceVersion}`:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
     const cacheKey = await assessmentCacheKey(context);
-    const cached = await readAssessmentCache(cacheKey);
+    let referencesFailed=false;
+    if(context.referenceVersion&&context.hpo.length)try{
+      const ranking=await loadReferences(context,[],controller.signal,true);
+      publish(session,{geneRanking:ranking.geneRanking??[]});
+    }catch(cause){
+      if(controller.signal.aborted||cause instanceof Error&&cause.message==='REFERENCE_VERSION_CHANGED')throw cause;
+      referencesFailed=true;publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});
+    }
+    const cached = referencesFailed?undefined:await readAssessmentCache(cacheKey);
     if (controller.signal.aborted) throw controller.signal.reason;
     if (cached) {
       session.byRow = new Map(cached.map(entry => [entry.rowId, entry.assessment]));
@@ -45,7 +53,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
       return cached;
     }
     await rpc('init',context);
-    const seenGenes=new Set<string>();let referencesFailed=false;
+    const seenGenes=new Set<string>();
     for(const table of context.tables??[]){
       if(controller.signal.aborted)throw new LocalizedError("display.initialAssessmentCanceledf56bc8");
       publish(session,{phase:'evaluate',table});
@@ -59,7 +67,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
           }catch(cause){
             if(controller.signal.aborted || cause instanceof Error&&cause.message==='REFERENCE_VERSION_CHANGED')throw cause;
             referencesFailed=true;await rpc('references-unavailable');
-            publish(session,{pending:[...context.availability,'phenotype.unavailable']});
+            publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});
           }
         }
         const processed=await rpc('batch',rows) as number;publish(session,{processed});

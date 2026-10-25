@@ -8,5 +8,5 @@ it('restores the original baseline if supplementary queries fail halfway through
  rpc('init',context);rpc('references',{resourceVersion:'r',version:'fixture',canonical:{G:'G'},matches:{G:[{gene:'G',diseaseId:'D',score:1,eligible:true,matched:[{id:'HP:0000001'}],source:'fixture'}]},background:{},warnings:[]});
  rpc('batch',[{id:'1',table:'snv-indel',values:{Gene:'G',ClinVar_Sig:'Pathogenic'}}]);rpc('references-unavailable');rpc('finish');
  const result=(rpc('drain') as {assessment:AutomaticAssessment}[])[0].assessment;
- expect(result.classification).toBe('Pathogenic');expect(result.pinned).toBe(false);expect(result.phenotypePriority).toBe(false);expect(result.phenotypeMatch).toBeUndefined();expect(result.criteria).toEqual([]);
+ expect(result.classification).toBe('Pathogenic');expect(result.pinned).toBe(true);expect(result.phenotypePriority).toBe(false);expect(result.phenotypeMatch).toBeUndefined();expect(result.criteria).toEqual([]);
 });

@@ -6,6 +6,9 @@ import type { AIAssistanceAdapter, AIAssistanceResult, AIAssistanceSettings } fr
 interface RequestView { requestId: string; status: string; result?: AIAssistanceResult; errorCode?: string }
 const ROOT = '/v1/ai-assistance';
 const ERRORS: Record<string, string> = {
+  AI_OUTPUT_INVALID: 'assistance.modelOutputInvalid',
+  AI_PROVIDER_UNAVAILABLE: 'assistance.modelProviderUnavailable',
+  AI_TOOL_BUDGET_EXCEEDED: 'assistance.modelToolBudgetExceeded',
   upstream_outcome_unknown: '无法确认上游是否已执行，请保留此请求记录，勿重复发起模型调用。',
   hpo_input_not_retained: '服务重启后 HPO 原文未保留，原请求状态不确定；不会自动重新调用模型。',
   legacy_upstream_unknown: '历史请求缺少上游实例归属，请联系管理员核对，勿重复生成。',
@@ -36,6 +39,7 @@ export const httpAIAssistanceAdapter: AIAssistanceAdapter = {
     while (true) {
       if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError');
       if (view.status === 'completed' && view.result) {
+        view.result.requestId = view.requestId;
         if (input.feature === 'hpo' && input.diagnosis) view.result.hpoTerms = view.result.hpoTerms?.map(term => {
           if (term.spanUnit !== 'unicode_codepoint' || term.spanStart === undefined || term.spanEnd === undefined) return term;
           try { const [spanStart,spanEnd] = unicodeSpanToUTF16(input.diagnosis!,term.spanStart,term.spanEnd); return {...term,spanStart,spanEnd,spanUnit:'utf16' as const}; }

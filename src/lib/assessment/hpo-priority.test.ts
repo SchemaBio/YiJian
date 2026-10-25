@@ -1,15 +1,34 @@
 import {describe,it,expect} from 'vitest';
-import {evaluateRow} from './engine';
+import {evaluateRow,selectCandidates} from './engine';
 import {referenceGenes} from './reference-client';
 import type {AssessmentContext,AssessmentRow,PhenotypeMatch} from './types';
 const match:PhenotypeMatch={gene:'B',diseaseId:'OMIM:1',diseaseName:'Fixture disease',score:.8,eligible:true,matched:[{id:'HP:0000001'}],source:'fixture'};
 const context=():AssessmentContext=>({taskId:'task',attemptId:'attempt',version:'context',reference:'hg19',referenceVersion:'resource',hpo:['HP:0000001'],hpoVersion:'hpo',members:[],availability:[],proofs:{},pack:{version:'pack',reference:'hg19',licenses:[],hpo:{},diseases:[],dosage:[],str:[],imprinting:[]},supplement:{resourceVersion:'resource',version:'fixture',canonical:{OLD:'B'},matches:{B:[match]},background:{},warnings:[]}});
 const row=(values:Record<string,unknown>):AssessmentRow=>({id:'row',table:'snv-indel',values:{Gene:'A&B',ClinVar_Sig:'Pathogenic',...values}});
 describe('HPO priority separated from ACMG and family prerequisites',()=>{
+ it('pins an HPO-related rare functional VUS as a research candidate without inventing ACMG evidence',()=>{
+   const variant=row({ClinVar_Sig:'.',Consequence:'stop_gained',GnomAD_AF:.00002,Filter:'PASS',Depth:90});
+   const result=evaluateRow(variant,context());
+   expect(result.classification).toBe('VUS');expect(result.score).toBe(0);expect(result.criteria).toEqual([]);
+   expect(result.priorityScore).toBe(34);expect(result.phenotypeCandidate).toBe(true);expect(result.pinned).toBe(false);
+   selectCandidates([{row:variant,assessment:result}]);expect(result.pinned).toBe(true);expect(result.pinReasons).toContain('表型候选');
+ });
+ it.each([{MAX_AF:.02},{Filter:'LowQual'},{GQ:10},{Genotype:'0/0'},{ClinVar_Sig:'Benign'}])('excludes unsuitable VUS candidates %o',values=>{
+   const result=evaluateRow(row({ClinVar_Sig:'.',Consequence:'stop_gained',GnomAD_AF:.00002,...values}),context());expect(result.phenotypeCandidate).not.toBe(true);
+ });
+ it.each([undefined,[],[0],true])('does not coerce unknown or non-scalar AF into rarity points (%s)',af=>{
+   const result=evaluateRow(row({ClinVar_Sig:'.',Consequence:'stop_gained',GnomAD_AF:af}),context());expect(result.priorityScore).toBe(29);expect(result.phenotypeCandidate).toBe(true);expect(result.score).toBe(0);
+ });
+ it('prioritizes HPO-related noncoding VUS without requiring a functional consequence',()=>{const variant=row({ClinVar_Sig:'.',Consequence:'intron_variant',GnomAD_AF:.00002});const result=evaluateRow(variant,context());selectCandidates([{row:variant,assessment:result}]);expect(result.pinned).toBe(true);expect(result.classification).toBe('VUS');expect(result.priorityScore).toBe(29);});
+ it('selects the highest scores across all rows with a 20-gene limit',()=>{
+   const entries=Array.from({length:25},(_,i)=>{const variant=row({ClinVar_Sig:'.',Consequence:'stop_gained',GnomAD_AF:0});variant.id=String(i);const assessment=evaluateRow(variant,context());assessment.gene='G'+i;assessment.priorityScore=i;return {row:variant,assessment};});
+   selectCandidates(entries);expect(entries.filter(x=>x.assessment.pinned)).toHaveLength(20);expect(entries.slice(0,5).every(x=>!x.assessment.pinned)).toBe(true);expect(entries[24].assessment.pinned).toBe(true);
+ });
+ it('does not create a phenotype candidate without patient HPO',()=>{const ctx=context();ctx.hpo=[];const result=evaluateRow(row({ClinVar_Sig:'.',Consequence:'stop_gained',GnomAD_AF:0}),ctx);expect(result.phenotypeCandidate).not.toBe(true);expect(result.classification).toBe('VUS');});
  it('matches every gene and prioritizes ClinVar P despite missing GQ/AN',()=>{const result=evaluateRow(row({}),context());expect(result.phenotypeMatch?.gene).toBe('B');expect(result.phenotypePriority).toBe(true);expect(result.pinned).toBe(true);expect(result.classificationBasis).toBe('clinvar_reference');expect(result.criteria).toEqual([]);expect(result.pending).toContain('phenotype.gqPending');expect(result.pending).not.toContain('质量未通过或必要质量信息缺失，不自动置顶');});
  it('uses normalized aliases without manufacturing disease validity',()=>{const result=evaluateRow(row({Gene:'OLD'}),context());expect(result.phenotypeMatch?.diseaseId).toBe('OMIM:1');expect(result.criteria).toEqual([]);});
  it('does not prioritize explicit quality failure or conflicting frequency',()=>{expect(evaluateRow(row({Filter:'LowQual'}),context()).phenotypePriority).not.toBe(true);const result=evaluateRow(row({MAX_AF:.2}),context());expect(result.classification).toBe('VUS');expect(result.phenotypePriority).not.toBe(true);});
- it('retains HPO-VUS relevance without introducing new automatic pinning',()=>{const result=evaluateRow(row({ClinVar_Sig:'Uncertain_significance'}),context());expect(result.phenotypeMatch?.score).toBe(.8);expect(result.pinned).toBe(false);});
+ it('marks an HPO-related VUS for bounded candidate selection',()=>{const result=evaluateRow(row({ClinVar_Sig:'Uncertain_significance'}),context());expect(result.phenotypeMatch?.score).toBe(.8);expect(result.pinned).toBe(false);});
  it('leaves known pathogenic baseline pinning unchanged without a match',()=>{const ctx=context();ctx.supplement=undefined;ctx.proofs.row={reference:'hg19',qualityPassed:true,proband:{gt:'0/1',dp:30,gq:40,ad:[20,10]}};const result=evaluateRow(row({Filter:'PASS'}),ctx);expect(result.pinned).toBe(true);expect(result.phenotypePriority).toBeUndefined();});
  it('deduplicates genes across rows and ignores a Region log2 Col5',()=>{expect(referenceGenes([row({Gene:'A&B',HGNC_ID:'HGNC:1'}),row({Gene:'A'})])).toEqual(['A','B','HGNC:1']);expect(referenceGenes([{id:'r',table:'cnv-segment',values:{Col5:'2.4'}}])).toEqual([]);});
  it('looks up CNV interval genes only with a verified reference',()=>{const ctx=context();ctx.proofs.r={reference:'hg19',interval:{reference:'hg19',chromosome:'chr1',start:10,end:20}};ctx.pack.dosage=[{reference:'hg19',chromosome:'1',start:0,end:30,gene:'B',id:'d',hi:3,ts:0,source:'fixture'}];expect(referenceGenes([{id:'r',table:'cnv-segment',values:{}}],ctx)).toEqual(['B']);});

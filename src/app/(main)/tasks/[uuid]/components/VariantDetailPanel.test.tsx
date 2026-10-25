@@ -20,6 +20,43 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it('scores structured AI candidates only after human review and save, replacing the quick assessment', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const client: AIAssistanceAdapter = {
+      getSettings: vi.fn().mockResolvedValue({ enabled: true, configured: true, connected: true, capabilities: { acmg: { enabled: true } } }), saveSettings: vi.fn(),
+      generate: vi.fn().mockResolvedValue({ feature: 'acmg', requestId: 'ai-request-review', model: 'synthetic', summary: '合成 AI 建议', resultKind: 'evidence_only', classification: 'insufficient_data', suggestedClassification: 'Pathogenic',
+        evidence: [{ code: 'PM2', status: 'met', strength: 'Moderate', reason: '频率需人工核验' }, { code: 'PVS1', status: 'not_applicable', strength: 'VeryStrong', reason: '机制未确认' }, { code: 'PP3', status: 'insufficient_data', strength: 'Supporting', reason: '尚未核验' }],
+        ruleEngineResult: { classification: 'insufficient_data', criteria: [{ code: 'PM2', status: 'insufficient_data', reason: 'coverage unavailable' }] }, agentProposal: { reconciliation: [{ code: 'PM2', accepted: false, reason: 'unsupported_override' }] },
+      }),
+    };
+    const initial = { ...variant('A'), acmgClassification: 'Benign', acmgAssessmentSource: 'automatic', acmgOverride: 'Pathogenic', automaticAcmg: { profile: 'fast', state: 'evaluated', classification: 'Benign', score: 0, criteria: [{ code: 'BA1', strength: 'standalone' }], pending: [], screeningNotes: ['旧快速初评说明'] } } as SNVIndel;
+    render(<AIAssistanceProvider deployment="opensource" adapter={client}><VariantDetailPanel taskId="task" referenceGenome="hg38" variant={initial} isOpen onClose={vi.fn()} onUpdateClassification={save} /></AIAssistanceProvider>);
+    fireEvent.click(screen.getByRole('tab', { name: 'ACMG' }));
+    const generate = screen.getByRole('button', { name: 'AI 生成ACMG 现版建议' });
+    await waitFor(() => expect(generate).toBeEnabled()); fireEvent.click(generate);
+    const review = await screen.findByRole('button', { name: '复核并应用 ACMG 证据' });
+    expect(screen.getByText('已核实证据不足')).toBeVisible();
+    expect(screen.getByText('规则校验未采纳该 AI 建议，仍需人工复核。')).toBeVisible();
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(review);
+    expect(screen.getByRole('checkbox', { name: '选择 ACMG 证据 PM2' })).toBeChecked();
+    for (const code of ['BA1', 'PVS1', 'PP3']) expect(screen.getByRole('checkbox', { name: `选择 ACMG 证据 ${code}` })).not.toBeChecked();
+    expect(screen.getByLabelText('PM2 强度')).toHaveValue('moderate');
+    expect(screen.getByRole('option', { name: '按证据积分显示' }).parentElement).toHaveValue('');
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText('旧快速初评说明')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: '复核并应用 ACMG 证据' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存证据与分类' }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PM2', strength: 'moderate', source: 'sepilens_ai_reviewed', note: expect.stringContaining('ai-request-review') })], '', '', expect.stringContaining('人工复核采纳'), false));
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: '选择 ACMG 证据 PM2' })).not.toBeInTheDocument());
+    expect(screen.getByText('证据积分').parentElement).toHaveTextContent('2 分');
+    expect(screen.getByText('已保存证据积分')).toBeVisible();
+    expect(screen.getByText(/^已保存人工复核证据；原 AI 建议与规则校验结果保留供追溯。/)).toBeVisible();
+    expect(screen.queryByText('旧快速初评说明')).not.toBeInTheDocument();
+    expect(client.generate).toHaveBeenCalledTimes(1);
+  });
   it('requests SepiLens AI for the selected variant and leaves adoption to the reviewer', async () => {
     const save = vi.fn();
     const client: AIAssistanceAdapter = {

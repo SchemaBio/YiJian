@@ -21,7 +21,7 @@ self.onmessage = (event: MessageEvent) => {
     }
     if(action==='references-unavailable'){
       context.supplement=undefined;
-      for(const {assessment} of evaluated){if(assessment.phenotypePriority)assessment.pinned=assessment.legacyPinned??false;assessment.phenotypePriority=false;assessment.phenotypeMatch=undefined;assessment.pinReasons=assessment.pinReasons.filter(reason=>reason!=='HPO 相关且初评致病/可能致病');}
+      for(const {assessment} of evaluated){if(assessment.phenotypePriority)assessment.pinned=assessment.legacyPinned??false;assessment.priorityScore=Math.max(0,(assessment.priorityScore??0)-Math.round(30*(assessment.phenotypeMatch?.score??0)));assessment.phenotypeCandidate=false;assessment.phenotypePriority=false;assessment.phenotypeMatch=undefined;assessment.pinReasons=assessment.pinReasons.filter(reason=>reason!=='HPO 相关且初评致病/可能致病');}
       self.postMessage({id,value:true});return;
     }
     if (action === 'batch') {

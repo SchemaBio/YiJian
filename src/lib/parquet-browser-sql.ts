@@ -1,8 +1,8 @@
 import { LocalizedError } from '@/i18n/errors';
 // The worker queries one immutable dataset and its versioned server overlays.
 // Only registered fields/operators may become SQL; values are escaped literals.
-export const OVERLAY_FIELDS = ['pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'acmgVusSubclass', 'acmgTrial'];
-const NUMERIC_FIELDS = new Set(['acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
+export const OVERLAY_FIELDS = ['priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'acmgVusSubclass', 'acmgTrial'];
+const NUMERIC_FIELDS = new Set(['priorityScore', 'acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
 export interface LocalFilter {
     column: string;
     operator: string;
@@ -41,6 +41,7 @@ export function effectiveField(s: string, raw: string[]): string {
         return overlay;
     if (s === 'cnvClassification' || s === 'cnvScore')
         return `CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN json_extract_string(o.payload, ${literal('$.cnvAssessment.' + (s === 'cnvScore' ? 'totalScore' : 'classification'))}) ELSE json_extract_string(a.baseline, ${literal('$.'+s)}) END`;
+    if(s==='priorityScore')return `json_extract_string(a.baseline,'$.priorityScore')`;
     const names: Record<string, string> = { acmgClassification: 'classification', acmgScore: 'score', acmgProfile: 'profile', acmgState: 'state', acmgEvidence: 'criteria' };
     if (s in names) {
         const baseline = `json_extract_string(a.baseline, ${literal('$.' + names[s])})`;
@@ -93,7 +94,7 @@ export function buildLocalSelection(q: LocalQuery, raw: string[]) {
         const fields = [...raw, 'acmgClassification'];
         where.push('(' + fields.map(s => `contains(lower(CAST(${effectiveField(s, raw)} AS VARCHAR)), lower(${literal(search)}))`).join(' OR ') + ')');
     }
-    let order = 't.file_row_number ASC';
+    let order = `COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.priorityScore') AS DOUBLE),0) DESC, t.file_row_number ASC`;
     if (q.sort) {
         let x = effectiveField(q.sort, raw);
         if (/^(chromosome|chr|chrom)$/i.test(q.sort)) {

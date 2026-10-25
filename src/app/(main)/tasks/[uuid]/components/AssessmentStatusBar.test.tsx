@@ -1,10 +1,33 @@
-import {render,screen} from '@testing-library/react';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
 import {afterEach,expect,it,vi} from 'vitest';
 import {AssessmentStatusBar} from './AssessmentStatusBar';
 import {assessmentStatus} from '@/lib/assessment/client';
+import {reevaluateBrowserResults} from '@/lib/parquet-browser';
+import {InterpretationReadOnlyContext} from './InterpretationLock';
 vi.mock('@/lib/assessment/client',()=>({assessmentStatus:vi.fn(),cancelAssessment:vi.fn()}));
 vi.mock('@/lib/parquet-browser',()=>({retryBrowserAssessment:vi.fn(),reevaluateBrowserResults:vi.fn()}));
 afterEach(()=>vi.clearAllMocks());
+it('keeps reassessment available after completion even when evidence has not changed',async()=>{
+ vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'ready',processed:100,reassessmentAvailable:false});
+ render(<AssessmentStatusBar taskId="task"/>);
+ fireEvent.click(screen.getByRole('button',{name:'重新初评'}));
+ await waitFor(()=>expect(reevaluateBrowserResults).toHaveBeenCalledWith('task'));
+});
+it('retains the updated-evidence label when a newer context is available',()=>{
+ vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'ready',processed:100,reassessmentAvailable:true});
+ render(<AssessmentStatusBar taskId="task"/>);
+ expect(screen.getByRole('button',{name:'证据版本已更新，重新评估'})).toBeInTheDocument();
+});
+it('hides reassessment for a read-only interpretation',()=>{
+ vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'ready',processed:100,reassessmentAvailable:false});
+ render(<InterpretationReadOnlyContext.Provider value={true}><AssessmentStatusBar taskId="task"/></InterpretationReadOnlyContext.Provider>);
+ expect(screen.queryByRole('button',{name:'重新初评'})).not.toBeInTheDocument();
+});
+it('opens a scored candidate gene list with the associated disease',()=>{
+ vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'ready',processed:1,geneRanking:[{gene:'FIXTURE',diseaseId:'OMIM:1',diseaseName:'Fixture disease',score:.8,eligible:true,matched:[{id:'HP:0000001'}],source:'public fixture'}]});
+ render(<AssessmentStatusBar taskId="task"/>);fireEvent.click(screen.getByRole('button',{name:'HPO 候选基因'}));
+ expect(screen.getByText('FIXTURE')).toBeInTheDocument();expect(screen.getByText('80.0%')).toBeInTheDocument();expect(screen.getByText('Fixture disease')).toBeInTheDocument();
+});
 it('shows a themed retry control without failure or cancellation prose after user cancellation',()=>{
  vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'cancelled',processed:100});
  render(<AssessmentStatusBar taskId="task" />);
