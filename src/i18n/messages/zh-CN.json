@@ -2163,7 +2163,12 @@
     "unableToSaveFocusSelection594b1f": "关注标记保存失败",
     "reportSnapshotca5ad0": "报告快照",
     "reportSnapshotVFixesSelectedLociLatest5987ef": "报告快照 v2 在生成时固定关注变异、当前人工解读及质控信息。",
-    "reassessInitialAssessment": "重新初评"
+    "reassessInitialAssessment": "重新初评",
+    "onlyFailedOrQueuedEditable": "仅失败或待启动的任务允许编辑",
+    "svcPartialContextTitle": "信息不足（部分评估）",
+    "svcPartialContextNotice": "已校验现有输入并保留可计算分项。依赖缺失上下文的条目暂不计分；暂无总分和最终分类。可保存当前部分评估，补充信息后重新计算。",
+    "svcMissingDisease": "疾病尚未明确",
+    "svcMissingMOI": "遗传模式尚未明确"
   },
   "auth": {
     "recoverPassword86c096": "找回密码",
@@ -2323,7 +2328,12 @@
     "clearSavedKeyf1a538": "清除已保存的 Key",
     "keysAreNotDisplayedOrSavedInf06fdf": "Key 不回显、不写入浏览器存储。",
     "aiSettingsSaved5932f7": "AI 配置已保存",
-    "saveAiSettings77c9c8": "保存 AI 配置"
+    "saveAiSettings77c9c8": "保存 AI 配置",
+    "saveSVCAIResult": "保存 AI 评估结果",
+    "svcAIResultSaved": "AI 评估结果已保存",
+    "svcAISaveNotice": "保存摘要、建议分类、证据及来源，无需填写下方手工计算参数。结果保留为 SVC v4 草案 AI 建议。",
+    "svcAutoContext": "联网检索与自动补全依据",
+    "svcAnnotationSource": "本位点原始注释"
   },
   "display": {
     "uncertainSignificancef3d82a": "意义不明",

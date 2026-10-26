@@ -7,6 +7,7 @@ import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 import { HoverHint } from '@/components/shared/HoverHint';
 
 
+import type { TrioMember } from '@/lib/sample-parents';
 import type { SampleDetail } from '@/app/(main)/samples/types';
 import type { QCMetric, ResultContext } from '../types';
 import { CopyTableButton } from './CopyTableButton';
@@ -87,18 +88,46 @@ function orderedMembers(context: ResultContext) {
 function genderLabel(value?: string, t: TextTranslator = chineseText) { return value === 'male' ? t("samples.male51625d") : value === 'female' ? t("samples.female26bc84") : t("samples.unknownd9c32a"); }
 function comparisonLabel(value?: string, t: TextTranslator = chineseText) { return value === 'match' ? t("tasks.consistent5ab754") : value === 'mismatch' ? t("tasks.needsReviewd9e041") : t("tasks.insufficientInformation098237"); }
 
-export type VerificationSample = Pick<SampleDetail, 'id' | 'internalId' | 'gender'>;
+export type VerificationSample = Pick<SampleDetail, 'id' | 'internalId' | 'gender'> & Partial<Pick<SampleDetail, 'fatherSampleInternalId' | 'motherSampleInternalId' | 'father' | 'mother'>>;
 
-export function SampleFamilyTable({ context, sample, sexMethod = 'sry' }: { context: ResultContext; sample?: VerificationSample|null; sexMethod?: 'sry'|'chrX' }) {
+// QC identifiers in older archives can be workflow role aliases. Resolve display
+// identity separately, without changing the IDs used to join QC measurements.
+function verificationMember(member: ResultContext['members'][number], sample?: VerificationSample|null, snapshot: TrioMember[] = []) {
+  const role = ({paternal: 'father', maternal: 'mother', single: 'proband', patient: 'proband'} as Record<string,string>)[member.role.toLowerCase()] ?? member.role.toLowerCase();
+  const saved = snapshot.find(item => item.role.toLowerCase() === role);
+  const parent = role === 'father' ? sample?.father : role === 'mother' ? sample?.mother : undefined;
+  const parentNumber = role === 'father' ? sample?.fatherSampleInternalId : role === 'mother' ? sample?.motherSampleInternalId : undefined;
+  // A task snapshot takes precedence over mutable present-day family links.
+  const internalId = snapshot.length ? saved?.internal_id : role === 'proband' ? sample?.internalId : parent?.internal_id || parentNumber;
+  const gender = snapshot.length ? saved?.gender : role === 'proband' ? sample?.gender : parent?.gender;
+  return {
+    label: internalId?.trim() || member.sampleId || member.id,
+    gender: gender === 'male' || gender === 'female' ? gender : undefined,
+    roleGender: role === 'father' ? 'male' : role === 'mother' ? 'female' : undefined,
+  };
+}
+
+function verificationComparison(declared: string, predicted?: string) {
+  return !['male','female'].includes(declared) || !['male','female'].includes(predicted ?? '') ? 'unknown' : declared === predicted ? 'match' : 'mismatch';
+}
+
+export function SampleFamilyTable({ context, sample, snapshot = [], sexMethod = 'sry' }: { context: ResultContext; sample?: VerificationSample|null; snapshot?: TrioMember[]; sexMethod?: 'sry'|'chrX' }) {
   const t = useText();
-  if (sexMethod === 'chrX') return <VCFSampleSexTable context={context} sample={sample}/>;
+  if (sexMethod === 'chrX') return <VCFSampleSexTable context={context} sample={sample} snapshot={snapshot}/>;
   const members = orderedMembers(context);
+  const verification = members.map(member => {
+    const qc = context.qc.find(item => item.memberId === member.id);
+    const identity = verificationMember(member, sample, snapshot);
+    const declared = identity.gender || (['male','female'].includes(qc?.declaredGender ?? '') ? qc!.declaredGender! : identity.roleGender) || 'unknown';
+    return {identity, declared, comparison: verificationComparison(declared, qc?.predictedGender)};
+  });
   const rows = [
     [t("tasks.memberc1ee9f"), t("history.sampleId6d686e"), t("tasks.registeredSex71ae63"), t("tasks.dataDerivedSex648644"), 'SRY reads', t("tasks.comparisond36792")],
-    ...members.map(member => {
+    ...members.map((member, index) => {
+      const {identity, declared, comparison} = verification[index];
       const qc = context.qc.find(item => item.memberId === member.id);
       const count = qc?.metrics.find(metric => metric.key === 'sryCount')?.value;
-      return [memberRoleLabel(member.role, t), member.sampleId || t("history.notProvided071fb2"), genderLabel(qc?.declaredGender, t), genderLabel(qc?.predictedGender, t), count == null ? t("history.notProvided071fb2") : String(count), comparisonLabel(qc?.genderComparison, t)];
+      return [memberRoleLabel(member.role, t), identity.label || t("history.notProvided071fb2"), genderLabel(declared, t), genderLabel(qc?.predictedGender, t), count == null ? t("history.notProvided071fb2") : String(count), comparisonLabel(comparison, t)];
     }),
   ];
   return <section aria-labelledby="overview-family-heading" className="overflow-hidden rounded-lg border border-border-default bg-canvas-default">
@@ -110,19 +139,19 @@ export function SampleFamilyTable({ context, sample, sexMethod = 'sry' }: { cont
       <thead className="bg-canvas-subtle text-fg-muted"><tr>{rows[0].map(label => <th key={label} scope="col" className="whitespace-nowrap px-2 py-1.5 font-medium">{label}</th>)}</tr></thead>
       <tbody>{rows.slice(1).map((row, index) => {
         const qc = context.qc.find(item => item.memberId === members[index].id);
-        return <tr key={members[index].id} className="border-t border-border-default">{row.map((value, column) => <HoverHint content={column === 3 && qc?.sryCutoff !== undefined ? t("tasks.sryReadsClassifiedAsMaleOtherwiseFemalefafe4e", {p0: String(qc.sryCutoff)}) : undefined} key={column}><td key={column}  className={`px-2 py-1.5 ${column === 1 ? 'max-w-[160px] break-all' : 'whitespace-nowrap'} ${column === 5 && qc?.genderComparison === 'mismatch' ? 'bg-warning-subtle font-medium text-warning-fg' : 'text-fg-default'}`}>{value}</td></HoverHint>)}</tr>;
+        return <tr key={members[index].id} className="border-t border-border-default">{row.map((value, column) => <HoverHint content={column === 3 && qc?.sryCutoff !== undefined ? t("tasks.sryReadsClassifiedAsMaleOtherwiseFemalefafe4e", {p0: String(qc.sryCutoff)}) : undefined} key={column}><td key={column}  className={`px-2 py-1.5 ${column === 1 ? 'max-w-[160px] break-all' : 'whitespace-nowrap'} ${column === 5 && verification[index].comparison === 'mismatch' ? 'bg-warning-subtle font-medium text-warning-fg' : 'text-fg-default'}`}>{value}</td></HoverHint>)}</tr>;
       })}</tbody>
     </table></div>}
     <p className="border-t border-border-default px-3 py-1.5 text-[11px] text-fg-muted">{t("tasks.dataDerivedSexUsesThisSryTest500a51")}</p>
   </section>;
 }
 
-export function QCAndFamilyTables({ context }: { context: ResultContext }) {
+export function QCAndFamilyTables({ context, sample, snapshot = [] }: { context: ResultContext; sample?: VerificationSample|null; snapshot?: TrioMember[] }) {
   const t = useText();
   const members = orderedMembers(context);
   const metricFor = (id: string, key: string) => context.qc.find(member => member.memberId === id)?.metrics.find(metric => metric.key === key);
   const rows = [
-    [t("tasks.metric1dfc81"), ...members.map(member => `${memberRoleLabel(member.role, t)} · ${member.sampleId || member.id}`), t("tasks.reviewNotice778aa7")],
+    [t("tasks.metric1dfc81"), ...members.map(member => `${memberRoleLabel(member.role, t)} · ${verificationMember(member, sample, snapshot).label}`), t("tasks.reviewNotice778aa7")],
     ...METRICS.map(definition => [t(definition.label), ...members.map(member => formatMetric(metricFor(member.id, definition.key), definition, t)), definition.prompt ? t(definition.prompt) : '—']),
   ];
   return <section aria-labelledby="overview-qc-heading" className="overflow-hidden rounded-lg border border-border-default bg-canvas-default">
@@ -133,7 +162,7 @@ export function QCAndFamilyTables({ context }: { context: ResultContext }) {
     {members.length === 0 || context.qc.length === 0 ? <p className="p-3 text-xs text-fg-muted">{t("tasks.thisExecutionHasNoMemberQcDatae07886")}</p> : <div className="overflow-x-auto"><table className="w-full select-text border-collapse text-left text-sm">
       <thead className="bg-canvas-subtle text-fg-muted"><tr>
         <th scope="col" className="px-3 py-1.5 font-medium">{t("tasks.metric1dfc81")}</th>
-        {members.map(member => <HoverHint content={member.sampleId || member.id} key={member.id}><th key={member.id} scope="col"  className="min-w-[105px] px-2 py-1.5 font-medium">{memberRoleLabel(member.role, t)}</th></HoverHint>)}
+        {members.map(member => <HoverHint content={verificationMember(member, sample, snapshot).label} key={member.id}><th key={member.id} scope="col"  className="min-w-[105px] px-2 py-1.5 font-medium">{memberRoleLabel(member.role, t)}</th></HoverHint>)}
       </tr></thead>
       <tbody>{METRICS.map(definition => <tr key={definition.key} className="border-t border-border-default hover:bg-canvas-subtle/50">
         <HoverHint content={definition.prompt ? t("tasks.reviewNotice7cbb4e", {p0: String(t(definition.prompt))}) : undefined}><th scope="row"  className="whitespace-nowrap px-3 py-1.5 font-normal text-fg-default">{translateUI(definition.label, t)}</th></HoverHint>
@@ -150,7 +179,7 @@ export function QCAndFamilyTables({ context }: { context: ResultContext }) {
   </section>;
 }
 
-function VCFSampleSexTable({context,sample}:{context:ResultContext;sample?:VerificationSample|null}) {
+function VCFSampleSexTable({context,sample,snapshot}:{context:ResultContext;sample?:VerificationSample|null;snapshot:TrioMember[]}) {
   const t=useText();
   const inference=context.vcfAnnotation?.sex_inference;
   const ratio=inference?.ratio;
@@ -159,11 +188,11 @@ function VCFSampleSexTable({context,sample}:{context:ResultContext;sample?:Verif
   const predicted=validRatio && hasSites && ['male','female'].includes(inference?.sex??'') ? inference!.sex : 'unknown';
   const members=context.members.length?context.members:sample?[{id:sample.id,sampleId:sample.id,role:'single'}]:[];
   const comparisons=members.map(member=>{
-    const linkedSample=sample && (sample.id===member.id || sample.id===member.sampleId)?sample:null;
-    const declared=linkedSample?.gender??'unknown';
+    const identity=verificationMember(member,sample,snapshot);
+    const declared=identity.gender||identity.roleGender||'unknown';
     const inferred=members.length===1?predicted:'unknown';
-    const comparison=!['male','female'].includes(declared)||inferred==='unknown'?'unknown':declared===inferred?'match':'mismatch';
-    return {member,declared,inferred,comparison,label:linkedSample?.internalId||member.sampleId||member.id};
+    const comparison=verificationComparison(declared,inferred);
+    return {member,declared,inferred,comparison,label:identity.label};
   });
   const ratioText=validRatio?ratio.toLocaleString(t.locale,{style:'percent',maximumFractionDigits:2}):t('history.notProvided071fb2');
   const rows=[

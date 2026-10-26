@@ -8,6 +8,15 @@ vi.mock('@/lib/api', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), 
 vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserParquet:vi.fn(),updateBrowserOverlay:vi.fn().mockResolvedValue(undefined)}));
 
 describe('versioned Parquet adjustments', () => {
+  it('restores the saved SVC AI snapshot without changing the active classification',async()=>{
+    const savedAI={requestId:'saved-request',feature:'svcv4',summary:'Saved SVC summary',resultKind:'experimental',suggestedClassification:'VUS'};
+    vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[{id:'row',attemptId:'attempt',datasetVersion:'hash',adjustmentVersion:2,acmgClassification:'Likely_Benign',adjustments:{svcv4AIResult:savedAI,activeAcmgVersion:'legacy'}}],total:1,rowCount:1,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});
+    const page=await getSNVIndels('saved-svc-ai',DEFAULT_FILTER_STATE);
+    expect(page.data[0].svcv4AIResult).toEqual(savedAI);
+    expect(page.data[0].activeAcmgVersion).toBe('legacy');
+    expect(page.data[0].acmgClassification).toBe('Likely_Benign');
+  });
+
   beforeEach(() => vi.clearAllMocks());
   it('normalizes translated exclusion filters in the actual browser query', async () => {
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[],total:0,rowCount:0,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});

@@ -2163,7 +2163,12 @@
     "unableToSaveFocusSelection594b1f": "No se pudo guardar la selección para seguimiento",
     "reportSnapshotca5ad0": "Instantánea del informe",
     "reportSnapshotVFixesSelectedLociLatest5987ef": "La instantánea v2 conserva las variantes en seguimiento, las interpretaciones actuales y el control de calidad al generar el informe.",
-    "reassessInitialAssessment": "Reevaluar"
+    "reassessInitialAssessment": "Reevaluar",
+    "onlyFailedOrQueuedEditable": "Solo se pueden editar tareas fallidas o pendientes de inicio.",
+    "svcPartialContextTitle": "Contexto insuficiente (evaluación parcial)",
+    "svcPartialContextNotice": "Se validaron los datos y se conservaron los cálculos parciales disponibles. Los criterios que requieren contexto faltante quedan sin puntuar; no se asigna un total ni una clasificación final. Puedes guardar esta evaluación y recalcular cuando haya más información.",
+    "svcMissingDisease": "Enfermedad no establecida",
+    "svcMissingMOI": "Modo de herencia no establecido"
   },
   "auth": {
     "recoverPassword86c096": "Recuperar contraseña",
@@ -2323,7 +2328,12 @@
     "clearSavedKeyf1a538": "Borrar clave guardada",
     "keysAreNotDisplayedOrSavedInf06fdf": "Las claves no se muestran ni se guardan en el navegador.",
     "aiSettingsSaved5932f7": "Configuración de IA guardada",
-    "saveAiSettings77c9c8": "Guardar configuración de IA"
+    "saveAiSettings77c9c8": "Guardar configuración de IA",
+    "saveSVCAIResult": "Guardar evaluación de IA",
+    "svcAIResultSaved": "Evaluación de IA guardada",
+    "svcAISaveNotice": "Guarda el resumen, la clasificación sugerida, la evidencia y la procedencia sin completar la calculadora manual. El resultado se conserva como sugerencia de IA del borrador SVC v4.",
+    "svcAutoContext": "Búsqueda en línea y fundamento del autocompletado",
+    "svcAnnotationSource": "Anotaciones originales de la variante"
   },
   "display": {
     "uncertainSignificancef3d82a": "Significado incierto",

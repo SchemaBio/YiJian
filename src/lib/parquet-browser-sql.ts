@@ -1,7 +1,7 @@
 import { LocalizedError } from '@/i18n/errors';
 // The worker queries one immutable dataset and its versioned server overlays.
 // Only registered fields/operators may become SQL; values are escaped literals.
-export const OVERLAY_FIELDS = ['priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'acmgVusSubclass', 'acmgTrial'];
+export const OVERLAY_FIELDS = ['priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'svcv4AIResult', 'acmgVusSubclass', 'acmgTrial'];
 const NUMERIC_FIELDS = new Set(['priorityScore', 'acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
 export interface LocalFilter {
     column: string;

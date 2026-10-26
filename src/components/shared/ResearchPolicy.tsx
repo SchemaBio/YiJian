@@ -33,7 +33,7 @@ export function RetentionNotice({kind, acknowledgement}: {kind:'task'|'sample'; 
     <aside role="note" className="mb-4 space-y-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
       <div className="flex items-start gap-3">
         <AlertTriangle aria-hidden="true" className="mt-1 h-4 w-4 shrink-0" />
-        <p><strong className="font-medium">{t(`research.${kind}RetentionTitle`)}</strong><span className="ml-3 inline-block text-xs">{t(`research.${kind}RetentionDetail`)}</span></p>
+        <p><strong className="font-medium">{t(`research.${kind}RetentionTitle`)}</strong><span className="ml-3 inline-block">{t(`research.${kind}RetentionDetail`)}</span></p>
       </div>
       {acknowledgement && <Checkbox checked={acknowledgement.checked} disabled={acknowledgement.disabled} onCheckedChange={(value) => acknowledgement.onChange(value === true)} label={t('research.taskRetentionConfirm')} />}
     </aside>

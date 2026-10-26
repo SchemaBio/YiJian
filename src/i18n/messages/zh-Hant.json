@@ -2163,7 +2163,12 @@
     "unableToSaveFocusSelection594b1f": "關注標記儲存失敗",
     "reportSnapshotca5ad0": "報告快照",
     "reportSnapshotVFixesSelectedLociLatest5987ef": "報告快照 v2 在產生時固定關注變異、目前人工解讀及質控資訊。",
-    "reassessInitialAssessment": "重新初評"
+    "reassessInitialAssessment": "重新初評",
+    "onlyFailedOrQueuedEditable": "僅失敗或待啟動的任務允許編輯",
+    "svcPartialContextTitle": "資訊不足（部分評估）",
+    "svcPartialContextNotice": "已驗證現有輸入並保留可計算分項。依賴缺失背景的條目暫不計分；暫無總分和最終分類。可儲存目前部分評估，補充資訊後重新計算。",
+    "svcMissingDisease": "疾病尚未明確",
+    "svcMissingMOI": "遺傳模式尚未明確"
   },
   "auth": {
     "recoverPassword86c096": "找回密碼",
@@ -2323,7 +2328,12 @@
     "clearSavedKeyf1a538": "清除已儲存的 Key",
     "keysAreNotDisplayedOrSavedInf06fdf": "Key 不回顯、不寫入瀏覽器存儲。",
     "aiSettingsSaved5932f7": "AI 配置已儲存",
-    "saveAiSettings77c9c8": "儲存 AI 配置"
+    "saveAiSettings77c9c8": "儲存 AI 配置",
+    "saveSVCAIResult": "儲存 AI 評估結果",
+    "svcAIResultSaved": "AI 評估結果已儲存",
+    "svcAISaveNotice": "儲存摘要、建議分類、證據及來源，無需填寫下方手動計算參數。結果保留為 SVC v4 草案 AI 建議。",
+    "svcAutoContext": "聯網檢索與自動補全依據",
+    "svcAnnotationSource": "本位點原始註釋"
   },
   "display": {
     "uncertainSignificancef3d82a": "意義不明",

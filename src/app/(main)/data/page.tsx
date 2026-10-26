@@ -486,7 +486,7 @@ export default function DataCenterPage() {
       {config?.temporary && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
           <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
-          <p className="whitespace-nowrap"><strong className="font-medium">{t("data.dataRetainedFore9bd90")}{config.retention_days} {t("data.daysf8bb05")}</strong><span className="ml-3 text-xs">{t("data.uploadAndDeletionOnlyFilesCannotBeff9045")}</span></p>
+          <p className="whitespace-nowrap"><strong className="font-medium">{t("data.dataRetainedFore9bd90")}{config.retention_days} {t("data.daysf8bb05")}</strong><span className="ml-3">{t("data.uploadAndDeletionOnlyFilesCannotBeff9045")}</span></p>
         </div>
       )}
 

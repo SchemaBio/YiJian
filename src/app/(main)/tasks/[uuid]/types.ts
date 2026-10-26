@@ -232,6 +232,7 @@ export interface AutomaticACMGAssessment {
 export interface SNVIndel extends VariantReviewStatus {
   activeAcmgVersion?: 'legacy' | 'svcv4';
   svcv4Assessment?: import('@/lib/svcv4').SVCv4Assessment;
+  svcv4AIResult?: import('@/lib/ai-assistance').AIAssistanceResult;
   legacyAcmgClassification?: ACMGClassification;
   acmgVusSubclass?: string;
   id: string;

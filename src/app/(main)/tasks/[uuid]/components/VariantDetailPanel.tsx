@@ -380,7 +380,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
             </div>}
               <section hidden={acmgTab !== 'svcv4'}>
-                <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} reference={referenceGenome} variant={variant} readOnly={readOnly} onUseAIInterpretation={onSaveInterpretation ? result => { setInterpretation(previous => [previous, formatAIInterpretation(result)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
+                <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} reference={referenceGenome} variant={variant} readOnly={readOnly} onSaveAI={onSaveVersionedAssessment?requestId=>saveVersioned({svcv4AIResult:requestId},''):undefined} onUseAIInterpretation={onSaveInterpretation ? result => { setInterpretation(previous => [previous, formatAIInterpretation(result)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
               </section>
               <section hidden={acmgTab !== 'acmg'}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

@@ -1,4 +1,5 @@
 'use client';
+import {canEditTask} from '@/lib/task-editing';
 import { downloadTaskBatchTemplate } from '@/lib/task-batch-template';
 import { useLiveRetention, useResearchExpiry } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
@@ -205,6 +206,11 @@ export default function AnalysisPage() {
   );
 
   const tasks=useLiveRetention(fetchedTasks);
+  React.useEffect(()=>{setEditingTask(current=>{
+    if(!current)return current;
+    const latest=tasks.find(task=>task.id===current.id);
+    return latest&&!canEditTask(latest)?null:current;
+  });},[tasks]);
   const refreshTaskBilling = React.useCallback(async (taskItems: AnalysisTask[]) => {
     if (!isSaaS || taskItems.length === 0) {
       setTaskBilling({});
@@ -248,6 +254,8 @@ export default function AnalysisPage() {
 
   const handleEditTask = async (id: string, data: EditTaskFormData) => {
     setActionError('');
+    const latest=tasks.find(task=>task.id===id);
+    if(latest&&!canEditTask(latest))throw new Error(t('tasks.onlyFailedOrQueuedEditable'));
     try {
       await tasksApi.update(id, {
         internalId: data.internalId,
@@ -482,7 +490,7 @@ export default function AnalysisPage() {
           onStart={handleStartTask}
           onStop={handleStopTask}
           onRetry={handleRetryTask}
-          onEdit={setEditingTask}
+          onEdit={task=>{if(canEditTask(task))setEditingTask(task);}}
           onDelete={handleDeleteTask}
           onView={handleOpenInterpretation}
           onDetails={handleOpenDetails}

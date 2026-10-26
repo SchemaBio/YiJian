@@ -1,4 +1,5 @@
 'use client';
+import {canEditTask} from '@/lib/task-editing';
 import { isFamilyAnalysisUnavailable } from '@/lib/analysis-availability';
 import { OperationScope } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
@@ -110,7 +111,7 @@ export function TaskActionsCell({
   };
 
   const primaryAction = getPrimaryAction();
-  const canEdit = !isFamilyAnalysisUnavailable(task) && !task.interpretationCompletedAt && task.status !== 'running' && !executionInFlight;
+  const canEdit = canEditTask(task);
   const canDelete = !task.interpretationCompletedAt;
 
   return (
@@ -121,7 +122,7 @@ export function TaskActionsCell({
           loading={isLoading} loadingLabel={t("tasks.processingfcb979")} disabled={isLoading || primaryAction.disabled} onClick={primaryAction.onClick} />}
         <TableAction action="view" label={t("tasks.details4f55ee")} disabled={!canInterpretTask(task)} hint={canInterpretTask(task) ? t("tasks.viewTaskDetailsfe0ccc") : t("tasks.cnvCalibrationTasksHaveNoVariantInterpretation699c4f")} aria-label={t("tasks.viewTaskDetailsf20ee8", {p0: String(task.internalId || task.id)})} onClick={() => onDetails(task)} />
         <TableAction action="edit" label={t("admin.edita7f814")} disabled={!canEdit || isLoading}
-          hint={canEdit ? t("tasks.editTask67659b") : task.interpretationCompletedAt ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : t("tasks.stopTheRunningTaskFirst2d18d7")} onClick={() => onEdit(task)} />
+          hint={canEdit ? t("tasks.editTask67659b") : task.interpretationCompletedAt ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : t("tasks.onlyFailedOrQueuedEditable")} onClick={() => {if(canEdit)onEdit(task);}} />
         <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" disabled={!canDelete || isLoading}
           hint={canDelete ? t("tasks.deleteTask070581") : t("tasks.interpretationIsCompleteReopenItFirsta9331f")} onClick={() => setShowDeleteConfirm(true)} />
       </TableActions>

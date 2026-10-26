@@ -2163,7 +2163,12 @@
     "unableToSaveFocusSelection594b1f": "Unable to save focus selection",
     "reportSnapshotca5ad0": "Report snapshot",
     "reportSnapshotVFixesSelectedLociLatest5987ef": "Report snapshot v2 captures focused variants, current interpretations and quality control when a report is generated.",
-    "reassessInitialAssessment": "Reassess"
+    "reassessInitialAssessment": "Reassess",
+    "onlyFailedOrQueuedEditable": "Only failed tasks or tasks awaiting start can be edited.",
+    "svcPartialContextTitle": "Insufficient context (partial assessment)",
+    "svcPartialContextNotice": "Existing inputs have been validated and available component calculations retained. Criteria requiring missing context remain unscored; no total or final classification is assigned. Save this partial assessment and recalculate when information becomes available.",
+    "svcMissingDisease": "Disease is not established",
+    "svcMissingMOI": "Mode of inheritance is not established"
   },
   "auth": {
     "recoverPassword86c096": "Recover password",
@@ -2323,7 +2328,12 @@
     "clearSavedKeyf1a538": "Clear saved key",
     "keysAreNotDisplayedOrSavedInf06fdf": "Keys are not displayed or saved in browser storage.",
     "aiSettingsSaved5932f7": "AI settings saved",
-    "saveAiSettings77c9c8": "Save AI settings"
+    "saveAiSettings77c9c8": "Save AI settings",
+    "saveSVCAIResult": "Save AI assessment",
+    "svcAIResultSaved": "AI assessment saved",
+    "svcAISaveNotice": "Save the summary, suggested classification, evidence and provenance without completing the manual calculator below. The result remains an SVC v4 draft AI suggestion.",
+    "svcAutoContext": "Online search and autofill rationale",
+    "svcAnnotationSource": "Original variant annotations"
   },
   "display": {
     "uncertainSignificancef3d82a": "Uncertain significance",

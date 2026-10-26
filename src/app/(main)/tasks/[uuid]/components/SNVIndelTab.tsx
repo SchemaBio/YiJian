@@ -243,7 +243,7 @@ export function SNVIndelTab({
     const svc=payload.svcv4Assessment as SNVIndel['svcv4Assessment'];
     const active=payload.activeAcmgVersion==='svcv4'?'svcv4':'legacy';
     setReloadToken(value=>value+1);
-    setSelectedVariant(current=>current?.id!==variant.id?current:{...current,svcv4Assessment:svc,activeAcmgVersion:active,
+    setSelectedVariant(current=>current?.id!==variant.id?current:{...current,svcv4Assessment:svc,svcv4AIResult:payload.svcv4AIResult as SNVIndel['svcv4AIResult'],activeAcmgVersion:active,
       legacyAcmgClassification: (payload.acmgOverride || ('acmgEvidence' in payload ? payload.acmgClassification : current.automaticAcmg?.classification)) as ACMGClassification | undefined,
       acmgClassification:active==='svcv4'?svc?.result?.classification??undefined:(payload.acmgOverride || ('acmgEvidence' in payload ? payload.acmgClassification : current.automaticAcmg?.classification)) as ACMGClassification | undefined,
       acmgVusSubclass:active==='svcv4'?svc?.result?.vusSubclass??undefined:undefined,adjustmentVersion:saved.adjustment.version});

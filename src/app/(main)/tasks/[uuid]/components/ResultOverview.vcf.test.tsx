@@ -47,3 +47,32 @@ it('keeps WES QC and its SRY-based verification unchanged',()=>{
  expect(screen.getByText(/数据性别来自本次 SRY 检测/)).toBeInTheDocument();
  expect(screen.queryByRole('heading',{name:'VCF 预处理统计'})).not.toBeInTheDocument();
 });
+
+const trioSample={...sample, fatherSampleInternalId:'FATHER-002',motherSampleInternalId:'MOTHER-003',father:{state:'found' as const,internal_id:'FATHER-002',gender:'unknown',data_ready:true},mother:{state:'found' as const,internal_id:'MOTHER-003',gender:'unknown',data_ready:true}};
+function trioContext():ResultContext {
+ return context({capabilities:['snv_indel','qc'],vcfAnnotation:undefined,members:['proband','father','mother'].map(role=>({id:role,role,sampleId:role})),qc:['proband','father','mother'].map(role=>({memberId:role,memberRole:role,sampleId:role,declaredGender:role==='proband'?'male':'unknown',predictedGender:role==='mother'?'female':'male',genderComparison:'unknown',metrics:[]}))});
+}
+it('resolves legacy trio role aliases to internal numbers and fills unknown parent sex',()=>{
+ render(<ResultOverview context={trioContext()} sample={trioSample} onNavigate={vi.fn()}/>);
+ const table=screen.getByRole('region',{name:'样本与性别核对'});
+ const rows=within(table).getAllByRole('row').slice(1);
+ for(const [i,id,gender] of [[0,'SAMPLE-001','男'],[1,'FATHER-002','男'],[2,'MOTHER-003','女']] as const){
+  const cells=within(rows[i]).getAllByRole('cell');
+  expect(cells[1]).toHaveTextContent(id);expect(cells[2]).toHaveTextContent(gender);expect(cells[5]).toHaveTextContent('一致');
+ }
+ expect(within(table).queryByText(/^(proband|father|mother)$/)).not.toBeInTheDocument();
+ expect(trioSample.father.gender).toBe('unknown');
+});
+it('preserves explicit conflicting parent sex and recalculates mismatch styling',()=>{
+ render(<ResultOverview context={trioContext()} sample={{...trioSample,father:{...trioSample.father,gender:'female'}}} onNavigate={vi.fn()}/>);
+ const row=within(screen.getByRole('region',{name:'样本与性别核对'})).getAllByRole('row')[2];
+ expect(within(row).getAllByRole('cell')[2]).toHaveTextContent('女');
+ expect(within(row).getByText('需核对')).toHaveClass('text-warning-fg');
+});
+it('uses task snapshot numbers and genders before current family links',()=>{
+ const snapshot=['proband','father','mother'].map(role=>({role,sample_id:role,internal_id:'SNAPSHOT-'+role,gender:role==='mother'?'female':'male',affected_status:'',read1_asset_id:'',read2_asset_id:''}));
+ render(<ResultOverview context={trioContext()} sample={trioSample} snapshot={snapshot} onNavigate={vi.fn()}/>);
+ const table=screen.getByRole('region',{name:'样本与性别核对'});
+ for(const member of snapshot)expect(within(table).getByText(member.internal_id)).toBeInTheDocument();
+ expect(within(table).queryByText('FATHER-002')).not.toBeInTheDocument();
+});

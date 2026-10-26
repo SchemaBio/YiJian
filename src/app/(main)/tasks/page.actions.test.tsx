@@ -83,3 +83,11 @@ it('keeps cancellation for an active SaaS analysis',()=>{
  render(<TaskActions task={normalizeTask({id:'task',status:'running',execution_phase:'running'})} onDetails={vi.fn()} onView={vi.fn()} onStart={vi.fn()} onStop={onStop} onRetry={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} isLoading={false}/>);
  fireEvent.click(screen.getByRole('button',{name:'取消'}));expect(onStop).toHaveBeenCalledWith('task');
 });
+
+it.each(['queued','failed','running','completed','pending_interpretation','cancelled','waiting_for_data'])('allows editing only failed and queued tasks: %s',status=>{
+ const edit=vi.fn();
+ render(<TaskActions task={normalizeTask({id:'edit-task',status})} onDetails={vi.fn()} onView={vi.fn()} onStart={vi.fn()} onStop={vi.fn()} onRetry={vi.fn()} onEdit={edit} onDelete={vi.fn()} isLoading={false}/>);
+ const button=screen.getByRole('button',{name:'编辑'});
+ if(['queued','failed'].includes(status)){expect(button).toBeEnabled();fireEvent.click(button);expect(edit).toHaveBeenCalledTimes(1);}
+ else {expect(button).toBeDisabled();fireEvent.click(button);expect(edit).not.toHaveBeenCalled();}
+});

@@ -1,4 +1,5 @@
 'use client';
+import {canEditTask} from '@/lib/task-editing';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -64,7 +65,7 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
 
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!task || submitting) return;
+    if (!task || submitting || !canEditTask(task)) return;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -88,11 +89,12 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>{t("admin.cancel4d0b46")}</Button>
-          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting}>{t("data.savefadf24")}</Button>
+          <Button action="save" variant="primary" onClick={(e: React.MouseEvent) => handleSubmit(e)} disabled={submitting||!canEditTask(task)}>{t("data.savefadf24")}</Button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}><fieldset disabled={submitting||!canEditTask(task)} className="space-y-4">
+ {!canEditTask(task)&&<p role="alert">{t("tasks.onlyFailedOrQueuedEditable")}</p>}
         {submitError && (
           <div className="rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
             {submitError}
@@ -126,7 +128,7 @@ export function EditTaskModal({ isOpen, onClose, onSubmit, task }: EditTaskModal
           <label className="block text-xs text-fg-muted mb-1">{t("admin.notese03614")}</label>
           <Input value={formData.remark} onChange={(e) => handleChange('remark', e.target.value)} placeholder={t("tasks.optionalNotes6dd2f7")} />
         </div>
-      </form>
+      </fieldset></form>
     </AppModal>
   );
 }

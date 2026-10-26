@@ -375,6 +375,7 @@ function mapSNV(row: BackendRow): SNVIndel {
     acmgOverrideReason: s(adjustments.acmgOverrideReason),
     activeAcmgVersion: adjustments.activeAcmgVersion === 'svcv4' ? 'svcv4' : 'legacy',
     svcv4Assessment: adjustments.svcv4Assessment as SNVIndel['svcv4Assessment'],
+    svcv4AIResult: adjustments.svcv4AIResult as SNVIndel['svcv4AIResult'],
     legacyAcmgClassification: acmg(adjustments.acmgOverride) ?? ('acmgEvidence' in adjustments ? acmg(adjustments.acmgClassification) : automaticAcmg?.classification),
     acmgVusSubclass: s(row.acmgVusSubclass),
     acmgState: s(adjustments.acmgState ?? automaticAcmg?.state),

@@ -271,7 +271,7 @@ export default function AnalysisDetailPage() {
     }
     switch (activeTab) {
 		case 'overview':
-			return resultContext ? <ResultOverview context={resultContext} sample={sample} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
+			return resultContext ? <ResultOverview context={resultContext} sample={sample} snapshot={task.trioMembers} onNavigate={handleTabChange} /> : <ResultContextUnavailable message={resultContextError} />;
       case 'snv-indel':
         return (
           <SNVIndelTab

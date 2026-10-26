@@ -10,7 +10,7 @@ export interface SVCv4Assessment {
   disease: string; moi: string; geneDiseaseValidity?: string | null;
   inputs: {workflow?: string; impact?: Record<string,unknown>; population?: Record<string,unknown>; cases?: Record<string,unknown>[]; caseControl?: Record<string,unknown>; family?: Record<string,unknown>};
   revision?: string; source?: string; authoritative?: false; confirmed: boolean;
-  result?: {score: number | null; classification?: ACMGClassification | null; vusSubclass?: string | null; state: string; breakdown: Record<string,number>; warnings: string[]; details: Record<string,unknown>};
+  result?: {score: number | null; classification?: ACMGClassification | null; vusSubclass?: string | null; state: string; partial?: boolean; missingFields?: string[]; breakdown: Record<string,number>; warnings: string[]; details: Record<string,unknown>};
 }
 export interface SVCv4Schema {
   revision: string; source: string; authoritative: false;

@@ -6,6 +6,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 
 
 import { CheckCircle2, Clock3, FileWarning } from 'lucide-react';
+import type { TrioMember } from '@/lib/sample-parents';
 import type { ResultContext, TabType } from '../types';
 import { CopyTableButton } from './CopyTableButton';
 import { QCAndFamilyTables, SampleFamilyTable, type VerificationSample } from './QCResultTab';
@@ -31,7 +32,7 @@ function stateDescription(context: ResultContext, t: TextTranslator = chineseTex
   }
 }
 
-export function ResultOverview({ context, onNavigate, sample }: { context: ResultContext; onNavigate: (tab: TabType) => void; sample?: VerificationSample|null }) {
+export function ResultOverview({ context, onNavigate, sample, snapshot = [] }: { context: ResultContext; onNavigate: (tab: TabType) => void; sample?: VerificationSample|null; snapshot?: TrioMember[] }) {
   const t = useText();
   const state = context.parquet?.available && context.importStatus === 'failed'
     ? { title: t("tasks.auxiliaryDataImportIncompleteb857ca"), detail: t("tasks.rawDetectionTablesAreAvailableSomeAuxiliary01772e"), icon: CheckCircle2, tone: 'text-success-fg bg-success-subtle border-success-emphasis' }
@@ -94,9 +95,9 @@ export function ResultOverview({ context, onNavigate, sample }: { context: Resul
         <p className="border-t border-border-default px-3 py-2 text-xs text-fg-muted">{t("tasks.focusSelectionDoesNotMeanAFormal8d65d4")}</p>
       </section>
 
-      <SampleFamilyTable context={context} sample={sample} sexMethod={snvOnly?'chrX':'sry'} />
+      <SampleFamilyTable context={context} sample={sample} snapshot={snapshot} sexMethod={snvOnly?'chrX':'sry'} />
       </div>
-      {snvOnly?<VCFPreprocessingTable context={context}/>:<QCAndFamilyTables context={context} />}
+      {snvOnly?<VCFPreprocessingTable context={context}/>:<QCAndFamilyTables context={context} sample={sample} snapshot={snapshot} />}
       </div>
 
       {!context.reference.available&&<p className="text-xs text-warning-fg">{context.reference.reason || t("tasks.referenceResourcesAreNotConfiguredSequencingEvidence9cfc0a")}</p>}

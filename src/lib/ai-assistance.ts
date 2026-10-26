@@ -29,7 +29,13 @@ export interface AIAssistanceInput {
   calculator?: unknown;
   clinicalContext?: AIClinicalContext;
 }
+export interface SVCAIContextField {value:string;reason:string;source_ids:string[]}
+export interface SVCAIContext {
+ disease:SVCAIContextField;moi:SVCAIContextField;geneDiseaseValidity:SVCAIContextField;workflow:SVCAIContextField;
+ sources?:Array<{id:string;title:string;url?:string;pmid?:string}>;retrieval_status?:string;
+}
 export interface AIAssistanceResult {
+ svcContext?:SVCAIContext;
   requestId?: string;
   feature: AIFeature;
   model?: string;
