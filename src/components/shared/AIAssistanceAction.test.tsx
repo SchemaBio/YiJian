@@ -232,3 +232,12 @@ it.each(['hpo','acmg','svcv4'] as const)('keeps the first %s fee prompt independ
  render(<AIAssistanceProvider deployment="saas" adapter={client} scope="user:org"><AIAssistanceAction input={{feature,mode:feature==='svcv4'?'experimental':undefined,taskId:'task',diagnosis:'synthetic'}} onResult={vi.fn()} /></AIAssistanceProvider>);
  const button=screen.getByRole('button',{name:labels[feature]});await waitFor(()=>expect(button).toBeEnabled());fireEvent.click(button);expect(screen.getByRole('dialog')).toBeVisible();expect(client.generate).not.toHaveBeenCalled();
 });
+
+it('reports preparation failures and releases the spinner without submitting', async () => {
+ const client=adapter();const circular:Record<string,unknown>={};circular.self=circular;
+ const {rerender}=render(<AIAssistanceProvider deployment="opensource" adapter={client}><AIAssistanceAction input={{feature:'cnv_loss',calculator:circular}} onResult={vi.fn()}/></AIAssistanceProvider>);
+ const button=screen.getByRole('button',{name:'AI 生成CNV Loss 建议'});await waitFor(()=>expect(button).toBeEnabled());fireEvent.click(button);
+ await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('本次未提交 AI 请求'));expect(button).toBeEnabled();expect(client.generate).not.toHaveBeenCalled();
+ rerender(<AIAssistanceProvider deployment="opensource" adapter={client}><AIAssistanceAction input={{feature:'cnv_loss',calculator:{geneCount:BigInt('0')}}} onResult={vi.fn()}/></AIAssistanceProvider>);
+ fireEvent.click(screen.getByRole('button',{name:'AI 生成CNV Loss 建议'}));await waitFor(()=>expect(client.generate).toHaveBeenCalledTimes(1));expect(client.generate).toHaveBeenCalledWith(expect.objectContaining({calculator:{geneCount:0}}),expect.anything());
+});

@@ -16,6 +16,7 @@ import {
   ScoreResult,
   ClinGenClassification,
 } from '../types';
+import { reviewedCNVSection4 } from './cnv-ai';
 import { classify } from './pathogenicity-classifier';
 import { calculateSection4, calculateSection5 } from './loss-calculator';
 
@@ -77,21 +78,21 @@ export function calculateSection2Gain(criteria: Section2GainCriteria): number {
 
   // TS重叠评分
   if (criteria.tsOverlap.selected) {
-    score += criteria.tsOverlap.score !== 0
+    score += Number.isFinite(criteria.tsOverlap.score)
       ? criteria.tsOverlap.score
       : SECTION2_GAIN_TS_DEFAULT_SCORES[criteria.tsOverlap.selected] ?? 0;
   }
 
   // 良性区域重叠评分
   if (criteria.benignOverlap.selected) {
-    score += criteria.benignOverlap.score !== 0
+    score += Number.isFinite(criteria.benignOverlap.score)
       ? criteria.benignOverlap.score
       : SECTION2_GAIN_BENIGN_DEFAULT_SCORES[criteria.benignOverlap.selected] ?? 0;
   }
 
   // HI基因重叠评分
   if (criteria.hiOverlap.selected) {
-    score += criteria.hiOverlap.score !== 0
+    score += Number.isFinite(criteria.hiOverlap.score)
       ? criteria.hiOverlap.score
       : SECTION2_GAIN_HI_DEFAULT_SCORES[criteria.hiOverlap.selected] ?? 0;
   }
@@ -115,16 +116,11 @@ export function calculateGainTotal(criteria: GainAssessmentCriteria): ScoreResul
     section1: calculateSection1Gain(criteria.section1),
     section2: calculateSection2Gain(criteria.section2),
     section3: calculateSection3Gain(criteria.section3),
-    section4: calculateSection4(criteria.section4),
+    section4: calculateSection4(criteria.section4,'gain'),
     section5: calculateSection5(criteria.section5),
   };
 
-  const totalScore = 
-    sectionScores.section1 +
-    sectionScores.section2 +
-    sectionScores.section3 +
-    sectionScores.section4 +
-    sectionScores.section5;
+  const totalScore = Object.values(sectionScores).reduce((n,v)=>n+Math.round(v*100),0)/100;
 
   const classification: ClinGenClassification = classify(totalScore);
 

@@ -35,6 +35,7 @@ export interface SVCAIContext {
  sources?:Array<{id:string;title:string;url?:string;pmid?:string}>;retrieval_status?:string;
 }
 export interface AIAssistanceResult {
+  variantId?:string;
  svcContext?:SVCAIContext;
   requestId?: string;
   feature: AIFeature;

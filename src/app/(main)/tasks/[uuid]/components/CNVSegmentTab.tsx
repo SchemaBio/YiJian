@@ -1,4 +1,5 @@
 'use client';
+import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import { formatNumericString } from '@/i18n/format';
 
 import { errorText } from '@/i18n/errors';
@@ -76,6 +77,7 @@ export function CNVSegmentTab({
   const [detailPanelOpen, setDetailPanelOpen] = React.useState(false);
 
   // 评估面板状态
+  const [initialAIResult,setInitialAIResult]=React.useState<AIAssistanceResult>();
   const [assessmentVariant, setAssessmentVariant] = React.useState<CNVSegment | null>(null);
   const [assessmentPanelOpen, setAssessmentPanelOpen] = React.useState(false);
 
@@ -117,7 +119,8 @@ export function CNVSegmentTab({
   }, []);
 
   // 打开评估面板
-  const handleOpenAssessmentPanel = React.useCallback((variant: CNVSegment) => {
+  const handleOpenAssessmentPanel = React.useCallback((variant: CNVSegment, result?:AIAssistanceResult) => {
+    setInitialAIResult(result);
     if (variant.type === 'Normal' || variant.type === 'Unknown') return;
     const cached = assessmentCache[variant.id] ?? variant.assessment;
     setAssessmentVariant({ ...variant, adjustmentVersion: cached?.adjustmentVersion ?? variant.adjustmentVersion });
@@ -511,7 +514,7 @@ export function CNVSegmentTab({
           setResult(current => current ? { ...current, data: current.data.map(row => row.id === variant.id ? { ...row, ...changes } : row) } : current);
         }}
         taskId={taskId}
-        onOpenAssessment={variant => handleOpenAssessmentPanel(variant as CNVSegment)}
+        onOpenAssessment={(variant,result) => handleOpenAssessmentPanel(variant as CNVSegment,result)}
         variant={selectedVariant}
         variantType="segment"
         isOpen={detailPanelOpen}
@@ -535,6 +538,7 @@ export function CNVSegmentTab({
         <div className="mt-3 text-sm text-fg-muted">{t("tasks.savingCnvAssessment4161a9")}</div>
       )}
       <CNVAssessmentPanel
+        initialAIResult={initialAIResult}
         taskId={taskId}
         referenceId={referenceId}
         cnv={assessmentVariant}

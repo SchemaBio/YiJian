@@ -16,6 +16,7 @@ import {
   ScoreResult,
   ClinGenClassification,
 } from '../types';
+import { reviewedCNVSection4 } from './cnv-ai';
 import { classify } from './pathogenicity-classifier';
 
 // ============ Section 1: 基因组内容初始评估 ============
@@ -75,14 +76,14 @@ export function calculateSection2Loss(criteria: Section2LossCriteria): number {
   // HI重叠评分
   if (criteria.hiOverlap.selected) {
     // 如果用户指定了分数，使用用户指定的分数；否则使用默认分数
-    score += criteria.hiOverlap.score !== 0 
+    score += Number.isFinite(criteria.hiOverlap.score)
       ? criteria.hiOverlap.score 
       : SECTION2_LOSS_HI_DEFAULT_SCORES[criteria.hiOverlap.selected] ?? 0;
   }
 
   // 良性区域重叠评分
   if (criteria.benignOverlap.selected) {
-    score += criteria.benignOverlap.score !== 0
+    score += Number.isFinite(criteria.benignOverlap.score)
       ? criteria.benignOverlap.score
       : SECTION2_LOSS_BENIGN_SCORES[criteria.benignOverlap.selected] ?? 0;
   }
@@ -213,7 +214,8 @@ function calculateSection4CaseControl(criteria: Section4Criteria['caseControl'])
 /**
  * 计算 Section 4 总评分
  */
-export function calculateSection4(criteria: Section4Criteria): number {
+export function calculateSection4(criteria: Section4Criteria, kind:'loss'|'gain'='loss'): number {
+  if(criteria.aiReviewed?.length)return reviewedCNVSection4(criteria.aiReviewed,kind);
   let score = 0;
 
   score += calculateSection4DeNovo(criteria.deNovo);
@@ -270,12 +272,7 @@ export function calculateLossTotal(criteria: LossAssessmentCriteria): ScoreResul
     section5: calculateSection5(criteria.section5),
   };
 
-  const totalScore = 
-    sectionScores.section1 +
-    sectionScores.section2 +
-    sectionScores.section3 +
-    sectionScores.section4 +
-    sectionScores.section5;
+  const totalScore = Object.values(sectionScores).reduce((n,v)=>n+Math.round(v*100),0)/100;
 
   const classification: ClinGenClassification = classify(totalScore);
 

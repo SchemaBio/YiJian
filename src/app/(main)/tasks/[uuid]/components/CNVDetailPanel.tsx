@@ -38,7 +38,7 @@ interface CNVDetailPanelProps {
   taskId?: string;
   plotAnchor?: CNVPlotAnchor;
   onSaveInterpretation?: (variant: CNVSegment | CNVExon, interpretation: string) => Promise<void>;
-  onOpenAssessment?: (variant: CNVSegment | CNVExon) => void;
+  onOpenAssessment?: (variant: CNVSegment | CNVExon, result?: AIAssistanceResult) => void;
 }
 
 function geneCardsURL(gene: string): string {
@@ -189,7 +189,7 @@ export function CNVDetailPanel({ variant, variantType, isOpen, onClose, referenc
           </section>
           <section hidden={section !== 'assessment'} >
           {(variant.type === 'Deletion' || variant.type === 'Amplification') && <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} {t("tasks.assessment6c63b7")}</span><AIAssistanceAction key={scope} disabled={readOnly || !taskId} input={{feature:variant.type === 'Deletion'?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(variant),calculator:variant.assessment}} onResult={setAIResult} /></div>}
-          {aiResult && <div className="mb-4"><AIResultCard result={aiResult} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} /></div>}
+          {aiResult && <div className="mb-4"><AIResultCard result={aiResult} onReviewEvidence={!readOnly&&onOpenAssessment?()=>onOpenAssessment(variant,aiResult):undefined} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} /></div>}
           <div className="mb-3 flex flex-wrap gap-2">
             {onOpenAssessment && (variant.type === 'Deletion' || variant.type === 'Amplification') && <button type="button" onClick={() => onOpenAssessment(variant)} className="rounded-md bg-accent-emphasis px-3 py-2 text-sm text-fg-on-emphasis">ClinGen {variant.type === 'Deletion' ? 'Loss' : 'Gain'} {t("tasks.calculatoraf747d")}</button>}
 

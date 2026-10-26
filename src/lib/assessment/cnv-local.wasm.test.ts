@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { prepareAIRequestInput } from '../ai-request-input';
+import { aiVariantContext } from '@/app/(main)/tasks/[uuid]/utils/ai-context';
+import type { CNVSegment } from '@/app/(main)/tasks/[uuid]/types';
 import {beforeAll,afterAll,expect,it,vi} from 'vitest';
 import {createRequire} from 'node:module';
 import {readFileSync,mkdirSync,copyFileSync} from 'node:fs';
@@ -47,3 +50,12 @@ it.skipIf(!process.env.CNV_ACCEPTANCE_FILE)('reads the original current CNV Parq
  expect(count).toBe(64732);expect(events).toBeGreaterThan(0);expect(scored).toBeGreaterThan(0);expect(pinned).toBeGreaterThan(0);
  console.log('CNV_READ_ONLY_ACCEPTANCE',JSON.stringify({rows:count,events,scored,pinned}));
 },30000);
+
+it('serializes the real WASM BIGINT interval-length annotation for CNV AI submission',()=>{
+ const values=conn.query('SELECT GREATEST(0,CAST(200 AS BIGINT)-CAST(100 AS BIGINT)) AS Interval_Length').toArray()[0].toJSON();
+ expect(typeof values.Interval_Length).toBe('bigint');
+ const variant=aiVariantContext({id:'synthetic',chromosome:'1',startPosition:100,endPosition:200,type:'Deletion',copyNumber:0,coordinateSystem:'0-based-half-open',annotationValues:values} as unknown as CNVSegment);
+ expect(()=>JSON.stringify(variant)).toThrow();
+ const safe=prepareAIRequestInput({feature:'cnv_loss',variant});
+ expect(()=>JSON.stringify(safe)).not.toThrow();expect((safe.variant!.annotationValues as Record<string,unknown>).Interval_Length).toBe(100);expect(safe.variant!.copyNumber).toBe(0);
+});

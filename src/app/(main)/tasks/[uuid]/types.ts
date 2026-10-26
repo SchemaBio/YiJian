@@ -292,6 +292,7 @@ export interface SNVIndel extends VariantReviewStatus {
 export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 
 export interface CNVSegment extends VariantReviewStatus {
+  coordinateSystem?: '0-based-half-open'|'1-based-inclusive';
   interpretation?: string;
   attemptId?: string;
   annotationValues?: Record<string, string>;
@@ -313,6 +314,7 @@ export interface CNVSegment extends VariantReviewStatus {
 
 // ============ CNV变异(外显子级别) ============
 export interface CNVExon extends VariantReviewStatus {
+  coordinateSystem?: '0-based-half-open'|'1-based-inclusive';
   interpretation?: string;
   attemptId?: string;
   confidenceLabel?: string;
@@ -680,6 +682,7 @@ export interface Section4CaseControlCriteria {
 }
 
 export interface Section4Criteria {
+  aiReviewed?: Array<{code:string;scoreHundredths:number;sourceIds:string[];reason:string}>;
   deNovo: Section4DeNovoCriteria;
   unknownInheritance: Section4UnknownInheritanceCriteria;
   segregation: Section4SegregationCriteria;
@@ -740,6 +743,7 @@ export interface Section5Criteria {
  * Loss 评估标准
  */
 export interface LossAssessmentCriteria {
+  aiReview?: {result: import('@/lib/ai-assistance').AIAssistanceResult; appliedCodes:string[]; clinicalContext?:{diseaseId:string;inheritance:string}; reviewedAt:string};
   section1: Section1LossCriteria;
   section2: Section2LossCriteria;
   section3: Section3Criteria;
@@ -751,6 +755,7 @@ export interface LossAssessmentCriteria {
  * Gain 评估标准
  */
 export interface GainAssessmentCriteria {
+  aiReview?: LossAssessmentCriteria['aiReview'];
   section1: Section1GainCriteria;
   section2: Section2GainCriteria;
   section3: Section3Criteria;

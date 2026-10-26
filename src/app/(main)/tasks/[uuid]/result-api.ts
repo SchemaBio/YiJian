@@ -421,6 +421,7 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     iscnCandidate: s(row.iscnCandidate ?? row.ISCN_Candidate),
     chromosome: s(row.chromosome),
     startPosition: start,
+    coordinateSystem: row.coordinateSystem === '0-based-half-open' || row.coordinateSystem === '1-based-inclusive' ? row.coordinateSystem : undefined,
     endPosition: end,
     interpretation: s(adjustments.interpretation),
     length: Math.max(0, end - start),

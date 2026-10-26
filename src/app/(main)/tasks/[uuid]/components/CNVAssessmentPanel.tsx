@@ -9,6 +9,7 @@ import { useInterpretationReadOnly } from './InterpretationLock';
 import * as React from 'react';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
+import { CNVAIReview } from './CNVAIReview';
 import { aiVariantContext } from '../utils/ai-context';
 import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
 import { Calculator } from 'lucide-react';
@@ -36,6 +37,7 @@ import { Section4Panel } from './assessment/Section4Panel';
 import { Section5Panel } from './assessment/Section5Panel';
 
 interface CNVAssessmentPanelProps {
+  initialAIResult?: AIAssistanceResult;
   taskId?: string;
   referenceId?: string;
   saving?: boolean;
@@ -154,7 +156,7 @@ function AssessmentSection({ title, score, children }: { title: string; score: n
  * CNV评估侧边栏主组件
  */
 export function CNVAssessmentPanel({
-  taskId, referenceId,
+  taskId, referenceId, initialAIResult,
   cnv,
   saving = false,
   error,
@@ -168,7 +170,7 @@ export function CNVAssessmentPanel({
   const t = useText();
   const readOnly = useInterpretationReadOnly();
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
-  React.useEffect(() => { setAIResult(undefined); }, [taskId, cnv?.id]);
+  React.useEffect(() => { setAIResult(initialAIResult ?? assessment?.criteria.aiReview?.result); }, [taskId, cnv?.id, initialAIResult]);
   if (!isOpen || !cnv || !assessment) return null;
   if (cnv.type === 'Normal' || cnv.type === 'Unknown') return null;
 
@@ -211,7 +213,7 @@ export function CNVAssessmentPanel({
     if (onCriteriaChange) {
       onCriteriaChange({
         ...criteria,
-        section4: newSection4,
+        section4: {...newSection4,aiReviewed:undefined},
       } as LossAssessmentCriteria | GainAssessmentCriteria);
     }
   };
@@ -254,6 +256,8 @@ export function CNVAssessmentPanel({
           {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.aiAssistedAssessment6b72ee")}</span><AIAssistanceAction key={`${taskId}/${cnv.id}`} disabled={readOnly||saving||!taskId} input={{feature:isLoss?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(cnv),calculator:assessment}} onResult={setAIResult} /></div>
           {aiResult && <div className="mb-4"><AIResultCard result={aiResult} /></div>}
+          {aiResult && onCriteriaChange && <CNVAIReview key={`${taskId}/${cnv.id}/${aiResult.requestId}`} result={aiResult} assessment={assessment} onApply={onCriteriaChange} disabled={readOnly||saving} />}
+          {assessment.criteria.section4.aiReviewed?.length ? <div className="mb-3 text-xs"><p>{t('assistance.cnvReviewedLiterature')}</p>{assessment.criteria.section4.aiReviewed.map(c=><p key={c.code}>{c.code} · {(c.scoreHundredths/100).toFixed(2)} · {c.reason}</p>)}<button type="button" className="yj-tool-button" disabled={readOnly||saving} onClick={()=>onCriteriaChange?.({...criteria,section4:{...criteria.section4,aiReviewed:undefined}})}>{t('assistance.cnvClearReviewedLiterature')}</button></div>:null}
           {/* 分数汇总 */}
           <ScoreSummaryCard
             classification={assessment.classification}

@@ -1,0 +1,25 @@
+import * as React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { it, expect, vi } from 'vitest';
+import { CNVAIReview } from './CNVAIReview';
+import { createDefaultLossAssessmentCriteria, type CNVAssessment } from '../types';
+import type { AIAssistanceResult } from '@/lib/ai-assistance';
+it('previews replacements, requires explicit confirmation, and records editable context without saving', () => {
+    const criteria = createDefaultLossAssessmentCriteria();
+    criteria.section2.benignOverlap = { selected: '2F', score: -1 };
+    const a = { criteria, cnvType: 'Deletion' } as CNVAssessment;
+    const result = { feature: 'cnv_loss', requestId: 'r', summary: 'synthetic', agentProposal: { sources: [{ id: 's', record_exists: true, identifier_valid: true, url: 'https://example.org', title: 'Synthetic citation' }], ai_assessment: { cnv_context: { disease_id: 'MONDO:1', inheritance: 'AD' }, criteria: [{ code: '2A', status: 'met', score_hundredths: 100, source_ids: ['s'], facts: { complete_hi_overlap: true }, override_reason: 'synthetic overlap' }] } } } as AIAssistanceResult;
+    const apply = vi.fn();
+    render(<CNVAIReview result={result} assessment={a} onApply={apply}/>);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'OMIM:2' } });
+    fireEvent.click(screen.getByRole('button', { name: '填入评估表' }));
+    expect(apply).not.toHaveBeenCalled();
+    expect(screen.getByRole('region')).toHaveTextContent('2F');
+    fireEvent.click(screen.getByRole('button', { name: '确认填入，稍后人工保存' }));
+    expect(apply).toHaveBeenCalledTimes(1);
+    const next = apply.mock.calls[0][0];
+    expect(next.section2.hiOverlap.selected).toBe('2A');
+    expect(next.section2.benignOverlap.selected).toBeNull();
+    expect(next.aiReview.clinicalContext.diseaseId).toBe('OMIM:2');
+    expect(a.criteria.section2.benignOverlap.selected).toBe('2F');
+});

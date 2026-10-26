@@ -179,7 +179,7 @@ export function useCNVAssessment(cnv: CNVSegment | CNVExon | null) {
 }
 
 function hasCNVEvidence(criteria:LossAssessmentCriteria|GainAssessmentCriteria):boolean{
- if(criteria.section1.selected||criteria.section3.confirmed)return true;
+ if(criteria.section1.selected||criteria.section3.confirmed||criteria.section4.aiReviewed?.length)return true;
  const selected=(value:unknown):boolean=>!!value&&typeof value==='object'&&Object.entries(value).some(([key,item])=>key==='selected'?!!item:key==='score'||key==='count'||key==='confirmedCount'||key==='assumedCount'||/^4[F-H]$/.test(key)?typeof item==='number'&&item!==0:selected(item));
  return selected(criteria.section2)||selected(criteria.section4)||selected(criteria.section5);
 }

@@ -42,3 +42,12 @@ describe('SepiLens platform adapter', () => {
     expect(api.post).toHaveBeenCalledTimes(1);expect(api.get).not.toHaveBeenCalled();
   });
 });
+
+it('bounds asynchronous CNV submission without retrying or discarding the key', async()=>{
+ vi.useFakeTimers();vi.mocked(api.post).mockImplementation((_url,_body,opts)=>new Promise((_resolve,reject)=>opts?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true})));
+ const result=httpAIAssistanceAdapter.generate({feature:'cnv_loss'},{requestId:'stable-cnv',confirmedCharge:true,signal:new AbortController().signal});const rejected=expect(result).rejects.toMatchObject({safeToRegenerate:false});await vi.advanceTimersByTimeAsync(45000);await rejected;expect(api.post).toHaveBeenCalledTimes(1);expect(api.get).not.toHaveBeenCalled();
+});
+it('bounds a stalled status read without cancelling the server job',async()=>{
+ vi.useFakeTimers();vi.mocked(api.post).mockResolvedValue({requestId:'cnv',status:'running'});vi.mocked(api.get).mockImplementation((_url,opts)=>new Promise((_resolve,reject)=>opts?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true})));
+ const result=httpAIAssistanceAdapter.generate({feature:'cnv_gain'},{requestId:'same-cnv',confirmedCharge:true,signal:new AbortController().signal});const rejected=expect(result).rejects.toMatchObject({safeToRegenerate:false});await vi.advanceTimersByTimeAsync(33000);await rejected;expect(api.post).toHaveBeenCalledTimes(1);
+});

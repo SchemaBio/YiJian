@@ -1,4 +1,5 @@
 'use client';
+import { prepareAIRequestInput } from '@/lib/ai-request-input';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
@@ -28,9 +29,9 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   const featureCapability = settings.capabilities?.[input.feature];
   const hpoProduction = deployment === 'saas' && input.feature === 'hpo';
   const charge = deployment === 'saas' && (featureCapability?.billingEnabled ?? settings.billingEnabled) === true;
-  const billingUnavailable = deployment === 'saas' && (input.feature === 'hpo' || input.feature === 'acmg' || input.feature === 'svcv4') && !charge;
+  const billingUnavailable = deployment === 'saas' && (input.feature === 'hpo' || input.feature === 'acmg' || input.feature === 'svcv4' || input.feature === 'cnv_gain' || input.feature === 'cnv_loss') && !charge;
   const unavailable = !settings.enabled || !settings.connected || !settings.configured || featureCapability?.enabled === false || billingUnavailable;
-  const contextRequired = (input.feature === 'cnv_gain' || input.feature === 'cnv_loss') && !!settings.capabilities;
+  const contextRequired = false;
   const running = React.useRef(false);
   const controller = React.useRef<AbortController | null>(null);
   const scope = `${input.taskId ?? ''}:${input.feature}:${String(input.variant?.id ?? '')}`;
@@ -59,11 +60,16 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
     running.current = true; setBusy(true); onBusyChange?.(true); setError('');
     const originalScope = scope;
     const nextController = new AbortController(); controller.current = nextController;
-    const prepared = contextRequired ? { ...input, reference, clinicalContext: context } : input;
-    const fingerprint = JSON.stringify(prepared);
-    if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
     try {
-      const result = await adapter.generate(prepared, { requestId: request.current.id, signal: nextController.signal, confirmedCharge: confirmed, onRequest: id => { if (!nextController.signal.aborted && scopeRef.current === originalScope) setServerRequestId(id); } });
+      let prepared: AIAssistanceInput;
+      try {
+        prepared = prepareAIRequestInput(contextRequired ? { ...input, reference, clinicalContext: context } : input);
+        const fingerprint = JSON.stringify(prepared);
+        if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
+      } catch {
+        throw new AIRequestError('assistance.assessmentInputUnavailable', true);
+      }
+      const result = await adapter.generate(prepared, { requestId: request.current!.id, signal: nextController.signal, confirmedCharge: confirmed, onRequest: id => { if (!nextController.signal.aborted && scopeRef.current === originalScope) setServerRequestId(id); } });
       if (nextController.signal.aborted || scopeRef.current !== originalScope) return;
       if (result.feature !== input.feature) throw new Error(t("assistance.aiReturnedAMismatchedAssessmentTypeRetry053edf"));
       onResult(result); request.current = undefined;
@@ -75,7 +81,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
     }
   };
   const label = t(AI_FEATURE_LABELS[input.feature]);
-  const inactiveReason = !settings.enabled ? t("assistance.aiAssistanceIsDisabledAskAnAdministratorfe2e3b") : !settings.connected ? t("assistance.aiServiceUnavailable6c7c68") : !settings.configured ? t("assistance.aiModelNotConfigured138bde") : featureCapability?.enabled === false ? featureCapability.reason ?? t("assistance.thisEngineIsNotAvailableYetfc2caa") : billingUnavailable ? t(input.feature === 'hpo' ? 'assistance.hpoBillingNotReady' : input.feature === 'svcv4' ? 'assistance.svcBillingNotReady' : 'assistance.acmgBillingNotReady') : '';
+  const inactiveReason = !settings.enabled ? t("assistance.aiAssistanceIsDisabledAskAnAdministratorfe2e3b") : !settings.connected ? t("assistance.aiServiceUnavailable6c7c68") : !settings.configured ? t("assistance.aiModelNotConfigured138bde") : featureCapability?.enabled === false ? (featureCapability.reason === 'cnv_ai_unavailable' ? t('assistance.cnvNotAvailable') : featureCapability.reason) ?? t("assistance.thisEngineIsNotAvailableYetfc2caa") : billingUnavailable ? t(input.feature === 'cnv_gain' || input.feature === 'cnv_loss' ? 'assistance.cnvBillingNotReady' : input.feature === 'hpo' ? 'assistance.hpoBillingNotReady' : input.feature === 'svcv4' ? 'assistance.svcBillingNotReady' : 'assistance.acmgBillingNotReady') : '';
   const continueGeneration = () => { if (charge && !skipConfirmation(input.feature)) setConfirmOpen(true); else void generate(charge); };
   const missingContext = !reference || !context.sampleType || (!context.diseaseId.trim() || !context.inheritance.trim()) || (experimental && context.variantOrigin !== 'germline_confirmed');
   return <>
@@ -139,6 +145,6 @@ export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, hu
     })}</dl>}
     {result.feature === 'acmg' && <p className="text-xs text-fg-muted">{t('assistance.acmgHumanReviewNotice')}</p>}
     {!!result.warnings?.length && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{result.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{statusLabel ?? t(humanReviewSaved ? "assistance.acmgHumanReviewSaved" : "assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span><div className="flex flex-wrap gap-2">{onReviewEvidence && result.feature === 'acmg' && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="primary" type="button" className="yj-tool-button" onClick={onReviewEvidence}>{t('assistance.acmgReviewAction')}</ActionButton>}{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div></div>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{statusLabel ?? t(humanReviewSaved ? "assistance.acmgHumanReviewSaved" : "assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span><div className="flex flex-wrap gap-2">{onReviewEvidence && (result.feature === 'acmg' || result.feature === 'cnv_gain' || result.feature === 'cnv_loss') && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="primary" type="button" className="yj-tool-button" onClick={onReviewEvidence}>{t(result.feature === 'acmg' ? 'assistance.acmgReviewAction' : 'assistance.cnvReviewAction')}</ActionButton>}{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div></div>
   </section>;
 }

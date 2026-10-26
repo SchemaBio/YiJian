@@ -2,7 +2,7 @@ import type { SNVIndel, CNVSegment, CNVExon } from '../types';
 
 /** Send variant evidence only, without storage URLs, sample IDs or reads. */
 export function aiVariantContext(variant: SNVIndel | CNVSegment | CNVExon): Record<string, unknown> {
-  const allowed = ['id', 'gene', 'genes', 'chromosome', 'position', 'startPosition', 'endPosition', 'ref', 'alt', 'variantType', 'zygosity', 'transcript', 'hgvsc', 'hgvsp', 'consequence', 'clinvarSignificance', 'clinvarReviewStatus', 'clinvarStars', 'clinvarDisease', 'gnomadAF', 'gnomadEasAF', 'alphaMissenseScore', 'pangolinGain', 'pangolinLoss', 'evoScore', 'diseaseAssociation', 'inheritanceMode', 'type', 'copyNumber', 'copyRatio', 'confidence', 'iscnCandidate', 'exon'];
+  const allowed = ['id', 'gene', 'genes', 'chromosome', 'position', 'startPosition', 'coordinateSystem', 'endPosition', 'ref', 'alt', 'variantType', 'zygosity', 'transcript', 'hgvsc', 'hgvsp', 'consequence', 'clinvarSignificance', 'clinvarReviewStatus', 'clinvarStars', 'clinvarDisease', 'gnomadAF', 'gnomadEasAF', 'alphaMissenseScore', 'pangolinGain', 'pangolinLoss', 'evoScore', 'diseaseAssociation', 'inheritanceMode', 'type', 'copyNumber', 'copyRatio', 'confidence', 'iscnCandidate', 'exon'];
   const source = variant as unknown as Record<string, unknown>;
   const samples = Object.fromEntries(['proband','father','mother'].flatMap(role => {
     const value = source[role] as Record<string,unknown> | undefined;

@@ -1,4 +1,5 @@
 'use client';
+import { cnvBEDCoordinateSystem } from './cnv-coordinate-system';
 import { sampleVafSQL, sampleRoleSQL, type SampleColumnRoles } from './snv-sample-metrics';
 import { LocalizedError } from '@/i18n/errors';
 
@@ -428,6 +429,7 @@ class BrowserTable {
         }
         if (this.table === 'cnv-segment') {
             row.copyNumber = source.CN ?? source.Copy_Number ?? source.Col8;
+            row.coordinateSystem = cnvBEDCoordinateSystem(this.table, this.raw);
             row.copyRatio = source.Copy_Ratio; // Never interpret absolute CN as a ratio.
             row.log2Ratio = source.Log2_Ratio ?? source.log2 ?? source.Col5;
         }
@@ -437,6 +439,7 @@ class BrowserTable {
             row.log2Ratio = source.Log2_Ratio ?? source.Col9;
             row.weight = source.Col14;
             row.confidenceLabel = source.Col18;
+            row.coordinateSystem = cnvBEDCoordinateSystem(this.table, this.raw);
         }
         Object.assign(row, overlay);
         if(overlay.activeAcmgVersion==='svcv4') {
