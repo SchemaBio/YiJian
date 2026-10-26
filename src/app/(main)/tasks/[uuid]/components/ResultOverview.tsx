@@ -8,6 +8,7 @@ import { HoverHint } from '@/components/shared/HoverHint';
 import { CheckCircle2, Clock3, FileWarning } from 'lucide-react';
 import type { TrioMember } from '@/lib/sample-parents';
 import type { ResultContext, TabType } from '../types';
+import { KinshipTable } from './KinshipTable';
 import { CopyTableButton } from './CopyTableButton';
 import { QCAndFamilyTables, SampleFamilyTable, type VerificationSample } from './QCResultTab';
 
@@ -99,6 +100,8 @@ export function ResultOverview({ context, onNavigate, sample, snapshot = [] }: {
       </div>
       {snvOnly?<VCFPreprocessingTable context={context}/>:<QCAndFamilyTables context={context} sample={sample} snapshot={snapshot} />}
       </div>
+
+      {!snvOnly && context.kinship && <KinshipTable context={context} sample={sample} snapshot={snapshot} />}
 
       {!context.reference.available&&<p className="text-xs text-warning-fg">{context.reference.reason || t("tasks.referenceResourcesAreNotConfiguredSequencingEvidence9cfc0a")}</p>}
     </section>

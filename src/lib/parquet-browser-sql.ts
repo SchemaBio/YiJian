@@ -85,7 +85,7 @@ export function localPredicate(f: LocalFilter, raw: string[]): string {
         throw new LocalizedError("display.invalidNumericFilter0a58b3");
     return `EXISTS (SELECT 1 FROM UNNEST(string_split(${text}, '&')) AS u(v) WHERE TRY_CAST(NULLIF(v,'.') AS DOUBLE) ${ops[f.operator]} ${Number(values[0])})`;
 }
-export function buildLocalSelection(q: LocalQuery, raw: string[]) {
+export function buildLocalSelection(q: LocalQuery, raw: string[], table?: string) {
     if ((q.filters?.length ?? 0) > 40 || (q.search?.length ?? 0) > 256)
         throw new LocalizedError("display.filterCriteriaExceedTheLimitcf4a4a");
     const where = (q.filters ?? []).map(f => localPredicate(f, raw));
@@ -111,10 +111,16 @@ export function buildLocalSelection(q: LocalQuery, raw: string[]) {
     // must promote it across the whole dataset, not just within the visible page.
     const pinned = `COALESCE(TRY_CAST(${effectiveField('pinned', raw)} AS BOOLEAN), FALSE)`;
     const focused = `COALESCE(TRY_CAST(${effectiveField('focused', raw)} AS BOOLEAN), FALSE)`;
-    const classification=`CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END`;
+    const classification=table==='cnv-segment' ? effectiveField('cnvClassification',raw) : `CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END`;
     const priority=`CASE ${classification} WHEN 'Pathogenic' THEN 0 WHEN 'Likely_Pathogenic' THEN 1 WHEN 'VUS' THEN 2 WHEN 'Likely_Benign' THEN 3 WHEN 'Benign' THEN 4 ELSE 5 END`;
     const manualPinned=`COALESCE(TRY_CAST(json_extract_string(o.payload,'$.pinned') AS BOOLEAN),FALSE)`;
     const phenotypePriority=`COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypePriority') AS BOOLEAN),FALSE) AND ${classification} IN ('Pathogenic','Likely_Pathogenic')`;
     order = `CASE WHEN ${focused} THEN 0 WHEN ${pinned} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} AND ${manualPinned} THEN 0 WHEN ${pinned} AND ${phenotypePriority} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} THEN ${priority} ELSE 0 END ASC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypeMatch.score') AS DOUBLE),TRY_CAST(json_extract_string(a.baseline,'$.phenotypeScore') AS DOUBLE),0) ELSE 0 END DESC, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.familySupport') AS INTEGER),0) ELSE 0 END DESC, ${order}`;
+    if(table==='cnv-segment') {
+        // Rank the effective (manual override or local baseline) CNV score over
+        // the full dataset before pagination; HPO relevance breaks score ties.
+        const score=`TRY_CAST(${effectiveField('cnvScore',raw)} AS DOUBLE)`;
+        order=`CASE WHEN ${focused} THEN 0 WHEN ${pinned} THEN 1 ELSE 2 END ASC, CASE WHEN ${pinned} AND ${manualPinned} THEN 0 ELSE 1 END ASC, CASE WHEN ${pinned} AND ${classification} IN ('Pathogenic','Likely_Pathogenic') THEN ${score} END DESC NULLS LAST, CASE WHEN ${pinned} THEN COALESCE(TRY_CAST(json_extract_string(a.baseline,'$.phenotypeMatch.score') AS DOUBLE),0) ELSE 0 END DESC, ${order}`;
+    }
     return { where: where.length ? ' WHERE ' + where.join(' AND ') : '', order };
 }

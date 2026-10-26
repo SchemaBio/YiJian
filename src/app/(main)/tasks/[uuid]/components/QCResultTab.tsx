@@ -92,7 +92,7 @@ export type VerificationSample = Pick<SampleDetail, 'id' | 'internalId' | 'gende
 
 // QC identifiers in older archives can be workflow role aliases. Resolve display
 // identity separately, without changing the IDs used to join QC measurements.
-function verificationMember(member: ResultContext['members'][number], sample?: VerificationSample|null, snapshot: TrioMember[] = []) {
+export function verificationMember(member: ResultContext['members'][number], sample?: VerificationSample|null, snapshot: TrioMember[] = []) {
   const role = ({paternal: 'father', maternal: 'mother', single: 'proband', patient: 'proband'} as Record<string,string>)[member.role.toLowerCase()] ?? member.role.toLowerCase();
   const saved = snapshot.find(item => item.role.toLowerCase() === role);
   const parent = role === 'father' ? sample?.father : role === 'mother' ? sample?.mother : undefined;

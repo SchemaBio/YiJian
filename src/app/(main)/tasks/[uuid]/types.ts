@@ -110,6 +110,7 @@ export interface ResultCount {
 }
 
 export interface ResultContext {
+ kinship?: {status: 'ready'|'pending'|'empty'|'unavailable'|'invalid';source: string;pairs: Array<{sampleA:string;sampleB:string;relatedness:number;pedigreeRelatedness:number;ibs0:number;ibs2:number;sites:number;pedigreeParents:boolean;predictedParents:boolean;parentError:boolean;sampleDuplicationError:boolean}>};
  capabilities?: string[];
  vcfAnnotation?: {preprocessing?: Record<string,unknown>; sex_inference?: {x_sum:number;ratio:number|null;sex:string;x_hom?:number;x_haploid_alt?:number;minimum_sites?:number;female_max_ratio?:number;male_min_ratio?:number;warning?:string;reason?:string};summary?: Record<string,unknown>};
   taskUuid: string;

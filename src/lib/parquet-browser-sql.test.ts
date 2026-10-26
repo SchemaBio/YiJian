@@ -57,3 +57,10 @@ describe('browser effective Parquet query', () => {
         expect(q.order).toContain('DESC');
     });
 });
+
+it('orders CNV P/LP by effective CNV score before HPO ties and user genomic sorting',()=>{
+ const q=buildLocalSelection({offset:200,limit:20,sort:'Start'},['Start'],'cnv-segment');
+ const score=q.order.indexOf('$.cnvAssessment.totalScore'),hpo=q.order.indexOf('$.phenotypeMatch.score');
+ expect(score).toBeGreaterThan(0);expect(score).toBeLessThan(hpo);expect(q.order).toContain('DESC NULLS LAST');
+ expect(q.order).toContain("$.cnvClassification");expect(q.order).toContain("$.pinned");expect(q.order).toContain('t.file_row_number ASC');
+});

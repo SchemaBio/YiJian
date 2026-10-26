@@ -6,7 +6,7 @@ const scalar=(v:unknown):number|undefined=>{
 };
 export function explicitQualityFailure(row:AssessmentRow,p?:RowProof){
   const v=row.values,filter=String(v.Filter??v.FILTER??v.filter??'').trim();
-  const dp=p?.proband?.dp??scalar(v.Depth??v.depth),gq=p?.proband?.gq??scalar(v.GQ);
+  const dp=p?.proband?.dp??scalar(v.Depth??v.depth??(row.coordinateSystem?v.Col6:undefined)),gq=p?.proband?.gq??scalar(v.GQ);
   const gt=String(p?.proband?.gt??v.Genotype??v.GT??'');
   return p?.qualityPassed===false || !!filter&&filter!=='.'&&filter!=='PASS' || dp!==undefined&&dp<10 || gq!==undefined&&gq<20 || /^(0[|/]0|0)$/.test(gt) || p?.proband?.ad!==undefined&&(p.proband.ad[1]??0)<3;
 }

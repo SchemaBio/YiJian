@@ -1,11 +1,12 @@
 import type { AssessmentContext, AssessmentRow, ReferenceSupplement } from './types';
+import { cnvInterval, dosageRecords } from './cnv-reference';
 import { annotationGenes } from './row-annotations';
 
 export function referenceGenes(rows:AssessmentRow[],context?:AssessmentContext):string[]{return [...new Set(rows.flatMap(row=>{
   const genes=annotationGenes(row);if(genes.length||!context)return genes;
-  const interval=context.proofs[row.id]?.interval;if(!interval||interval.reference!==context.reference)return genes;
+  const interval=row.table==='cnv-segment'?cnvInterval(row,context):context.proofs[row.id]?.interval;if(!interval||interval.reference!==context.reference)return genes;
   const chr=interval.chromosome.replace(/^chr/i,'');
-  return context.pack.dosage.filter(record=>record.gene&&record.reference===interval.reference&&record.chromosome.replace(/^chr/i,'')===chr&&interval.start<record.end&&record.start<interval.end).map(record=>record.gene!);
+  return dosageRecords(context).filter(record=>record.gene&&record.reference===interval.reference&&record.chromosome.replace(/^chr/i,'')===chr&&interval.start<record.end&&record.start<interval.end).map(record=>record.gene!);
 }))];}
 export async function loadReferences(context:AssessmentContext,genes:string[],signal:AbortSignal,rank=false):Promise<ReferenceSupplement>{
   const combined:ReferenceSupplement={resourceVersion:context.referenceVersion!,version:'',canonical:{},matches:{},background:{},warnings:[]};

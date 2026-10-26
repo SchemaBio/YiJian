@@ -3129,5 +3129,35 @@
     "aiCandidates": "AI HPO 待確認候選",
     "aiEmpty": "暫無待確認的 AI 候選術語。",
     "aiAdded": "已新增 {p0} 個確認的 AI 候選。"
+  },
+  "kinship": {
+    "title": "親緣關係核對（Peddy）",
+    "sampleA": "樣本 A（內部編號）",
+    "sampleB": "樣本 B（內部編號）",
+    "relatedness": "基因型相關度（rel）",
+    "expected": "家系預期相關度",
+    "sites": "比較位點數",
+    "ibs0": "IBS0 位點數",
+    "predictedParents": "預測為親子",
+    "parentError": "親子關係衝突",
+    "duplicate": "重複樣本提示",
+    "yes": "是",
+    "no": "否",
+    "pending": "分析尚未完成，親緣關係結果待產生。",
+    "empty": "親緣關係報告沒有樣本配對記錄。",
+    "unavailable": "未取得本次執行的親緣關係報告。",
+    "invalid": "親緣關係報告格式或指標異常，暫無法顯示。",
+    "note": "顯示 Peddy 原始相關度與核對標記，負值按原值保留；不等同於臨床親緣鑑定，也不會自動採納為 ACMG 家系證據。"
+  },
+  "igvSize": {
+    "expand": "放大",
+    "restore": "縮小"
+  },
+  "cnvLocal": {
+    "hpoCandidate": "HPO 候選匹配",
+    "matched": "表型相關",
+    "weakMatch": "匹配較弱",
+    "referenceUnavailable": "本地 ClinGen 劑量敏感性參考不可用，CNV 區段初評未完成。",
+    "note": "CNV 區段使用本地 ClinGen 劑量敏感性資料初評；P / LP 按 CNV 得分降序置頂，同分時優先 HPO 匹配度。HPO 不直接計入致病分數，缺失證據保留待核驗，人工關注與置頂選擇保留。"
   }
 }

@@ -5,6 +5,7 @@ import {api} from '../api';
 import { assessmentCacheKey, readAssessmentCache, writeAssessmentCache, removeAssessmentCache, setAssessmentCacheScope } from './cache';
 export { setAssessmentCacheScope } from './cache';
 import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable, PhenotypeMatch} from './types';
+import { loadCNVReference } from './cnv-reference';
 import { loadReferences, referenceGenes } from './reference-client';
 export interface AssessmentStatus {geneRanking?:PhenotypeMatch[];taskId:string;state:'checking'|'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
@@ -40,7 +41,15 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
   };
   session.promise=(async()=>{
     const envelope=await api.get<Envelope>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{signal:controller.signal});
-    const context=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
+    const authorized=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
+    const context={...authorized};
+    let cnvReferenceFailed=false;
+    if(context.tables?.includes('cnv-segment'))try{
+      context.cnvReference=await loadCNVReference(context,controller.signal);
+    }catch(cause){
+      if(controller.signal.aborted)throw cause;
+      cnvReferenceFailed=true;context.availability=[...context.availability,'cnvLocal.referenceUnavailable'];
+    }
     session.context=context;
     publish(session,{version:context.version,packVersion:context.referenceVersion?`${context.pack.version} · HPO/HGNC/ClinGen ${context.referenceVersion}`:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
     const cacheKey = await assessmentCacheKey(context);
@@ -98,7 +107,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
       if(!batch.length||result.length+batch.length>total)throw new LocalizedError("display.localAssessmentResultTransferIncompleteRetry025832");
       for(const entry of batch)result.push(entry);
     }
-    if (!referencesFailed && !controller.signal.aborted) await writeAssessmentCache(cacheKey, result);
+    if (!referencesFailed && !cnvReferenceFailed && !controller.signal.aborted) await writeAssessmentCache(cacheKey, result);
     session.byRow=new Map(result.map(entry=>[entry.rowId,entry.assessment]));
     const pinnedByTable:Record<string,number>={};for(const row of result)if(row.assessment.pinned)pinnedByTable[row.table]=(pinnedByTable[row.table]??0)+1;
     publish(session,{state:'ready',pinned:result.filter(x=>x.assessment.pinned).length,pinnedByTable});

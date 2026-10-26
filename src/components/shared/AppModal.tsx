@@ -34,6 +34,8 @@ export interface AppModalProps {
   /** Additional CSS classes for the modal content */
   className?: string;
   bodyClassName?: string;
+  /** Controls placed immediately before the close button. */
+  headerActions?: React.ReactNode;
 }
 
 interface ModalSectionHeadingProps {
@@ -87,6 +89,7 @@ export function AppModal({
   footer,
   className,
   bodyClassName,
+  headerActions,
 }: AppModalProps) {
   const t = useText();
   return (
@@ -101,10 +104,10 @@ export function AppModal({
         className
       )}
     >
-      <ModalHeader showCloseButton={false} className="pr-16">
+      <ModalHeader showCloseButton={false} className={headerActions ? "shrink-0 pr-28" : "shrink-0 pr-16"}>
         {title}
       </ModalHeader>
-      {showCloseButton && <div className="absolute right-4 top-4"><Button action="close" iconOnly aria-label={t("common.closeDialog81f18d")} variant="ghost" onClick={() => onOpenChange(false)} /></div>}
+      {(showCloseButton || headerActions) && <div className="absolute right-4 top-4 flex items-center gap-1">{headerActions}{showCloseButton && <Button action="close" iconOnly aria-label={t("common.closeDialog81f18d")} variant="ghost" onClick={() => onOpenChange(false)} />}</div>}
       <ModalBody className={bodyClassName}>
         {children}
       </ModalBody>

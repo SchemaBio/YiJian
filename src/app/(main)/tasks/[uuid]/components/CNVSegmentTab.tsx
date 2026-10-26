@@ -376,6 +376,15 @@ export function CNVSegmentTab({
       width: 100,
     },
     {
+      id: 'phenotypeMatch',
+      header: t('cnvLocal.hpoCandidate'),
+      accessor: row => {
+        const match=row.automaticAssessment?.phenotypeMatch;
+        return match ? <HoverHint content={`${match.diseaseName || match.diseaseId} · ${match.matched.map(term=>term.name||term.id).join('、')}`}><span className="inline-flex flex-col text-xs"><span className="font-medium">{match.gene} · {(match.score*100).toFixed(1)}%</span><span className="text-fg-muted">{t(match.eligible?'cnvLocal.matched':'cnvLocal.weakMatch')}</span></span></HoverHint> : <span className="text-fg-muted">—</span>;
+      },
+      width: 145,
+    },
+    {
       id: 'copyNumber',
       header: t("history.copyNumber04d1ca"),
       accessor: (row) => row.copyNumber ?? t("history.notProvided071fb2"),
@@ -404,6 +413,7 @@ export function CNVSegmentTab({
       if (row) clickedRow.current = row;
     }} data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
+      <p className="text-xs text-fg-muted">{t('cnvLocal.note')}</p>
       <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'cnv-segment', t)} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={localizeDisplay(columns, t)} view={tableView} />} />
       <div className="yj-variant-controls-row">
         <div className="flex min-w-0 flex-wrap items-center gap-2">

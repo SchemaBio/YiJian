@@ -9,7 +9,7 @@ import type { IGVSession } from '../types';
 
 vi.mock('igv/dist/igv.esm.js', () => ({ default: { createBrowser: vi.fn(), removeBrowser: vi.fn() } }));
 vi.mock('@schema/ui-kit', async importOriginal => ({ ...await importOriginal<typeof import('@schema/ui-kit')>(), Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock('@/components/shared', () => ({ AppModal: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+vi.mock('@/components/shared', () => ({ AppModal: ({ children, headerActions }: { children: React.ReactNode;headerActions?:React.ReactNode }) => <div>{headerActions}{children}</div> }));
 vi.mock('../result-api', () => ({ getIGVSession: vi.fn(), getIGVTrackURLs: vi.fn(), getIGVSnapshot: vi.fn(), saveIGVSnapshot: vi.fn() }));
 
 vi.mock('@/lib/igv-snapshot', () => ({ igvSVGToPNG: vi.fn() }));
@@ -152,4 +152,13 @@ it('finishes a captured screenshot upload after the viewer closes', async () => 
   view.unmount();
   await act(async () => finish(new Blob(['png'])));
   await waitFor(() => expect(saveIGVSnapshot).toHaveBeenCalledTimes(1));
+});
+
+it('expands to the page and restores without recreating IGV, then resets on reopen',async()=>{
+ const browser={search:vi.fn().mockResolvedValue(undefined),loadTrack:vi.fn(),dispose:vi.fn(),toSVG:vi.fn(),removeTrackByName:vi.fn(),updateViews:vi.fn().mockResolvedValue(undefined),currentLoci:vi.fn().mockReturnValue('chr1:1-110')};
+ vi.mocked(igv.createBrowser).mockResolvedValue(browser);
+ const view=render(<IGVViewer {...props}/>);await waitFor(()=>expect(igv.createBrowser).toHaveBeenCalledTimes(1));
+ fireEvent.click(screen.getByRole('button',{name:'放大'}));expect(screen.getByRole('button',{name:'缩小'})).toHaveAttribute('aria-pressed','true');
+ fireEvent.click(screen.getByRole('button',{name:'缩小'}));expect(screen.getByRole('button',{name:'放大'})).toHaveAttribute('aria-pressed','false');expect(igv.createBrowser).toHaveBeenCalledTimes(1);expect(igv.removeBrowser).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'放大'}));view.rerender(<IGVViewer {...props} isOpen={false}/>);view.rerender(<IGVViewer {...props}/>);expect(screen.getByRole('button',{name:'放大'})).toHaveAttribute('aria-pressed','false');await waitFor(()=>expect(igv.createBrowser).toHaveBeenCalledTimes(2));view.unmount();
 });

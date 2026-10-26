@@ -1,5 +1,10 @@
 declare module 'igv' {
+  export interface IGVTrackView {
+    track: {type?: string; height: number; autoHeight?: boolean; coverageTrackHeight?: number};
+    setTrackHeight(height: number, force?: boolean): void;
+  }
   export interface IGVBrowser {
+    trackViews?: IGVTrackView[];
     search(locus: string): Promise<void>;
     loadTrack(config: TrackConfig): Promise<unknown>;
     updateViews(): Promise<void>;

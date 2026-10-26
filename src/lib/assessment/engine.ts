@@ -5,6 +5,7 @@ import { calculateLossTotal } from '@/app/(main)/tasks/[uuid]/utils/loss-calcula
 import { calculateGainTotal } from '@/app/(main)/tasks/[uuid]/utils/gain-calculator';
 import { screenSNV } from './snv-screen';
 import { annotationGenes } from './row-annotations';
+import { cnvInterval, dosageRecords } from './cnv-reference';
 import { explicitQualityFailure, priorityScore } from './priority';
 
 const pathogenic = (s?: string) => s === 'Pathogenic' || s === 'Likely_Pathogenic';
@@ -18,7 +19,7 @@ const points = { supporting: 1, moderate: 2, strong: 4, very_strong: 8, standalo
 const indexes = new WeakMap<AssessmentContext, {genes:Map<string,Disease[]>; dosage:Map<string,DosageRecord[]>; matches:Map<Disease,ReturnType<typeof phenotypeMatch>>}>();
 function index(ctx:AssessmentContext) {
   let value=indexes.get(ctx);
-  if(!value){value={genes:new Map(),dosage:new Map(),matches:new Map()};for(const disease of ctx.pack.diseases){if(!['Moderate','Strong','Definitive'].includes(disease.validity))continue;const group=value.genes.get(disease.gene)??[];group.push(disease);value.genes.set(disease.gene,group);}for(const record of ctx.pack.dosage){if(record.reference!==ctx.reference)continue;const key=chromosome(record.chromosome),group=value.dosage.get(key)??[];group.push(record);value.dosage.set(key,group);}indexes.set(ctx,value);}
+  if(!value){value={genes:new Map(),dosage:new Map(),matches:new Map()};for(const disease of ctx.pack.diseases){if(!['Moderate','Strong','Definitive'].includes(disease.validity))continue;const group=value.genes.get(disease.gene)??[];group.push(disease);value.genes.set(disease.gene,group);}for(const record of dosageRecords(ctx)){if(record.reference!==ctx.reference)continue;const key=chromosome(record.chromosome),group=value.dosage.get(key)??[];group.push(record);value.dosage.set(key,group);}indexes.set(ctx,value);}
   return value;
 }
 function cachedMatch(ctx:AssessmentContext,disease:Disease){const cache=index(ctx).matches;let value=cache.get(disease);if(!value){value=phenotypeMatch(ctx,disease);cache.set(disease,value);}return value;}
@@ -142,6 +143,8 @@ function cnv(row: AssessmentRow, ctx: AssessmentContext, p: RowProof | undefined
 export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): AutomaticAssessment {
   const result: AutomaticAssessment={profile:ASSESSMENT_PROFILE,contextVersion:ctx.version,state:'insufficient_evidence',score:0,criteria:[],pending:[],pinned:false,pinReasons:[],phenotypeScore:0,familySupport:0};
   const p0=ctx.proofs[row.id], p=p0?.reference===ctx.reference?p0:undefined;
+  const localInterval=row.table==='cnv-segment'?cnvInterval(row,ctx):undefined;
+  if(localInterval)row={...row,values:{...row.values,__validatedInterval:localInterval}};
   if (p?.interval) row={...row,values:{...row.values,__validatedInterval:p.interval}};
   result.gene=text(read(row.values,'Gene','MTGene','MT_Gene',...(row.table==='cnv-exon'?['Col5']:[]),'gene')).split(/[&,;]/)[0] || undefined;
   if (row.table==='snv-indel') { snv(row,p,result); screenSNV(row.values,result); }
@@ -204,13 +207,13 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
   }
   result.priorityScore=explicitQualityFailure(row,p)?0:priorityScore(row,result);
   if(result.pinned||result.phenotypeCandidate)result.pending=result.pending.filter(note=>note!=='质量未通过或必要质量信息缺失，不自动置顶');
-  if (!ctx.pack.licenses.length) result.pending.push('本地参考证据包尚未发布');
+  if (!ctx.pack.licenses.length && !(row.table==='cnv-segment'&&ctx.cnvReference)) result.pending.push('本地参考证据包尚未发布');
   return result;
 }
 // This function runs after all rows have been evaluated. It never selects the
 // first page, and a paired candidate is admitted or rejected as one group.
 export function selectCandidates(rows: {row:AssessmentRow;assessment:AutomaticAssessment}[],context?:AssessmentContext) {
-  const candidates=rows.filter(x=>(x.assessment.phenotypeCandidate||x.assessment.phenotypeScore>=.5) && !x.assessment.pinned).sort((a,b)=>(b.assessment.priorityScore??0)-(a.assessment.priorityScore??0)||b.assessment.phenotypeScore-a.assessment.phenotypeScore||b.assessment.familySupport-a.assessment.familySupport||a.row.id.localeCompare(b.row.id));
+  const candidates=rows.filter(x=>(x.row.table!=='cnv-segment'||pathogenic(x.assessment.cnvClassification))&&(x.assessment.phenotypeCandidate||x.assessment.phenotypeScore>=.5) && !x.assessment.pinned).sort((a,b)=>(b.assessment.priorityScore??0)-(a.assessment.priorityScore??0)||b.assessment.phenotypeScore-a.assessment.phenotypeScore||b.assessment.familySupport-a.assessment.familySupport||a.row.id.localeCompare(b.row.id));
   const genes=new Set<string>(), admitted=new Set<string>();let n=0;
   const byID=new Map(rows.map(x=>[x.row.id,x]));
   for (const item of candidates) {

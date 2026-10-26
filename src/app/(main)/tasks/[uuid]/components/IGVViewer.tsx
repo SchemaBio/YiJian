@@ -11,11 +11,12 @@ import { ActionButton } from '@/components/shared/ActionButton';
 
 
 import * as React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { Tooltip } from '@schema/ui-kit';
 import { AppModal } from '@/components/shared';
 import type { IGVSession, IGVTrackDescriptor, IGVTrackURL } from '../types';
 import { getIGVSession, getIGVTrackURLs, getIGVSnapshot, saveIGVSnapshot, type IGVSnapshot } from '../result-api';
+import { IGVTrackLayout } from '@/lib/igv-layout';
 import { igvSVGToPNG } from '@/lib/igv-snapshot';
 
 export interface IGVViewerProps {
@@ -157,6 +158,10 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
   const canSaveSnapshot = hasPermission('interpretation_reports.manage');
   const t = useText();
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [containerNode,setContainerNode]=React.useState<HTMLDivElement|null>(null);
+  const attachContainer=React.useCallback((node:HTMLDivElement|null)=>{containerRef.current=node;setContainerNode(node);},[]);
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const trackLayout = React.useRef(new IGVTrackLayout());
   const browserRef = React.useRef<import('igv').IGVBrowser | null>(null);
   const resolverRef = React.useRef<SignedTrackResolver | null>(null);
   const [loadedSession, setLoadedSession] = React.useState<IGVSession | null>(null);
@@ -164,6 +169,8 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
   const [error, setError] = React.useState<string | null>(null);
   const [trackErrors, setTrackErrors] = React.useState<string[]>([]);
   const [reloadToken, setReloadToken] = React.useState(0);
+  const [expanded, setExpanded] = React.useState(false);
+  React.useEffect(() => { if (!isOpen) setExpanded(false); }, [isOpen]);
   const [snapshotState, setSnapshotState] = React.useState<{ key: string; value: IGVSnapshot } | null>(null);
   const [snapshotNotice, setSnapshotNotice] = React.useState('');
   const [snapshotLoading, setSnapshotLoading] = React.useState(false);
@@ -183,6 +190,31 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
   const snapshot = snapshotState?.key === snapshotKey ? snapshotState.value : null;
   const liveBAM = !!session?.tracks.some(track => track.format === 'bam' && track.available);
   const showSnapshot = !liveBAM && !!snapshot?.available;
+
+  React.useLayoutEffect(() => {
+    if (!isOpen) return;
+    const viewport=viewportRef.current,content=containerRef.current;
+    let frame=0;
+    const schedule=()=>{
+      if(frame)return;
+      frame=requestAnimationFrame(()=>{
+        const browser=browserRef.current;
+        if(browser&&viewport&&content){
+          if(expanded&&!showSnapshot)trackLayout.current.fit(browser,viewport.clientHeight,content.getBoundingClientRect().height);
+          else trackLayout.current.restore(browser);
+        }
+        frame=0;
+      });
+    };
+    const observer=typeof ResizeObserver==='undefined'?undefined:new ResizeObserver(schedule);
+    if(viewport)observer?.observe(viewport);
+    if(content)observer?.observe(content);
+    window.addEventListener('resize',schedule);
+    // IGV's existing listener recalculates horizontal dimensions. Our observer
+    // independently fits vertical sample viewports after layout settles.
+    window.dispatchEvent(new Event('resize'));schedule();
+    return()=>{observer?.disconnect();window.removeEventListener('resize',schedule);if(frame)cancelAnimationFrame(frame);};
+  },[expanded,isOpen,loading,showSnapshot,containerNode]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -225,7 +257,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
   React.useEffect(() => {
     setTracksReady(false);
-    if (!isOpen || !session || !containerRef.current) return;
+    if (!isOpen || !session || !containerNode) return;
     if (session.tracks.some(track => track.format === 'bam') && !liveBAM) {
       setLoading(false);
       setError(null);
@@ -317,7 +349,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       active = false;
       void dispose();
     };
-  }, [isOpen, reloadToken, session, taskId, liveBAM]);
+  }, [isOpen, reloadToken, session, taskId, liveBAM, containerNode]);
 
   React.useEffect(() => {
     const browser = browserRef.current;
@@ -363,7 +395,9 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
 
   const unavailableTracks = session?.tracks.filter(track => !track.available && track.format !== 'cnr') ?? [];
   return (
-    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title={t("tasks.igvSequencingEvidencefca9b1")} size="large" className="!z-[80] !w-[min(1100px,94vw)] !max-w-none">
+    <AppModal open={isOpen} onOpenChange={open => !open && onClose()} title={t("tasks.igvSequencingEvidencefca9b1")} size="large" headerActions={<button type="button" aria-label={t(expanded ? 'igvSize.restore' : 'igvSize.expand')} title={t(expanded ? 'igvSize.restore' : 'igvSize.expand')} aria-pressed={expanded} onClick={() => setExpanded(value => !value)} className="inline-flex h-8 w-8 items-center justify-center rounded text-fg-muted hover:bg-canvas-subtle hover:text-fg-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-emphasis">
+          {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>} className={expanded ? '!z-[80] !flex !flex-col !overflow-hidden !h-[100dvh] !w-screen !max-h-[100dvh] !max-w-none max-sm:!max-w-none !rounded-none' : '!z-[80] !w-[min(1100px,94vw)] !max-w-none'} bodyClassName={expanded ? '!flex !min-h-0 !max-h-none !flex-1 !flex-col !overflow-hidden [&>*:not([data-igv-viewport])]:shrink-0' : undefined}>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded bg-canvas-subtle px-2 py-1 text-fg-default">{locus}</span>
         <span className="text-fg-muted">{session?.reference.id || t("tasks.unknownReference15bf46")}</span>
@@ -397,8 +431,8 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
           <img src={snapshot?.url} alt={t("tasks.historicalIgvScreenshota10645", {p0: String(locus)})} className="h-auto w-full rounded-lg border border-border-default" onError={() => { setSnapshotState({ key: snapshotKey, value: { available: false } }); setSnapshotNotice(t("tasks.unableToLoadScreenshotRefreshAndRetryd9aecf")); }} />
         </div>
       )}
-      <div className={showSnapshot || (!liveBAM && unavailableTracks.some(track => track.format === 'bam')) || (error && !loading && !browserRef.current) ? 'hidden' : 'relative h-[min(480px,58dvh)] min-h-[260px] overflow-auto rounded-lg border border-border-default bg-canvas-default'}>
-        <div ref={containerRef} className="min-h-[260px] w-full min-w-[640px]" />
+      <div ref={viewportRef} data-igv-viewport className={showSnapshot || (!liveBAM && unavailableTracks.some(track => track.format === 'bam')) || (error && !loading && !browserRef.current) ? 'hidden' : `relative ${expanded ? 'min-h-0 flex-1' : 'h-[min(480px,58dvh)] min-h-[260px]'} overflow-auto rounded-lg border border-border-default bg-canvas-default`}>
+        <div ref={attachContainer} className={`${expanded ? 'min-h-0' : 'min-h-[260px]'} w-full min-w-[640px]`} />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-canvas-default/80">
             <div className="flex items-center gap-3 text-sm text-fg-muted"><div className="h-5 w-5 animate-spin rounded-full border-b-2 border-accent-emphasis" />{t("tasks.loadingReferenceAndTracks02e5bf")}</div>

@@ -76,3 +76,20 @@ it('uses task snapshot numbers and genders before current family links',()=>{
  for(const member of snapshot)expect(within(table).getByText(member.internal_id)).toBeInTheDocument();
  expect(within(table).queryByText('FATHER-002')).not.toBeInTheDocument();
 });
+
+it('shows current Peddy pairs using internal sample numbers and preserves negative/zero values',()=>{
+ const current=trioContext();current.kinship={status:'ready',source:'Peddy',pairs:[{sampleA:'father',sampleB:'mother',relatedness:-0.06313,pedigreeRelatedness:0,ibs0:545,ibs2:2133,sites:4920,pedigreeParents:false,predictedParents:false,parentError:false,sampleDuplicationError:false},{sampleA:'father',sampleB:'proband',relatedness:0.6492,pedigreeRelatedness:0.5,ibs0:6,ibs2:2789,sites:4920,pedigreeParents:true,predictedParents:true,parentError:false,sampleDuplicationError:false}]};
+ render(<ResultOverview context={current} sample={trioSample} onNavigate={vi.fn()}/>);
+ const table=screen.getByRole('region',{name:'亲缘关系核对（Peddy）'});
+ expect(within(table).getAllByText('FATHER-002')).toHaveLength(2);
+ expect(within(table).getByText('MOTHER-003')).toBeInTheDocument();expect(within(table).getByText('SAMPLE-001')).toBeInTheDocument();
+ expect(within(table).getByText('-0.06313')).toBeInTheDocument();expect(within(table).getByText('0')).toBeInTheDocument();
+ expect(within(table).queryByText(/^(father|mother|proband)$/)).not.toBeInTheDocument();
+ expect(within(table).getAllByRole('row')).toHaveLength(3);
+});
+it.each(['pending','empty','unavailable','invalid'] as const)('shows explicit %s instead of a successful relationship check',status=>{
+ const current=trioContext();current.kinship={status,source:'Peddy',pairs:[]};
+ render(<ResultOverview context={current} sample={trioSample} onNavigate={vi.fn()}/>);
+ const section=screen.getByRole('region',{name:'亲缘关系核对（Peddy）'});
+ expect(within(section).queryByRole('table')).not.toBeInTheDocument();expect(within(section).queryByText('否')).not.toBeInTheDocument();
+});

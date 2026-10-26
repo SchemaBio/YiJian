@@ -1,4 +1,4 @@
-export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v4-hpo-gene-ranking';
+export const ASSESSMENT_PROFILE = 'germline-browser-assessment-v5-cnv-region';
 export interface PhenotypeMatch {
   geneBackground?:{id:string;validity:string;inheritance:string;source?:string};
   gene:string; diseaseId:string; diseaseName?:string; score:number; eligible:boolean;
@@ -46,6 +46,7 @@ export interface RowProof {
   upd?: {genotypeSupported: boolean; parent: 'maternal' | 'paternal' | 'unknown'; source: string};
 }
 export interface AssessmentContext {
+  cnvReference?: {sha256:string;version:string;dosage:DosageRecord[]};
   referenceVersion?:string;
   supplement?:ReferenceSupplement;
   taskId: string; attemptId: string; version: string; reference: string; hpo: string[];
@@ -54,7 +55,7 @@ export interface AssessmentContext {
   availability: string[];
   tables?: ResultTable[];
 }
-export interface AssessmentRow { id: string; table: ResultTable; values: Record<string, unknown>; }
+export interface AssessmentRow { coordinateSystem?:'cnr-bed-zero-based-half-open'; id: string; table: ResultTable; values: Record<string, unknown>; }
 export interface AutomaticAssessment {
   /** Research triage (0–100), never ACMG evidence points or a probability. */
   priorityScore?:number;

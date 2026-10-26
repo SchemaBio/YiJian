@@ -4,7 +4,7 @@
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
 
-**2026-10-26 当前线上：YiJian 为 `banner-font-20261026t072331z`，Octopus 为 `svc-partial-context-20261026t071635z`，SepiLens 为 `svc-autofill-20261026t060848z`，Squid 保持 `svc-billing-confirmations-20261025t154057z`。第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG 与 SVC v4 AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复；CNV 开关未变。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
+**2026-10-26 当前线上：YiJian 为 `igv-trio-fit-20261026t085326z`，Octopus 为 `family-kinship-20261026t074652z`，SepiLens 为 `svc-autofill-20261026t060848z`，Squid 保持 `svc-billing-confirmations-20261025t154057z`。第 28 节修正 IGV 放大后的正文与三样本轨道高度自适应，按钮移至关闭按钮左侧；第 27 节启用 CNV Region 本地初评/HPO 关联/得分排序；第 26 节补齐 Peddy 亲缘关系接口和总览展示；第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG 与 SVC v4 AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复；CNV 开关未变。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
 
 ## 1. 新对话先读
 
@@ -481,3 +481,62 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 发布资料 `/home/ubuntu/schema/backups/banner-font-20261026T072331Z` 含前端完整源码/清单、原环境/Compose、基线、构建与测试日志、result.json、final-acceptance.json 和 rollback.py（语法核验）。基于第 24 节精确运行源 overlay，保留之前全部修复。任务数据集、人工调整、账本/余额/账户/任务数及配置摘要不变，未调用模型/计算或编辑生产任务。
 - 用户要求提交本阶段全部更新。Octopus 已本地提交 `89c31e9`（SVC 结果保存/上下文传递/部分评估、任务编辑状态与对应回归）；SepiLens 已本地提交 `58e2e30`（逐引擎输出约束、有界结构纠正、强制检索及四字段补全与回归）。YiJian 的家系编号/性别、SVC 保存/自动填表/部分评估、任务编辑限制、统一 banner 字号及交接记录随本节一起提交。均不 push，Squid 本阶段无新增改动。
 - 第 19–24 节“未提交”是当时记录，最新提交状态以本节为准。此前提交保留；忽略目录 .gotmp 中的运维脚本、保护数据和凭据不入库。线上代码来源仍以运行镜像的保护快照/清单为准，远端旧 Git HEAD 不能直接重建。
+
+
+## 26. 2026-10-26 家系亲缘关系结果接入总览
+
+用户询问家系分析为何总览没有亲缘关系。只读核对任务 `8f7cd22b-c171-4cdb-97e6-d5802964560f` 当前执行 `107e2f30-2712-4628-a432-72b1bc8e5cc6`：trio.wdl 已调用 Peddy，summary 声明 ped_check.csv，归档原始报告 420 字节、三组配对，另有对应 Parquet。不是没有执行亲缘分析，而是 ResultContext / 总览此前未接入。
+
+- 原始报告 father–mother：rel=-0.06313、PED 预期 0、IBS0=545、n=4920，predicted_parents=false；father–proband：rel=0.6492、预期 0.5、IBS0=6、n=4920，predicted_parents=true；mother–proband：rel=0.6409、预期 0.5、IBS0=6、n=4919，predicted_parents=true。三组 parent_error / sample_duplication_error 均 false。保留工具原值及标记，不把负值截断为零，也不将 rel 套用其他工具的 kinship 阈值。
+- Octopus ResultContext 新增 kinship；仅 trio 任务读取当前租户/任务/执行的归档。云端严格限定 resultPackagePrefix 下 .ped_check.csv，对重复归档只接受字节一致者；本地仅接受 manifest 声明且受归档路径约束的文件。不回退其他执行，1 MiB 上限；严格校验列、有限数值、位点计数、布尔标记和重复配对。不可用、待生成、空报告和异常均明确状态，不阻塞变异工作区、不伪装为核对成功。不修改工作流、数据集、临床证据或家系判定门禁。
+- YiJian 总览新增“亲缘关系核对（Peddy）”，展示内部编号、基因型 rel、PED 预期相关度、比较位点数、IBS0、预测亲子、亲子冲突和重复样本提示，支持复制。复用任务快照优先的内部编号解析，按 Peddy 源标识匹配，不使用历史 SNP 报告的位置列。四语言同步；不自动采用为 ACMG 家系证据。
+- 本地后端报告解析测试、前端 24 项回归、类型检查通过；服务器后端含 30 个通过项，前端 4 文件 36 测试、类型检查与生产构建通过。当前授权只读接口确认 ready、三组配对、两组预测亲子、冲突与重复提示为零。
+- 同时延续上一轮 ROH/UPD 只读核对：当前执行的 ROH 原始报告 86 字节、UPD 原始报告 162 字节，均只有表头、零数据行；对应 Parquet 与浏览器读取零行一致，日志步骤成功。这个任务的两项空表来自原报告无记录，不是漏渲染；不构成临床排除。
+- 当前 Octopus / YiJian 镜像 `schemabio/{octopus,yijian}:family-kinship-20261026t074652z`，healthy、完整源码清单和镜像标签核对。SepiLens / Squid 等容器身份不变，网关检查重载；此前全部修复保留。未重跑任务、调用真实模型、生产测试保存或扣费；业务数据集/人工调整/账本/余额/账户/任务数与配置摘要保持。
+- 发布资料 `/home/ubuntu/schema/backups/family-kinship-20261026T074652Z` 包含两仓库保护源码/清单、原环境/Compose、基线、构建与测试日志、kinship-acceptance.json、result.json、final-acceptance.json 和 rollback.py（语法核验，使用通用定义入口 split）。基于第 24 节 Octopus 与第 25 节 YiJian 精确快照 overlay，无 schema 迁移；业务库完整备份继续复用第 12 节，代码回退须授权，不恢复数据库。
+- 本轮修改未 commit/push。前一阶段提交 YiJian `cca67cd`、Octopus `89c31e9`、SepiLens `58e2e30` 已保留；忽略目录 .gotmp 中的临时运维资料不入库。远端旧 Git HEAD 仍不可直接重建当前镜像。
+
+
+## 27. 2026-10-26 CNV Region 本地初评、HPO 候选及 IGV 网页放大还原
+
+用户要求 CNV Region（cnv-segment）执行本地初评、结合 HPO 候选，按分数置顶 P / LP；随后追加 IGV 显示框的网页放大/缩小按钮。两项一起完成并部署，只更换 YiJian。
+
+- 当前家系任务的授权初评快照中，pack 的 dosage/diseases/HPO 与 proofs 均空。原前端 CNV 评分器依赖归档区间及本地剂量参考，因而不能从原始 CNV 区间触发实际评分。HPO/HGNC/ClinGen 补充 SQLite 查询已可用，但不能替代剂量敏感性坐标数据。没有把原报告 Classification、Total_Score、HI_Max 或 Evidence_* 直接当本地评分结果。
+- 新增 scripts/build-cnv-browser-reference.py，从此前已校验的 hg19/hg38 管理源清单生成两个公开 ClinGen 剂量敏感性快照。逐源核对 SHA256、来源/版本/许可证，ClinGen 一基闭区间转零基半开；源版本明确保留为基因 2026-10-07、区域 2026-04-28，不声称最新。资源位于 public/assessment-reference/cnv/<sha256>.json，分别 398613 / 396630 字节，内含公开来源元数据，无患者内容。客户端从自身站点加载，核对字节数/摘要/参考组装/版本/结构后才交给 Worker；不运行外部 AI 或在线医学推断。
+- 对当前工作流已核实的 CNR/BED 八列 schema（Chromosome/Start/End/Col4–Col8），本地流增加显式零基半开格式标签，并仅投影必要坐标。评分器校验整型区间和标准染色体，未知/普通坐标不猜测，已有不同参考组装的区间证据不回退套用。正常 CN 不当作事件；DEL 对 HI、DUP 对 TS，完整覆盖且对应 ClinGen 分数为 3 才自动应用 2A=1；部分重叠与 30/40 不当成充分证据。现有已核验其他条款继续保留，缺失的蛋白编码计数、病例、遗传证据保持待核验，不虚构加分或自动保存人工采用。
+- CNV 涉及的剂量参考基因按当前样本正向 HPO 进入现有本地 HPO/HGNC 查询，评估中保留匹配基因/疾病/术语/相似度。CNV Region 列表新增 HPO 候选匹配列；HPO 不直接增加 CNV 致病积分，HPO-only VUS 不被本次规则自动置顶。评分和关联仍在浏览器 Worker 内完成。
+- DuckDB 在分页前对整个表使用人工修订或本地初评的有效 CNV 分类/分数：P / LP 按 CNV 得分降序，同分以 HPO 相似度排序，显式人工关注/置顶/取消选择保持。浏览、筛选和导出共用该排序。用真实 WASM 验证跨页、人工改分和取消置顶，未只排序当前页。
+- 浏览器规则 profile 升为 germline-browser-assessment-v5-cnv-region，CNV 公开资源摘要和数据纳入现有完整缓存键；不会替换服务器已授权的历史 active 快照/HPO，也不伪造归档 proof。升级后首次重建一次；相同任务/HPO/参考继续复用缓存。资源异常明确 pending，失败初评不缓存；现有账号/组织/任务/执行隔离与 24 小时缓存政策保留。Octopus 上下文快照的既有 profile 不因此改写。
+- IGV 工具栏增加放大按钮；点击后模态框占满当前网页可视区域（100vw / 100dvh），按钮切为缩小，再次点击恢复原尺寸。复用同一 IGV browser、当前位点及轨道，利用现有 resize 监听重新布局，不通过重载实现；关闭后再次打开默认原尺寸。同步四语言和 aria-pressed。未启用浏览器系统全屏。
+- 本地 168 项回归通过，含 CNV 坐标/剂量、HPO 分离、缓存、55,393 行 Worker 流、IGV 切换；生产构建含类型检查通过。服务器最终 19 文件 198 测试通过，另一个未提供完整参考包的独立性能 fixture 按原门禁跳过；生产数据验收未跳过。
+- 当前执行原始 CNV Parquet 摘要核验后，以真实 DuckDB WASM 只读投影并本地重算：64732 行、19288 条 DEL/DUP，1 条有剂量证据可评分并达到 P 初评置顶。其他没有充分自动证据者保持不足，不从原报告高标签凑数。该数是这版自动初评候选数，不是最终临床报告结论。授权 HPO 补充查询 HTTP 200、两个公开测试基因有匹配且版本与 active 快照一致；没有真实模型调用。
+- 发布前验收首次在测试 SQL 中未给保留字 End 加引号，WASM Node 报 _setThrew，第一轮在切换前停止；修正测试为带引号的必要字段投影后，原始文件验收和全量回归均通过，再从当前保护源重建发布。不是篡改业务原文件或绕过验收。Windows 测试中 Node bindings 硬编码 homedir 的扩展缓存，现将测试缓存隔离在 .gotmp，预置项目相同的已签名 json/parquet 扩展，无外部下载和全局环境变量改写。
+- 当前 YiJian 镜像 schemabio/yijian:cnv-region-igv-20261026t082550z，healthy，源码清单/标签及两份公开资源 HTTP 内容摘要核对通过；Octopus 保持 family-kinship-20261026t074652z，SepiLens / Squid 等容器身份不变，网关检查重载。没有重跑家系工作流、模型请求、测试保存、扣费或 schema 迁移；数据集/人工调整/账本/余额/账户/任务数与配置摘要保持。
+- 发布资料 /home/ubuntu/schema/backups/cnv-region-igv-20261026T082550Z 含完整 YiJian 源码/清单、原环境/Compose、基线、构建/测试日志、原始 CNV 保护副本及摘要、hpo-reference-acceptance.json、result.json、final-acceptance.json 和 rollback.py。基于第 26 节精确运行源 overlay，保留亲缘关系、SVC、收费等此前修复。失败的首次构建保护目录为 cnv-region-igv-20261026T082102Z，未切换生产；以成功目录为准。代码回退须授权，不恢复数据库，完整业务库备份继续复用第 12 节。
+- 本轮及第 26 节修改仍未 commit/push；此前阶段提交保留。生成的公开资源、构建脚本和测试属于待提交源码，.gotmp 中的运维资料与患者数据保护副本不入库。远端旧 Git HEAD 不能直接重建当前镜像。
+
+
+## 28. 2026-10-26 IGV 标题栏控制与三样本纵向适配
+
+用户反馈上一版按钮位置不符，放大外框后 reads 显示区没有同步增长，仍须向下滚动寻找父母样本。核查确认：ModalBody 默认 max-h-[60vh] 未解除，Modal 外层未建立纵向 flex 布局，且各 alignment track 仍固定 180px；第 27 节仅窗口 resize 和外框尺寸不足以实现需求。
+
+- AppModal 新增可选 headerActions，位于共用关闭按钮紧邻左侧；IGV 的放大/缩小图标按钮改放此处，并为标题预留空间。其他弹窗默认行为保持，关闭仍为既有共享操作。
+- IGV 放大模式明确建立视窗高的纵向 flex 容器，正文移除 60vh 限高并 min-height:0 / flex:1 / overflow:hidden；工具栏、提醒占实际高度，reads 外层获得剩余空间，不再保持旧固定高度或最低 260px。缩小保留原普通窗口样式。
+- 新增 IGVTrackLayout，按容器实测可用高度扣除 IGV 导航、边框等非轨道部分，对父母子 alignment 轨道均分剩余高度；辅助基因/VCF/序列/尺标轨道压缩为适当高度，给 reads 优先留空间。同步调整覆盖度区域，使用当前安装 IGV 源码核实的 trackView.setTrackHeight(height,true)，临时关闭轨道 autoHeight，避免内容自动撑高整个列表。每个样本仍保留自己的 reads 视口及内部滚动，三个样本面板无需通过滚动整个列表才能看到；不宣称同时展示高覆盖度下的每一条 read。
+- ResizeObserver 观察可用区域及内容高度，配合 RAF 合并重新布局；窗口大小变化自适应。原轨道高度/autoHeight/coverageTrackHeight 逐项保留，缩小时恢复。不重建浏览器、不丢失当前位点/轨道，也不改写原始数据。
+- 完整 Radix/AppModal 集成测试还发现已有 session 时，Portal 容器可能尚未挂载，原初始化 effect 直接退出。改为稳定 callback ref 提供容器就绪状态，并将其作为初始化依赖及门禁，防止初始化早于实际容器或重复进入。保留晚完成初始化的释放、截图和错误恢复策略。
+- 新增测试覆盖 420/560/720/980px 可用空间下三样本加辅助轨道总高度不超出预算、reads 获得可见空间、扩大及缩小、反复 resize 仍恢复原高度、未测量/释放的浏览器安全处理；真实 AppModal（IGV 数据为合成 mock、尺寸为受控测量）验证标题栏相邻顺序、正文解除限高、轨道实际收到高度调整、窗口变矮重新适配且同一 browser 不重建。不能把该合成布局测试称为真实患者浏览器截图验收。
+- 本地类型检查及相关回归通过；服务器 9 文件 65 项测试、类型检查和生产构建通过，含既有截图、CNV 详情、SVC 和亲缘关系回归。当前 YiJian `schemabio/yijian:igv-trio-fit-20261026t085326z` healthy，完整源码清单及镜像标签一致；Octopus / SepiLens / Squid 等容器身份不变，网关检查重载。任务数据集、人工调整、积分账本/余额、账户、任务数量和配置摘要保持，无真实工作流/模型调用或生产测试保存。
+- 发布资料 `/home/ubuntu/schema/backups/igv-trio-fit-20261026T085326Z` 含完整 YiJian 保护源码/清单、原环境与 Compose、基线、构建/测试日志、result.json、final-acceptance.json 和 rollback.py。基于第 27 节精确运行源 overlay，CNV Region 初评/HPO/排序及其公开参考资源等全部保留。无 schema 迁移，业务库备份继续复用第 12 节；代码回退须授权，不恢复数据库。
+- 本轮与第 26–27 节仍未 commit/push；此前阶段提交保持。忽略目录 .gotmp 不入库，远端旧 Git HEAD 不可直接重建当前镜像。
+
+
+## 29. 2026-10-26 本阶段本地提交
+
+用户要求提交本阶段更新。Octopus 已提交 `d05b428`（feat: expose archived family relationship checks），包含当前执行归档的 Peddy 亲缘关系接口、严格报告解析与回归测试。YiJian 的亲缘关系总览与内部编号映射、CNV Region 本地 ClinGen 参考/初评/HPO 关联/全表得分排序及缓存、IGV 标题栏放大还原与父母子轨道自适应、相应公开参考构建脚本/资源、四语言/回归和第 26–28 节交接说明随本节一起提交。
+
+- 沿用已通过的本地及服务器回归与生产构建/只读验收，本次仅整理提交和更新交接记录，不重新调用 AI 或工作流，也不更改线上镜像或业务数据。
+- 两仓库均仅本地 commit、不 push。SepiLens / Squid 本阶段无新增改动，原提交保持。第 26–28 节“未提交”是当时状态，最新状态以本节和 Git 记录为准。
+- 忽略目录 .gotmp、患者原始数据保护副本、私钥、令牌及运维临时文件不入库。纳入提交的两个 CNV JSON 均为带来源和校验摘要的公开 ClinGen 剂量参考，不含患者数据。运行镜像仍以第 27、28 节的精确源码快照/清单为准，远端旧 Git HEAD 不可直接重建。
+
+- 提交时发现 Windows core.autocrlf 会转换内容寻址的公开 CNV JSON；新增 .gitattributes 对 public/assessment-reference/cnv/*.json 设置 -text，确保检出/提交保留原始字节。提交前核对 Git 暂存 blob 与参考 manifest 的长度和 SHA256 一致。仅 Git 元数据约束，不改变已部署资源。

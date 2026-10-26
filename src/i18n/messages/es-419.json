@@ -3129,5 +3129,35 @@
     "aiCandidates": "Candidatos HPO de IA pendientes de confirmación",
     "aiEmpty": "No hay candidatos de IA pendientes de confirmación.",
     "aiAdded": "Se agregaron {p0} candidatos de IA confirmados."
+  },
+  "kinship": {
+    "title": "Verificación de parentesco (Peddy)",
+    "sampleA": "Muestra A (ID interno)",
+    "sampleB": "Muestra B (ID interno)",
+    "relatedness": "Parentesco genotípico (rel)",
+    "expected": "Parentesco esperado",
+    "sites": "Sitios comparados",
+    "ibs0": "Sitios IBS0",
+    "predictedParents": "Predicción padre/madre–hijo",
+    "parentError": "Conflicto de parentesco",
+    "duplicate": "Posible duplicado",
+    "yes": "Sí",
+    "no": "No",
+    "pending": "Análisis pendiente; aún no hay resultados de parentesco.",
+    "empty": "El informe no contiene pares de muestras.",
+    "unavailable": "El informe de parentesco de esta ejecución no está disponible.",
+    "invalid": "El informe contiene formato o métricas inválidos.",
+    "note": "Se muestran las métricas y marcas originales de Peddy, incluidos valores negativos. No constituyen una certificación clínica de parentesco ni se adoptan automáticamente como evidencia familiar ACMG."
+  },
+  "igvSize": {
+    "expand": "Ampliar",
+    "restore": "Restaurar tamaño"
+  },
+  "cnvLocal": {
+    "hpoCandidate": "Coincidencia HPO",
+    "matched": "Fenotipo relacionado",
+    "weakMatch": "Coincidencia débil",
+    "referenceUnavailable": "Las referencias locales de dosis de ClinGen no están disponibles; la evaluación CNV está incompleta.",
+    "note": "Las regiones CNV se evalúan localmente con referencias de dosis de ClinGen. P / LP se priorizan por puntaje CNV descendente y luego por coincidencia HPO. HPO no suma puntos de patogenicidad; la evidencia faltante queda pendiente. Se conservan las selecciones manuales."
   }
 }

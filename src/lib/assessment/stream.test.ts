@@ -36,3 +36,11 @@ it('cancels an open query if the assessment worker rejects a batch',async()=>{
   await expect(streamAssessmentRows(conn,'source',['Gene'],'snv-indel',async()=>{throw new Error('worker failed');},new AbortController().signal)).rejects.toThrow('worker failed');
   expect(conn.cancelSent).toHaveBeenCalledTimes(1);
 });
+
+it('tags only the verified CNV region CNR schema and streams endpoints for local dosage matching',async()=>{
+ const consume=vi.fn(async(_rows:import('./types').AssessmentRow[])=>{});const columns=['Chromosome','Start','End','Col4','Col5','Col6','Col7','Col8'];
+ await streamAssessmentRows(connection(1),'source',columns,'cnv-segment',consume,new AbortController().signal);
+ expect(consume.mock.calls[0][0][0].coordinateSystem).toBe('cnr-bed-zero-based-half-open');
+ consume.mockClear();await streamAssessmentRows(connection(1),'source',['Chromosome','Start','End'],'cnv-segment',consume,new AbortController().signal);
+ expect(consume.mock.calls[0][0][0].coordinateSystem).toBeUndefined();
+});

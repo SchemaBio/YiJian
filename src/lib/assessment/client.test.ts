@@ -6,6 +6,8 @@ import {assessTask,assessmentStatus,clearAssessments,invalidateAssessment,cancel
 import type {AssessmentContext} from './types';
 vi.mock('./reference-client',()=>({loadReferences:vi.fn(),referenceGenes:vi.fn(()=>[])}));
 import {loadReferences} from './reference-client';
+vi.mock('./cnv-reference',()=>({loadCNVReference:vi.fn()}));
+import {loadCNVReference} from './cnv-reference';
 vi.mock('../api',()=>({api:{get:vi.fn(),post:vi.fn()}}));
 
 let worker:FakeWorker;
@@ -110,4 +112,16 @@ it('keeps cached interpretations when ranking refresh fails and still checks for
  await vi.advanceTimersByTimeAsync(60000);
  expect(assessmentStatus('task')?.reassessmentAvailable).toBe(true);
  }finally{clearAssessments();vi.useRealTimers();}
+});
+
+it('adds a pinned CNV resource to the local cache context without mutating the active snapshot',async()=>{
+ const active={...context,tables:['cnv-segment' as const]};vi.mocked(api.get).mockResolvedValue({active,latestVersion:'v'});
+ vi.mocked(loadCNVReference).mockResolvedValue({sha256:'cnv-hash',version:'cnv-v1',dosage:[]});
+ await assessTask('task',vi.fn(),new AbortController().signal);
+ expect(active).not.toHaveProperty('cnvReference');expect(loadCNVReference).toHaveBeenCalledTimes(1);expect(writeAssessmentCache).toHaveBeenCalled();
+});
+it('does not cache an assessment when CNV public resource validation fails',async()=>{
+ const active={...context,tables:['cnv-segment' as const]};vi.mocked(api.get).mockResolvedValue({active,latestVersion:'v'});vi.mocked(loadCNVReference).mockRejectedValue(new Error('checksum mismatch'));
+ await assessTask('task',vi.fn(),new AbortController().signal);
+ expect(writeAssessmentCache).not.toHaveBeenCalled();expect(assessmentStatus('task')?.pending).toContain('cnvLocal.referenceUnavailable');expect(active.availability).toEqual([]);
 });

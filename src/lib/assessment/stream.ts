@@ -8,6 +8,7 @@ export async function streamAssessmentRows(
   table:ResultTable,consume:(rows:AssessmentRow[])=>Promise<void>,signal:AbortSignal,
 ) {
   const check=()=>{if(signal.aborted)throw new DOMException('请求已取消','AbortError');};
+  const cnr=table==='cnv-segment'&&['Chromosome','Start','End','Col4','Col5','Col6','Col7','Col8'].every(field=>columns.includes(field));
   const fields=ASSESSMENT_FIELDS.filter(field=>columns.includes(field));
   let cancelling:Promise<unknown>|undefined;
   const cancel=()=>{cancelling??=conn.cancelSent().catch(()=>undefined);};
@@ -22,7 +23,7 @@ export async function streamAssessmentRows(
       for(const record of chunk){
         const values=record.toJSON() as Record<string,unknown>;
         const id=String(values.__row_id);delete values.__row_id;
-        batch.push({id,table,values});
+        batch.push({id,table,values,...(cnr?{coordinateSystem:'cnr-bed-zero-based-half-open' as const}:{})});
         if(batch.length===ASSESSMENT_BATCH_SIZE){check();await consume(batch);batch=[];}
       }
     }

@@ -24,3 +24,9 @@ it('keeps an in-flight confirmation open and prevents duplicate confirmation', a
   expect(confirm).toHaveBeenCalledOnce();
   expect(change).not.toHaveBeenCalled();
 });
+
+it('places header actions immediately before the shared close control',()=>{
+ render(<AppModal open title="轨道视图" onOpenChange={vi.fn()} headerActions={<button aria-label="放大">放大</button>}>内容</AppModal>);
+ const expand=screen.getByRole('button',{name:'放大'}),close=screen.getByRole('button',{name:'关闭弹窗'});
+ expect(expand.parentElement).toBe(close.parentElement);expect(expand.nextElementSibling).toBe(close);
+});

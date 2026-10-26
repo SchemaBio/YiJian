@@ -3129,5 +3129,35 @@
     "aiCandidates": "AI HPO candidates awaiting confirmation",
     "aiEmpty": "No AI candidates awaiting confirmation.",
     "aiAdded": "Added {p0} confirmed AI candidates."
+  },
+  "kinship": {
+    "title": "Relationship checks (Peddy)",
+    "sampleA": "Sample A (internal ID)",
+    "sampleB": "Sample B (internal ID)",
+    "relatedness": "Genotype relatedness (rel)",
+    "expected": "Expected pedigree relatedness",
+    "sites": "Compared sites",
+    "ibs0": "IBS0 sites",
+    "predictedParents": "Predicted parent–child",
+    "parentError": "Parent–child conflict",
+    "duplicate": "Possible duplicate",
+    "yes": "Yes",
+    "no": "No",
+    "pending": "Analysis is pending; relationship results are not yet available.",
+    "empty": "The relationship report contains no sample pairs.",
+    "unavailable": "The relationship report for this execution is unavailable.",
+    "invalid": "The relationship report has invalid formatting or metrics.",
+    "note": "Original Peddy relatedness and flags are shown, including negative values. These checks are not clinical relationship certification and are not automatically adopted as ACMG family evidence."
+  },
+  "igvSize": {
+    "expand": "Expand",
+    "restore": "Restore size"
+  },
+  "cnvLocal": {
+    "hpoCandidate": "HPO candidate match",
+    "matched": "Phenotype related",
+    "weakMatch": "Weak match",
+    "referenceUnavailable": "Local ClinGen dosage references are unavailable; CNV region assessment is incomplete.",
+    "note": "CNV regions are assessed locally using ClinGen dosage references. P / LP rows are pinned by descending CNV score, then HPO relevance. HPO adds no pathogenicity points; missing evidence remains pending. Manual focus and pin choices are preserved."
   }
 }

@@ -367,7 +367,7 @@ class BrowserTable {
             const cached = this.pages.get(key);
             if (cached)
                 return structuredClone(cached);
-            const selection = buildLocalSelection(q, this.raw);
+            const selection = buildLocalSelection(q, this.raw, this.table);
             let total = this.counts.get(selection.where);
             if (total === undefined) {
                 total = selection.where ? Number((await this.rows('SELECT count(*) AS n ' + this.joined() + selection.where, signal))[0].n) : this.info.dataset.rows;
@@ -465,7 +465,7 @@ class BrowserTable {
         return this.serialize(async () => {
             // Catch edits from other browsers before creating an effective export.
             await this.sync();
-            const selection = buildLocalSelection(q, this.raw);
+            const selection = buildLocalSelection(q, this.raw, this.table);
             const fields = [...this.raw.map(s => 't.' + ident(s)), 't.__row_id AS row_id', ...OVERLAY_FIELDS.map(s => effectiveField(s, this.raw) + ' AS ' + ident(s))];
             await this.conn.query(`COPY (SELECT ${fields.join(',')} ${this.joined()}${selection.where} ORDER BY ${selection.order}) TO 'filtered.csv' (FORMAT CSV,HEADER TRUE)`);
             const bytes = await this.db.copyFileToBuffer('filtered.csv');
