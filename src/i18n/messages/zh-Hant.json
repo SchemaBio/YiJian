@@ -2349,7 +2349,9 @@
     "svcAIResultSaved": "AI 評估結果已儲存",
     "svcAISaveNotice": "儲存摘要、建議分類、證據及來源，無需填寫下方手動計算參數。結果保留為 SVC v4 草案 AI 建議。",
     "svcAutoContext": "聯網檢索與自動補全依據",
-    "svcAnnotationSource": "本位點原始註釋"
+    "svcAnnotationSource": "本位點原始註釋",
+    "cnvAutoFilled": "AI 已自動填入計算器並重新計算。可直接修改後儲存；含預設值的結果為待複核草稿。",
+    "cnvAutoDefaults": "以下部分的缺失項使用預設值（未選/未知、計數和貢獻分數為 0）：{p0}。預設值不代表已核實的臨床事實。"
   },
   "display": {
     "uncertainSignificancef3d82a": "意義不明",

@@ -1,10 +1,10 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
-核对日期：**2026-10-26，Asia/Shanghai**。本文替代此前 2026-10-08 的版本。
+核对日期：**2026-10-27，Asia/Shanghai**。本文替代此前 2026-10-08 的版本。
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
 
-**2026-10-26 当前线上：Octopus / SepiLens 为 `cnv-copy-estimate-20261026t145125z`，YiJian 为 `cnv-ai-submit-fix-20261026t135427z`，Squid 保持 `cnv-ai-20261026t115034z`。第 33 节修复深度估算小数拷贝数被错误拒绝，保留其估算身份、不取整。第 31 节修复 CNV 浏览器 BIGINT 区间长度在提交前序列化失败导致一直转圈，并增加有界传输超时。第 30 节接通 CNV Gain/Loss AI 自动上下文、联网候选、人工填表保存及每次 1 积分，保留正式规则批准门禁；同步修复质控大于号文案。第 28 节修正 IGV 放大后的正文与三样本轨道高度自适应，按钮移至关闭按钮左侧；第 27 节启用 CNV Region 本地初评/HPO 关联/得分排序；第 26 节补齐 Peddy 亲缘关系接口和总览展示；第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG / SVC v4 / CNV Gain / CNV Loss AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
+**2026-10-27 当前线上：SepiLens 为 `cnv-default-draft-20261027t023827z`（第 37 节），Octopus 为 `cnv-copy-estimate-20261026t145125z`，YiJian 为 `cnv-autofill-20261027t023917z`，Squid 保持 `cnv-ai-20261026t115034z`。第 33 节修复深度估算小数拷贝数被错误拒绝，保留其估算身份、不取整。第 31 节修复 CNV 浏览器 BIGINT 区间长度在提交前序列化失败导致一直转圈，并增加有界传输超时。第 30 节接通 CNV Gain/Loss AI 自动上下文、联网候选、人工填表保存及每次 1 积分，保留正式规则批准门禁；同步修复质控大于号文案。第 28 节修正 IGV 放大后的正文与三样本轨道高度自适应，按钮移至关闭按钮左侧；第 27 节启用 CNV Region 本地初评/HPO 关联/得分排序；第 26 节补齐 Peddy 亲缘关系接口和总览展示；第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG / SVC v4 / CNV Gain / CNV Loss AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
 
 ## 1. 新对话先读
 
@@ -583,3 +583,43 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 
 - 用户要求提交第 33 节修复。Octopus 已本地提交 `973bef5`（保留小数深度拷贝数估算，整数/零值及非法值回归和对接说明）；SepiLens 已本地提交 `44410ea`（模型输入分离连续估算与整数计数，相关回归和对接说明）。YiJian 随本节提交第 33–34 节交接更新，前端代码仍为此前提交 `39f0abf`；Squid 无新增改动。
 - 第 33 节“本轮未 commit/push”是当时记录，当前状态以本节和 Git 记录为准。本次仅本地提交、不 push，不重新调用模型或更改线上镜像、数据及账务；沿用已通过的本地/服务器回归与发布验收。.gotmp、保护副本及凭据不入库，线上精确源码仍以第 33 节清单和镜像标签为准。
+
+
+## 35. 2026-10-27 CNV 模型输出长度处理与安全失败诊断
+
+- 用户报告“模型调用失败或超时”。只读核实三个 CNV Loss 请求均为 AI_PROVIDER_UNAVAILABLE，最新为 4cf35dbb-9c97-4480-ad33-3f33a7f8a95a；联网检索及首轮模型已有返回，失败审计位于 model_run，执行 2–3 轮，有三次工具读取。输出用量累计 8298、15767、8322 token；其中一次出现 $.cnv_context: unexpected property 并进入格式纠正。历史代码没有保留 provider 的最终结束原因，因此只能确认模型输出阶段失败，不能断言全部为连接超时或全部为 token 截断。三条 Squid ai_billing_requests 均为 refunded，Octopus billing_done=true / billable=false；billing_reserved 是曾预扣标记，不能单凭该字段判为尚未退款。
+- SepiLens 识别 Chat 的 finish_reason=length 和 Responses 的 incomplete/max_output_tokens，不再将明确截断归为通用连接失败。沿用当前请求、三分钟期限和最多一次纠正预算：首次截断丢弃部分内容/工具调用，禁用后续工具，保留既有工具历史与证据，将输出预算从 8192 提至 16384，并要求精简最终 JSON；再次截断返回 AI_OUTPUT_INVALID，不采用、不结算。与已有格式纠正共享一次预算，不增加新平台请求或预扣，不改变正常请求的 8192 预算。
+- 加密 agent 审计增加白名单 provider_failure / finish_reason，仅记录固定类别；不记录任意 provider 错误、响应正文、端点、密钥或临床原文到普通日志。明确 CNV cnv_context 必须为 disease_id / inheritance / rationale / source_ids 的扁平对象，并要求减少重复缺项描述；prompt_version=four-engine-ai-2.6-bounded-output。未知字段、分值及引用校验、Gain/Loss 独立规则与正式医学批准门禁保持。
+- 本地及远端模型适配、agent、API、assessment、config、retrieval、rules 回归和生产构建通过，使用合成模型/检索。新增覆盖两种协议截断、部分工具绝不执行、成功纠正、再次截断拒绝、用量累计和纠正上限。没有重发历史请求或调用真实付费模型；真实模型是否恢复交付仍由用户刷新页面测试，不将合成测试称为真实模型验收。
+- 仅替换 SepiLens 为 schemabio/sepilens:cnv-output-limit-20261027t015653z，健康、完整源码清单与运行镜像标签核验，网关检查并重载；其他容器身份和业务数据/账务/配置基线保持。无数据库迁移、生产测试保存或工作流调用。
+- 保护资料 /home/ubuntu/schema/backups/cnv-output-limit-20261027T015653Z 含完整 SepiLens 保护源码/清单、原环境/Compose、SQLite 一致性备份、测试/构建日志、result.json、final-acceptance.json、语法核验的 rollback.py。从第 33 节精确运行源叠加，保留此前全部修复；代码回退须用户授权，不恢复业务数据库。完整业务库备份复用第 30 节。本轮尚未 commit/push，.gotmp 及凭据不入库，远端旧 Git HEAD 不能直接重建。
+
+
+## 36. 2026-10-27 CNV 条款语义校验纳入一次有界纠正
+
+- 用户再次报告 AI_OUTPUT_INVALID。最新 job-20cb6bc16e956467feb363b10279e56a 已完整返回 JSON，用时约 33.5 秒、2 轮，失败在 proposal_validate，未触发格式纠正。本次有充分审计可确认具体原因：无检索来源时 1A / 3A 被标 met，但缺少来源和 rubric 必需事实；1B / 2F 为 not_met，却填 score_hundredths=0，超出对应 rubric 允许范围。不是本次连接超时或截断。诊断在服务器内只读解密重放，仅输出固定条款码、数值和违规类型，没有输出患者背景、模型临床原文或密钥。
+- 根因还包括纠正边界不完整：之前仅 JSON schema 校验参与 agent 的一次纠正，CNV 分值/来源/事实/互斥等校验在模型执行结束后才运行，因而直接失败。新增 RunValidatedContract，将 CNV 精确建议及引用别名映射后的语义验证接入同一纠正循环；保留执行后独立复核。一次收集至多 24 项固定字段路径/原因，告知模型按真实证据修正；与 JSON 格式、长度纠正共用一次预算、原工具历史和三分钟总期限，纠正时禁止工具。未知来源、非法分值和缺失事实不静默改成合法内容，不提高正式医学规则批准状态。
+- 提示明确未满足/未知条款使用 null 分值，不以 0 占位；真实零分的 met 仍须满足来源及事实前提，证据缺失应输出 insufficient_data。原始非法建议、校验原因及纠正后的建议保留在既有加密审计中，模型事实不能直接升级为确定性规则事实。prompt_version=four-engine-ai-2.7-cnv-validation。
+- 新增两引擎真实 HTTP 合成模型测试，复现 met 缺少来源/事实及 not_met 零分越界；验证一次纠正后交付信息不足、两次非法拒绝且 settlement_eligible=false、纠正禁用工具、用量累计。本地 go test ./... 全部通过；服务器 agent/LLM/API/assessment/config/retrieval/rules 回归及生产构建通过。真实模型仍由用户测试，没有重发历史请求或生产保存。四条历史 CNV Loss 请求的 Squid 计费状态均为 refunded。
+- 仅更新 SepiLens 为 schemabio/sepilens:cnv-semantic-repair-20261027t022004z，健康、完整保护源码/运行镜像标签核验，网关检查并重载；其他容器身份、业务数据/账务/配置基线保持。无 schema 迁移、工作流或真实模型调用。
+- 保护资料 /home/ubuntu/schema/backups/cnv-semantic-repair-20261027T022004Z 含完整 SepiLens 源码/清单、原环境/Compose、SQLite 一致性备份、回归/构建日志、result.json、final-acceptance.json 与语法核验的 rollback.py；基于第 35 节精确运行源叠加，保留此前全部修复。代码回退须授权，不恢复业务数据库；完整业务库备份复用第 30 节。第 35–36 节修改仍未 commit/push，.gotmp 和凭据不入库，远端旧 Git HEAD 不能直接重建。
+
+
+## 37. 2026-10-27 按用户明确要求自动填入 CNV 计算器、缺项用默认值并给出结果
+
+用户明确要求“AI 评估后帮我把评估计算器填好并给出结果；能填的都填，缺失字段用默认值”。此要求更新第 30、36 节的交互和缺项处理：生成成功直接自动填表并重算，不再要求先点预览/确认填入，也不再因个别 CNV 语义条款不合格而拒绝整份有效 JSON 草稿。保存仍由用户点击，正式医学规则门禁保持。
+
+- 前端 Region / Exon 共用流程：详情页 AI 返回后直接打开计算器；计算器内 AI 返回后直接填入当前表。合法且适用的建议映射到原计算器，其他已有手工/本地核实内容保留。缺失项补齐默认结构，未知选择保持未选、计数和贡献分数为 0，缺少遗传信息时选 5F（信息不可用、0 分）。第三节缺少确切编码基因数时显示默认 0，并记录 confirmed=false/defaulted=true；不把类别阈值反推为真实基因计数。
+- 使用现有 Loss/Gain 本地计算器立即重算五节分数、总分及分类；全中性默认值对应 0 分/VUS 的待复核草稿。显示已自动填入、默认值涉及哪些分节及可修改保存的说明；默认值不是已核实临床事实。四语言同步。AI 摘要、上下文、原结果/来源和 autoFilled/defaultedFields/skippedCodes 审计随现有 criteria.aiReview JSON 保存，重开保留。相同请求不会在重渲染/重新载入时覆盖已修改内容；引擎/变异绑定不符不填，保存接口继续由 Octopus 重新计算分数与分类。
+- SepiLens 对已通过 JSON 结构约束的 CNV 建议执行确定性保守投影：有效条款保留；未知/重复条款剔除；缺来源/必需事实、越界积分及互斥满足条款改为 insufficient_data/null score/空事实与来源，后续表单使用中性默认值。不满足条款不保留其模型分值。错误疾病 ID 留空，不支持的上下文引用剔除。原始输出留在加密 run.Raw，固定原因记入 ValidationErrors，交付额外标记 calculator_draft/calculator_defaults。原始不合法医学断言不会变为合法加分事实。
+- 第 36 节的 CNV 专属语义重试不再阻断交付，避免反复要求付费模型纠正本可默认处理的缺项。JSON 类型/引擎枚举等结构约束及其一次纠正、第 35 节长度预算保护仍保留；传输失败、不可解析结果等仍不能声称完成 AI 评估。prompt_version=four-engine-ai-2.8-cnv-autofill。计费协议/开关、正式规则批准状态、数据库 schema 均未改变。
+- 本地类型检查、自动填表/中性默认/重算/人工修改/两个入口测试通过，SepiLens 全仓库 go test ./... 通过。远端 SepiLens 模型/API/assessment/config/retrieval/rules 回归及构建通过；前端 12 文件 74 项回归、生产构建通过，无跳过，包含原始 CNV 保护副本真实 WASM 只读回归（64732 行、19288 事件、1 条可评分置顶）。没有实际模型调用、生产保存或工作流测试，真实付费模型仍由用户测试。
+- 按顺序仅更新 SepiLens 为 schemabio/sepilens:cnv-default-draft-20261027t023827z、YiJian 为 schemabio/yijian:cnv-autofill-20261027t023917z，均健康、源码清单和镜像标签核验，网关检查重载。Octopus/Squid 等其他服务保持；两轮业务数据/人工调整/账务/配置基线均未改变。
+- 两个保护目录分别为 /home/ubuntu/schema/backups/cnv-default-draft-20261027T023827Z 与 /home/ubuntu/schema/backups/cnv-autofill-20261027T023917Z，含完整对应源码/清单、原部署环境、构建/回归日志、result.json、final-acceptance.json、语法核验的 rollback.py；SepiLens 另有 SQLite 一致性备份。基于第 36 节 SepiLens 和第 31 节 YiJian 精确运行源叠加，保留此前修复。代码回退须授权，不恢复业务数据库；完整业务库备份复用第 30 节。第 35–37 节仍未 commit/push，运维 .gotmp、保护副本和凭据不入库，远端旧 Git HEAD 不能直接重建。
+
+
+## 38. 2026-10-27 CNV 自动填表及默认草稿本地提交
+
+- 用户要求提交本次更新。SepiLens 已本地提交 `81f8ac5`（CNV 默认草稿投影、固定校验诊断、模型输出长度处理与回归）；YiJian 将自动打开/填入计算器、缺项默认、立即重算、人工修改及保存恢复标记、四语言、相关回归和第 35–38 节交接一起提交，具体提交号以 Git 记录为准。
+- 第 35–37 节“未 commit/push”为当时状态，当前提交状态以本节与各仓库 Git 记录为准。本次仅本地 commit、不 push，复用已通过的本地/服务器测试和构建，不重新调用模型或更改线上镜像、业务数据及账务。Octopus / Squid 无新增改动。
+- .gotmp 运维材料、保护副本及凭据不入库；线上精确源码以第 37 节保护目录/清单及镜像摘要为准，远端旧 Git HEAD 不能直接重建运行镜像。

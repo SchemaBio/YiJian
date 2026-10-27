@@ -615,6 +615,7 @@ export interface Section2GainCriteria {
 // ============ Section 3: 基因数量评估 ============
 
 export interface Section3Criteria {
+  defaulted?: boolean;
   confirmed?: boolean;
   geneCount: number;
 }
@@ -743,7 +744,7 @@ export interface Section5Criteria {
  * Loss 评估标准
  */
 export interface LossAssessmentCriteria {
-  aiReview?: {result: import('@/lib/ai-assistance').AIAssistanceResult; appliedCodes:string[]; clinicalContext?:{diseaseId:string;inheritance:string}; reviewedAt:string};
+  aiReview?: {result: import('@/lib/ai-assistance').AIAssistanceResult; appliedCodes:string[]; autoFilled?:boolean; defaultedFields?:string[]; skippedCodes?:string[]; clinicalContext?:{diseaseId:string;inheritance:string}; reviewedAt:string};
   section1: Section1LossCriteria;
   section2: Section2LossCriteria;
   section3: Section3Criteria;

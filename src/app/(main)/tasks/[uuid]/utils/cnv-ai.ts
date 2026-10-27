@@ -1,7 +1,7 @@
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import type { CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import rubrics from './cnv-ai-rubrics.json';
-import { createDefaultSection4Criteria } from '../types';
+import { createDefaultSection4Criteria, createDefaultLossAssessmentCriteria, createDefaultGainAssessmentCriteria } from '../types';
 type Clause = {
     code: string;
     status: string;
@@ -146,4 +146,44 @@ export function reviewedCNVSection4(items: NonNullable<LossAssessmentCriteria['s
     }
     const sum = (keys: string[]) => keys.reduce((n, k) => n + (sums[k] ?? 0), 0);
     return (Math.max(-30, Math.min(90, sum(['4A', '4B', '4C', '4D']))) + Math.min(45, sum(['4F', '4G', '4H'])) + Math.min(45, sum(['4L', '4M'])) + sum(['4E', '4I', '4J', '4K', '4N', '4O'])) / 100;
+}
+
+
+/** Automatically prepare a complete editable calculator draft. Unknown evidence
+ * uses neutral form defaults, never a fabricated clinical observation. */
+export function autofillCNVAssessment(result: AIAssistanceResult, assessment: CNVAssessment) {
+    const expected = assessment.cnvType === 'Deletion' ? 'cnv_loss' : 'cnv_gain';
+    if (!result.requestId || result.feature !== expected || (result.variantId && result.variantId !== assessment.cnvId)) return null;
+    if (assessment.criteria.aiReview?.result.requestId === result.requestId) return null;
+    const defaults = assessment.cnvType === 'Deletion' ? createDefaultLossAssessmentCriteria() : createDefaultGainAssessmentCriteria();
+    const fill = (fallback: unknown, current: unknown): unknown => {
+        if (!fallback || typeof fallback !== 'object' || Array.isArray(fallback)) return current ?? fallback;
+        const saved = current && typeof current === 'object' ? current as Record<string, unknown> : {};
+        return { ...saved, ...Object.fromEntries(Object.entries(fallback).map(([key, value]) => [key, fill(value, saved[key])])) };
+    };
+    const seed = { ...assessment, criteria: fill(defaults, assessment.criteria) as CNVAssessment['criteria'] };
+    const review = prepareCNVAIReview(result, seed);
+    const criteria = review.criteria;
+    const defaultedFields: string[] = [];
+    if (!criteria.section1.selected) defaultedFields.push('section1');
+    if (!Object.values(criteria.section2).some(v => v.selected)) defaultedFields.push('section2');
+    if (criteria.section3.confirmed !== true) {
+        criteria.section3 = { geneCount: 0, confirmed: false, defaulted: true };
+        defaultedFields.push('section3');
+    }
+    if (!criteria.section4.aiReviewed?.length) defaultedFields.push('section4');
+    if (!Object.values(criteria.section5).some(v => v.selected)) {
+        criteria.section5.other = { selected: '5F', score: 0 };
+        defaultedFields.push('section5');
+    }
+    const proposal = result.agentProposal as { ai_assessment?: { cnv_context?: { disease_id?: string; inheritance?: string } } } | undefined;
+    criteria.aiReview = {
+        result, appliedCodes: review.applied, skippedCodes: review.skipped,
+        autoFilled: true, defaultedFields, reviewedAt: new Date().toISOString(),
+        clinicalContext: {
+            diseaseId: proposal?.ai_assessment?.cnv_context?.disease_id ?? assessment.criteria.aiReview?.clinicalContext?.diseaseId ?? '',
+            inheritance: proposal?.ai_assessment?.cnv_context?.inheritance ?? assessment.criteria.aiReview?.clinicalContext?.inheritance ?? 'unknown',
+        },
+    };
+    return criteria;
 }

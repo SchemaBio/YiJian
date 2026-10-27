@@ -2349,7 +2349,9 @@
     "svcAIResultSaved": "AI 评估结果已保存",
     "svcAISaveNotice": "保存摘要、建议分类、证据及来源，无需填写下方手工计算参数。结果保留为 SVC v4 草案 AI 建议。",
     "svcAutoContext": "联网检索与自动补全依据",
-    "svcAnnotationSource": "本位点原始注释"
+    "svcAnnotationSource": "本位点原始注释",
+    "cnvAutoFilled": "AI 已自动填入计算器并重新计算。可直接修改后保存；含默认值的结果为待复核草稿。",
+    "cnvAutoDefaults": "以下部分的缺失项使用默认值（未选/未知、计数和贡献分数为 0）：{p0}。默认值不表示已核实的临床事实。"
   },
   "display": {
     "uncertainSignificancef3d82a": "意义不明",

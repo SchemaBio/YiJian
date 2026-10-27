@@ -10,6 +10,7 @@ import * as React from 'react';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import { CNVAIReview } from './CNVAIReview';
+import { autofillCNVAssessment } from '../utils/cnv-ai';
 import { aiVariantContext } from '../utils/ai-context';
 import { WorkspaceInspector } from '@/components/shared/WorkspaceInspector';
 import { Calculator } from 'lucide-react';
@@ -171,6 +172,16 @@ export function CNVAssessmentPanel({
   const readOnly = useInterpretationReadOnly();
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
   React.useEffect(() => { setAIResult(initialAIResult ?? assessment?.criteria.aiReview?.result); }, [taskId, cnv?.id, initialAIResult]);
+  const filledRequests = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    if (!isOpen || !cnv || !assessment || assessment.cnvId !== cnv.id || !aiResult || !onCriteriaChange || readOnly || saving) return;
+    const key = `${taskId}/${cnv.id}/${aiResult.requestId}`;
+    if (filledRequests.current.has(key)) return;
+    const filled = autofillCNVAssessment(aiResult, assessment);
+    if (!filled) return;
+    filledRequests.current.add(key);
+    onCriteriaChange(filled);
+  }, [isOpen, cnv, assessment, aiResult, onCriteriaChange, readOnly, saving, taskId]);
   if (!isOpen || !cnv || !assessment) return null;
   if (cnv.type === 'Normal' || cnv.type === 'Unknown') return null;
 
@@ -253,7 +264,7 @@ export function CNVAssessmentPanel({
         {/* 内容区域 */}
         <fieldset disabled={readOnly} className="yj-inspector-content min-w-0">
           <p className="mb-3 text-xs text-fg-muted">{t("tasks.basedOnAcmgClingenPreselectionUsesProvided16a1ce")}</p>
-          {assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
+          {!assessment.criteria.aiReview?.autoFilled && assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.aiAssistedAssessment6b72ee")}</span><AIAssistanceAction key={`${taskId}/${cnv.id}`} disabled={readOnly||saving||!taskId} input={{feature:isLoss?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(cnv),calculator:assessment}} onResult={setAIResult} /></div>
           {aiResult && <div className="mb-4"><AIResultCard result={aiResult} /></div>}
           {aiResult && onCriteriaChange && <CNVAIReview key={`${taskId}/${cnv.id}/${aiResult.requestId}`} result={aiResult} assessment={assessment} onApply={onCriteriaChange} disabled={readOnly||saving} />}
@@ -264,7 +275,7 @@ export function CNVAssessmentPanel({
             totalScore={assessment.totalScore}
             sectionScores={assessment.sectionScores}
             isUserModified={assessment.isUserModified}
-            insufficient={assessment.assessmentState === 'insufficient_evidence'}
+            insufficient={!assessment.criteria.aiReview?.autoFilled && assessment.assessmentState === 'insufficient_evidence'}
           />
 
           <nav aria-label={t("tasks.assessmentSections8c836d")} className="mb-3 flex flex-wrap gap-2">

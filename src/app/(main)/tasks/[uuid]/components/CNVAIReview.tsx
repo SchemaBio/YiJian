@@ -14,6 +14,7 @@ export function CNVAIReview({ result, assessment, onApply, disabled = false }: {
 }) {
     const t = useText();
     const [preview, setPreview] = React.useState(false);
+    const autoFilled = assessment.criteria.aiReview?.autoFilled;
     const review = prepareCNVAIReview(result, assessment);
     const proposal = result.agentProposal as {
         ai_assessment?: {
@@ -37,12 +38,13 @@ export function CNVAIReview({ result, assessment, onApply, disabled = false }: {
         return [...(typeof object.selected === 'string' ? [object.selected] : []), ...(typeof object.code === 'string' ? [object.code] : []), ...Object.entries(object).filter(([key]) => key !== 'aiReview').flatMap(([key, item]) => /^4[A-O]$/.test(key) && ((typeof item === 'number' && item > 0) || (item && typeof item === 'object' && Object.values(item).some(v => typeof v === 'number' && v !== 0))) ? [key] : selectedCodes(item))];
     };
     return <div className="mb-3 space-y-2 rounded border border-border-subtle p-3 text-xs">
-  <p>{t('assistance.cnvReviewNotice')}</p>
-  <div className="flex flex-wrap gap-2"><label>{t('tasks.diseaseIdentifier3697b1')}<input disabled={disabled} value={disease} onChange={e => setDisease(e.target.value)} className="ml-2 rounded border bg-canvas-default p-1"/></label><label>{t('tasks.inheritancePattern5de3fe')}<select disabled={disabled} value={moi} onChange={e => setMoi(e.target.value)} className="ml-2 rounded border bg-canvas-default p-1">{['unknown', 'AD', 'AR', 'XL', 'XLD', 'XLR', 'SD', 'MT'].map(v => <option key={v}>{v}</option>)}</select></label></div>
+  <p>{t(autoFilled ? 'assistance.cnvAutoFilled' : 'assistance.cnvReviewNotice')}</p>
+  <div className="flex flex-wrap gap-2"><label>{t('tasks.diseaseIdentifier3697b1')}<input disabled={disabled} value={disease} onChange={e => { setDisease(e.target.value); if (autoFilled) onApply({ ...assessment.criteria, aiReview: { ...assessment.criteria.aiReview!, clinicalContext: { diseaseId: e.target.value, inheritance: moi } } }); }} className="ml-2 rounded border bg-canvas-default p-1"/></label><label>{t('tasks.inheritancePattern5de3fe')}<select disabled={disabled} value={moi} onChange={e => { setMoi(e.target.value); if (autoFilled) onApply({ ...assessment.criteria, aiReview: { ...assessment.criteria.aiReview!, clinicalContext: { diseaseId: disease, inheritance: e.target.value } } }); }} className="ml-2 rounded border bg-canvas-default p-1">{['unknown', 'AD', 'AR', 'XL', 'XLD', 'XLR', 'SD', 'MT'].map(v => <option key={v}>{v}</option>)}</select></label></div>
   {proposal?.ai_assessment?.cnv_context?.rationale && <p>{proposal.ai_assessment.cnv_context.rationale}</p>}
   <ul className="space-y-1">{cnvAIClauses(result).map(c => <li key={c.code}>{c.code} · {t(`assistance.criterionStatus.${({ met: 'met', not_met: 'notMet', not_applicable: 'notApplicable', insufficient_data: 'insufficient', conflicting: 'conflicting' } as Record<string, string>)[c.status] ?? 'insufficient'}`)} · {typeof c.score_hundredths === 'number' ? (c.score_hundredths / 100).toFixed(2) : '—'}<p>{c.override_reason}</p><span>{c.source_ids?.join(', ')}</span></li>)}</ul>
   <ul>{cnvAISources(result).map(s => <li key={s.id}>{/^https:\/\//i.test(s.url) ? <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-accent-fg underline">{s.title || s.id}</a> : s.title || s.id} · {s.id}</li>)}</ul>
-  <button type="button" className="yj-tool-button" disabled={disabled || !review.applied.length} onClick={() => setPreview(v => !v)}>{t('assistance.cnvReviewAction')}</button>
+  {!autoFilled && <button type="button" className="yj-tool-button" disabled={disabled || !review.applied.length} onClick={() => setPreview(v => !v)}>{t('assistance.cnvReviewAction')}</button>}
+  {autoFilled && <p>{t('assistance.cnvAutoDefaults', { p0: assessment.criteria.aiReview?.defaultedFields?.map(v => v.replace('section', 'Section ')).join(', ') || '—' })}</p>}
   {preview && <div role="region" aria-label={t('assistance.cnvReviewAction')} className="space-y-2 border-t pt-2"><p>{t('assistance.cnvReviewReplaceNotice')}</p><p>{t('assistance.cnvReviewCodes', { p0: review.applied.join(', ') })}</p>{!!review.skipped.length && <p>{t('assistance.cnvReviewSkipped', { p0: review.skipped.join(', ') })}</p>}<dl className="space-y-1"><div>{t('assistance.cnvReviewBefore', { p0: selectedCodes(assessment.criteria).join(', ') || '—' })}</div><div>{t('assistance.cnvReviewAfter', { p0: selectedCodes(review.criteria).join(', ') || '—' })}</div><div>{t('assistance.cnvReviewScore', { p0: scoreBefore.totalScore.toFixed(2), p1: scoreAfter.totalScore.toFixed(2) })}</div></dl><button type="button" className="yj-tool-button" disabled={disabled} onClick={() => { onApply({ ...review.criteria, aiReview: { ...review.criteria.aiReview!, clinicalContext: { diseaseId: disease, inheritance: moi } } }); setPreview(false); }}>{t('assistance.cnvReviewConfirm')}</button></div>}
  </div>;
 }

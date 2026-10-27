@@ -63,7 +63,7 @@ export function Section3Panel({ cnvType, criteria, onChange }: Section3PanelProp
             type="number"
             id="gene-count"
             min={0}
-            value={criteria.confirmed === false ? '' : criteria.geneCount}
+            value={criteria.confirmed === false && !criteria.defaulted ? '' : criteria.geneCount}
             placeholder={t("tasks.awaitingConfirmation27b584")}
             onChange={(e) => handleGeneCountChange(e.target.value)}
             className="w-24 px-3 py-2 text-sm border border-border rounded-md bg-canvas-default focus:outline-none focus:ring-2 focus:ring-accent-emphasis"

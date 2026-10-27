@@ -2349,7 +2349,9 @@
     "svcAIResultSaved": "Evaluación de IA guardada",
     "svcAISaveNotice": "Guarda el resumen, la clasificación sugerida, la evidencia y la procedencia sin completar la calculadora manual. El resultado se conserva como sugerencia de IA del borrador SVC v4.",
     "svcAutoContext": "Búsqueda en línea y fundamento del autocompletado",
-    "svcAnnotationSource": "Anotaciones originales de la variante"
+    "svcAnnotationSource": "Anotaciones originales de la variante",
+    "cnvAutoFilled": "La IA completó la calculadora y recalculó el resultado. Puedes editar y guardar; los resultados con valores predeterminados son borradores por revisar.",
+    "cnvAutoDefaults": "Los campos faltantes usan valores predeterminados (sin seleccionar/desconocido, recuentos y aportes de 0) en: {p0}. No representan hechos clínicos verificados."
   },
   "display": {
     "uncertainSignificancef3d82a": "Significado incierto",
