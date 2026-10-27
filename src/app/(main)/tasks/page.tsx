@@ -1,4 +1,5 @@
 'use client';
+import { ExampleBadge } from '@/components/shared/ExampleData';
 import {canEditTask} from '@/lib/task-editing';
 import { downloadTaskBatchTemplate } from '@/lib/task-batch-template';
 import { useLiveRetention, useResearchExpiry } from '@/lib/research-retention';
@@ -380,7 +381,7 @@ export default function AnalysisPage() {
       header: t("history.sampleId6d686e"),
       accessor: (row) => (
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-sm font-medium text-fg-default">{row.internalId || '-'}</span>
+          <span className="text-sm font-medium text-fg-default">{row.internalId || '-'}<ExampleBadge origin={row.origin} /></span>
           <IdCell id={row.sampleId} full />
         </div>
       ),

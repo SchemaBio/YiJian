@@ -1,4 +1,14 @@
 {
+  "exampleData": {
+    "label": "Ejemplo",
+    "ready": "Los datos de ejemplo están listos para consultar y utilizar.",
+    "preparing": "Se están preparando los datos de ejemplo.",
+    "failed": "La preparación falló y se está reintentando.",
+    "deadlines": "FASTQ/BAM vencen: {p0}; muestra y resultados vencen: {p1}.",
+    "dataExpired": "Los FASTQ/BAM vencieron. La muestra y los demás resultados se conservan hasta {p1}.",
+    "sample": "Ver muestra de ejemplo",
+    "results": "Ver resultados del análisis"
+  },
   "payments": {
     "quantityError": "Ingresa un número entero del 1 al 5000.",
     "quantityHelp": "Solicita entre 1 y 5000 créditos por vez, solo en números enteros."

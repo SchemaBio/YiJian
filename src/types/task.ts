@@ -9,6 +9,7 @@ export type TaskStatus =
   | 'pending_interpretation';
 
 export interface AnalysisTask {
+  origin?: string;
  trioMembers?:TrioMember[];
   template?: string;
  resultCapabilities?: string[];

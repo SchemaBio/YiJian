@@ -14,6 +14,7 @@ import type { SampleDetail } from '@/app/(main)/samples/types';
 import { normalizeSampleDetail } from './samples';
 
 interface RawTask {
+  origin?: string;
  trio_members?:TrioMember[];
  result_capabilities?: string[];
   template?: string;
@@ -98,6 +99,7 @@ function normalizeStatus(value: unknown): TaskStatus {
 export function normalizeTask(rawValue: unknown): AnalysisTask {
   const raw = asRawTask(rawValue);
   return {
+    origin: typeof raw.origin === 'string' ? raw.origin : undefined,
     trioMembers:raw.trio_members,
     id: String(raw.id ?? ''),
     name: typeof raw.name === 'string' ? raw.name : undefined,

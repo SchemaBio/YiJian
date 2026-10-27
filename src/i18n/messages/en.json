@@ -1,4 +1,14 @@
 {
+  "exampleData": {
+    "label": "Example",
+    "ready": "Your example data is ready to view and use.",
+    "preparing": "Your example data is being prepared.",
+    "failed": "Example preparation failed and is being retried.",
+    "deadlines": "FASTQ/BAM expire: {p0}; sample and analysis results expire: {p1}.",
+    "dataExpired": "FASTQ/BAM have expired. The sample and remaining results are retained until {p1}.",
+    "sample": "View example sample",
+    "results": "View analysis results"
+  },
   "payments": {
     "quantityError": "Enter a whole number from 1 to 5000.",
     "quantityHelp": "Request 1–5000 credits at a time, in whole numbers only."

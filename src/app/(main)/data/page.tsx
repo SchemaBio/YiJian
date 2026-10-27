@@ -1,4 +1,5 @@
 'use client';
+import { ExampleBadge } from '@/components/shared/ExampleData';
 import { LocalDataImportModal } from './LocalDataImportModal';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
 import {localDataTemplate} from '@/lib/local-data-import';
@@ -369,7 +370,7 @@ export default function DataCenterPage() {
     {
       id: 'file',
       header: t("data.file49deaf"),
-      accessor: (asset) => <HoverText value={asset.file_name} className="font-medium text-fg-default" />,
+      accessor: (asset) => <><HoverText value={asset.file_name} className="font-medium text-fg-default" /><ExampleBadge origin={asset.source} /></>,
       width: 260,
       minWidth: 260,
     },

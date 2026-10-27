@@ -1,4 +1,5 @@
 'use client';
+import { ExampleBadge } from '@/components/shared/ExampleData';
 import { getHpoTermName } from '@/lib/hpo-terms';
 import {ParentSampleStatus} from '@/components/shared/SampleParentFields';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
@@ -324,7 +325,7 @@ export default function SamplesPage() {
     {
       id: 'internalId',
       header: t("data.internalIdabcc9d"),
-      accessor: (row) => <HoverText value={row.internalId} className="text-sm font-semibold text-[var(--yj-text-strong)]" />,
+      accessor: (row) => <><HoverText value={row.internalId} className="text-sm font-semibold text-[var(--yj-text-strong)]" /><ExampleBadge origin={row.origin} /></>,
       width: 154,
       minWidth: 140,
       maxWidth: 220,

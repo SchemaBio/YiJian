@@ -1,4 +1,14 @@
 {
+  "exampleData": {
+    "label": "示例",
+    "ready": "示例数据已准备完成，可正常查看和使用。",
+    "preparing": "示例数据正在准备中。",
+    "failed": "示例数据准备失败，后台正在重试。",
+    "deadlines": "FASTQ/BAM 到期：{p0}；样本及分析结果到期：{p1}。",
+    "dataExpired": "FASTQ/BAM 已到期；样本及其他分析结果保留至 {p1}。",
+    "sample": "查看示例样本",
+    "results": "查看分析结果"
+  },
   "payments": {
     "quantityError": "请输入 1～5000 的正整数。",
     "quantityHelp": "每次可申请 1～5000 积分，数量必须为正整数。"

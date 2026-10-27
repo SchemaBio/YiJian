@@ -72,6 +72,7 @@ export function normalizeSample(rawValue: unknown): Sample {
   return {
     ...normalizeParentFields(raw),
     id: String(raw.id ?? ''),
+    origin: typeof raw.origin === 'string' ? raw.origin : undefined,
     internalId: rawString(raw, 'internalId', 'internal_id'),
     gender: (raw.gender === 'male' || raw.gender === 'female' || raw.gender === 'unknown') ? raw.gender : 'unknown',
     age: rawNumber(raw.age),

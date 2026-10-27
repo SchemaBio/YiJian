@@ -13,6 +13,7 @@ export interface MatchedPair {
 }
 
 export interface Sample extends SampleParentValues {
+  origin?: string;
   id: string;
   internalId: string;  // 内部编号
   gender: Gender;
