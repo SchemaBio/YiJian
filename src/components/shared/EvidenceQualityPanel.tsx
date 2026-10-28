@@ -20,6 +20,7 @@ export function EvidenceQualityPanel({proposal,defaultedFields=[]}:{proposal:unk
   {!known&&<p>{t('evidenceBindings.missing')}</p>}
   {known&&<ul>{criteria.map((item,index)=><li key={`${text(item.code)}-${index}`}>{text(item.code)}: {t(`assessmentQuality.${['supported','pending_review','insufficient_data','conflicting'].includes(text(item.status))?text(item.status):'pending_review'}`)}</li>)}</ul>}
   {defaulted&&<p className="font-medium">{t('evidenceBindings.defaulted')}</p>}
+  {known&&typeof quality?.structured_inputs_omitted==='number'&&Number.isSafeInteger(quality.structured_inputs_omitted)&&quality.structured_inputs_omitted>0&&<p>{t('structuredInputEvidence.omitted',{p0:String(quality.structured_inputs_omitted)})}</p>}
   {known&&!Array.isArray(quality.evidence_bindings)&&<p>{t('evidenceBindings.missing')}</p>}
   {!!findings.length&&<details><summary className="cursor-pointer">{t('retrievalEvidence.title')}</summary>
    <p className="my-2">{t('retrievalEvidence.explanation')}</p>
@@ -42,7 +43,7 @@ export function EvidenceQualityPanel({proposal,defaultedFields=[]}:{proposal:unk
      const reason=reasonCodes.has(text(binding.reason))?text(binding.reason):'unknown';
      return <li key={ordinal}>
       <p>{text(binding.fact)||t('evidenceBindings.criterion')}: {t(`evidenceBindings.status.${status}`)}</p>
-      <p>{binding.reason==='source_group_conflicting'?t('retrievalEvidence.sourceGroupConflict'):t(`evidenceBindings.reason.${reason}`)}</p>
+      <p>{binding.reason==='source_group_conflicting'?t('retrievalEvidence.sourceGroupConflict'):binding.reason==='structured_input_requires_rule_applicability'?t('structuredInputEvidence.contextOnly'):t(`evidenceBindings.reason.${reason}`)}</p>
       <p>{t(binding.origin==='rule_engine'?'evidenceBindings.ruleOrigin':'evidenceBindings.modelOrigin')}</p>
       {label&&<p>{href?<a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-fg underline">{label}</a>:label}</p>}
       {!!text(binding.source_id)&&<p>{t('evidenceBindings.version')}: {text(binding.source_version)&&binding.source_version!=='unversioned'?text(binding.source_version):t('evidenceBindings.notRecorded')}</p>}

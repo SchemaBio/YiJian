@@ -1,4 +1,5 @@
 {
+  "structuredInputEvidence": {"contextOnly":"結構化欄位及來源可追溯；條款適用性仍須由規則或專業覆核確認，不能直接作為已驗證條款。","omitted":"本次建議的結構化輸入檢視省略了 {p0} 個欄位；這些欄位保持未知，完整輸入仍保存在受保護記錄中。"},
   "retrievalEvidence":{"title":"檢索問題與材料狀態","explanation":"同一文獻的多份記錄不代表獨立病例；未查詢的問題和未找到記錄不代表陰性證據。","remaining":"仍有 {p0} 個問題尚未查詢，相關資訊保持未知。","sourceGroupConflict":"同一文獻出現對象已匹配且材料已核查的衝突記錄，目前依據需覆核。","purpose":{"variant_conflict":"變異記錄與衝突線索","functional_evidence":"功能與機制證據","gene_disease_validity":"基因、疾病與遺傳模式","case_segregation":"病例與共分離證據","dosage_sensitivity":"劑量敏感性證據","unknown":"其他證據問題"},"status":{"supported":"已有相關獨立證據","pending_review":"找到材料，適用性待核實","conflicting":"來源有衝突標記，需覆核","not_found":"本次查詢未傳回記錄","unavailable":"檢索未完成或無法使用","unknown":"未記錄此狀態"}},
   "evidenceBindings": {
     "missing":"此記錄未儲存逐條證據綁定，不能據此補標為已驗證。",

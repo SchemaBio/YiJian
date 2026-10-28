@@ -33,3 +33,8 @@ it('keeps query absence, service failure and unqueried questions separate',()=>{
  fireEvent.click(screen.getByText('检索问题与材料状态'));
  expect(screen.getByText('变异记录与冲突线索: 本次查询未返回记录')).toBeInTheDocument();expect(screen.getByText('功能与机制证据: 检索未完成或不可用')).toBeInTheDocument();expect(screen.getByText('仍有 1 个问题尚未查询，相关信息保持未知。')).toBeInTheDocument();expect(screen.getByText(/同一文献的多份记录不代表独立病例/)).toBeInTheDocument();
 });
+
+it('does not present traceable structured inputs or omitted fields as verified criteria',()=>{
+ render(<EvidenceQualityPanel proposal={{evidence_quality:{version:'evidence-quality-v1',structured_inputs_omitted:12,criteria:[],evidence_bindings:[{code:'PVS1',bindings:[{status:'context_only',reason:'structured_input_requires_rule_applicability',fact_id:'input.mechanism.lof_established',source_id:'source'}]}]}}}/>);
+ expect(screen.getByText(/省略了 12 个字段/)).toBeInTheDocument();expect(screen.getByText(/条款适用性仍须由规则或专业复核确认/)).toBeInTheDocument();expect(screen.queryByText('PVS1: 已有证据支持')).not.toBeInTheDocument();
+});
