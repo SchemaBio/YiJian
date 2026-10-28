@@ -23,7 +23,9 @@ function fixture(size:number){
  return {ctx,rows};
 }
 
-it.each([1000,10000])('preserves every result and reference gene for %i mixed rows',size=>{
+// Large acceptance runs are explicit so ordinary edit/test cycles stay bounded.
+const sizes=process.env.ASSESSMENT_LARGE_PARITY==='true'?[1000,10000,50000,100000]:[1000,10000];
+it.each(sizes)('preserves every result and reference gene for %i mixed rows',size=>{
  const {ctx,rows}=fixture(size);
  vi.stubEnv('NEXT_PUBLIC_ASSESSMENT_OPTIMIZED','false');
  // Use one immutable context per worker in both paths, including candidate selection.
@@ -33,4 +35,4 @@ it.each([1000,10000])('preserves every result and reference gene for %i mixed ro
  const nextContext=structuredClone(ctx);const next=rows.map(row=>({row,assessment:evaluateRow(row,nextContext)}));
  selectCandidates(next,nextContext);
  expect(next).toEqual(baseline);expect(referenceGenes(rows,nextContext)).toEqual(genes);
-},30000);
+},180000);
