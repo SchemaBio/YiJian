@@ -1,9 +1,16 @@
 import manifest from './cnv-reference-manifest.json';
 import type {AssessmentContext, AssessmentRow, DosageRecord, Interval} from './types';
+import {optimizedAssessment} from './optimization';
+
+const references=new Map<string,NonNullable<AssessmentContext['cnvReference']>>();
+export function clearCNVReferenceCache(){references.clear();}
 
 export async function loadCNVReference(context:AssessmentContext,signal:AbortSignal) {
  const entry=manifest[context.reference as keyof typeof manifest];
  if(!entry)throw new Error('CNV_REFERENCE_UNAVAILABLE');
+ if(signal.aborted)throw new DOMException('Aborted','AbortError');
+ const cached=optimizedAssessment()?references.get(entry.sha256):undefined;
+ if(cached)return cached;
  const response=await fetch(entry.url,{signal,credentials:'same-origin'});
  if(!response.ok||Number(response.headers.get('Content-Length'))>2*1024*1024)throw new Error('CNV_REFERENCE_UNAVAILABLE');
  const raw=await response.arrayBuffer();if(raw.byteLength!==entry.bytes)throw new Error('CNV_REFERENCE_INVALID');
@@ -11,7 +18,9 @@ export async function loadCNVReference(context:AssessmentContext,signal:AbortSig
  if(hash!==entry.sha256)throw new Error('CNV_REFERENCE_INVALID');
  const pack=JSON.parse(new TextDecoder().decode(raw));
  if(pack.reference!==context.reference||pack.version!==entry.version||pack.coordinateSystem!=='zero-based-half-open'||!Array.isArray(pack.dosage)||!pack.dosage.length||pack.dosage.some((d:DosageRecord)=>d.reference!==context.reference||!d.chromosome||!d.id||!d.source||!Number.isSafeInteger(d.start)||!Number.isSafeInteger(d.end)||d.start<0||d.end<=d.start||!Number.isInteger(d.hi)||!Number.isInteger(d.ts)))throw new Error('CNV_REFERENCE_INVALID');
- return {sha256:hash,version:pack.version as string,dosage:pack.dosage as DosageRecord[]};
+ const result={sha256:hash,version:pack.version as string,dosage:pack.dosage as DosageRecord[]};
+ if(optimizedAssessment())references.set(hash,result);
+ return result;
 }
 const dosageCache=new WeakMap<AssessmentContext,DosageRecord[]>();
 export function dosageRecords(context:AssessmentContext) {

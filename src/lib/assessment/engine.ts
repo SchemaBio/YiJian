@@ -7,6 +7,25 @@ import { screenSNV } from './snv-screen';
 import { annotationGenes } from './row-annotations';
 import { cnvInterval, dosageRecords } from './cnv-reference';
 import { explicitQualityFailure, priorityScore } from './priority';
+import {optimizedAssessment} from './optimization';
+import {containmentIndex,overlapIndex} from './interval-index';
+
+const locusIndexes=new WeakMap<AssessmentContext,{str:Map<string,AssessmentContext['pack']['str'][number]>;imprinting:Map<string,ReturnType<typeof overlapIndex<AssessmentContext['pack']['imprinting'][number]>>>}>();
+function loci(ctx:AssessmentContext){
+ let value=locusIndexes.get(ctx);if(value)return value;
+ const str=new Map<string,AssessmentContext['pack']['str'][number]>();
+ for(const rule of ctx.pack.str){const key=JSON.stringify([rule.reference,rule.chromosome,rule.start,rule.motif]);if(!str.has(key))str.set(key,rule);}
+ const groups=new Map<string,AssessmentContext['pack']['imprinting']>();
+ for(const rule of ctx.pack.imprinting){const key=[rule.reference,chromosome(rule.chromosome)].join('/');const group=groups.get(key)??[];group.push(rule);groups.set(key,group);}
+ value={str,imprinting:new Map([...groups].map(([key,group])=>[key,overlapIndex(group)]))};locusIndexes.set(ctx,value);return value;
+}
+
+const dosageLookups=new WeakMap<AssessmentContext,Map<string,ReturnType<typeof containmentIndex<DosageRecord>>>>();
+function containedDosage(ctx:AssessmentContext,region:Interval){
+ let lookup=dosageLookups.get(ctx);
+ if(!lookup){lookup=new Map([...index(ctx).dosage].map(([chr,records])=>[chr,containmentIndex(records)]));dosageLookups.set(ctx,lookup);}
+ return lookup.get(region.chromosome)?.(region)??[];
+}
 
 const pathogenic = (s?: string) => s === 'Pathogenic' || s === 'Likely_Pathogenic';
 const number = (v: unknown): number | undefined => v === undefined || v === null || String(v).trim() === '' || v === '.' || !Number.isFinite(Number(v)) ? undefined : Number(v);
@@ -22,7 +41,10 @@ function index(ctx:AssessmentContext) {
   if(!value){value={genes:new Map(),dosage:new Map(),matches:new Map()};for(const disease of ctx.pack.diseases){if(!['Moderate','Strong','Definitive'].includes(disease.validity))continue;const group=value.genes.get(disease.gene)??[];group.push(disease);value.genes.set(disease.gene,group);}for(const record of dosageRecords(ctx)){if(record.reference!==ctx.reference)continue;const key=chromosome(record.chromosome),group=value.dosage.get(key)??[];group.push(record);value.dosage.set(key,group);}indexes.set(ctx,value);}
   return value;
 }
-function cachedMatch(ctx:AssessmentContext,disease:Disease){const cache=index(ctx).matches;let value=cache.get(disease);if(!value){value=phenotypeMatch(ctx,disease);cache.set(disease,value);}return value;}
+interface PhenotypeIndex {sample:string[];ancestors:Map<string,Set<string>>;similarities:Map<string,Map<string,number>>}
+const phenotypeIndexes=new WeakMap<AssessmentContext,PhenotypeIndex>();
+function phenotypeIndex(ctx:AssessmentContext){let value=phenotypeIndexes.get(ctx);if(!value){value={sample:[...new Set(ctx.hpo)].filter(id=>ctx.pack.hpo[id]),ancestors:new Map(),similarities:new Map()};phenotypeIndexes.set(ctx,value);}return value;}
+function cachedMatch(ctx:AssessmentContext,disease:Disease){const cache=index(ctx).matches;let value=cache.get(disease);if(!value){value=phenotypeMatch(ctx,disease,optimizedAssessment()?phenotypeIndex(ctx):undefined);cache.set(disease,value);}return value;}
 export function classifyEvidence(criteria: Evidence[]): {score: number; classification?: Classification} {
   if (!criteria.length) return {score: 0};
   if (criteria.some(e => !/^(PVS1|PS[1-4]|PM[1-6]|PP[1-5]|BA1|BS[1-4]|BP[1-7])$/.test(e.code) || !(e.strength in points) || (e.strength === 'standalone' && e.code !== 'BA1') || (e.code === 'BA1' && e.strength !== 'standalone'))) throw new LocalizedError("display.invalidEvidenceCodeOrStrength14f0b9");
@@ -44,15 +66,19 @@ const usableAD=(g?:Genotype)=>!!g?.ad&&g.ad.length>=2&&g.ad.every(n=>Number.isIn
 const alt = (g?: Genotype) => genotypeUsable(g) && usableAD(g) && alleles(g).some(x => x > 0) && (g?.ad?.[1] ?? -1) >= 3;
 const ref = (g?: Genotype) => genotypeUsable(g) && usableAD(g) && alleles(g).every(x => x === 0) && g!.ad![0]>=10 && g!.ad![1] <= 1 && g!.ad![1] / g!.ad!.reduce((a,b) => a+b,0) <= 0.02;
 
-export function phenotypeMatch(ctx: AssessmentContext, disease: Disease) {
-  const sample = [...new Set(ctx.hpo)].filter(id => ctx.pack.hpo[id]);
+export function phenotypeMatch(ctx: AssessmentContext, disease: Disease, prepared?:PhenotypeIndex) {
+  const sample = prepared?.sample??[...new Set(ctx.hpo)].filter(id => ctx.pack.hpo[id]);
   const target = disease.hpo.filter(id => ctx.pack.hpo[id]);
   if (!sample.length || !target.length) return {score: 0, eligible: false};
   const similarity = (a: string, b: string) => {
+    const previous=prepared?.similarities.get(a)?.get(b);if(previous!==undefined)return previous;
     const aa = ctx.pack.hpo[a], bb = ctx.pack.hpo[b];
-    const ancestors = new Set([b, ...bb.ancestors]);
+    const ancestors = prepared?.ancestors.get(b)??new Set([b, ...bb.ancestors]);
+    prepared?.ancestors.set(b,ancestors);
     const ic = Math.max(0, ...[a, ...aa.ancestors].filter(x => ancestors.has(x)).map(x => ctx.pack.hpo[x]?.ic ?? 0));
-    return aa.ic + bb.ic > 0 ? Math.min(1, 2 * ic / (aa.ic + bb.ic)) : 0;
+    const score=aa.ic + bb.ic > 0 ? Math.min(1, 2 * ic / (aa.ic + bb.ic)) : 0;
+    if(prepared){const group=prepared.similarities.get(a)??new Map<string,number>();group.set(b,score);prepared.similarities.set(a,group);}
+    return score;
   };
   const forward = sample.map(a => Math.max(...target.map(b => similarity(a,b))));
   const reverse = target.map(b => Math.max(...sample.map(a => similarity(a,b))));
@@ -128,7 +154,7 @@ function cnv(row: AssessmentRow, ctx: AssessmentContext, p: RowProof | undefined
   const criteria=loss?createDefaultLossAssessmentCriteria():createDefaultGainAssessmentCriteria();
   criteria.section3.confirmed=false;criteria.section5.other={selected:null,score:0};
   if (p?.cnv?.functionalElements !== undefined) criteria.section1.selected=p.cnv.functionalElements?'1A':'1B';
-  const dosage=(index(ctx).dosage.get(region.chromosome)??[]).filter(d=>contains(region,d) && (loss?d.hi:d.ts)===3);
+  const dosage=(optimizedAssessment()?containedDosage(ctx,region):(index(ctx).dosage.get(region.chromosome)??[])).filter(d=>contains(region,d) && (loss?d.hi:d.ts)===3);
   if (dosage.length) {
     if (loss) (criteria as ReturnType<typeof createDefaultLossAssessmentCriteria>).section2.hiOverlap={selected:'2A',score:1};
     else (criteria as ReturnType<typeof createDefaultGainAssessmentCriteria>).section2.tsOverlap={selected:'2A',score:1};
@@ -152,7 +178,7 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
   else if (quality(row,p) && p?.establishedDisease?.exactIdentity) result.classification=p.establishedDisease.classification;
   if (row.table==='str' && quality(row,p)) {
     const locus=interval(row,ctx.reference), motif=text(read(row.values,'Repeat_Unit','RepeatUnit','repeatUnit'));
-    const rule=locus && ctx.pack.str.find(r=>r.reference===ctx.reference && r.chromosome===locus.chromosome && r.start===locus.start && r.motif===motif);
+    const rule=locus && (optimizedAssessment()?loci(ctx).str.get(JSON.stringify([ctx.reference,locus.chromosome,locus.start,motif])):ctx.pack.str.find(r=>r.reference===ctx.reference && r.chromosome===locus.chromosome && r.start===locus.start && r.motif===motif));
     const values=[read(row.values,'Allele1_Repeats','Allele1','allele1Repeats'),read(row.values,'Allele2_Repeats','Allele2','allele2Repeats')];
     if (rule?.pathogenicMin !== undefined && values.some(v=>(number(v)??-1)>=rule.pathogenicMin!)) {result.pinned=true;result.pinReasons.push('疾病阈值');}
     else result.pending.push('重复次数跨阈值或缺少已核验位点/疾病阈值');
@@ -170,7 +196,7 @@ export function evaluateRow(row: AssessmentRow, ctx: AssessmentContext): Automat
     }
   }
   if (row.table==='upd') {
-    const region=interval(row,ctx.reference), imprints=region?ctx.pack.imprinting.filter(r=>overlaps(region,r)):[],imprint=imprints.length>0;
+    const region=interval(row,ctx.reference), imprints=region?(optimizedAssessment()?(loci(ctx).imprinting.get([region.reference,region.chromosome].join('/'))?.(region)??[]):ctx.pack.imprinting.filter(r=>overlaps(region,r))):[],imprint=imprints.length>0;
     if (imprint && p?.upd?.genotypeSupported && p.upd.parent!=='unknown' && quality(row,p)) {result.pinned=true;result.pinReasons.push('疾病相关 UPD');}
     else if (imprint && ctx.hpo.length) {
       result.pending.push('印记区域相关，但仅 ROH 推测不能确认 UPD');
@@ -225,10 +251,11 @@ export function selectCandidates(rows: {row:AssessmentRow;assessment:AutomaticAs
     genes.add(gene);n+=count;
     for(const x of group){admitted.add(x.row.id);x.assessment.pinned=true;x.assessment.state='evaluated';if(x.assessment.phenotypeCandidate)x.assessment.phenotypePriority=true;x.assessment.pinReasons.push('表型候选');if(x.assessment.familySupport>0)x.assessment.pinReasons.push('家系候选');}
   }
+  const arCandidates=context&&optimizedAssessment()?rows.filter(y=>y.row.table==='snv-indel'&&y.assessment.pinned&&y.assessment.inheritance==='AR'&&alleles(context.proofs[y.row.id]?.proband).length===2&&alleles(context.proofs[y.row.id]?.proband).every(a=>a===1)&&!!context.proofs[y.row.id]?.interval):undefined;
   if(context)for(const x of rows.filter(x=>x.row.table==='roh')){
     const region=context.proofs[x.row.id]?.interval;
     if(!region || context.proofs[x.row.id]?.qualityPassed!==true)continue;
-    const linked=rows.find(y=>y.row.table==='snv-indel'&&y.assessment.pinned&&y.assessment.inheritance==='AR'&&alleles(context.proofs[y.row.id]?.proband).length===2&&alleles(context.proofs[y.row.id]?.proband).every(a=>a===1)&&!!context.proofs[y.row.id]?.interval&&contains(region,context.proofs[y.row.id].interval!));
+    const linked=arCandidates?arCandidates.find(y=>contains(region,context.proofs[y.row.id].interval!)):rows.find(y=>y.row.table==='snv-indel'&&y.assessment.pinned&&y.assessment.inheritance==='AR'&&alleles(context.proofs[y.row.id]?.proband).length===2&&alleles(context.proofs[y.row.id]?.proband).every(a=>a===1)&&!!context.proofs[y.row.id]?.interval&&contains(region,context.proofs[y.row.id].interval!));
     if(linked && !x.assessment.pinned && n<100){n++;x.assessment.pinned=true;x.assessment.pinReasons=['家系候选：区间内存在相关 AR 纯合候选'];x.assessment.state='evaluated';}
   }
   return rows;

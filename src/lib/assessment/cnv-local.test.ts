@@ -1,14 +1,14 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
-import {cnvInterval,loadCNVReference} from './cnv-reference';
+import {cnvInterval,loadCNVReference,clearCNVReferenceCache} from './cnv-reference';
 import manifest from './cnv-reference-manifest.json';
 import {evaluateRow,selectCandidates} from './engine';
 import {referenceGenes} from './reference-client';
 import type {AssessmentContext,AssessmentRow} from './types';
 const context=():AssessmentContext=>({taskId:'t',attemptId:'a',version:'v',reference:'hg19',hpo:['HP:0001250'],hpoVersion:'h',members:[],availability:[],proofs:{},tables:['cnv-segment'],pack:{reference:'hg19',version:'old-empty',licenses:[],hpo:{},diseases:[],dosage:[],str:[],imprinting:[]},cnvReference:{sha256:'hash',version:'fixture',dosage:[{reference:'hg19',chromosome:'1',start:10,end:20,id:'dosage',gene:'G',hi:3,ts:0,source:'fixture'}]}});
 const row=(type='DEL'):AssessmentRow=>({id:'r',table:'cnv-segment',coordinateSystem:'cnr-bed-zero-based-half-open',values:{Chromosome:'chr1',Start:0,End:100,Col4:type,Col6:30}});
-afterEach(()=>vi.unstubAllGlobals());
+afterEach(()=>{vi.unstubAllGlobals();clearCNVReferenceCache();});
 it('recomputes CNV 2A from pinned dosage coordinates when the historical snapshot is empty',()=>{
  const c=context(),r=row();r.values.Total_Score=-99;r.values.Classification='Benign';
  const a=evaluateRow(r,c);expect(a.cnvScore).toBe(1);expect(a.cnvClassification).toBe('Pathogenic');expect(a.pinned).toBe(true);expect(a.cnvCriteria?.section2).toMatchObject({hiOverlap:{selected:'2A',score:1}});
@@ -36,5 +36,5 @@ it('suppresses auto pins on an explicit quality failure and does not promote HPO
 it.each(['hg19','hg38'] as const)('verifies the immutable %s public reference bytes and hash',async reference=>{
  vi.stubGlobal('crypto',webcrypto);const entry=manifest[reference];const raw=readFileSync('public'+entry.url);vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(raw)));
  const c=context();c.reference=reference;const result=await loadCNVReference(c,new AbortController().signal);expect(result.sha256).toBe(entry.sha256);expect(result.dosage.length).toBeGreaterThan(1000);expect(result.dosage.every(d=>d.reference===reference)).toBe(true);
- raw[0]=32;vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(raw)));await expect(loadCNVReference(c,new AbortController().signal)).rejects.toThrow('CNV_REFERENCE_INVALID');
+ clearCNVReferenceCache();raw[0]=32;vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(raw)));await expect(loadCNVReference(c,new AbortController().signal)).rejects.toThrow('CNV_REFERENCE_INVALID');
 });

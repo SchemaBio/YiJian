@@ -7,6 +7,7 @@ export { setAssessmentCacheScope } from './cache';
 import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable, PhenotypeMatch} from './types';
 import { loadCNVReference } from './cnv-reference';
 import { loadReferences, referenceGenes } from './reference-client';
+import {optimizedAssessment,assessmentTimer} from './optimization';
 export interface AssessmentStatus {geneRanking?:PhenotypeMatch[];taskId:string;state:'checking'|'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
 interface Envelope {active?:AssessmentContext;latestVersion:string;reassessmentAvailable:boolean}
@@ -40,11 +41,16 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     controller.signal.addEventListener('abort',()=>{clearTimeout(session.timer);},{once:true});
   };
   session.promise=(async()=>{
+    const timing=assessmentTimer();const totalDone=timing.start('total');
+    const contextDone=timing.start('context');
     const envelope=await api.get<Envelope>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{signal:controller.signal});
     const authorized=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
     const context={...authorized};
+    contextDone();
+    const earlyKey=optimizedAssessment()?await assessmentCacheKey(context):null;
+    const earlyCached=earlyKey?await readAssessmentCache(earlyKey):null;
     let cnvReferenceFailed=false;
-    if(context.tables?.includes('cnv-segment'))try{
+    if(!earlyCached&&context.tables?.includes('cnv-segment'))try{
       context.cnvReference=await loadCNVReference(context,controller.signal);
     }catch(cause){
       if(controller.signal.aborted)throw cause;
@@ -52,8 +58,8 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     }
     session.context=context;
     publish(session,{version:context.version,packVersion:context.referenceVersion?`${context.pack.version} · HPO/HGNC/ClinGen ${context.referenceVersion}`:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
-    const cacheKey = await assessmentCacheKey(context);
-    const cached = await readAssessmentCache(cacheKey);
+    const cacheKey = earlyKey??await assessmentCacheKey(context);
+    const cached = earlyCached??await readAssessmentCache(cacheKey);
     if (controller.signal.aborted) throw controller.signal.reason;
     if (cached) {
       session.byRow = new Map(cached.map(entry => [entry.rowId, entry.assessment]));
@@ -61,6 +67,8 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
       for (const row of cached) if (row.assessment.pinned) pinnedByTable[row.table] = (pinnedByTable[row.table] ?? 0) + 1;
       publish(session, { state: 'ready', processed: cached.length, pinned: cached.filter(row => row.assessment.pinned).length, pinnedByTable });
       scheduleContextCheck(context);
+      totalDone(cached.length);
+      if(optimizedAssessment())window.dispatchEvent(new CustomEvent('yijian:assessment-timing',{detail:timing.timings}));
       if(context.referenceVersion&&context.hpo.length)void loadReferences(context,[],controller.signal,true).then(ranking=>{
         if(!controller.signal.aborted)publish(session,{geneRanking:ranking.geneRanking??[]});
       }).catch(()=>{if(!controller.signal.aborted)publish(session,{pending:[...context.availability,'phenotype.unavailable']});});
@@ -112,6 +120,8 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     const pinnedByTable:Record<string,number>={};for(const row of result)if(row.assessment.pinned)pinnedByTable[row.table]=(pinnedByTable[row.table]??0)+1;
     publish(session,{state:'ready',pinned:result.filter(x=>x.assessment.pinned).length,pinnedByTable});
     scheduleContextCheck(context);
+    totalDone(result.length);
+    if(optimizedAssessment())window.dispatchEvent(new CustomEvent('yijian:assessment-timing',{detail:timing.timings}));
     return result;
   })().catch(error=>{if(controller.signal.aborted){publish(session,{state:'cancelled',error:undefined});return [];}publish(session,{state:'error',error:error instanceof Error?error.message:'初评失败',errorKey:error instanceof LocalizedError?error.messageKey:undefined});throw error;}).finally(()=>{signal.removeEventListener('abort',abort);worker?.terminate();});
   return session.promise;

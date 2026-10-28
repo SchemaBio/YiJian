@@ -1,4 +1,6 @@
 import { ASSESSMENT_PROFILE, type AssessmentContext, type AutomaticAssessment, type ResultTable } from './types';
+import manifest from './cnv-reference-manifest.json';
+import {optimizedAssessment} from './optimization';
 
 export interface CachedAssessment { table: ResultTable; rowId: string; assessment: AutomaticAssessment }
 let scope = '';
@@ -29,13 +31,16 @@ export async function assessmentCacheKey(context: AssessmentContext): Promise<st
   // in attempts, HPO, proofs, references or rule packs invalidate the result.
   const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
     : value && typeof value==='object' ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical((value as Record<string,unknown>)[key])])) : value;
-  const stable = {...context, hpo:[...new Set(context.hpo ?? [])].sort(),
+  const optimized=optimizedAssessment();
+  const reference=manifest[context.reference as keyof typeof manifest];
+  const input=optimized ? {...context,cnvReference:undefined,cnvReferenceDigest:context.tables?.includes('cnv-segment')?reference?.sha256:undefined} : context;
+  const stable = {...input, hpo:[...new Set(context.hpo ?? [])].sort(),
     ...(context.tables ? {tables:[...new Set(context.tables)].sort()} : {}),
     ...(context.members ? {members:[...context.members].sort((a,b)=>(a.role+'/'+a.id).localeCompare(b.role+'/'+b.id))} : {}),
     ...(context.availability ? {availability:[...new Set(context.availability)].sort()} : {})};
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(canonical(stable))));
   const hash = Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, '0')).join('');
-  return `sample-roles-v1/${scope}/${context.taskId}/${context.attemptId}/${ASSESSMENT_PROFILE}/${hash}`;
+  return `${optimized?'assessment-optimized-v1':'sample-roles-v1'}/${scope}/${context.taskId}/${context.attemptId}/${ASSESSMENT_PROFILE}/${hash}`;
 }
 
 export async function readAssessmentCache(key: string | null): Promise<CachedAssessment[] | null> {

@@ -3,6 +3,17 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { assessmentCacheKey, setAssessmentCacheScope, readAssessmentCache, writeAssessmentCache, removeAssessmentCache } from './cache';
 import type { AssessmentContext } from './types';
 afterEach(() => { setAssessmentCacheScope('anonymous'); vi.unstubAllGlobals(); });
+it('optimized keys use pinned CNV digest and retain proof invalidation',async()=>{
+ vi.stubEnv('NEXT_PUBLIC_ASSESSMENT_OPTIMIZED','true');vi.stubGlobal('crypto',webcrypto);
+ try {
+  setAssessmentCacheScope('u:o');
+  const ctx={taskId:'t',attemptId:'a',reference:'hg19',tables:['cnv-segment'],hpo:[],pack:{version:'v'},proofs:{}} as unknown as AssessmentContext;
+  const key=await assessmentCacheKey(ctx);
+  expect(await assessmentCacheKey({...ctx,cnvReference:{sha256:'loaded',version:'v',dosage:[]}})).toBe(key);
+  expect(await assessmentCacheKey({...ctx,proofs:{r:{reference:'hg19',qualityPassed:true}}})).not.toBe(key);
+  expect(await assessmentCacheKey({...ctx,reference:'hg38'})).not.toBe(key);
+ }finally{vi.unstubAllEnvs();}
+});
 it('isolates saved assessments by account, organization, attempt, rules, HPO and reference context', async () => {
   vi.stubGlobal('crypto', webcrypto); vi.stubGlobal('indexedDB', {});
   const context = {taskId:'task',attemptId:'one',version:'v1',hpo:['HP:1'],pack:{version:'rules1'},proofs:{}} as unknown as AssessmentContext;

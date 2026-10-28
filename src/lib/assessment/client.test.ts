@@ -23,6 +23,15 @@ class FakeWorker {
 const context:AssessmentContext={taskId:'task',attemptId:'attempt',version:'v',reference:'hg19',hpo:[],hpoVersion:'v',members:[],availability:[],proofs:{},tables:[],pack:{version:'pack',reference:'hg19',licenses:[],hpo:{},diseases:[],dosage:[],str:[],imprinting:[]}};
 beforeEach(()=>{workers=[];vi.stubGlobal('Worker',FakeWorker);vi.mocked(api.get).mockResolvedValue({active:context,latestVersion:'v',reassessmentAvailable:false});});
 afterEach(()=>{clearAssessments();vi.clearAllMocks();vi.unstubAllGlobals();});
+it('optimized cache hit skips CNV loading after authorization',async()=>{
+ vi.stubEnv('NEXT_PUBLIC_ASSESSMENT_OPTIMIZED','true');
+ try {
+  vi.mocked(api.get).mockResolvedValueOnce({active:{...context,tables:['cnv-segment']},latestVersion:'v',reassessmentAvailable:false});
+  vi.mocked(readAssessmentCache).mockResolvedValueOnce([]);
+  const read=vi.fn();await assessTask('task',read,new AbortController().signal);
+  expect(api.get).toHaveBeenCalled();expect(loadCNVReference).not.toHaveBeenCalled();expect(read).not.toHaveBeenCalled();expect(workers).toHaveLength(0);
+ }finally{vi.unstubAllEnvs();}
+});
 it('does not create a worker while checking authorized context and allows retry after a crash',async()=>{
   let resolve!:(value:unknown)=>void;
   vi.mocked(api.get).mockImplementationOnce(()=>new Promise(r=>{resolve=r;}));

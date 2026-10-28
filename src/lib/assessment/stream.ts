@@ -2,6 +2,8 @@ import type {AsyncDuckDBConnection} from '@duckdb/duckdb-wasm';
 import {ident} from '../parquet-browser-sql';
 import {ASSESSMENT_BATCH_SIZE,ASSESSMENT_FIELDS} from './transport';
 import type {AssessmentRow,ResultTable} from './types';
+import {optimizedAssessment} from './optimization';
+import {batchPipeline} from './pipeline';
 
 export async function streamAssessmentRows(
   conn:Pick<AsyncDuckDBConnection,'send'|'cancelSent'>,relation:string,columns:string[],
@@ -14,6 +16,8 @@ export async function streamAssessmentRows(
   const cancel=()=>{cancelling??=conn.cancelSent().catch(()=>undefined);};
   signal.addEventListener('abort',cancel,{once:true});
   let complete=false;
+  const pipeline=optimizedAssessment()?batchPipeline(consume,signal):undefined;
+  const submit=pipeline?(rows:AssessmentRow[])=>pipeline.push(rows):consume;
   try {
     check();
     const stream=await conn.send(`SELECT ${['__row_id',...fields].map(ident).join(',')} FROM ${ident(relation)}`,true);
@@ -24,13 +28,14 @@ export async function streamAssessmentRows(
         const values=record.toJSON() as Record<string,unknown>;
         const id=String(values.__row_id);delete values.__row_id;
         batch.push({id,table,values,...(cnr?{coordinateSystem:'cnr-bed-zero-based-half-open' as const}:{})});
-        if(batch.length===ASSESSMENT_BATCH_SIZE){check();await consume(batch);batch=[];}
+        if(batch.length===ASSESSMENT_BATCH_SIZE){check();await submit(batch);batch=[];}
       }
     }
-    check();if(batch.length)await consume(batch);
+    check();if(batch.length)await submit(batch);
+    await pipeline?.finish();
     complete=true;
   } finally {
-    if(!complete)cancel();
+    if(!complete){pipeline?.stop();cancel();await pipeline?.finish().catch(()=>undefined);}
     signal.removeEventListener('abort',cancel);
     await cancelling;
   }
