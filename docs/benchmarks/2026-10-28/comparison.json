@@ -1,0 +1,182 @@
+{
+  "version": "assessment-browser-comparison-v1",
+  "createdUtc": "2026-10-28T06:59:38.199686+00:00",
+  "baselineCommit": "6fffe3578c90bf5774f8982334517bbb3c657fc8",
+  "optimizedCommit": "6fffe3578c90bf5774f8982334517bbb3c657fc8",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 16,
+    "deviceMemoryGiB": 32,
+    "crossOriginIsolated": true,
+    "visibilityState": "visible"
+  },
+  "groups": [
+    {
+      "size": 10000,
+      "cache": "cold",
+      "nPerPath": 5,
+      "metrics": {
+        "firstReadableMs": {
+          "baselineP50": 2429.475000143051,
+          "baselineP95": 2630.4900000095367,
+          "optimizedP50": 1147.340000152588,
+          "optimizedP95": 1255.5599999427795,
+          "p95ReductionPercent": 52.26896890167887
+        },
+        "fullMs": {
+          "baselineP50": 2429.4800000190735,
+          "baselineP95": 2630.4950001239777,
+          "optimizedP50": 2317.5300002098083,
+          "optimizedP95": 2456.085000038147,
+          "p95ReductionPercent": 6.630311028061664
+        }
+      },
+      "fullTimeTargetReductionPercent": 25,
+      "fullTimeTargetMet": false,
+      "exactResultAndFirstPageParity": true,
+      "baselineHeapCounterMax": 102538350,
+      "optimizedHeapCounterMax": 94395381
+    },
+    {
+      "size": 10000,
+      "cache": "hot",
+      "nPerPath": 5,
+      "metrics": {
+        "firstReadableMs": {
+          "baselineP50": 1120.289999961853,
+          "baselineP95": 1132,
+          "optimizedP50": 1093.9900000095367,
+          "optimizedP95": 1169.045000076294,
+          "p95ReductionPercent": -3.2725265085065347
+        },
+        "fullMs": {
+          "baselineP50": 1120.295000076294,
+          "baselineP95": 1132.0150001049042,
+          "optimizedP50": 1093.9900000095367,
+          "optimizedP95": 1169.0499999523163,
+          "p95ReductionPercent": -3.2715997441712386
+        }
+      },
+      "fullTimeTargetReductionPercent": 50,
+      "fullTimeTargetMet": false,
+      "exactResultAndFirstPageParity": true,
+      "baselineHeapCounterMax": 109154127,
+      "optimizedHeapCounterMax": 76857506
+    },
+    {
+      "size": 50000,
+      "cache": "cold",
+      "nPerPath": 5,
+      "metrics": {
+        "firstReadableMs": {
+          "baselineP50": 8567.305000066757,
+          "baselineP95": 8700.019999980927,
+          "optimizedP50": 1685.2400000095367,
+          "optimizedP95": 1726.4249999523163,
+          "p95ReductionPercent": 80.15608010146987
+        },
+        "fullMs": {
+          "baselineP50": 8567.30999994278,
+          "baselineP95": 8700.025000095367,
+          "optimizedP50": 4100.899999856949,
+          "optimizedP95": 4265.014999866486,
+          "p95ReductionPercent": 50.976979953279056
+        }
+      },
+      "fullTimeTargetReductionPercent": 25,
+      "fullTimeTargetMet": true,
+      "exactResultAndFirstPageParity": true,
+      "baselineHeapCounterMax": 298255831,
+      "optimizedHeapCounterMax": 353501851
+    },
+    {
+      "size": 50000,
+      "cache": "hot",
+      "nPerPath": 5,
+      "metrics": {
+        "firstReadableMs": {
+          "baselineP50": 1610.590000152588,
+          "baselineP95": 1636.5,
+          "optimizedP50": 1627.9800000190735,
+          "optimizedP95": 1658.9749999046326,
+          "p95ReductionPercent": -1.3733577699133859
+        },
+        "fullMs": {
+          "baselineP50": 1610.5950000286102,
+          "baselineP95": 1636.505000114441,
+          "optimizedP50": 1627.9849998950958,
+          "optimizedP95": 1658.9749999046326,
+          "p95ReductionPercent": -1.373048037654656
+        }
+      },
+      "fullTimeTargetReductionPercent": 50,
+      "fullTimeTargetMet": false,
+      "exactResultAndFirstPageParity": true,
+      "baselineHeapCounterMax": 235142279,
+      "optimizedHeapCounterMax": 243161953
+    },
+    {
+      "size": 100000,
+      "cache": "cold",
+      "nPerPath": 5,
+      "metrics": {
+        "firstReadableMs": {
+          "baselineP50": 27203.46499991417,
+          "baselineP95": 27610.139999866486,
+          "optimizedP50": 2483.0499999523163,
+          "optimizedP95": 2625.5199999809265,
+          "p95ReductionPercent": 90.49073999627085
+        },
+        "fullMs": {
+          "baselineP50": 27203.46499991417,
+          "baselineP95": 27610.144999980927,
+          "optimizedP50": 6548.149999856949,
+          "optimizedP95": 6638.674999952316,
+          "p95ReductionPercent": 75.9556677447478
+        }
+      },
+      "fullTimeTargetReductionPercent": 25,
+      "fullTimeTargetMet": true,
+      "exactResultAndFirstPageParity": true,
+      "baselineHeapCounterMax": 670034522,
+      "optimizedHeapCounterMax": 653692276
+    },
+    {
+      "size": 100000,
+      "cache": "hot",
+      "nPerPath": 5,
+      "metrics": {
+        "firstReadableMs": {
+          "baselineP50": 2189.3250000476837,
+          "baselineP95": 2267.9649999141693,
+          "optimizedP50": 2193.3450000286102,
+          "optimizedP95": 2218.4550001621246,
+          "p95ReductionPercent": 2.1830142772890415
+        },
+        "fullMs": {
+          "baselineP50": 2189.3250000476837,
+          "baselineP95": 2267.9700000286102,
+          "optimizedP50": 2193.3499999046326,
+          "optimizedP95": 2218.4550001621246,
+          "p95ReductionPercent": 2.1832299309894276
+        }
+      },
+      "fullTimeTargetReductionPercent": 50,
+      "fullTimeTargetMet": false,
+      "exactResultAndFirstPageParity": true,
+      "baselineHeapCounterMax": 469060442,
+      "optimizedHeapCounterMax": 467518815
+    }
+  ],
+  "exactParityPassed": true,
+  "timingTargetsPassed": false,
+  "memoryAcceptance": "unverified: implementation-dependent heap counter is not a proven whole-page plus worker peak",
+  "overallAcceptance": false,
+  "defaultEnableAllowed": false,
+  "limitations": [
+    "Five runs provide coarse nearest-rank p95 (the maximum); repeat on representative hardware.",
+    "Synthetic local data and 20 ms normal fixture latency do not establish production network performance.",
+    "Cold runs retain compiled assets and potentially OS/HTTP caches.",
+    "Product toolbar visual behavior and whole-page memory require separate acceptance."
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "version": "assessment-browser-scenarios-v1",
+  "allChecksPassed": true,
+  "checks": [
+    {
+      "scenario": "weak",
+      "size": 10000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 10000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "weak",
+      "size": 10000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 10000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "weak",
+      "size": 50000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 50000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "weak",
+      "size": 50000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 50000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "weak",
+      "size": 100000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 100000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "weak",
+      "size": 100000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 100000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "reference_failure",
+      "size": 10000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 10000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "reference_failure",
+      "size": 10000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 10000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "reference_failure",
+      "size": 50000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 50000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "reference_failure",
+      "size": 50000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 50000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "reference_failure",
+      "size": 100000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 100000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "reference_failure",
+      "size": 100000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "ready",
+      "rows": 100000,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "cancel",
+      "size": 10000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "cancelled",
+      "rows": 0,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "cancel",
+      "size": 10000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "cancelled",
+      "rows": 0,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "cancel",
+      "size": 50000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "cancelled",
+      "rows": 0,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "cancel",
+      "size": 50000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "cancelled",
+      "rows": 0,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "cancel",
+      "size": 100000,
+      "cache": "cold",
+      "nPerPath": 1,
+      "state": "cancelled",
+      "rows": 0,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    },
+    {
+      "scenario": "cancel",
+      "size": 100000,
+      "cache": "hot",
+      "nPerPath": 1,
+      "state": "cancelled",
+      "rows": 0,
+      "previewWithdrawn": true,
+      "fullResultAndPageParity": true
+    }
+  ],
+  "scope": "Engineering replay on synthetic local inputs; latency-only weak mode, not a bandwidth/packet-loss test or clinical evaluation."
+}
