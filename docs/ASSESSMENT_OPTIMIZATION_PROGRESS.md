@@ -20,6 +20,7 @@ This is a progress report, not full acceptance of the optimization plan.
 - Directed retrieval advances at most three engine-scoped questions within the existing HTTP/deadline budget. Known conflicts take priority; one supported clause does not suppress other unresolved clauses. Request-local caching prevents repeated queries. No-record, unqueried and unavailable states remain distinct from negative clinical evidence.
 - Publication identities group PMID/DOI/ClinVar records without merging trust flags or losing distinct snippets/citation IDs. Only independently verified object/material conflict holds structured support from the same publication. CNV duplicate case IDs are rejected within a selection as well as across selections; private case IDs are excluded from retrieval model views.
 - The four-language read-only panel displays retrieval findings, source conflicts and remaining questions. Docker build arguments and SaaS/self-hosted Compose configuration expose independent browser/AI opt-ins, both default off. Changing the browser flag requires an image rebuild; enabling AI transport requires the updated receiver first.
+- The receiver builds a bounded `structured-inputs-v1` view from existing normalized ACMG mechanism/GenCC, CNV dosage and SVC method fields. Source versions and original paths remain traceable; input source confirmation cannot establish clause applicability. Direction-specific CNV overlap reuses the existing annotator. Pointer zero/false survives; ambiguous non-pointer defaults remain unknown. A 256-field limit reports omissions explicitly. Nested source IDs and provenance IDs use opaque aliases, and patient/family IDs are not repeated in this view.
 
 ## Validation performed
 
@@ -28,13 +29,14 @@ This is a progress report, not full acceptance of the optimization plan.
 - SepiLens API, assessment and config suites passed with local synthetic HTTP services. Includes a 120-case engineering replay matrix (30 parameterized cases per engine); this is not 120 independent clinical cases or a model-accuracy evaluation.
 - Octopus assistance suite passed, including zero/missing fact tests.
 - HTTP proxy variables were cleared only in test processes to permit localhost synthetic service connections.
+- Explicit large parity run (`ASSESSMENT_LARGE_PARITY=true pnpm exec vitest run src/lib/assessment/optimization-parity.test.ts`) passed 1k/10k/50k/100k mixed-row cases. Each case compares every final row assessment and reference-gene ordering between old and optimized paths. Total test runtime was 89.74 s; individual 50k/100k cases took 17.35/71.53 s including both paths and deep equality checks. These are Node/jsdom regression timings, not browser performance targets or p50/p95 measurements.
 
 ## Remaining before the original plan is complete
 
 - Browser end-to-end baseline and 10k/50k/100k repeated cold/hot runs, p50/p95 and peak-memory comparison. The 50%/25% targets are unverified.
 - End-to-end browser timing integration and report, including network/Parquet materialization and memory. HPO pair/ancestor reuse and prefiltered ROH candidate lookup are implemented; final large-fixture comparison is outstanding.
 - Real-browser verification of the provisional row preview surface and its withdrawal behavior. The main Parquet table intentionally publishes only the completed baseline; provisional previews have no mutation controls.
-- Complete engine-specific structured method/dosage input extraction. Claim-level excerpts and independent rule-result field bindings are implemented; unsupported premises are not inferred from caller annotations.
+- Validate real-world coverage of original structured method/dosage inputs. Receiver extraction and context-only field bindings are implemented; Octopus currently forwards imported annotations without fabricating trusted dosage/method records, so absent curated material remains unknown. Production input coverage and source-policy validation must be assessed before enabling the path.
 - Independent clinically reviewed labels and fixed-model quality comparison, including false acceptance, support, omission, conflict and useful coverage metrics. No paid provider calls were made.
 - Real-browser verification for the implemented per-source reasons/defaults/historical-metadata UI. Both default-off and optimization-enabled production builds passed locally; Docker/Linux build verification remains outstanding.
 
@@ -54,5 +56,7 @@ This is a progress report, not full acceptance of the optimization plan.
 - SepiLens `f62663e`: engine-scoped missing-evidence retrieval, cache/budget/cancellation protection and independently verified source-conflict holds. Full `go test ./...` passed with synthetic local services.
 - YiJian `a3d66d2`: four-language retrieval findings and source-conflict presentation. Seven panel tests, ten language tests and TypeScript checks passed.
 - YiJian `26c6584`, Octopus `1ce0188`, Squid `b93821a`: default-off build/runtime opt-ins and deployment examples. SaaS/local Compose syntax checks passed; the self-hosted SepiLens overlay was validated with a synthetic Octopus image declaration and synthetic secret paths, matching its generated-base requirement. No containers were started.
+- SepiLens `6aec124`: engine-specific structured field view, original-field context bindings, strict source provenance separation, bounded omissions and nested citation alias tests. Full backend tests passed before the alias-depth fix; the complete affected API/assessment suites passed after that fix and the prompt metadata update.
+- YiJian `416c33f`: four-language explanations for original-field applicability and omitted context. Eight panel tests, ten language tests and TypeScript checks passed.
 
 Neither new path is enabled by default. The overall plan remains in progress. No paid provider requests, push or production deployment have been performed. This report accompanies functional commits and explicitly records outstanding work; it is not a clinical-accuracy or performance-target acceptance report.
