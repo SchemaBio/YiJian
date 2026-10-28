@@ -2,6 +2,17 @@
 
 This is a progress report, not full acceptance of the optimization plan.
 
+## Updated performance acceptance — 2026-10-28
+
+The user accepted the measured 51%/76% cold full-time p95 reductions at 50k/100k
+as satisfying this delivery's performance requirement and requested no further
+work merely to chase the original hot-cache target. The uncommitted cache-probe
+exploration was removed; all committed implementations and baseline reports remain.
+Original timing misses and memory limitations remain visible as historical evidence,
+not claims of passing those individual gates. No default flag, push or production
+deployment was changed. Independent AI quality/clinical-review validation is still
+separate from the accepted performance result.
+
 ## Implemented
 
 - `NEXT_PUBLIC_ASSESSMENT_OPTIMIZED=true` opts into the browser path (default off). Authorized context is checked before cache reuse. The new cache namespace retains the full context/proof/rule fingerprint and replaces loaded CNV reference content with the pinned manifest digest.
@@ -35,8 +46,7 @@ This is a progress report, not full acceptance of the optimization plan.
 
 ## Remaining before the original plan is complete
 
-- Address measured hot-cache and 10k cold full-time target misses; preserve the collected baseline and report actual bottlenecks. Representative 100k hot stages include ~730 ms DuckDB startup, ~252 ms full context transfer/parse and ~693 ms context key canonicalization/hash. The cache lookup itself was ~0.02 ms. Context preparation/authorization and query-engine startup need further work.
-- Obtain defensible whole-page plus Worker memory measurements and investigate the 50k heap-counter regression signal. Five-run timing p95 is coarse; repeat on representative environments after further optimizations. Real network bandwidth/loss profiles remain outside the latency-only fixture replay.
+- Performance follow-ups are recorded rather than required for this accepted delivery: original hot-cache/10k targets, defensible whole-page plus Worker memory measurement, the 50k heap-counter signal, and real network bandwidth/loss profiles. The measured hot stages and limitations remain in the benchmark report. Further optimization was stopped at the user's request.
 - Real-browser verification of the provisional row preview surface and its withdrawal behavior. The main Parquet table intentionally publishes only the completed baseline; provisional previews have no mutation controls.
 - Validate real-world coverage of original structured method/dosage inputs. Receiver extraction and context-only field bindings are implemented; Octopus currently forwards imported annotations without fabricating trusted dosage/method records, so absent curated material remains unknown. Production input coverage and source-policy validation must be assessed before enabling the path.
 - Independent clinically reviewed labels and fixed-model quality comparison, including false acceptance, support, omission, conflict and useful coverage metrics. No paid provider calls were made.
