@@ -4,6 +4,7 @@ public/duckdb/
 .gotmp/
 .next
 .assessment-benchmark/
+__pycache__/
 *.tsbuildinfo
 .env
 .env.local

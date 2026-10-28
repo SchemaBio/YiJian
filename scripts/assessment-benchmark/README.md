@@ -58,6 +58,25 @@ Raw reports persist as `.assessment-benchmark/reports/{baseline,optimized}-SCENA
 The last run for a scenario replaces that report. The server accepts report writes
 only from its same-origin benchmark page, never arbitrary filesystem paths.
 
+Compare completed, balanced normal suites with at least five runs per group:
+
+```powershell
+python scripts/assessment-benchmark/compare.py .assessment-benchmark/reports/baseline-normal.json .assessment-benchmark/reports/optimized-normal.json --output .assessment-benchmark/reports/comparison.json
+```
+
+The comparer rejects incomplete runs, mismatched fixtures/browser/hardware,
+insufficient repetitions and any full-result or sorted-first-page digest change.
+It reports target misses directly. It always keeps overall acceptance false while
+whole-page memory and product-surface verification remain unproven.
+
+After running both paths for all additional scenarios, validate cancellation,
+degraded-cache exclusion and result/page equivalence:
+
+```powershell
+python scripts/assessment-benchmark/validate_scenarios.py .assessment-benchmark/reports --output .assessment-benchmark/reports/scenarios.json
+python -m unittest discover -s scripts/assessment-benchmark -p 'test_*.py'
+```
+
 `performance.memory` is an implementation-dependent heap counter, sampled every
 50 ms. It is **not proof of total main-thread plus Worker peak memory**. The report
 preserves that limitation, and the 110% memory acceptance requirement remains open
