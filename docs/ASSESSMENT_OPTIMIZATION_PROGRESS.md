@@ -13,6 +13,31 @@ not claims of passing those individual gates. No default flag, push or productio
 deployment was changed. Independent AI quality/clinical-review validation is still
 separate from the accepted performance result.
 
+## AI validation handoff — 2026-10-28
+
+The user requested continued AI validation, set a total paid-model budget of
+CNY 5, and proposed existing task ClinVar annotations in place of unavailable
+independent professional labels. The read-only data-quality investigation and
+offline evaluator were committed in SepiLens `e48d751`; see the sibling repository's
+`docs/AI_QUALITY_CLINVAR_READINESS_2026-10-28.md` for aggregate evidence.
+
+That investigation found no assembly or ClinVar release metadata in the inspected
+Parquet cache, no usable CNV classification labels, and no independent SVC labels.
+The SNV candidates are strongly imbalanced, with only three pathogenic/likely
+pathogenic coordinate keys before assembly verification. None is yet an accepted
+reference label. ClinVar aggregate agreement cannot establish clause-level truth
+or replace the plan's independently reviewed clinical acceptance.
+
+The user chose **not to query further task metadata and to receive the data-quality
+report first**. Further remote queries and paid model calls were therefore left
+unexecuted at this handoff. Provider spending remains CNY 0/5. The unfinished isolated executor draft
+was removed, and the committed offline evaluator/reservation-ledger tests passed
+all 19 cases. There is no completed live model comparison or clinical-accuracy
+improvement claim. Full AI acceptance remains blocked by unavailable qualified
+labels and unverified task/reference provenance; the performance acceptance above
+does not waive those requirements. Resume this validation only with suitable
+reference data and an explicit decision to continue the necessary data checks.
+
 ## Implemented
 
 - `NEXT_PUBLIC_ASSESSMENT_OPTIMIZED=true` opts into the browser path (default off). Authorized context is checked before cache reuse. The new cache namespace retains the full context/proof/rule fingerprint and replaces loaded CNV reference content with the pinned manifest digest.
