@@ -3,6 +3,7 @@ node_modules
 public/duckdb/
 .gotmp/
 .next
+.assessment-benchmark/
 *.tsbuildinfo
 .env
 .env.local

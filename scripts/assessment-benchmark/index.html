@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>YiJian isolated assessment benchmark</title>
+<style>body{font:15px system-ui;margin:24px;max-width:1200px}button,input,select{font:inherit;margin:8px;padding:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:16px}.notice{color:#744600}li{margin:6px}</style>
+<h1>Isolated synthetic assessment benchmark</h1><p class="notice">Synthetic data only. No production API, clinical record, model or billing service is used.</p>
+<p id="environment"></p><label>Rows <select id="size"><option>10000</option><option>50000</option><option>100000</option></select></label>
+<label>Scenario <select id="scenario"><option value="normal">normal</option><option value="weak">150 ms fixture latency</option><option value="reference_failure">reference failure</option><option value="cancel">cancel after first batch</option></select></label>
+<label>Pairs <input id="repeats" type="number" min="1" max="20" value="5"></label>
+<button id="run">Run cold / hot pairs</button><button id="suite">Run 10k / 50k / 100k suite</button><button id="stop">Cancel current assessment</button>
+<p id="status" role="status">Ready</p><h2>Provisional read-only rows</h2><ul id="preview"></ul><h2>Final sorted page</h2><ul id="final"></ul><h2>Report</h2><pre id="report">No measurements yet.</pre><script type="module" src="/main.ts"></script></html>
