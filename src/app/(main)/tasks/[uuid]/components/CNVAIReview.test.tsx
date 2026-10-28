@@ -14,7 +14,7 @@ it('previews replacements, requires explicit confirmation, and records editable 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'OMIM:2' } });
     fireEvent.click(screen.getByRole('button', { name: '填入评估表' }));
     expect(apply).not.toHaveBeenCalled();
-    expect(screen.getByRole('region')).toHaveTextContent('2F');
+    expect(screen.getByRole('region', {name:'填入评估表'})).toHaveTextContent('2F');
     fireEvent.click(screen.getByRole('button', { name: '确认填入，稍后人工保存' }));
     expect(apply).toHaveBeenCalledTimes(1);
     const next = apply.mock.calls[0][0];

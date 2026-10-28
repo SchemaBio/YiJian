@@ -1,4 +1,19 @@
 {
+  "evidenceBindings": {
+    "missing":"此記錄未儲存逐條證據綁定，不能據此補標為已驗證。",
+    "defaulted":"部分條款使用預設值或已降級；請核對計分依據。",
+    "details":"查看事實與引用綁定",
+    "traceability":"能夠定位引用不代表其已證明臨床條款；文獻摘錄仍需核實對象、內容和適用性。",
+    "noBinding":"未記錄具體綁定。",
+    "criterion":"條款依據",
+    "ruleOrigin":"來源：獨立規則事實",
+    "modelOrigin":"來源：模型提出的關聯",
+    "version":"來源版本",
+    "notRecorded":"未記錄",
+    "fact":"事實識別碼",
+    "status":{"supported":"獨立事實支持","context_only":"僅為匯入背景","pending_review":"待人工核實","invalid":"綁定未通過核查"},
+    "reason":{"duplicate_binding":"重複綁定，未重複採納。","claim_not_asserted":"綁定與本條款提出的事實不一致。","unknown_fact_id":"事實識別碼不在本次提供的事實包中。","ambiguous_binding":"結構化事實與摘錄混用，關聯不明確。","fact_scope_mismatch":"事實屬於其他條款或評估範圍。","structured_support_unavailable":"缺少對應的獨立結構化支持。","request_fact_cannot_claim_source":"匯入背景不能被標成獨立來源證據。","referenced_fact_unavailable":"所引用事實未知、衝突或不適用。","unknown_source":"來源不在本次提供的材料中。","source_not_cited":"綁定來源未在該條款中引用。","source_conflicting_or_rejected":"來源存在衝突或未通過核查。","excerpt_not_located":"無法在提供的來源材料中定位該摘錄。","excerpt_requires_review":"摘錄可以定位，但是否支持該臨床條款仍需覆核。","imported_context_only":"匯入值尚未經過獨立證據核實。","independent_structured_fact":"對應事實和來源已由獨立規則鏈核實。","missing_independent_or_excerpt_binding":"缺少獨立事實或可定位的摘錄綁定。","unknown":"請覆核此證據關聯。"}
+  },
   "assessmentPreview":{"title":"行級初評預覽","pending":"最新已計算行的唯讀預覽。全域排序和置頂仍在處理中，尚未完成；取消或失敗後將撤回預覽。","rowResult":"行級結果"},
   "assessmentQuality":{"title":"條款證據支持狀態（建議仍需人工覆核）","supported":"已有證據支持","pending_review":"待核實來源、事實或適用性","insufficient_data":"證據不足","conflicting":"存在衝突"},
   "exampleData": {

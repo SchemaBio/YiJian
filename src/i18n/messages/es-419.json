@@ -1,4 +1,19 @@
 {
+  "evidenceBindings": {
+    "missing":"Este registro no contiene vínculos de evidencia por afirmación; no se puede añadir verificación retroactiva.",
+    "defaulted":"Algunos criterios usan valores predeterminados o se degradaron. Revise la base de la puntuación.",
+    "details":"Inspeccionar vínculos de hechos y citas",
+    "traceability":"Localizar una cita no demuestra un criterio clínico. Aún se deben revisar su objeto, contenido y aplicabilidad.",
+    "noBinding":"No se registró un vínculo específico.",
+    "criterion":"Respaldo del criterio",
+    "ruleOrigin":"Origen: hecho establecido por reglas independientes",
+    "modelOrigin":"Origen: asociación propuesta por el modelo",
+    "version":"Versión de la fuente",
+    "notRecorded":"No registrada",
+    "fact":"Identificador del hecho",
+    "status":{"supported":"Respaldo de hechos independientes","context_only":"Solo contexto importado","pending_review":"Requiere revisión","invalid":"Falló la validación del vínculo"},
+    "reason":{"duplicate_binding":"El vínculo duplicado no se adoptó de nuevo.","claim_not_asserted":"El vínculo no coincide con un hecho afirmado para este criterio.","unknown_fact_id":"El identificador del hecho no se proporcionó en este paquete.","ambiguous_binding":"El vínculo combina de forma ambigua un hecho estructurado y un fragmento.","fact_scope_mismatch":"El hecho pertenece a otro criterio o ámbito de evaluación.","structured_support_unavailable":"Falta el respaldo estructurado independiente correspondiente.","request_fact_cannot_claim_source":"El contexto importado no puede atribuirse respaldo de fuentes independientes.","referenced_fact_unavailable":"El hecho citado es desconocido, contradictorio o no aplicable.","unknown_source":"La fuente no se proporcionó para esta evaluación.","source_not_cited":"El criterio no citó la fuente del vínculo.","source_conflicting_or_rejected":"La fuente es contradictoria o fue rechazada.","excerpt_not_located":"El fragmento no se pudo localizar en el material proporcionado.","excerpt_requires_review":"El fragmento es rastreable, pero su respaldo al criterio clínico aún requiere revisión.","imported_context_only":"El valor importado no se verificó de forma independiente.","independent_structured_fact":"La cadena de reglas independientes estableció el hecho y la fuente correspondientes.","missing_independent_or_excerpt_binding":"Falta un vínculo a un hecho independiente o a un fragmento rastreable.","unknown":"Revise esta asociación de evidencia."}
+  },
   "assessmentPreview":{"title":"Vista previa de evaluación por fila","pending":"Vista de solo lectura de filas evaluadas recientemente. La clasificación global y los elementos fijados siguen en proceso; el resultado está incompleto. Se retira al cancelar o fallar.","rowResult":"Resultado por fila"},
   "assessmentQuality":{"title":"Respaldo de evidencia por criterio (requiere revisión)","supported":"Respaldado por evidencia existente","pending_review":"Fuente, hechos o aplicabilidad pendientes de revisión","insufficient_data":"Evidencia insuficiente","conflicting":"Evidencia contradictoria"},
   "exampleData": {

@@ -1,4 +1,19 @@
 {
+  "evidenceBindings": {
+    "missing":"此记录未保存逐条证据绑定，不能据此补标为已验证。",
+    "defaulted":"部分条款使用默认值或已降级；请核对计分依据。",
+    "details":"查看事实与引用绑定",
+    "traceability":"能够定位引用不代表其已证明临床条款；文献摘录仍需核实对象、内容和适用性。",
+    "noBinding":"未记录具体绑定。",
+    "criterion":"条款依据",
+    "ruleOrigin":"来源：独立规则事实",
+    "modelOrigin":"来源：模型提出的关联",
+    "version":"来源版本",
+    "notRecorded":"未记录",
+    "fact":"事实标识",
+    "status":{"supported":"独立事实支持","context_only":"仅为导入背景","pending_review":"待人工核实","invalid":"绑定未通过核查"},
+    "reason":{"duplicate_binding":"重复绑定，未重复采纳。","claim_not_asserted":"绑定与本条款提出的事实不一致。","unknown_fact_id":"事实标识不在本次提供的事实包中。","ambiguous_binding":"结构化事实与摘录混用，关联不明确。","fact_scope_mismatch":"事实属于其他条款或评估范围。","structured_support_unavailable":"缺少对应的独立结构化支持。","request_fact_cannot_claim_source":"导入背景不能被标成独立来源证据。","referenced_fact_unavailable":"所引用事实未知、冲突或不适用。","unknown_source":"来源不在本次提供的材料中。","source_not_cited":"绑定来源未在该条款中引用。","source_conflicting_or_rejected":"来源存在冲突或未通过核查。","excerpt_not_located":"无法在提供的来源材料中定位该摘录。","excerpt_requires_review":"摘录可以定位，但是否支持该临床条款仍需复核。","imported_context_only":"导入值尚未经过独立证据核实。","independent_structured_fact":"对应事实和来源已由独立规则链核实。","missing_independent_or_excerpt_binding":"缺少独立事实或可定位的摘录绑定。","unknown":"请复核此证据关联。"}
+  },
   "assessmentPreview":{"title":"行级初评预览","pending":"最新已计算行的只读预览。全局排序和置顶仍在处理中，尚未完成；取消或失败后将撤回预览。","rowResult":"行级结果"},
   "assessmentQuality":{"title":"条款证据支持状态（建议仍需人工复核）","supported":"已有证据支持","pending_review":"待核实来源、事实或适用性","insufficient_data":"证据不足","conflicting":"存在冲突"},
   "exampleData": {

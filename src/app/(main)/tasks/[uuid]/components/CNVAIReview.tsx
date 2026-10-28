@@ -6,6 +6,7 @@ import type { CNVAssessment } from '../types';
 import { calculateLossTotal } from '../utils/loss-calculator';
 import { calculateGainTotal } from '../utils/gain-calculator';
 import { cnvAIClauses, cnvAISources, prepareCNVAIReview } from '../utils/cnv-ai';
+import {EvidenceQualityPanel} from '@/components/shared/EvidenceQualityPanel';
 export function CNVAIReview({ result, assessment, onApply, disabled = false }: {
     result: AIAssistanceResult;
     assessment: CNVAssessment;
@@ -39,6 +40,7 @@ export function CNVAIReview({ result, assessment, onApply, disabled = false }: {
     };
     return <div className="mb-3 space-y-2 rounded border border-border-subtle p-3 text-xs">
   <p>{t(autoFilled ? 'assistance.cnvAutoFilled' : 'assistance.cnvReviewNotice')}</p>
+  <EvidenceQualityPanel proposal={result.agentProposal} defaultedFields={assessment.criteria.aiReview?.defaultedFields}/>
   <div className="flex flex-wrap gap-2"><label>{t('tasks.diseaseIdentifier3697b1')}<input disabled={disabled} value={disease} onChange={e => { setDisease(e.target.value); if (autoFilled) onApply({ ...assessment.criteria, aiReview: { ...assessment.criteria.aiReview!, clinicalContext: { diseaseId: e.target.value, inheritance: moi } } }); }} className="ml-2 rounded border bg-canvas-default p-1"/></label><label>{t('tasks.inheritancePattern5de3fe')}<select disabled={disabled} value={moi} onChange={e => { setMoi(e.target.value); if (autoFilled) onApply({ ...assessment.criteria, aiReview: { ...assessment.criteria.aiReview!, clinicalContext: { diseaseId: disease, inheritance: e.target.value } } }); }} className="ml-2 rounded border bg-canvas-default p-1">{['unknown', 'AD', 'AR', 'XL', 'XLD', 'XLR', 'SD', 'MT'].map(v => <option key={v}>{v}</option>)}</select></label></div>
   {proposal?.ai_assessment?.cnv_context?.rationale && <p>{proposal.ai_assessment.cnv_context.rationale}</p>}
   <ul className="space-y-1">{cnvAIClauses(result).map(c => <li key={c.code}>{c.code} · {t(`assistance.criterionStatus.${({ met: 'met', not_met: 'notMet', not_applicable: 'notApplicable', insufficient_data: 'insufficient', conflicting: 'conflicting' } as Record<string, string>)[c.status] ?? 'insufficient'}`)} · {typeof c.score_hundredths === 'number' ? (c.score_hundredths / 100).toFixed(2) : '—'}<p>{c.override_reason}</p><span>{c.source_ids?.join(', ')}</span></li>)}</ul>

@@ -1,4 +1,19 @@
 {
+  "evidenceBindings": {
+    "missing":"This record has no saved claim-level evidence bindings; verification cannot be added retrospectively.",
+    "defaulted":"Some criteria use defaults or were downgraded. Review the scoring basis.",
+    "details":"Inspect fact and citation bindings",
+    "traceability":"Locating a quotation does not establish a clinical criterion. Its object, content and applicability still require review.",
+    "noBinding":"No specific binding was recorded.",
+    "criterion":"Criterion support",
+    "ruleOrigin":"Origin: independently established rule fact",
+    "modelOrigin":"Origin: model-proposed association",
+    "version":"Source version",
+    "notRecorded":"Not recorded",
+    "fact":"Fact identifier",
+    "status":{"supported":"Independent fact support","context_only":"Imported context only","pending_review":"Review required","invalid":"Binding validation failed"},
+    "reason":{"duplicate_binding":"Duplicate binding was not adopted again.","claim_not_asserted":"The binding does not match a fact asserted for this criterion.","unknown_fact_id":"The fact identifier was not supplied in this fact pack.","ambiguous_binding":"The binding ambiguously combines a structured fact and an excerpt.","fact_scope_mismatch":"The fact belongs to a different criterion or assessment scope.","structured_support_unavailable":"Corresponding independent structured support is missing.","request_fact_cannot_claim_source":"Imported context cannot claim independently established source evidence.","referenced_fact_unavailable":"The referenced fact is unknown, conflicting or inapplicable.","unknown_source":"The source was not supplied for this assessment.","source_not_cited":"The binding source was not cited by this criterion.","source_conflicting_or_rejected":"The source is conflicting or rejected.","excerpt_not_located":"The excerpt could not be located in the supplied source material.","excerpt_requires_review":"The excerpt is traceable, but its support for this clinical criterion still requires review.","imported_context_only":"The imported value has not been independently verified.","independent_structured_fact":"The corresponding fact and source were established by the independent rule chain.","missing_independent_or_excerpt_binding":"An independent fact or traceable excerpt binding is missing.","unknown":"Review this evidence association."}
+  },
   "assessmentPreview":{"title":"Row assessment preview","pending":"Read-only preview of recently evaluated rows. Global ranking and pinning are still processing; this is incomplete. Previews are withdrawn on cancellation or failure.","rowResult":"Row result"},
   "assessmentQuality":{"title":"Criterion evidence support (review required)","supported":"Supported by existing evidence","pending_review":"Source, facts or applicability pending review","insufficient_data":"Insufficient evidence","conflicting":"Conflicting evidence"},
   "exampleData": {
