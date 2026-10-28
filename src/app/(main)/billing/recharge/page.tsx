@@ -18,6 +18,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { parseCreditQuantity } from '@/lib/payments';
+import { StripeRechargePanel } from '@/components/shared/StripeRechargePanel';
 
 const PRESET_CREDITS = [100, 500, 1000, 5000];
 
@@ -89,7 +90,6 @@ export default function RechargePage() {
             {t("billing.backToBilling844842")}</Link>
           <div className="flex items-center gap-2">
             <h2 className="yj-page-title">{t("billing.addCreditsfa03c4")}</h2>
-            <Tag variant="warning">{t("billing.manualReview61d90f")}</Tag>
           </div>
           <p className="yj-page-subtitle">{t("billing.chooseACreditAmountAndCreateAb9ec63")}</p>
         </div>
@@ -145,6 +145,7 @@ export default function RechargePage() {
             </p>
           </div>
 
+          {currentOrg?.id && <StripeRechargePanel quantity={amount} orgId={String(currentOrg.id)} />}
           <div className="mt-6 flex flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm text-fg-muted">{t("billing.requestedAmount2e583a")}</p>

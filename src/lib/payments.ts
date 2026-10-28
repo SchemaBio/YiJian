@@ -9,8 +9,10 @@ export interface PaymentOptions {
   credits_per_unit: 1;
   min_quantity: number;
   max_quantity: number;
-  status: 'not_integrated';
-  price: null;
+  status: 'not_integrated' | 'disabled' | 'available';
+  mode?: 'test' | 'live';
+  simulated?: boolean;
+  price: { currency: string; unit_amount: number } | null;
 }
 
 export interface CreditCheckoutRequest {
@@ -40,5 +42,20 @@ export function createCheckoutSession(input: CreditCheckoutRequest, idempotencyK
     throw new Error('Invalid Credit quantity');
   }
   if (!idempotencyKey.trim() || idempotencyKey.length > 200 || /[\r\n]/.test(idempotencyKey)) throw new Error('Invalid Idempotency-Key');
-  return api.post<never>('/v1/billing/checkout-sessions', input, { coreApi: false, headers: { 'Idempotency-Key': idempotencyKey } });
+  return api.post<{ order_id: string; state: string; checkout_url?: string; simulated: boolean }>('/v1/billing/checkout-sessions', input, { coreApi: false, headers: { 'Idempotency-Key': idempotencyKey } });
+}
+
+export interface PaymentOrder {
+  id: string; mode: 'test' | 'live'; quantity: number; currency: string; amount: number;
+  state: string; simulated: boolean; refunded_amount: number; recovered_credits: number;
+  refund_status?: string; dispute_status?: string; created_at: string;
+}
+export function getPaymentOrders(page = 1) { return api.get<{ items: PaymentOrder[]; total: number }>('/v1/billing/orders?page=' + page, { coreApi: false }); }
+export function getPaymentOrder(id: string) { return api.get<PaymentOrder>('/v1/billing/orders/' + encodeURIComponent(id), { coreApi: false }); }
+
+// Stripe's charge minor units (ISK/UGX are represented using two decimals).
+const zeroDecimal = new Set(['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'vnd', 'vuv', 'xaf', 'xof', 'xpf']);
+export function formatPaymentMoney(amount: number, currency: string) {
+  const divisor = zeroDecimal.has(currency.toLowerCase()) ? 1 : 100;
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency.toUpperCase() }).format(amount / divisor);
 }

@@ -17,6 +17,7 @@ export function billingTransactionLabel(row: BillingTransaction, t: TextTranslat
     failure_refund: 'settings.failureRefund390d28', adjust: 'settings.adjustment0a4d26',
     download: 'settings.downloadChargef8580c', settlement: 'settings.settlementConfirmation',
     reservation_refunded: 'settings.reservationRefunded',
+    payment_refund: 'stripePayments.refundLedger', payment_dispute: 'stripePayments.disputeLedger', payment_restore: 'stripePayments.restoreLedger',
   };
   return keys[type] ? t(keys[type]) : type || '-';
 }

@@ -1,8 +1,10 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
-核对日期：**2026-10-27，Asia/Shanghai**。本文替代此前 2026-10-08 的版本。
+核对日期：**2026-10-28，Asia/Shanghai**。本文替代此前 2026-10-08 的版本。
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
+
+**最新部署以第 41 节为准：Squid / Cuttlefish / YiJian 已部署 Stripe 接入代码，test/live 收款均关闭，Stripe 测试凭据和真实测试卡闭环验收待完成。服务器仍有待应用计算配置，支付发布以显式 preserve-applied 选项保留当前运行配置。以下 2026-10-27 镜像记录为历史状态。**
 
 **2026-10-27 当前线上：SepiLens 为 `cnv-default-draft-20261027t023827z`（第 37 节），Octopus 为 `cnv-copy-estimate-20261026t145125z`，YiJian 为 `cnv-autofill-20261027t023917z`，Squid 保持 `cnv-ai-20261026t115034z`。第 33 节修复深度估算小数拷贝数被错误拒绝，保留其估算身份、不取整。第 31 节修复 CNV 浏览器 BIGINT 区间长度在提交前序列化失败导致一直转圈，并增加有界传输超时。第 30 节接通 CNV Gain/Loss AI 自动上下文、联网候选、人工填表保存及每次 1 积分，保留正式规则批准门禁；同步修复质控大于号文案。第 28 节修正 IGV 放大后的正文与三样本轨道高度自适应，按钮移至关闭按钮左侧；第 27 节启用 CNV Region 本地初评/HPO 关联/得分排序；第 26 节补齐 Peddy 亲缘关系接口和总览展示；第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG / SVC v4 / CNV Gain / CNV Loss AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
 
@@ -637,3 +639,25 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 
 - 按用户要求将第 39 节实现本地提交：Squid `080e939`（审核事务、持久发放队列及状态）、Octopus `c953655`（SaaS 模板、组织独立副本、保留策略及集成测试）、Cuttlefish `acdebb1`（审核发放选项和重试）。YiJian 将示例标签、准备/到期提示、四语言、测试及本节交接一并提交，具体提交号以 Git 记录为准。
 - 第 39 节“尚未 commit”为当时状态；当前以本节和 Git 记录为准。本次仅本地提交、不 push、不部署，沿用已通过的测试和构建。模板尚未选定/发布，生产版本及业务数据保持。临时测试容器及其匿名卷已清理，`.gotmp`、源码验收副本和运维材料不入库。
+
+## 41. 2026-10-28 仓库刷新及 SaaS Stripe 支付接入部署
+
+- 先前仓库刷新已将六个应用仓库同步至各自 origin/main。之后按用户批准的计划实现并部署 Stripe：Squid / Cuttlefish / YiJian 当前均为 `schemabio/<service>:stripe-payments-20261028t152642z`，healthy。Octopus 保持 `github-refresh-20261028t143037z`，SepiLens 同为 `github-refresh-20261028t143037z`；其他容器保持。新增浏览器优化及 AI 证据链开关仍默认关闭。
+- Cuttlefish 平台计费页支持 test/live 独立配置、只写密钥、商品价格验证、启用/暂停收款、订单分页/对账及事件失败重试。密钥由 Squid 独立 AES-GCM 主密钥加密保存，版本保留供历史订单使用，不向页面回显。每次保存暂停该模式收款并撤销验证。
+- YiJian 充值页支持真实价格、Stripe 托管 Checkout、订单与返回状态；超时保留幂等键，返回页只读订单。每件 Credit 对应 1 积分，数量 1～5000。首版仅银行卡及可用卡钱包，单一一次性 Price，无套餐、折扣、附加税费或动态换汇。
+- Squid 增加独立支付配置版本、持久订单、签名事件收件箱、重试与对账，官方 SDK `stripe-go/v87 v87.0.0`，API `2026-09-30.endive`。Webhook 使用 Snapshot 格式，路径 `/api/v1/payments/stripe/webhook`，独立验签且仅该路径豁免 CSRF。订单/余额/流水原子处理、事件及订单双重幂等；test 模拟到账不写真实余额或充值流水。
+- 退款在 Stripe Dashboard 发起，平台按累计成功退款金额比例向下取整追回积分；真实支付争议开启追回剩余积分，胜诉恢复非退款部分，败诉保持。追回可形成负余额，保留既有消费准入；不改历史流水。旧订单、退款和对账在暂停收款后继续处理。
+- 服务器已安全生成独立主密钥文件 `/home/ubuntu/schema/saas-deploy/secrets/payments/master.key`，只读挂载至 Squid `/run/secrets/payment_master_key`，通过 `PAYMENT_ENCRYPTION_KEY_FILE` 使用。`PAYMENT_PUBLIC_ORIGIN=https://yijian.schema-bio.com`。不要读取/输出、丢失或直接覆盖主密钥。Stripe API Key、Webhook Secret、商品/Price 尚未配置；test/live 均关闭，四张新支付表无订单/配置/事件记录。
+- 原 Squid 存在 1 项待应用计算配置。发布前在远端内存核对加密 applied 快照与 live effective 配置一致，部署新增 `SAAS_SETTINGS_PRESERVE_APPLIED=true`，启动使用 applied，不应用/清除 desired，不修改 applied_revision。前后数据库摘要及 effective_values/effective_secrets/revision/applied_revision/restart_required 一致。该选项保持开启，直到用户明确安排应用计算配置。
+- 本机专用 PostgreSQL 18 的支付生命周期、模拟隔离、加密/轮换、签名时间与原始字节校验、事务回滚、并发唯一入账、跨组织隔离、超时原键恢复及配置保留回归通过；Squid 全仓库编译检查通过。YiJian 38 项相关测试及类型检查、Cuttlefish 8 项相关测试及类型检查通过。三服务 Linux 生产构建、容器健康、正常用户/管理员只读接口、Cuttlefish 支付代理、公网页面和网关验收通过。无签名的公网 Webhook 返回 400，确认到达签名门禁；不等于已完成 Stripe 真签名投递或测试卡闭环。
+- 扩大后端全量回归遇到 `TestDurableQueueConcurrentAdmissionAndCancellation` 超时，以及既有 CVM preflight/start_failed 测试返回 `Expiry fence unavailable`。已在干净 HEAD 的隔离副本复现同样问题；本阶段未修改相关 CVM 路径，不声称全量回归通过。证据保留在本机 Squid `.gotmp/stripe-baseline-regression/baseline.log`。
+- 保护目录 `/home/ubuntu/schema/backups/stripe-payments-20261028T152642Z` 包含三仓库完整源码/清单、两业务库 PostgreSQL 18 scoped dumps、原环境/Compose/nginx、独立主密钥保护副本、基线、effective 配置记录、构建日志、result.json、final-acceptance.json 和语法核验的 rollback.py。手工回退脚本在存在待应用计算配置或 live 订单时主动拒绝，以免旧 Squid 应用待配置或丢失在途支付处理；不得直接恢复旧数据库。先准备保持配置与支付处理能力的兼容回退，且代码回退须用户授权。
+- 正式收款未启用，Stripe 测试卡及真实签名回调验收因缺少测试凭据待完成；没有创建真实 Checkout、调用付费模型/计算工作流或改变生产积分。管理员可在 Cuttlefish 配置测试凭据后按 `Squid/docs/STRIPE_PAYMENTS.md` 完成测试；live 需要独立配置、验证及管理员主动启用。
+- 三仓库本轮功能修改及本文交接尚未 commit/push；远端运行使用精确源码快照 overlay，`source_dirty=true`，不能从远端旧 Git HEAD 直接重建。临时本地 PostgreSQL 测试容器及匿名卷已清理；`.gotmp`、保护副本、凭据均不入库。
+
+## 42. 2026-10-29 Stripe 接入本地提交
+
+- 按用户要求提交第 41 节实现：Squid `b3e7de5`（Stripe 配置加密、Checkout/订单、签名回调、幂等到账、退款争议、配置保留及测试）；Cuttlefish `2ae0882`（分模式只写密钥配置、验证/启停、订单对账、事件重试及测试）。YiJian 将收银台、订单状态、四语言、账本展示、测试和第 41–42 节交接一起本地提交，具体提交号以 Git 记录为准。
+- 第 41 节“尚未 commit/push”为当时状态；当前以本节及各仓库 Git 记录为准。本次仅本地提交、不 push、不重新部署，不调用 Stripe、模型或计算流程，不更改线上配置、业务数据及账务。
+- 沿用第 41 节已通过的支付相关测试、生产构建及线上验收；既有 CVM 全量回归失败和缺少 Stripe 凭据导致的真实测试卡/签名投递验收限制仍保留。test/live 收款均保持关闭。
+- `.gotmp` 运维资料、保护副本和密钥不入库；线上精确运行源码仍以第 41 节保护目录、清单及镜像摘要为准。
