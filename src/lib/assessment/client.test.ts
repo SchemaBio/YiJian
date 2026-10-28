@@ -5,7 +5,7 @@ vi.mock('./cache', () => ({ assessmentCacheKey: vi.fn(async () => 'scoped-key'),
 import {assessTask,assessmentStatus,clearAssessments,invalidateAssessment,cancelAssessment} from './client';
 import type {AssessmentContext} from './types';
 vi.mock('./reference-client',()=>({loadReferences:vi.fn(),referenceGenes:vi.fn(()=>[])}));
-import {loadReferences} from './reference-client';
+import {loadReferences,referenceGenes} from './reference-client';
 vi.mock('./cnv-reference',()=>({loadCNVReference:vi.fn()}));
 import {loadCNVReference} from './cnv-reference';
 vi.mock('../api',()=>({api:{get:vi.fn(),post:vi.fn()}}));
@@ -31,6 +31,37 @@ it('optimized cache hit skips CNV loading after authorization',async()=>{
   const read=vi.fn();await assessTask('task',read,new AbortController().signal);
   expect(api.get).toHaveBeenCalled();expect(loadCNVReference).not.toHaveBeenCalled();expect(read).not.toHaveBeenCalled();expect(workers).toHaveLength(0);
  }finally{vi.unstubAllEnvs();}
+});
+it('optimized preparation overlaps computation without waiting for display ranking',async()=>{
+ vi.stubEnv('NEXT_PUBLIC_ASSESSMENT_OPTIMIZED','true');
+ const calls:string[]=[];let releaseFirst:(()=>void)|undefined;let secondPrepared=false;
+ const entries:{rowId:string;table:string;assessment:{pinned:boolean}}[]=[];
+ class PipelineWorker extends FakeWorker {
+  constructor(){super();this.postMessage.mockImplementation(({id,action,...rest})=>{
+   const payload=(rest as {payload?:unknown}).payload;
+   const respond=(value:unknown)=>queueMicrotask(()=>this.onmessage?.({data:{id,value}} as MessageEvent));
+   if(action==='batch'){
+    const rows=payload as {id:string;table:string}[];calls.push('compute:'+rows[0].id);
+    for(const row of rows)entries.push({rowId:row.id,table:row.table,assessment:{pinned:false}});
+    const count=entries.length;
+    if(count===1){releaseFirst=()=>respond(count);if(secondPrepared)releaseFirst();}else respond(count);
+   }else respond(action==='finish'?entries.length:action==='drain'?entries:true);
+  });}
+ }
+ vi.stubGlobal('Worker',PipelineWorker);
+ vi.mocked(referenceGenes).mockImplementation(rows=>rows.map(row=>String(row.values.Gene)));
+ vi.mocked(loadReferences).mockImplementation(async(_ctx,genes,_signal,rank)=>{
+  if(rank)return new Promise(()=>{});
+  calls.push('prepare:'+genes[0]);
+  if(genes.includes('G2')){secondPrepared=true;releaseFirst?.();}
+  return {resourceVersion:'r',version:'s',canonical:{},matches:{},background:{},warnings:[]};
+ });
+ vi.mocked(api.get).mockResolvedValueOnce({active:{...context,tables:['snv-indel'],hpo:['HP:1'],referenceVersion:'r'},latestVersion:'v'});
+ try{
+  await assessTask('task',async(_ctx,_table,consume)=>{await consume([{id:'1',table:'snv-indel',values:{Gene:'G1'}}]);await consume([{id:'2',table:'snv-indel',values:{Gene:'G2'}}]);},new AbortController().signal);
+  expect(calls).toContain('prepare:G2');expect(calls.indexOf('compute:1')).toBeLessThan(calls.indexOf('compute:2'));expect(calls.indexOf('prepare:G2')).toBeLessThan(calls.indexOf('compute:2'));
+  expect(assessmentStatus('task')).toMatchObject({state:'ready',processed:2});
+ }finally{vi.unstubAllEnvs();vi.mocked(referenceGenes).mockImplementation(()=>[]);}
 });
 it('does not create a worker while checking authorized context and allows retry after a crash',async()=>{
   let resolve!:(value:unknown)=>void;

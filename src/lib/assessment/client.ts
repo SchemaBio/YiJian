@@ -4,10 +4,11 @@ import { LocalizedError } from '@/i18n/errors';
 import {api} from '../api';
 import { assessmentCacheKey, readAssessmentCache, writeAssessmentCache, removeAssessmentCache, setAssessmentCacheScope } from './cache';
 export { setAssessmentCacheScope } from './cache';
-import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable, PhenotypeMatch} from './types';
+import type {AssessmentContext, AssessmentRow, AutomaticAssessment, ResultTable, PhenotypeMatch,ReferenceSupplement} from './types';
 import { loadCNVReference } from './cnv-reference';
 import { loadReferences, referenceGenes } from './reference-client';
 import {optimizedAssessment,assessmentTimer} from './optimization';
+import {preparedBatchPipeline} from './pipeline';
 export interface AssessmentStatus {geneRanking?:PhenotypeMatch[];taskId:string;state:'checking'|'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
 interface Envelope {active?:AssessmentContext;latestVersion:string;reassessmentAvailable:boolean}
@@ -20,6 +21,9 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
   const current=sessions.get(taskId);if(current)return current.promise;
   let worker: Worker | undefined;
   const controller=new AbortController();
+  const optimized=optimizedAssessment();
+  const timing=assessmentTimer();
+  const measure=async<T,>(phase:string,run:()=>Promise<T>)=>{const done=timing.start(phase);try{return await run();}finally{done();}};
   let sequence=0;
   let fatalError:Error|undefined;
   const pending=new Map<number,{resolve:(value:unknown)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
@@ -41,17 +45,17 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     controller.signal.addEventListener('abort',()=>{clearTimeout(session.timer);},{once:true});
   };
   session.promise=(async()=>{
-    const timing=assessmentTimer();const totalDone=timing.start('total');
+    const totalDone=timing.start('total');
     const contextDone=timing.start('context');
     const envelope=await api.get<Envelope>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{signal:controller.signal});
     const authorized=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
     const context={...authorized};
     contextDone();
-    const earlyKey=optimizedAssessment()?await assessmentCacheKey(context):null;
-    const earlyCached=earlyKey?await readAssessmentCache(earlyKey):null;
+    const earlyKey=optimized?await measure('cache_key',()=>assessmentCacheKey(context)):null;
+    const earlyCached=earlyKey?await measure('cache_read',()=>readAssessmentCache(earlyKey)):null;
     let cnvReferenceFailed=false;
     if(!earlyCached&&context.tables?.includes('cnv-segment'))try{
-      context.cnvReference=await loadCNVReference(context,controller.signal);
+      context.cnvReference=await measure('cnv_reference',()=>loadCNVReference(context,controller.signal));
     }catch(cause){
       if(controller.signal.aborted)throw cause;
       cnvReferenceFailed=true;context.availability=[...context.availability,'cnvLocal.referenceUnavailable'];
@@ -59,7 +63,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     session.context=context;
     publish(session,{version:context.version,packVersion:context.referenceVersion?`${context.pack.version} · HPO/HGNC/ClinGen ${context.referenceVersion}`:context.pack.version,pending:context.availability,reassessmentAvailable:envelope.reassessmentAvailable});
     const cacheKey = earlyKey??await assessmentCacheKey(context);
-    const cached = earlyCached??await readAssessmentCache(cacheKey);
+    const cached = optimized?earlyCached:await readAssessmentCache(cacheKey);
     if (controller.signal.aborted) throw controller.signal.reason;
     if (cached) {
       session.byRow = new Map(cached.map(entry => [entry.rowId, entry.assessment]));
@@ -77,15 +81,42 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     startWorker();
     publish(session,{state:'loading'});
     let referencesFailed=false;
-    if(context.referenceVersion&&context.hpo.length)try{
+    const ranking=async()=>{if(context.referenceVersion&&context.hpo.length)try{
       const ranking=await loadReferences(context,[],controller.signal,true);
-      publish(session,{geneRanking:ranking.geneRanking??[]});
+      if(!controller.signal.aborted&&(!optimized||!referencesFailed))publish(session,{geneRanking:ranking.geneRanking??[]});
     }catch(cause){
       if(controller.signal.aborted||cause instanceof Error&&cause.message==='REFERENCE_VERSION_CHANGED')throw cause;
-      referencesFailed=true;publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});
-    }
+      if(!optimized)referencesFailed=true;
+      publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});
+    }};
+    if(optimized)void ranking().catch(cause=>{if(!controller.signal.aborted)publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable'],...(cause instanceof Error&&cause.message==='REFERENCE_VERSION_CHANGED'?{reassessmentAvailable:true}:{})});});
+    else await ranking();
     await rpc('init',context);
     const seenGenes=new Set<string>();
+    if(optimized){
+      type Prepared={rows:AssessmentRow[];supplement?:ReferenceSupplement;unavailable?:boolean};
+      const pipeline=preparedBatchPipeline(async(rows:AssessmentRow[]):Promise<Prepared>=>{
+        if(controller.signal.aborted)throw controller.signal.reason;
+        if(context.referenceVersion&&context.hpo.length&&!referencesFailed){
+          const genes=referenceGenes(rows,context).filter(gene=>!seenGenes.has(gene));
+          for(const gene of genes)seenGenes.add(gene);
+          if(genes.length)try{return {rows,supplement:await measure('gene_reference',()=>loadReferences(context,genes,controller.signal))};}
+          catch(cause){if(controller.signal.aborted||cause instanceof Error&&cause.message==='REFERENCE_VERSION_CHANGED')throw cause;return {rows,unavailable:true};}
+        }
+        return {rows};
+      },async({rows,supplement,unavailable})=>{
+        if(unavailable&&!referencesFailed){referencesFailed=true;await rpc('references-unavailable');publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});}
+        if(supplement&&!referencesFailed){await rpc('references',supplement);if(supplement.warnings.length)publish(session,{pending:[...context.availability,'phenotype.invalidHPO',...supplement.warnings.map(w=>`${w.id}${w.replacement?' → '+w.replacement:''}`)]});}
+        const processed=await measure('worker_evaluate',()=>rpc('batch',rows)) as number;publish(session,{processed});
+      },controller.signal);
+      try{
+        for(const table of context.tables??[]){
+          publish(session,{phase:'evaluate',table});
+          await measure('read_and_prepare',()=>read(context,table,rows=>pipeline.push(rows),controller.signal));
+          await pipeline.finish();
+        }
+      }finally{pipeline.stop();await pipeline.finish().catch(()=>undefined);}
+    }else{
     for(const table of context.tables??[]){
       if(controller.signal.aborted)throw new LocalizedError("display.initialAssessmentCanceledf56bc8");
       publish(session,{phase:'evaluate',table});
@@ -105,17 +136,18 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
         const processed=await rpc('batch',rows) as number;publish(session,{processed});
       },controller.signal);
     }
+    }
     publish(session,{phase:'finalize'});
-    const total=await rpc('finish') as number;
+    const total=await measure('worker_finalize',()=>rpc('finish')) as number;
     if(total!==session.status.processed)throw new LocalizedError("display.localAssessmentRecordCountMismatchRetrydbbb0d");
     const result:Entry[]=[];
     publish(session,{phase:'transfer'});
     while(result.length<total){
-      const batch=await rpc('drain') as Entry[];
+      const batch=await measure('worker_transfer',()=>rpc('drain')) as Entry[];
       if(!batch.length||result.length+batch.length>total)throw new LocalizedError("display.localAssessmentResultTransferIncompleteRetry025832");
       for(const entry of batch)result.push(entry);
     }
-    if (!referencesFailed && !cnvReferenceFailed && !controller.signal.aborted) await writeAssessmentCache(cacheKey, result);
+    if (!referencesFailed && !cnvReferenceFailed && !controller.signal.aborted) await measure('cache_write',()=>writeAssessmentCache(cacheKey, result));
     session.byRow=new Map(result.map(entry=>[entry.rowId,entry.assessment]));
     const pinnedByTable:Record<string,number>={};for(const row of result)if(row.assessment.pinned)pinnedByTable[row.table]=(pinnedByTable[row.table]??0)+1;
     publish(session,{state:'ready',pinned:result.filter(x=>x.assessment.pinned).length,pinnedByTable});
