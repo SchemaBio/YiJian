@@ -7,7 +7,7 @@ export function aiVariantContext(variant: SNVIndel | CNVSegment | CNVExon): Reco
   const samples = Object.fromEntries(['proband','father','mother'].flatMap(role => {
     const value = source[role] as Record<string,unknown> | undefined;
     if (!value) return [];
-    return [[role,Object.fromEntries(['genotype','zygosity','alleleDepth','alleleFrequency','vafSource'].filter(key=>value[key]!==undefined).map(key=>[key,value[key]]))]];
+    return [[role,Object.fromEntries(['genotype','zygosity','alleleDepth','alleleFrequency','depth','genotypeQuality','vafSource'].filter(key=>value[key]!==undefined).map(key=>[key,value[key]]))]];
   }));
   return { ...(Object.keys(samples).length ? {sampleGenotypes:samples} : {}), ...Object.fromEntries([...allowed, 'clinvarId', 'rsId', 'depth', 'alleleFrequency', 'maxAF', 'gnomadNhomaltXX', 'gnomadNhomaltXY', 'pangolinAnnotation', 'evoAnnotation', 'alphaMissenseClass', 'pubmedIds', 'omimId'].filter(key => source[key] !== undefined).map(key => [key, source[key]])),
     annotationValues: Object.fromEntries(Object.entries(variant.annotationValues ?? {}).filter(([key]) => !/(password|token|secret|api.?key|sample.?id|patient.?name|file.?path|fastq|bam.?path|cram.?path)/i.test(key))) };
