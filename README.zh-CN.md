@@ -67,6 +67,7 @@ NEXT_PUBLIC_BACKEND=octopus
 | `YIJIAN_PASSWORD_RESET_ENABLED` | `false` | 密码重置 |
 | `NEXT_PUBLIC_PASSWORD_HASH_ENABLED` | `false` | 客户端密码哈希，构建镜像时写入 |
 | `NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED` | `true` | 隐私同意，构建镜像时写入 |
+| `NEXT_PUBLIC_ASSESSMENT_OPTIMIZED` | `false` | 初评缓存、流水线和索引优化开关；构建参数，修改后须重建镜像，验收前保持关闭 |
 
 `NEXT_PUBLIC_DEV_MOCK_AUTH=true` 会被生产镜像拒绝。
 

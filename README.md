@@ -67,6 +67,7 @@ Other runtime settings, with defaults from `.env.example` and `docker-entrypoint
 | `YIJIAN_PASSWORD_RESET_ENABLED` | `false` | Password reset |
 | `NEXT_PUBLIC_PASSWORD_HASH_ENABLED` | `false` | Client-side password hashing. Baked in at image build time |
 | `NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED` | `true` | Privacy consent. Baked in at image build time |
+| `NEXT_PUBLIC_ASSESSMENT_OPTIMIZED` | `false` | Assessment cache/pipeline/index opt-in. Build argument; changing it requires rebuilding the image. Keep disabled pending acceptance |
 
 `NEXT_PUBLIC_DEV_MOCK_AUTH=true` is rejected in production images.
 
