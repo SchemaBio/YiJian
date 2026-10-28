@@ -1,4 +1,6 @@
 {
+  "assessmentPreview":{"title":"Vista previa de evaluación por fila","pending":"Vista de solo lectura de filas evaluadas recientemente. La clasificación global y los elementos fijados siguen en proceso; el resultado está incompleto. Se retira al cancelar o fallar.","rowResult":"Resultado por fila"},
+  "assessmentQuality":{"title":"Respaldo de evidencia por criterio (requiere revisión)","supported":"Respaldado por evidencia existente","pending_review":"Fuente, hechos o aplicabilidad pendientes de revisión","insufficient_data":"Evidencia insuficiente","conflicting":"Evidencia contradictoria"},
   "exampleData": {
     "label": "Ejemplo",
     "ready": "Los datos de ejemplo están listos para consultar y utilizar.",

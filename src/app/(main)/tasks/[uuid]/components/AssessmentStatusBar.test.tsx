@@ -7,6 +7,14 @@ import {InterpretationReadOnlyContext} from './InterpretationLock';
 vi.mock('@/lib/assessment/client',()=>({assessmentStatus:vi.fn(),cancelAssessment:vi.fn()}));
 vi.mock('@/lib/parquet-browser',()=>({retryBrowserAssessment:vi.fn(),reevaluateBrowserResults:vi.fn()}));
 afterEach(()=>vi.clearAllMocks());
+it('shows provisional rows with an incomplete notice and withdraws them on cancellation',()=>{
+ vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'loading',processed:25,preview:[{rowId:'synthetic',table:'snv-indel',gene:'PREVIEW_GENE',classification:'VUS',score:4,criteria:[],pending:[]}]});
+ render(<AssessmentStatusBar taskId="task" table="snv-indel"/>);
+ fireEvent.click(screen.getByRole('button',{name:'行级初评预览'}));
+ expect(screen.getByText('PREVIEW_GENE')).toBeInTheDocument();expect(screen.getByText(/全局排序和置顶仍在处理中/)).toBeInTheDocument();
+ fireEvent(window,new CustomEvent('yijian:assessment-status',{detail:{taskId:'task',state:'cancelled',processed:25}}));
+ expect(screen.queryByText('PREVIEW_GENE')).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'行级初评预览'})).not.toBeInTheDocument();
+});
 it('keeps reassessment available after completion even when evidence has not changed',async()=>{
  vi.mocked(assessmentStatus).mockReturnValue({taskId:'task',state:'ready',processed:100,reassessmentAvailable:false});
  render(<AssessmentStatusBar taskId="task"/>);

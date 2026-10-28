@@ -17,7 +17,7 @@ class FakeWorker {
   onerror?:()=>void;
   onmessageerror?:()=>void;
   terminate=vi.fn();
-  postMessage=vi.fn(({id,action}:{id:number;action:string})=>queueMicrotask(()=>this.onmessage?.({data:{id,value:action==='finish'?0:true}} as MessageEvent)));
+  postMessage=vi.fn(({id,action}:{id:number;action:string})=>queueMicrotask(()=>this.onmessage?.({data:{id,value:action==='finish'?0:action==='batch-preview'?{processed:0,preview:[]}:true}} as MessageEvent)));
   constructor(){worker=this;workers.push(this);}
 }
 const context:AssessmentContext={taskId:'task',attemptId:'attempt',version:'v',reference:'hg19',hpo:[],hpoVersion:'v',members:[],availability:[],proofs:{},tables:[],pack:{version:'pack',reference:'hg19',licenses:[],hpo:{},diseases:[],dosage:[],str:[],imprinting:[]}};
@@ -35,16 +35,21 @@ it('optimized cache hit skips CNV loading after authorization',async()=>{
 it('optimized preparation overlaps computation without waiting for display ranking',async()=>{
  vi.stubEnv('NEXT_PUBLIC_ASSESSMENT_OPTIMIZED','true');
  const calls:string[]=[];let releaseFirst:(()=>void)|undefined;let secondPrepared=false;
+ const previews:unknown[]=[];const timings:unknown[]=[];
+ const observe=(event:Event)=>previews.push((event as CustomEvent).detail.preview);
+ const observeTiming=(event:Event)=>timings.push((event as CustomEvent).detail);
+ window.addEventListener('yijian:assessment-status',observe);window.addEventListener('yijian:assessment-timing',observeTiming);
  const entries:{rowId:string;table:string;assessment:{pinned:boolean}}[]=[];
  class PipelineWorker extends FakeWorker {
   constructor(){super();this.postMessage.mockImplementation(({id,action,...rest})=>{
    const payload=(rest as {payload?:unknown}).payload;
    const respond=(value:unknown)=>queueMicrotask(()=>this.onmessage?.({data:{id,value}} as MessageEvent));
-   if(action==='batch'){
+   if(action==='batch'||action==='batch-preview'){
     const rows=payload as {id:string;table:string}[];calls.push('compute:'+rows[0].id);
     for(const row of rows)entries.push({rowId:row.id,table:row.table,assessment:{pinned:false}});
     const count=entries.length;
-    if(count===1){releaseFirst=()=>respond(count);if(secondPrepared)releaseFirst();}else respond(count);
+    const response=action==='batch-preview'?{processed:count,preview:[{rowId:rows[0].id,table:rows[0].table,score:0,criteria:[],pending:[]}]}:count;
+    if(count===1){releaseFirst=()=>respond(response);if(secondPrepared)releaseFirst();}else respond(response);
    }else respond(action==='finish'?entries.length:action==='drain'?entries:true);
   });}
  }
@@ -61,7 +66,9 @@ it('optimized preparation overlaps computation without waiting for display ranki
   await assessTask('task',async(_ctx,_table,consume)=>{await consume([{id:'1',table:'snv-indel',values:{Gene:'G1'}}]);await consume([{id:'2',table:'snv-indel',values:{Gene:'G2'}}]);},new AbortController().signal);
   expect(calls).toContain('prepare:G2');expect(calls.indexOf('compute:1')).toBeLessThan(calls.indexOf('compute:2'));expect(calls.indexOf('prepare:G2')).toBeLessThan(calls.indexOf('compute:2'));
   expect(assessmentStatus('task')).toMatchObject({state:'ready',processed:2});
- }finally{vi.unstubAllEnvs();vi.mocked(referenceGenes).mockImplementation(()=>[]);}
+  expect(previews.some(value=>Array.isArray(value)&&value.length>0)).toBe(true);expect(assessmentStatus('task')?.preview).toBeUndefined();
+  expect(JSON.stringify(timings)).toContain('first_readable');expect(JSON.stringify(timings)).not.toContain('G1');
+ }finally{window.removeEventListener('yijian:assessment-status',observe);window.removeEventListener('yijian:assessment-timing',observeTiming);vi.unstubAllEnvs();vi.mocked(referenceGenes).mockImplementation(()=>[]);}
 });
 it('does not create a worker while checking authorized context and allows retry after a crash',async()=>{
   let resolve!:(value:unknown)=>void;
@@ -89,7 +96,7 @@ it('does not publish ready after receiving incomplete drain results',async()=>{
   vi.mocked(api.get).mockResolvedValue({active:{...context,tables:['snv-indel']}});
   const next=assessTask('task',async(_context,_table,consume)=>{await new Promise(r=>setTimeout(r,75));await consume([]);},new AbortController().signal);
   await vi.waitFor(()=>expect(workers).toHaveLength(1));
-  worker.postMessage.mockImplementation(({id,action})=>queueMicrotask(()=>worker.onmessage?.({data:{id,value:action==='drain'?[]:1}} as MessageEvent)));
+  worker.postMessage.mockImplementation(({id,action})=>queueMicrotask(()=>worker.onmessage?.({data:{id,value:action==='drain'?[]:action==='batch-preview'?{processed:1,preview:[]}:1}} as MessageEvent)));
   await expect(next).rejects.toThrow('结果传输不完整');
   expect(assessmentStatus('task')?.state).toBe('error');
 });

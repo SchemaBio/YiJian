@@ -24,14 +24,15 @@ self.onmessage = (event: MessageEvent) => {
       for(const {assessment} of evaluated){if(assessment.phenotypePriority)assessment.pinned=assessment.legacyPinned??false;assessment.priorityScore=Math.max(0,(assessment.priorityScore??0)-Math.round(30*(assessment.phenotypeMatch?.score??0)));assessment.phenotypeCandidate=false;assessment.phenotypePriority=false;assessment.phenotypeMatch=undefined;assessment.pinReasons=assessment.pinReasons.filter(reason=>reason!=='HPO 相关且初评致病/可能致病');}
       self.postMessage({id,value:true});return;
     }
-    if (action === 'batch') {
+    if (action === 'batch'||action==='batch-preview') {
       if(completed)throw new LocalizedError("display.assessmentCompleted80797a");
       for (const row of payload as AssessmentRow[]) {
         const assessment=evaluateRow(row,context);
         // Full annotations are not retained by the assessment worker.
         evaluated.push({row:{...row,values:{}},assessment});
       }
-      self.postMessage({id,value:evaluated.length});return;
+      if(action==='batch-preview')self.postMessage({id,value:{processed:evaluated.length,preview:((payload as AssessmentRow[]).length?evaluated.slice(-Math.min(20,(payload as AssessmentRow[]).length)):[]).map(({row,assessment})=>({rowId:row.id,table:row.table,gene:assessment.gene,classification:assessment.cnvClassification??assessment.classification,score:assessment.cnvScore??assessment.score,criteria:assessment.criteria,pending:assessment.pending}))}});
+      else self.postMessage({id,value:evaluated.length});return;
     }
     if (action === 'finish') {
       if(!completed)selectCandidates(evaluated,context);

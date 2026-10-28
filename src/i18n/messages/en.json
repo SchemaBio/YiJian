@@ -1,4 +1,6 @@
 {
+  "assessmentPreview":{"title":"Row assessment preview","pending":"Read-only preview of recently evaluated rows. Global ranking and pinning are still processing; this is incomplete. Previews are withdrawn on cancellation or failure.","rowResult":"Row result"},
+  "assessmentQuality":{"title":"Criterion evidence support (review required)","supported":"Supported by existing evidence","pending_review":"Source, facts or applicability pending review","insufficient_data":"Insufficient evidence","conflicting":"Conflicting evidence"},
   "exampleData": {
     "label": "Example",
     "ready": "Your example data is ready to view and use.",

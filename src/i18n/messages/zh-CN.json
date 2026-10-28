@@ -1,4 +1,6 @@
 {
+  "assessmentPreview":{"title":"行级初评预览","pending":"最新已计算行的只读预览。全局排序和置顶仍在处理中，尚未完成；取消或失败后将撤回预览。","rowResult":"行级结果"},
+  "assessmentQuality":{"title":"条款证据支持状态（建议仍需人工复核）","supported":"已有证据支持","pending_review":"待核实来源、事实或适用性","insufficient_data":"证据不足","conflicting":"存在冲突"},
   "exampleData": {
     "label": "示例",
     "ready": "示例数据已准备完成，可正常查看和使用。",

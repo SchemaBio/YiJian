@@ -36,3 +36,16 @@ it('evaluates and drains 55,393 rows without one full-result message',async()=>{
   }
   console.info(JSON.stringify({fixture:'worker-55393',milliseconds:Math.round(performance.now()-start),maxResponseRows:ASSESSMENT_BATCH_SIZE}));
 },30000);
+it('publishes bounded read-only row previews before global selection',async()=>{
+ vi.resetModules();
+ const postMessage=vi.fn();const scope={postMessage,onmessage:undefined as undefined|((event:MessageEvent)=>void)};
+ vi.stubGlobal('self',scope);await import('./worker');
+ let id=0;const rpc=(action:string,payload?:unknown)=>{scope.onmessage!({data:{id:++id,action,payload}} as MessageEvent);const response=postMessage.mock.calls.at(-1)![0];expect(response.error).toBeUndefined();return response.value;};
+ rpc('init',context());
+ const rows=Array.from({length:25},(_,i):AssessmentRow=>({id:String(i),table:'snv-indel',values:{Type:'SNP',Transcript:'ENST1',Consequence:'missense_variant',AlphaMissense_AM:.99}}));
+ const value=rpc('batch-preview',rows);
+ expect(value.processed).toBe(25);expect(value.preview).toHaveLength(20);expect(value.preview[0].rowId).toBe('5');
+ for(const preview of value.preview){expect(preview.classification).toBe('VUS');expect(preview).not.toHaveProperty('pinned');expect(preview).not.toHaveProperty('phenotypePriority');}
+ expect(rpc('batch-preview',[]).preview).toEqual([]);
+ expect(rpc('finish')).toBe(25);const completed=rpc('drain');expect(completed).toHaveLength(25);expect(completed[0].assessment).toHaveProperty('pinned');
+});

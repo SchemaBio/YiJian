@@ -9,7 +9,8 @@ import { loadCNVReference } from './cnv-reference';
 import { loadReferences, referenceGenes } from './reference-client';
 import {optimizedAssessment,assessmentTimer} from './optimization';
 import {preparedBatchPipeline} from './pipeline';
-export interface AssessmentStatus {geneRanking?:PhenotypeMatch[];taskId:string;state:'checking'|'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
+import type {AssessmentPreview} from './types';
+export interface AssessmentStatus {preview?:AssessmentPreview[];geneRanking?:PhenotypeMatch[];taskId:string;state:'checking'|'loading'|'ready'|'error'|'cancelled';phase?:'context'|'evaluate'|'finalize'|'transfer';table?:ResultTable;processed:number;pinned?:number;pinnedByTable?:Record<string,number>;version?:string;packVersion?:string;pending?:string[];reassessmentAvailable?:boolean;error?:string;errorKey?:string;}
 interface Entry {table:ResultTable;rowId:string;assessment:AutomaticAssessment}
 interface Envelope {active?:AssessmentContext;latestVersion:string;reassessmentAvailable:boolean}
 interface Session {promise:Promise<Entry[]>;byRow?:Map<string,AutomaticAssessment>;context?:AssessmentContext;status:AssessmentStatus;controller:AbortController;timer?:ReturnType<typeof setTimeout>}
@@ -23,6 +24,9 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
   const controller=new AbortController();
   const optimized=optimizedAssessment();
   const timing=assessmentTimer();
+  const totalDone=timing.start('total');
+  const firstReadableDone=timing.start('first_readable');let readable=false;
+  const markReadable=(rows:number)=>{if(!readable){readable=true;firstReadableDone(rows);}};
   const measure=async<T,>(phase:string,run:()=>Promise<T>)=>{const done=timing.start(phase);try{return await run();}finally{done();}};
   let sequence=0;
   let fatalError:Error|undefined;
@@ -45,7 +49,6 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     controller.signal.addEventListener('abort',()=>{clearTimeout(session.timer);},{once:true});
   };
   session.promise=(async()=>{
-    const totalDone=timing.start('total');
     const contextDone=timing.start('context');
     const envelope=await api.get<Envelope>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{signal:controller.signal});
     const authorized=envelope.active??await api.post<AssessmentContext>(`/v1/tasks/${encodeURIComponent(taskId)}/results/assessment/context`,{},{signal:controller.signal});
@@ -71,8 +74,7 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
       for (const row of cached) if (row.assessment.pinned) pinnedByTable[row.table] = (pinnedByTable[row.table] ?? 0) + 1;
       publish(session, { state: 'ready', processed: cached.length, pinned: cached.filter(row => row.assessment.pinned).length, pinnedByTable });
       scheduleContextCheck(context);
-      totalDone(cached.length);
-      if(optimizedAssessment())window.dispatchEvent(new CustomEvent('yijian:assessment-timing',{detail:timing.timings}));
+      markReadable(cached.length);
       if(context.referenceVersion&&context.hpo.length)void loadReferences(context,[],controller.signal,true).then(ranking=>{
         if(!controller.signal.aborted)publish(session,{geneRanking:ranking.geneRanking??[]});
       }).catch(()=>{if(!controller.signal.aborted)publish(session,{pending:[...context.availability,'phenotype.unavailable']});});
@@ -105,9 +107,12 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
         }
         return {rows};
       },async({rows,supplement,unavailable})=>{
-        if(unavailable&&!referencesFailed){referencesFailed=true;await rpc('references-unavailable');publish(session,{geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});}
+        if(unavailable&&!referencesFailed){referencesFailed=true;await rpc('references-unavailable');publish(session,{preview:undefined,geneRanking:[],pending:[...context.availability,'phenotype.unavailable']});}
         if(supplement&&!referencesFailed){await rpc('references',supplement);if(supplement.warnings.length)publish(session,{pending:[...context.availability,'phenotype.invalidHPO',...supplement.warnings.map(w=>`${w.id}${w.replacement?' → '+w.replacement:''}`)]});}
-        const processed=await measure('worker_evaluate',()=>rpc('batch',rows)) as number;publish(session,{processed});
+        const batch=await measure('worker_evaluate',()=>rpc('batch-preview',rows)) as {processed:number;preview:AssessmentPreview[]};
+        if(!Number.isSafeInteger(batch.processed)||!Array.isArray(batch.preview)||batch.preview.length>20)throw new Error('Invalid provisional assessment response');
+        publish(session,{processed:batch.processed,preview:batch.preview});
+        if(batch.preview.length)markReadable(batch.preview.length);
       },controller.signal);
       try{
         for(const table of context.tables??[]){
@@ -150,12 +155,11 @@ export async function assessTask(taskId:string,read:(context:AssessmentContext,t
     if (!referencesFailed && !cnvReferenceFailed && !controller.signal.aborted) await measure('cache_write',()=>writeAssessmentCache(cacheKey, result));
     session.byRow=new Map(result.map(entry=>[entry.rowId,entry.assessment]));
     const pinnedByTable:Record<string,number>={};for(const row of result)if(row.assessment.pinned)pinnedByTable[row.table]=(pinnedByTable[row.table]??0)+1;
-    publish(session,{state:'ready',pinned:result.filter(x=>x.assessment.pinned).length,pinnedByTable});
+    publish(session,{state:'ready',preview:undefined,pinned:result.filter(x=>x.assessment.pinned).length,pinnedByTable});
     scheduleContextCheck(context);
-    totalDone(result.length);
-    if(optimizedAssessment())window.dispatchEvent(new CustomEvent('yijian:assessment-timing',{detail:timing.timings}));
+    markReadable(result.length);
     return result;
-  })().catch(error=>{if(controller.signal.aborted){publish(session,{state:'cancelled',error:undefined});return [];}publish(session,{state:'error',error:error instanceof Error?error.message:'初评失败',errorKey:error instanceof LocalizedError?error.messageKey:undefined});throw error;}).finally(()=>{signal.removeEventListener('abort',abort);worker?.terminate();});
+  })().catch(error=>{if(controller.signal.aborted){publish(session,{state:'cancelled',preview:undefined,error:undefined});return [];}publish(session,{state:'error',preview:undefined,error:error instanceof Error?error.message:'初评失败',errorKey:error instanceof LocalizedError?error.messageKey:undefined});throw error;}).finally(()=>{signal.removeEventListener('abort',abort);worker?.terminate();totalDone(session.status.processed);if(optimized)window.dispatchEvent(new CustomEvent('yijian:assessment-timing',{detail:timing.timings}));});
   return session.promise;
 }
 export async function reassessTask(taskId:string){
@@ -166,6 +170,6 @@ export async function reassessTask(taskId:string){
 }
 export function clearAssessments(){for(const session of sessions.values())session.controller.abort();sessions.clear();}
 export function invalidateAssessment(taskId:string){void removeAssessmentCache(taskId);const session=sessions.get(taskId);session?.controller.abort();sessions.delete(taskId);}
-export function cancelAssessment(taskId:string){const session=sessions.get(taskId);if(!session || !['checking','loading'].includes(session.status.state))return;session.controller.abort();publish(session,{state:'cancelled',error:undefined});}
+export function cancelAssessment(taskId:string){const session=sessions.get(taskId);if(!session || !['checking','loading'].includes(session.status.state))return;session.controller.abort();publish(session,{state:'cancelled',preview:undefined,error:undefined});}
 
 if (typeof window !== "undefined") window.addEventListener("schema:auth-expired", () => { clearAssessments(); void removeAssessmentCache(); });

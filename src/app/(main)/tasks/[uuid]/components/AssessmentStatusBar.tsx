@@ -32,6 +32,15 @@ export function AssessmentStatusBar({taskId,table}:{taskId:string;table?:string}
      <section><h4 className="mb-1 font-semibold">{t("tasks.resourceVersion0c7595")}</h4><p className="break-words text-fg-muted">{status.packVersion && status.packVersion !== 'unavailable' ? `Human Phenotype Ontology、ClinGen、Mondo · ${status.packVersion}` : t("tasks.assessmentResourcesUnavailableOrNotLoaded700183")}</p></section>
    </div>
  </ToolbarPopover>
+ {status.state==='loading'&&!!status.preview?.length&&<ToolbarPopover wide iconOnly={compact} label={t('assessmentPreview.title')} icon={<Info size={14}/>}>
+   <p className="mb-3 text-xs text-fg-muted" role="status">{t('assessmentPreview.pending')}</p>
+   <ol className="max-h-80 space-y-3 overflow-auto text-xs">{status.preview.filter(row=>!table||row.table===table).map(row=><li key={`${row.table}/${row.rowId}`} className="rounded border border-border-default p-2">
+     <p className="font-semibold">{row.gene??row.rowId.slice(0,12)}</p>
+     <p>{t('assessmentPreview.rowResult')}: {row.classification??t('assistance.verifiedEvidenceInsufficient')} · {row.score}</p>
+     {!!row.criteria.length&&<p>{row.criteria.map(item=>`${item.code} (${item.strength})`).join(', ')}</p>}
+     {!!row.pending.length&&<p className="text-fg-muted">{row.pending.map(item=>t(item)).join(' · ')}</p>}
+   </li>)}</ol>
+ </ToolbarPopover>}
  {status.geneRanking&&<ToolbarPopover wide iconOnly={compact} label={t('phenotype.geneList')} icon={<Dna size={14}/>}>
    <p className="mb-3 text-xs text-fg-muted">{t('phenotype.geneListHelp')}</p>
    <div className="max-h-80 overflow-auto">

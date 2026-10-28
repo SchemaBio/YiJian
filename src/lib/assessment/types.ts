@@ -14,6 +14,9 @@ export interface ReferenceSupplement {
 export type ResultTable = 'snv-indel' | 'cnv-segment' | 'cnv-exon' | 'str' | 'mei' | 'mt' | 'upd' | 'roh';
 export type Classification = 'Pathogenic' | 'Likely_Pathogenic' | 'VUS' | 'Likely_Benign' | 'Benign';
 export interface Evidence { code: string; strength: 'supporting' | 'moderate' | 'strong' | 'very_strong' | 'standalone'; source: string; note: string; }
+// Read-only row results before task-wide candidate selection. Deliberately
+// excludes pinning, ranking and fields used to save a completed assessment.
+export interface AssessmentPreview {rowId:string;table:ResultTable;gene?:string;classification?:Classification;score:number;criteria:Evidence[];pending:string[]}
 export interface HPOTerm { id: string; ancestors: string[]; ic: number; }
 export interface Disease {
   id: string; gene: string; hpo: string[]; validity: 'Moderate' | 'Strong' | 'Definitive';

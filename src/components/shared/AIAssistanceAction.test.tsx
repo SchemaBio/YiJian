@@ -31,6 +31,12 @@ it('shows the running spinner to the left of the cancel button label', async () 
   expect(screen.queryByRole('button', { name: '取消' })).not.toBeInTheDocument();
 });
 beforeEach(() => sessionStorage.clear());
+it('shows separately supported and pending evidence without changing the interpretation',()=>{
+ const result:AIAssistanceResult={feature:'acmg',summary:'Synthetic evidence audit',agentProposal:{evidence_quality:{version:'evidence-quality-v1',criteria:[{code:'PP3',status:'supported'},{code:'PVS1',status:'pending_review'}]}}};
+ render(<AIResultCard result={result}/>);
+ expect(screen.getByText('PP3: 已有证据支持')).toBeInTheDocument();expect(screen.getByText('PVS1: 待核实来源、事实或适用性')).toBeInTheDocument();
+ expect(screen.getByText('Synthetic evidence audit')).toBeInTheDocument();
+});
 
 it('confirms production HPO pricing independently of other AI rollout switches and remembers only this session and identity', async () => {
   const client = adapter();
