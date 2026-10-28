@@ -31,6 +31,12 @@ def validate(folder):
                 for key in ['resultDigest', 'pageDigest']:
                     if len({run[key] for run in a + b}) != 1 or any(not run[key] for run in a + b):
                         raise ValueError('SCENARIO_RESULT_PARITY_FAILED')
+                    if scenario == 'weak':
+                        for name, runs in [('baseline', a), ('optimized', b)]:
+                            normal = load(folder / f'{name}-normal.json')
+                            expected = {run[key] for run in normal['runs'] if run['size'] == size and run['cache'] == cache}
+                            if expected != {run[key] for run in runs}:
+                                raise ValueError('LATENCY_CHANGED_RESULT')
                 if scenario == 'reference_failure' and cache == 'hot':
                     if any(run['requests'].get('cnv_reference', 0) < 1 or run['requests'].get('gene_reference', 0) < 1 for run in a + b):
                         raise ValueError('DEGRADED_RESULT_REUSED_AS_COMPLETE')

@@ -11,6 +11,9 @@ TEST_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def write_reports(folder, defect=None):
+    for name, report in zip(['baseline', 'optimized'], reports()):
+        report.update({'kind': 'yijian-synthetic-browser-v1', 'completed': True})
+        (folder / f'{name}-normal.json').write_text(json.dumps(report), encoding='utf-8')
     for scenario in ['weak', 'reference_failure', 'cancel']:
         baseline, optimized = reports()
         for name, report in [('baseline', baseline), ('optimized', optimized)]:
@@ -31,6 +34,8 @@ def write_reports(folder, defect=None):
                             run['requests'] = {}
                 if defect == 'parity':
                     report['runs'][0]['resultDigest'] = 'c' * 64
+                if defect == 'latency' and scenario == 'weak':
+                    report['runs'][0]['resultDigest'] = 'd' * 64
                 if defect == 'incomplete':
                     report['completed'] = False
             (folder / f'{name}-{scenario}.json').write_text(json.dumps(report), encoding='utf-8')
@@ -47,7 +52,7 @@ class ScenarioGates(unittest.TestCase):
             self.assertEqual(18, len(result['checks']))
 
     def test_failed_gates_cannot_be_reported_as_completed_acceptance(self):
-        for defect in ['partial', 'preview', 'cached', 'parity', 'incomplete']:
+        for defect in ['partial', 'preview', 'cached', 'parity', 'incomplete', 'latency']:
             with self.subTest(defect=defect), tempfile.TemporaryDirectory(dir=TEST_ROOT) as location:
                 folder = Path(location)
                 self.assertTrue(folder.resolve().is_relative_to(TEST_ROOT.resolve()))

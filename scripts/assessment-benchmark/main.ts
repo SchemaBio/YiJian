@@ -67,7 +67,7 @@ async function measure(size:number,cache:'cold'|'hot',repeat:number):Promise<Mea
  window.addEventListener('yijian:assessment-status',changed);window.addEventListener('yijian:result-load-timing',loaded);window.addEventListener('yijian:assessment-timing',timed);
  try{
   const page=await queryBrowserParquet(currentTask,'snv-indel',{offset:0,limit:50});
-  for(const item of page.items){const li=document.createElement('li');li.textContent=`${String(item.Gene??'')}: ${String(item.acmgClassification??item.cnvClassification??'unclassified')}; pinned ${String(item.pinned??false)}`;byID('final').append(li);}
+  for(const item of page.items){const li=document.createElement('li');li.textContent=`${String(item.gene??item.Gene??'')}: ${String(item.acmgClassification??item.cnvClassification??'unclassified')}; pinned ${String(item.pinned??false)}`;byID('final').append(li);}
   await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
   // The baseline has no provisional row surface. Its first readable page follows
   // materialization/query; a ready assessment event alone is not a rendered page.
