@@ -1,4 +1,5 @@
 {
+  "retrievalEvidence":{"title":"检索问题与材料状态","explanation":"同一文献的多份记录不代表独立病例；未查询的问题和未找到记录不代表阴性证据。","remaining":"仍有 {p0} 个问题尚未查询，相关信息保持未知。","sourceGroupConflict":"同一文献出现对象已匹配且材料已核查的冲突记录，当前依据需复核。","purpose":{"variant_conflict":"变异记录与冲突线索","functional_evidence":"功能与机制证据","gene_disease_validity":"基因、疾病与遗传模式","case_segregation":"病例与共分离证据","dosage_sensitivity":"剂量敏感性证据","unknown":"其他证据问题"},"status":{"supported":"已有相关独立证据","pending_review":"找到材料，适用性待核实","conflicting":"来源有冲突标记，需复核","not_found":"本次查询未返回记录","unavailable":"检索未完成或不可用","unknown":"未记录此状态"}},
   "evidenceBindings": {
     "missing":"此记录未保存逐条证据绑定，不能据此补标为已验证。",
     "defaulted":"部分条款使用默认值或已降级；请核对计分依据。",

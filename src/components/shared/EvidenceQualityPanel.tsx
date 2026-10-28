@@ -13,6 +13,7 @@ export function EvidenceQualityPanel({proposal,defaultedFields=[]}:{proposal:unk
  const t=useText();const root=object(proposal);const quality=object(root?.evidence_quality);
  const known=quality?.version==='evidence-quality-v1';const criteria=known?list(quality.criteria):[];
  const reports=known?list(quality.evidence_bindings):[];
+ const findings=known?list(quality.retrieval_findings):[];
  const defaulted=defaultedFields.length>0||Array.isArray(root?.calculator_defaults)&&root.calculator_defaults.length>0||reports.some(report=>Array.isArray(report.issues)&&report.issues.length>0);
  return <section className="space-y-2 text-xs text-fg-muted" aria-label={t('assessmentQuality.title')}>
   <p>{t('assessmentQuality.title')}</p>
@@ -20,6 +21,16 @@ export function EvidenceQualityPanel({proposal,defaultedFields=[]}:{proposal:unk
   {known&&<ul>{criteria.map((item,index)=><li key={`${text(item.code)}-${index}`}>{text(item.code)}: {t(`assessmentQuality.${['supported','pending_review','insufficient_data','conflicting'].includes(text(item.status))?text(item.status):'pending_review'}`)}</li>)}</ul>}
   {defaulted&&<p className="font-medium">{t('evidenceBindings.defaulted')}</p>}
   {known&&!Array.isArray(quality.evidence_bindings)&&<p>{t('evidenceBindings.missing')}</p>}
+  {!!findings.length&&<details><summary className="cursor-pointer">{t('retrievalEvidence.title')}</summary>
+   <p className="my-2">{t('retrievalEvidence.explanation')}</p>
+   <ul className="space-y-1">{findings.map((finding,index)=>{
+    const purpose=['variant_conflict','functional_evidence','gene_disease_validity','case_segregation','dosage_sensitivity'].includes(text(finding.purpose))?text(finding.purpose):'unknown';
+    const state=['supported','pending_review','conflicting','not_found','unavailable'].includes(text(finding.status))?text(finding.status):'unknown';
+    const codes=Array.isArray(finding.codes)?finding.codes.filter((code):code is string=>typeof code==='string').slice(0,20):[];
+    return <li key={index}>{t(`retrievalEvidence.purpose.${purpose}`)}: {t(`retrievalEvidence.status.${state}`)}{codes.length?` (${codes.join(', ')})`:''}</li>;
+   })}</ul>
+   {typeof quality?.remaining_questions==='number'&&Number.isSafeInteger(quality.remaining_questions)&&quality.remaining_questions>0&&<p>{t('retrievalEvidence.remaining',{p0:String(quality.remaining_questions)})}</p>}
+  </details>}
   {!!reports.length&&<details><summary className="cursor-pointer">{t('evidenceBindings.details')}</summary>
    <p className="my-2">{t('evidenceBindings.traceability')}</p>
    <ul className="space-y-3">{reports.map((report,index)=><li key={`${text(report.code)}-${index}`} className="rounded border border-border-subtle p-2">
@@ -31,7 +42,7 @@ export function EvidenceQualityPanel({proposal,defaultedFields=[]}:{proposal:unk
      const reason=reasonCodes.has(text(binding.reason))?text(binding.reason):'unknown';
      return <li key={ordinal}>
       <p>{text(binding.fact)||t('evidenceBindings.criterion')}: {t(`evidenceBindings.status.${status}`)}</p>
-      <p>{t(`evidenceBindings.reason.${reason}`)}</p>
+      <p>{binding.reason==='source_group_conflicting'?t('retrievalEvidence.sourceGroupConflict'):t(`evidenceBindings.reason.${reason}`)}</p>
       <p>{t(binding.origin==='rule_engine'?'evidenceBindings.ruleOrigin':'evidenceBindings.modelOrigin')}</p>
       {label&&<p>{href?<a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-fg underline">{label}</a>:label}</p>}
       {!!text(binding.source_id)&&<p>{t('evidenceBindings.version')}: {text(binding.source_version)&&binding.source_version!=='unversioned'?text(binding.source_version):t('evidenceBindings.notRecorded')}</p>}

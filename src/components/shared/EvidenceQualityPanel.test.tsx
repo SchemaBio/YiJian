@@ -27,3 +27,9 @@ it('handles incomplete old metadata and caller defaults without inventing source
  render(<EvidenceQualityPanel defaultedFields={['section3']} proposal={{evidence_quality:{version:'evidence-quality-v1',criteria:'malformed',evidence_bindings:[{code:'2A',bindings:[{source_id:'source',status:'supported',origin:'rule_engine',reason:'independent_structured_fact',fact_id:'criterion.2A.complete_hi_overlap'}]}]}}}/>);
  expect(screen.getByText('来源：独立规则事实')).toBeInTheDocument();expect(screen.getByText('来源版本: 未记录')).toBeInTheDocument();expect(screen.getByText(/部分条款使用默认值或已降级/)).toBeInTheDocument();
 });
+
+it('keeps query absence, service failure and unqueried questions separate',()=>{
+ render(<EvidenceQualityPanel proposal={{evidence_quality:{version:'evidence-quality-v1',criteria:[],evidence_bindings:[],remaining_questions:1,retrieval_findings:[{purpose:'variant_conflict',status:'not_found'},{purpose:'functional_evidence',status:'unavailable'},{purpose:'case_segregation',status:'supported',codes:['4A']}]}}}/>);
+ fireEvent.click(screen.getByText('检索问题与材料状态'));
+ expect(screen.getByText('变异记录与冲突线索: 本次查询未返回记录')).toBeInTheDocument();expect(screen.getByText('功能与机制证据: 检索未完成或不可用')).toBeInTheDocument();expect(screen.getByText('仍有 1 个问题尚未查询，相关信息保持未知。')).toBeInTheDocument();expect(screen.getByText(/同一文献的多份记录不代表独立病例/)).toBeInTheDocument();
+});
