@@ -3283,5 +3283,13 @@
     "emptyHint": "Your payment orders and fulfillment progress will appear here.",
     "createdAt": "Created",
     "pageCount": "Page {p0} of {p1}"
+  },
+  "announcements": {
+    "title": "Announcements",
+    "loading": "Loading announcements…",
+    "failed": "Announcements are temporarily unavailable. Please try again.",
+    "empty": "No current announcements",
+    "view": "Read announcement",
+    "dismiss": "Dismiss announcement: {p0}"
   }
 }

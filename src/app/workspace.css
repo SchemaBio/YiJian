@@ -1,4 +1,33 @@
 /* Shared workspace surfaces. Colors follow the application's theme tokens. */
+.yj-mobile-records { display: none; }
+@media (max-width: 767px) {
+  .yj-record-desktop { display: none; }
+  .yj-record-page { padding: 16px !important; }
+  .yj-mobile-records { display: grid; gap: 12px; list-style: none; margin: 0; padding: 12px; }
+  .yj-mobile-record { min-width: 0; padding: 16px; border: 1px solid var(--yj-border-subtle); border-radius: 12px; background: var(--yj-panel-bg); }
+  .yj-mobile-record-heading { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 16px; }
+  .yj-mobile-record-identity { flex: 1 1 140px; min-width: 0; }
+  .yj-mobile-record-identity > p, .yj-mobile-record-status > p, .yj-mobile-record-field > dt { margin-bottom: 6px; color: var(--yj-text-muted); font-size: 11px; line-height: 1.5; }
+  .yj-mobile-record-identity h3 { font-size: 16px; font-weight: 600; line-height: 1.5; color: var(--yj-text-strong); overflow-wrap: anywhere; }
+  .yj-mobile-record-status { min-width: 0; max-width: 100%; font-size: 12px; }
+  .yj-mobile-record-status > div { align-items: flex-start; text-align: left; }
+  .yj-mobile-record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .yj-mobile-record-field { min-width: 0; }
+  .yj-mobile-record-field[data-field='file'], .yj-mobile-record-details .yj-mobile-record-field { grid-column: 1 / -1; }
+  .yj-mobile-record-field .text-center { text-align: left; }
+  .yj-mobile-record-field .justify-center { justify-content: flex-start; }
+  .yj-mobile-record-field dd { margin: 0; color: var(--yj-text-strong); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+  .yj-mobile-record-field dd .truncate { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .yj-mobile-record-details { margin-top: 16px; border-top: 1px solid var(--yj-border-subtle); }
+  .yj-mobile-record-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding-top: 8px; cursor: pointer; list-style: none; color: var(--yj-text-muted); font-size: 12px; }
+  .yj-mobile-record-details > summary::-webkit-details-marker { display: none; }
+  .yj-mobile-record-details > summary:focus-visible { outline: 2px solid var(--color-accent-emphasis); outline-offset: 2px; border-radius: 4px; }
+  .yj-mobile-record-details > summary svg { width: 16px; height: 16px; }
+  .yj-mobile-record-details[open] > summary svg { transform: rotate(180deg); }
+  .yj-mobile-record-actions { margin-top: 16px; }
+  .yj-mobile-record-actions .yj-table-actions { display: flex; flex-wrap: wrap; gap: 8px; white-space: normal; }
+  .yj-mobile-record-actions .yj-table-action { min-height: 40px; height: auto; padding: 8px; }
+}
 .yj-tool-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 32px; padding: 0 10px; border: 1px solid var(--yj-border-subtle);

@@ -1,4 +1,5 @@
 'use client';
+import { MobileRecordList } from '@/components/shared/MobileRecordList';
 import { ExampleBadge } from '@/components/shared/ExampleData';
 import {canEditTask} from '@/lib/task-editing';
 import { downloadTaskBatchTemplate } from '@/lib/task-batch-template';
@@ -562,7 +563,7 @@ export default function AnalysisPage() {
                 <div className="yj-panel min-w-0 overflow-hidden">
                 <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="w-64">
+                    <div className="w-64 max-w-full">
                       <Input
                         placeholder={t("tasks.searchTaskOrSampleId9c4f1c")}
                         value={searchQuery}
@@ -586,12 +587,19 @@ export default function AnalysisPage() {
                 </div>
 
                 {tasks !== null && (filteredTasks.length > 0 ? (
-                  <DataTable
-                    data={filteredTasks}
-                    columns={localizeDisplay(columns, t)}
-                    rowKey="id"
-                    density="compact"
-                    className="yj-data-table right-pinned-actions-table task-center-table"
+                  <MobileRecordList data={filteredTasks} columns={localizeDisplay(columns, t)}
+                    title={row => <>{row.internalId || row.sampleId || row.id}<ExampleBadge origin={row.origin} /></>}
+                    primaryLabel={t("history.sampleId6d686e")} statusColumn="status"
+                    secondaryColumns={['pipeline', 'progress']} detailColumns={['taskId', 'sample', 'expiresAt', 'createdAt', 'cost', 'remark']}
+                    desktop={
+                      <DataTable
+                        data={filteredTasks}
+                        columns={localizeDisplay(columns, t)}
+                        rowKey="id"
+                        density="compact"
+                        className="yj-data-table right-pinned-actions-table task-center-table"
+                      />
+                    }
                   />
                 ) : (
                   <EmptyState

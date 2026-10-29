@@ -3283,5 +3283,13 @@
     "emptyHint": "你的付款訂單與入帳進度將顯示於此。",
     "createdAt": "建立時間",
     "pageCount": "第 {p0} / {p1} 頁"
+  },
+  "announcements": {
+    "title": "公告",
+    "loading": "正在讀取公告…",
+    "failed": "暫時無法讀取公告，請稍後重試。",
+    "empty": "目前沒有公告",
+    "view": "檢視完整公告",
+    "dismiss": "關閉公告：{p0}"
   }
 }

@@ -9,7 +9,7 @@ import { Coins } from 'lucide-react';
 import { BILLING_UPDATED_EVENT, getBillingBalance } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
-export function BillingDisplay() {
+export function BillingDisplay({ compact = false }: { compact?: boolean }) {
   const t = useText();
   const [balance, setBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -50,12 +50,12 @@ export function BillingDisplay() {
   return (
     <Link
       href="/billing"
-      className="flex h-8 min-w-[112px] items-center justify-center gap-1.5 rounded-md border border-[var(--yj-border-subtle)] px-2.5 text-sm hover:bg-[var(--yj-panel-muted)] transition-colors"
+      className={`flex h-8 items-center justify-center gap-1.5 rounded-md border border-[var(--yj-border-subtle)] hover:bg-[var(--yj-panel-muted)] transition-colors ${compact ? 'min-w-[72px] max-w-[96px] px-2 text-xs' : 'min-w-[112px] px-2.5 text-sm'}`}
       aria-label={t("billing.billingCenterCurrentBalanceCredits6e9910", {p0: String(balance ?? '--')})}
     >
-      <Coins className="w-4 h-4" />
-      <span className={isLow ? 'text-danger-fg font-medium' : 'text-fg-default font-medium'}>
-        {balance ?? '--'} {t("billing.creditse6d317")}</span>
+      <Coins className="w-4 h-4 shrink-0" />
+      <span className={`truncate ${isLow ? 'text-danger-fg font-medium' : 'text-fg-default font-medium'}`}>
+        {balance ?? '--'}{!compact && <> {t("billing.creditse6d317")}</>}</span>
     </Link>
   );
 }

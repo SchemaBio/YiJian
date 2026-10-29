@@ -3283,5 +3283,13 @@
     "emptyHint": "Tus órdenes y el progreso de acreditación aparecerán aquí.",
     "createdAt": "Creación",
     "pageCount": "Página {p0} de {p1}"
+  },
+  "announcements": {
+    "title": "Anuncios",
+    "loading": "Cargando anuncios…",
+    "failed": "Los anuncios no están disponibles temporalmente. Inténtalo de nuevo.",
+    "empty": "No hay anuncios vigentes",
+    "view": "Leer anuncio completo",
+    "dismiss": "Cerrar anuncio: {p0}"
   }
 }

@@ -1,4 +1,5 @@
 'use client';
+import { MobileRecordList } from '@/components/shared/MobileRecordList';
 import { ExampleBadge } from '@/components/shared/ExampleData';
 import { LocalDataImportModal } from './LocalDataImportModal';
 import { downloadImportWorkbook } from '@/lib/import-workbook';
@@ -460,7 +461,7 @@ export default function DataCenterPage() {
   ];
 
   return (
-    <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
+    <div className="yj-record-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="yj-page-title">{t("data.dataCenter189979")}</h2>
@@ -487,7 +488,7 @@ export default function DataCenterPage() {
       {config?.temporary && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
           <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
-          <p className="whitespace-nowrap"><strong className="font-medium">{t("data.dataRetainedFore9bd90")}{config.retention_days} {t("data.daysf8bb05")}</strong><span className="ml-3">{t("data.uploadAndDeletionOnlyFilesCannotBeff9045")}</span></p>
+          <p className="min-w-0"><strong className="font-medium">{t("data.dataRetainedFore9bd90")}{config.retention_days} {t("data.daysf8bb05")}</strong><span className="ml-3">{t("data.uploadAndDeletionOnlyFilesCannotBeff9045")}</span></p>
         </div>
       )}
 
@@ -512,7 +513,7 @@ export default function DataCenterPage() {
       <p role="status" className="mb-3 text-sm text-fg-muted">{t("uploadExperience.queueHint", { p0: queuedCount })}</p>
       <div className="yj-panel min-w-0 overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
-          <div className="flex min-w-[280px] flex-1 items-center gap-2">
+          <div className="flex min-w-0 w-full sm:w-auto sm:min-w-[280px] flex-none sm:flex-1 items-center gap-2">
             <div className="w-full max-w-[420px]">
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("data.searchFilenameInternalIdOrUuid462576")} leftElement={<Search className="h-4 w-4" />} onKeyDown={(event) => { if (event.key === 'Enter') void load(search); }} />
             </div>
@@ -530,12 +531,19 @@ export default function DataCenterPage() {
         {loading ? (
           <div className="flex h-48 items-center justify-center gap-2 text-sm text-fg-muted"><Loader2 className="h-4 w-4 animate-spin" />{t("data.loadingDataAssetsfde260")}</div>
         ) : loadFailed && assets.length === 0 ? null : assets.length > 0 ? (
-          <DataTable
-            data={assets}
-            columns={localizeDisplay(columns, t)}
-            rowKey="id"
-            density="compact"
-            className="yj-data-table right-pinned-actions-table data-center-table"
+          <MobileRecordList data={assets} columns={localizeDisplay(columns, t)}
+            title={asset => <>{asset.internal_id || asset.file_name}<ExampleBadge origin={asset.source} /></>}
+            primaryLabel={asset => t(asset.internal_id ? "history.sampleId6d686e" : "data.file49deaf")} statusColumn="status"
+            secondaryColumns={['file', 'readType', 'size']} detailColumns={['uuid', 'expiresAt', 'createdAt']}
+            desktop={
+              <DataTable
+                data={assets}
+                columns={localizeDisplay(columns, t)}
+                rowKey="id"
+                density="compact"
+                className="yj-data-table right-pinned-actions-table data-center-table"
+              />
+            }
           />
         ) : (
           <div className="flex h-48 flex-col items-center justify-center text-fg-muted"><Database className="mb-2 h-6 w-6" /><p className="text-sm">{search.trim() ? t("data.noMatchingDataAssets29b140") : t("data.noDataAssets5862af")}</p></div>

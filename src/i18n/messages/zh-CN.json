@@ -3283,5 +3283,13 @@
     "emptyHint": "你的支付订单与到账进度将在这里显示。",
     "createdAt": "创建时间",
     "pageCount": "第 {p0} / {p1} 页"
+  },
+  "announcements": {
+    "title": "公告",
+    "loading": "正在读取公告…",
+    "failed": "公告暂时无法读取，请稍后重试。",
+    "empty": "当前没有公告",
+    "view": "查看完整公告",
+    "dismiss": "关闭公告：{p0}"
   }
 }

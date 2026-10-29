@@ -1,4 +1,5 @@
 'use client';
+import { MobileRecordList } from '@/components/shared/MobileRecordList';
 import { ExampleBadge } from '@/components/shared/ExampleData';
 import { getHpoTermName } from '@/lib/hpo-terms';
 import {ParentSampleStatus} from '@/components/shared/SampleParentFields';
@@ -461,7 +462,7 @@ export default function SamplesPage() {
   ];
 
   return (
-    <div className="h-full overflow-auto p-6 xl:p-8">
+    <div className="yj-record-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
           <h2 className="yj-page-title">
@@ -551,18 +552,25 @@ export default function SamplesPage() {
             </div>
           )}
           {!hasLoaded && loading ? <div className="yj-empty-state text-sm text-fg-muted">{t("samples.loadingSamples20c029")}</div> : readFailed && samples.length === 0 ? null : filteredSamples.length > 0 ? (
-            <DataTable
-              data={filteredSamples}
-              columns={localizeDisplay(columns, t)}
-              rowKey="id"
-              selectable
-              selectionMode="multiple"
-              selectedRows={selectedRows}
-              onSelectionChange={handleSelectionChange}
-              onRowDoubleClick={(row) => setEditingSample(row)}
-              stickyHeader
-              density="comfortable"
-              className="yj-data-table right-pinned-actions-table sample-management-table"
+            <MobileRecordList data={filteredSamples} columns={localizeDisplay(columns, t)}
+              title={row => <>{row.internalId || row.id}<ExampleBadge origin={row.origin} /></>}
+              primaryLabel={t("history.sampleId6d686e")} statusColumn="matchedPair"
+              secondaryColumns={['sampleType', 'batch']} detailColumns={['uuid', 'expiresAt', 'createdAt', 'remark']}
+              desktop={
+                <DataTable
+                  data={filteredSamples}
+                  columns={localizeDisplay(columns, t)}
+                  rowKey="id"
+                  selectable
+                  selectionMode="multiple"
+                  selectedRows={selectedRows}
+                  onSelectionChange={handleSelectionChange}
+                  onRowDoubleClick={(row) => setEditingSample(row)}
+                  stickyHeader
+                  density="comfortable"
+                  className="yj-data-table right-pinned-actions-table sample-management-table"
+                />
+              }
             />
           ) : (
             <div className="yj-empty-state">

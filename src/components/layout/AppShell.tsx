@@ -20,6 +20,7 @@ import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
 import { SupportDialog } from '@/components/support/SupportDialog';
 import { ExampleDataNotice } from '@/components/shared/ExampleData';
+import { AnnouncementsProvider, AnnouncementButton, AnnouncementBanners } from '@/components/announcements/Announcements';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -133,7 +134,7 @@ function getBreadcrumbs(pathname: string, t: TextTranslator = chineseText): Brea
  */
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  return <OperationScope permission={permissionForPath(pathname)}><AppShellContent>{children}</AppShellContent></OperationScope>;
+  return <OperationScope permission={permissionForPath(pathname)}><AnnouncementsProvider><AppShellContent>{children}</AppShellContent></AnnouncementsProvider></OperationScope>;
 }
 function AppShellContent({ children }: AppShellProps) {
   const t = useText();
@@ -170,14 +171,14 @@ function AppShellContent({ children }: AppShellProps) {
     return (
       <div className={`${fixedTaskWorkspace ? 'h-dvh' : 'min-h-screen'} flex flex-col yj-modern yj-workspace`}>
         {/* Mobile Header */}
-        <header className="h-14 flex items-center justify-between px-4 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)]">
-          <div className="flex items-center gap-2">
+        <header className="h-14 shrink-0 flex items-center justify-between px-3 sm:px-4 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)]">
+          <div className="flex shrink-0 items-center gap-2">
             <Image src="/logo.svg" alt={t("common.appName")} width={30} height={30} />
-            <span className="font-semibold text-fg-default">{t("common.appName")}</span>
+            <span className="whitespace-nowrap font-semibold text-fg-default max-[420px]:hidden">{t("common.appName")}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <ResearchUseBadge /><BillingDisplay />
-            <SupportDialog />
+          <div className="flex items-center gap-0">
+            <ResearchUseBadge /><BillingDisplay compact />
+            <AnnouncementButton /><SupportDialog />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-md hover:bg-canvas-inset"
@@ -187,6 +188,7 @@ function AppShellContent({ children }: AppShellProps) {
             </button>
           </div>
         </header>
+        <AnnouncementBanners />
         {mobileMenuOpen && (
           <MobileNav
             currentSection={currentSection}
@@ -218,7 +220,7 @@ function AppShellContent({ children }: AppShellProps) {
           {/* Right: Settings + About */}
           <div className="flex items-center gap-1.5 shrink-0">
             <ResearchUseBadge /><BillingDisplay />
-            <SupportDialog />
+            <AnnouncementButton /><SupportDialog />
             <Link
               href="/settings"
               className="p-2 rounded-md text-fg-muted hover:text-fg-default hover:bg-[var(--yj-panel-muted)] transition-colors"
@@ -243,6 +245,7 @@ function AppShellContent({ children }: AppShellProps) {
           </div>
         </header>
 
+        <AnnouncementBanners />
         {/* Main Content */}
         <main className={`min-h-0 flex-1 bg-[var(--yj-workspace-bg)] ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>
           <ExampleDataNotice />
