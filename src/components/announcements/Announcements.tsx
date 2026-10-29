@@ -106,9 +106,9 @@ export function AnnouncementBanners() {
   if (!banners.length) return null;
   return <section aria-label={t('announcements.title')} className="yj-announcement-banners">
     {banners.map(item => <div key={item.id} className="yj-announcement-banner">
-      <span className="yj-announcement-banner-icon"><Megaphone size={16} aria-hidden="true"/></span>
+      <span className="yj-announcement-banner-icon"><Megaphone size={20} aria-hidden="true"/></span>
       <button type="button" className="yj-announcement-banner-content" onClick={() => state.setOpen(true)}>
-        <strong>{item.title}</strong><span className="yj-announcement-banner-separator" aria-hidden="true"/><span className="yj-announcement-banner-excerpt">{item.body.replace(/\s+/g, ' ')}</span>
+        <strong>{item.title}</strong><span className="yj-announcement-banner-excerpt">{item.body.replace(/\s+/g, ' ')}</span>
         <span className="yj-announcement-banner-link">{t('announcements.view')}<ChevronRight size={14} aria-hidden="true"/></span>
       </button>
       <button type="button" aria-label={t('announcements.dismiss', { p0: item.title })} className="yj-announcement-banner-close" onClick={() => state.dismiss(item)}><X size={16} aria-hidden="true"/></button>
