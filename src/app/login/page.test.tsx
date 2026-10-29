@@ -13,6 +13,7 @@ beforeEach(() => {vi.clearAllMocks();state.backend='squid';window.history.replac
 it('requires the unchecked combined acknowledgment and links to the localized agreement',async()=>{
  const view=render(<LoginPage />);
  expect(screen.queryByRole('link',{name:'重新发送验证邮件'})).not.toBeInTheDocument();
+ expect(screen.queryByRole('navigation',{name:'托管服务政策'})).not.toBeInTheDocument();
  expect(screen.getByRole('link',{name:'注册'})).toHaveAttribute('href','/register');
  const agreement=screen.getByRole('link',{name:'《使用协议》'});
  expect(agreement).toHaveAttribute('href',`/agreement?lang=zh-CN&version=${USER_AGREEMENT_VERSION}`);
