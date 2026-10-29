@@ -15,7 +15,7 @@ function Probe() {
 beforeEach(() => { localStorage.clear(); });
 
 describe('public privacy access', () => {
-  it.each(['/privacy', '/privacy?lang=en'])('keeps %s open after session expiry', async path => {
+  it.each(['/privacy', '/privacy?lang=en', '/service', '/terms?lang=en', '/refund?lang=es-419'])('keeps %s open after session expiry', async path => {
     window.history.replaceState({}, '', path);
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {

@@ -1,4 +1,5 @@
 'use client';
+import { ServicePolicyLinks } from '@/components/shared/ServicePolicyDocument';
 import { useText } from '@/i18n/useText';
 import { errorText } from '@/i18n/errors';
 
@@ -198,6 +199,7 @@ export default function RegisterPage() {
               {t("auth.signIn21f1e8")}</Link>
           </p>
         </form>
+        <div className="mt-6"><ServicePolicyLinks /></div>
       </div>
     </div>
   );

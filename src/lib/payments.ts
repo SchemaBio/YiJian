@@ -18,10 +18,11 @@ export interface PaymentOptions {
 export interface CreditCheckoutRequest {
   product: 'credit';
   quantity: number;
+  accepted?: boolean;
+  policy_version?: string;
 }
 
-// No success response is implemented yet: the reserved endpoint returns 503
-// with code PAYMENT_NOT_INTEGRATED. Define success data when Checkout is wired.
+// Stable errors are returned by Squid; redirects never grant credits.
 export interface PaymentUnavailableError {
   code: 'PAYMENT_NOT_INTEGRATED';
   error: string;

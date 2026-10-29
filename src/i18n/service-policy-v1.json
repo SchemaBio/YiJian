@@ -1,0 +1,166 @@
+{
+  "zh-CN": {
+    "navigation": "托管服务政策",
+    "operator": "运营主体与联系信息",
+    "missingOperator": "运营信息尚未配置完整，正式收款暂不可用。",
+    "unavailable": "此政策版本不可用",
+    "privacy": "隐私政策",
+    "accept": "我已阅读并同意服务条款和退款规则，确认仅用于科研，不用于个人医疗决策。",
+    "changed": "购买政策已更新，请重新阅读并确认。",
+    "loadError": "无法加载购买政策，请刷新后重试。",
+    "limited": "新付款暂不可用或已达到支付限制，请稍后重试或联系支持。",
+    "purpose": "购买科研生物信息分析与计算服务额度；仅限本平台使用，不可转让、不支持提现。",
+    "service": {
+      "title": "科研分析与计算服务",
+      "paragraphs": [
+        "托管服务面向个人科研用户、科研机构及获授权人员。提供从 FASTQ 到结果的质控、变异注释和结果浏览；HPO 关联、ACMG 初评及 AI 辅助用于整理证据和筛选研究候选。",
+        "仅供科研（RUO），不提供采样、实验室检测、个人诊断、健康风险结论、治疗或用药建议，也不签发诊断报告。输出须独立验证，不得用于个人医疗决策。",
+        "付费积分用于本平台科研分析及计算服务，不可转让、不用于第三方支付、不支持提现；退款按退款规则申请。币种、单价、数量及总价在付款前展示。",
+        "计算任务先预留积分，再按实际计费规则结算。按时长计费任务从实例确认运行或经鉴权的节点回报起，计入初始化、下载、运行、归档和诊断日志保留阶段，分钟向上取整。取消或失败不代表免费；节点未开始计费则退回预留，已开始计费的在节点释放后结算，多退少补。AI 功能按展示的功能费率单独计费。",
+        "样本及任务自创建起保留 30 天，编辑或重试不延期；FASTQ 上传后 7 天、BAM 分析完成后 7 天清理，且不超过任务期限。请及时导出结果。"
+      ]
+    },
+    "terms": {
+      "title": "托管服务条款",
+      "paragraphs": [
+        "本条款仅适用于 SchemaBio 运营的 YiJian 托管服务，不改变开源自部署软件的许可或功能。签约主体及联系信息见下方；信息未完整配置时不开放正式收款。",
+        "用户应具备提交数据的合法权限，并遵守科研用途、数据授权及安全要求；不得用于个人医疗决策、非法活动、侵犯第三方权利或绕过平台限制。不得在科研数据、文件名或备注中提交真实姓名、身份证件、联系方式等身份信息。遗传数据使用化名不代表匿名。",
+        "付费对象是科研分析及计算服务额度。购买前核对币种、单价、数量、总价及计费说明；价格变更不修改历史订单。积分不可转让、不支持提现，不提供第三方代收付款。退款依退款规则及适用法律处理。",
+        "服务输出具有不确定性，AI 或自动初评可能出错，须由具备能力的人员验证。平台可针对滥用暂停新付款或相关服务，并提供支持处理渠道；暂停不改变已发生的账务事实。",
+        "购买时记录购买人、所属组织、确认时间及政策版本，用于服务履行、账务核对及争议处理；隐私政策另行说明数据处理。当前版本正文保留供历史订单查阅，后续修订使用新版本。"
+      ]
+    },
+    "refund": {
+      "title": "退款规则",
+      "paragraphs": [
+        "未使用的付费额度可申请退款；已消耗部分原则上不退。重复收费、平台计费错误及依法应退情形另行处理，适用法律赋予的权利不受本规则限制。",
+        "向下方客服邮箱提供订单号、申请原因及可联系的账户邮箱。不要发送银行卡资料、测序文件、遗传、疾病或健康数据。默认三个工作日内答复，退款到账时间由银行及支付渠道决定。",
+        "退款由人工核对原订单、累计退款、拒付、付费与赠送积分、实际消耗和待结算任务。组织共享余额不等于某笔订单的可退额度；赠送额度不能折现。仍在结算或消耗不明时先核实再处理。",
+        "批准后仅通过原支付渠道退回，累计退款不超过原订单可退金额。成功退款后系统追回相应积分；重复回调不会重复追回。申请退款不自动暂停正在运行的任务，申请前应停止新增消费并告知待结算情况。"
+      ]
+    }
+  },
+  "zh-Hant": {
+    "navigation": "託管服務政策",
+    "operator": "營運主體與聯絡資訊",
+    "missingOperator": "營運資訊尚未完整設定，正式收款暫不可用。",
+    "unavailable": "此政策版本不可用",
+    "privacy": "隱私政策",
+    "accept": "我已閱讀並同意服務條款和退款規則，確認僅用於科研，不用於個人醫療決策。",
+    "changed": "購買政策已更新，請重新閱讀並確認。",
+    "loadError": "無法載入購買政策，請重新整理後重試。",
+    "limited": "新付款暫不可用或已達支付限制，請稍後重試或聯絡支援。",
+    "purpose": "購買科研生物資訊分析與計算服務額度；僅限本平台使用，不可轉讓、不支援提現。",
+    "service": {
+      "title": "科研分析與計算服務",
+      "paragraphs": [
+        "託管服務面向個人科研使用者、科研機構及獲授權人員，提供 FASTQ 品管、變異註釋與結果瀏覽。HPO、ACMG 初評與 AI 輔助用於整理證據和篩選研究候選。",
+        "僅供科研（RUO），不提供採樣、實驗室檢測、個人診斷、健康風險結論、治療或用藥建議，也不簽發診斷報告；不得用於個人醫療決策，輸出須獨立驗證。",
+        "付費積分僅用於本平台科研分析與計算，不可轉讓、不用於第三方支付、不支援提現。付款前展示幣別、單價、數量及總價。退款依退款規則處理。",
+        "計算任務先預留積分，再依實際計費結算。按時長計費從實例確認運行或經驗證的節點回報起，包含初始化、下載、運行、歸檔及診斷日誌保留，分鐘向上取整。取消或失敗不代表免費；尚未開始計費則退回預留，已開始計費則於節點釋放後結算，多退少補。AI 功能依展示的功能費率另計。",
+        "樣本及任務自建立起保留 30 天，編輯或重試不延期；FASTQ 上傳後 7 天、BAM 分析完成後 7 天清理，且不超過任務期限。請及時匯出結果。"
+      ]
+    },
+    "terms": {
+      "title": "託管服務條款",
+      "paragraphs": [
+        "僅適用於 SchemaBio 營運的 YiJian 託管服務，不變更開源自行部署軟體的授權或功能。簽約主體與聯絡資訊見下方；資訊不完整時不開放正式收款。",
+        "使用者須具備資料提交的合法權限，遵守科研用途、授權與安全要求。不得用於個人醫療決策、非法活動、侵害第三方權利或繞過平台限制。不得在科研資料、檔名或備註中提交真實姓名、身分證件及聯絡方式；化名不代表遺傳資料已匿名。",
+        "購買對象為科研分析與計算額度，付款前須核對幣別、單價、數量、總價及計費說明。改價不變更歷史訂單；積分不可轉讓、不可提現，不提供第三方代收付款。退款依退款規則及適用法律處理。",
+        "AI 與自動初評可能出錯，輸出須由具備能力的人員驗證。平台可針對濫用暫停新付款或相關服務，並提供支援管道；暫停不改變已發生的帳務。",
+        "購買時記錄購買人、組織、確認時間與政策版本，用於服務履行、帳務核對及爭議處理。資料處理另見隱私政策；歷史政策正文保留，修訂另用新版本。"
+      ]
+    },
+    "refund": {
+      "title": "退款規則",
+      "paragraphs": [
+        "未使用的付費額度可申請退款；已消耗部分原則上不退。重複收費、平台計費錯誤及依法應退情形另行處理，不限制適用法律賦予的權利。",
+        "向下方客服信箱提供訂單號、原因及帳戶信箱。請勿傳送信用卡資料、測序檔案、遺傳、疾病或健康資料。預設三個工作日內答覆，入帳時間由銀行及支付管道決定。",
+        "人工核對原訂單、累計退款、拒付、付費與贈送積分、消耗及待結算任務。組織共享餘額不等於單筆可退額度；贈送額度不可折現。待結算或消耗不明時先核實。",
+        "核准後僅原路退款，累計不超過訂單可退金額。成功後追回對應積分，重複回呼不重複追回。申請不自動停止執行中的任務，申請前請停止新增消費並告知待結算情況。"
+      ]
+    }
+  },
+  "en": {
+    "navigation": "Hosted service policies",
+    "operator": "Operator and contact",
+    "missingOperator": "Operator information is incomplete. Live payments are unavailable.",
+    "unavailable": "Policy version unavailable",
+    "privacy": "Privacy policy",
+    "accept": "I have read and agree to the service terms and refund policy, and confirm research use only, with no personal medical decisions.",
+    "changed": "The purchase policy changed. Please read it and confirm again.",
+    "loadError": "Unable to load the purchase policy. Refresh and try again.",
+    "limited": "New payments are unavailable or a payment limit was reached. Try later or contact support.",
+    "purpose": "Bioinformatics research analysis and computing credits for this service only. Non-transferable; no cash withdrawal.",
+    "service": {
+      "title": "Research analysis and computing",
+      "paragraphs": [
+        "Available to individual researchers, research organizations and authorized users. FASTQ workflows provide quality control, variant annotation and result browsing. HPO associations, ACMG preliminary assessment and AI assistance organize evidence and prioritize research candidates.",
+        "Research Use Only (RUO). No sample collection, laboratory testing, personal diagnosis, health-risk conclusions, treatment or medication advice, or signed diagnostic reports. Independently validate outputs; do not use them for personal medical decisions.",
+        "Paid credits cover this platform’s research analysis and computing only. They cannot be transferred, withdrawn as cash or used for third-party payments. Currency, unit price, quantity and total appear before payment. Refunds follow the refund policy.",
+        "Compute tasks reserve credits before settlement. Time-based billing starts when the instance is confirmed running or an authenticated node reports, and includes initialization, downloads, execution, archiving and diagnostic-log retention, rounding minutes up. Cancellation or failure does not mean no charge. Reservations are returned if billing never began; otherwise settlement follows confirmed node release, with excess returned or a shortfall collected. AI features are charged separately at displayed rates.",
+        "Samples and tasks expire 30 days after creation; edits and retries do not extend this. FASTQ files are removed 7 days after upload, BAM files 7 days after analysis, no later than task expiry. Export results in time."
+      ]
+    },
+    "terms": {
+      "title": "Hosted service terms",
+      "paragraphs": [
+        "These terms cover SchemaBio’s hosted YiJian service only and do not change the license or features of independently deployed open-source software. The contracting operator and contacts appear below; live payments remain unavailable until these are complete.",
+        "Users must have legal authority to submit data and meet research-use, authorization and security requirements. Personal medical decisions, unlawful activity, infringement and bypassing platform restrictions are prohibited. Do not put real names, identity documents or contact details in research data, filenames or notes. Pseudonymous genetic data is not necessarily anonymous.",
+        "The purchase is for research analysis and computing credits. Check currency, unit price, quantity, total and billing rules before payment. Price changes do not alter existing orders. Credits are non-transferable, cannot be withdrawn and do not facilitate third-party payments. Refunds follow the refund policy and applicable law.",
+        "AI and automated preliminary assessments can be wrong; competent personnel must validate outputs. Abuse may lead to suspension of new payments or relevant services, with a support channel available. Suspension does not change past accounting facts.",
+        "Purchaser, organization, acceptance time and policy version are recorded for service delivery, accounting and disputes. Data processing is described separately in the privacy policy. Historical policy text is retained; revisions receive new versions."
+      ]
+    },
+    "refund": {
+      "title": "Refund policy",
+      "paragraphs": [
+        "Unused paid credits may be submitted for refund. Consumed services are generally non-refundable; duplicate charges, platform billing errors and legally required refunds are handled separately. Statutory rights remain unaffected.",
+        "Email the support contact below with the order ID, reason and account email. Do not send card details, sequencing files, genetic, disease or health data. We normally respond within three business days; arrival of funds depends on the bank and payment provider.",
+        "We manually reconcile the original order, prior refunds, disputes, paid and promotional credits, consumption and unsettled tasks. An organization’s shared balance is not the refundable amount of a particular order; promotional credits cannot be exchanged for money. Unclear or unsettled consumption must be reconciled first.",
+        "Approved refunds go only to the original payment method and cannot exceed the order’s remaining refundable amount. Corresponding credits are recovered after a successful refund, without duplicate recovery on repeated callbacks. A request does not stop running tasks: stop new consumption and disclose unsettled work when applying."
+      ]
+    }
+  },
+  "es-419": {
+    "navigation": "Políticas del servicio alojado",
+    "operator": "Operador y contacto",
+    "missingOperator": "Faltan datos del operador. Los pagos reales no están disponibles.",
+    "unavailable": "Versión de política no disponible",
+    "privacy": "Política de privacidad",
+    "accept": "Leí y acepto los términos y la política de reembolso. Confirmo el uso exclusivo para investigación, sin decisiones médicas personales.",
+    "changed": "La política cambió. Léela y confirma de nuevo.",
+    "loadError": "No se pudo cargar la política. Actualiza e inténtalo de nuevo.",
+    "limited": "Los pagos no están disponibles o se alcanzó un límite. Inténtalo más tarde o contacta a soporte.",
+    "purpose": "Créditos de análisis bioinformático y cómputo para investigación, solo en esta plataforma. No transferibles ni canjeables por efectivo.",
+    "service": {
+      "title": "Análisis y cómputo para investigación",
+      "paragraphs": [
+        "Para investigadores individuales, instituciones y personal autorizado. Los flujos FASTQ ofrecen control de calidad, anotación de variantes y consulta de resultados. HPO, la evaluación preliminar ACMG y la asistencia de IA organizan evidencia y priorizan candidatos de investigación.",
+        "Solo para investigación (RUO). No incluye toma de muestras, pruebas de laboratorio, diagnóstico personal, conclusiones de riesgo de salud, tratamientos, recomendaciones de medicamentos ni informes diagnósticos firmados. Valida los resultados de manera independiente; no los uses para decisiones médicas personales.",
+        "Los créditos pagan únicamente análisis y cómputo de investigación de esta plataforma. No pueden transferirse, retirarse como efectivo ni usarse para pagos a terceros. Antes de pagar se muestran moneda, precio unitario, cantidad y total. Se aplica la política de reembolso.",
+        "Las tareas reservan créditos y luego se liquidan. El cobro por tiempo comienza al confirmarse la instancia en ejecución o recibirse un reporte autenticado del nodo. Incluye inicialización, descargas, ejecución, archivado y retención de registros de diagnóstico; los minutos se redondean hacia arriba. Cancelar o fallar no implica gratuidad: si el cobro no comenzó se devuelve la reserva; de lo contrario se liquida tras liberar el nodo, devolviendo excedentes o cobrando diferencias. La IA se cobra por separado según la tarifa mostrada.",
+        "Las muestras y tareas vencen 30 días después de su creación; editar o reintentar no amplía el plazo. Los FASTQ se eliminan 7 días después de subirlos y los BAM 7 días después del análisis, sin superar el vencimiento de la tarea. Exporta los resultados a tiempo."
+      ]
+    },
+    "terms": {
+      "title": "Términos del servicio alojado",
+      "paragraphs": [
+        "Aplican solo a YiJian alojado por SchemaBio. No modifican licencias ni funciones del software de código abierto desplegado por terceros. El operador contratante y sus datos aparecen abajo; no se habilitan pagos reales hasta completarlos.",
+        "Debes tener autorización legal para enviar datos y cumplir los requisitos de investigación, autorización y seguridad. Se prohíben las decisiones médicas personales, actividades ilegales, infracciones y evasión de restricciones. No incluyas nombres reales, documentos de identidad ni contactos en los datos, archivos o notas. Los datos genéticos con seudónimo no son necesariamente anónimos.",
+        "Se compran créditos de análisis y cómputo para investigación. Revisa moneda, precio unitario, cantidad, total y reglas de cobro antes de pagar. Cambiar precios no altera pedidos anteriores. Los créditos no se transfieren, no se retiran y no sirven para pagos a terceros. Los reembolsos siguen su política y la legislación aplicable.",
+        "La IA y las evaluaciones preliminares pueden equivocarse; personal competente debe validar los resultados. El abuso puede causar la suspensión de pagos nuevos o servicios relevantes, con un canal de soporte. No modifica los registros contables previos.",
+        "Se registran comprador, organización, fecha de aceptación y versión de la política para prestar el servicio, conciliar cuentas y gestionar disputas. La privacidad se describe por separado. Se conserva el texto histórico; cada revisión recibe una nueva versión."
+      ]
+    },
+    "refund": {
+      "title": "Política de reembolso",
+      "paragraphs": [
+        "Puedes solicitar el reembolso de créditos pagados sin usar. Los servicios consumidos generalmente no son reembolsables; se tratan por separado los cobros duplicados, errores de facturación y reembolsos exigidos por ley. Se mantienen tus derechos legales.",
+        "Escribe al correo de soporte indicado abajo con el ID del pedido, motivo y correo de la cuenta. No envíes datos de tarjetas, archivos de secuenciación ni datos genéticos, de enfermedades o salud. Normalmente respondemos en tres días hábiles; la llegada del dinero depende del banco y proveedor.",
+        "Revisamos manualmente pedido original, reembolsos previos, disputas, créditos pagados y promocionales, consumo y tareas pendientes de liquidación. El saldo compartido de la organización no equivale al monto reembolsable de un pedido; los créditos promocionales no se canjean por dinero. Primero se aclaran consumos inciertos o pendientes.",
+        "Los reembolsos aprobados vuelven solo al medio de pago original, sin superar el monto restante reembolsable. Tras el éxito se recuperan los créditos correspondientes, sin duplicarlos por eventos repetidos. Solicitar no detiene tareas en ejecución: suspende nuevos consumos e informa los pendientes al solicitar."
+      ]
+    }
+  }
+}

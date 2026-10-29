@@ -1,5 +1,6 @@
 'use client';
 ﻿
+import { ServicePolicyLinks } from '@/components/shared/ServicePolicyDocument';
 import { useText } from '@/i18n/useText';
 import { errorText } from '@/i18n/errors';
 
@@ -180,6 +181,7 @@ export default function LoginPage() {
             >
               {t("auth.signIn21f1e8")}</Button>
           </form>
+        <div className="mt-6"><ServicePolicyLinks /></div>
 
           <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
             {t("auth.noAccounte15c6e")}{' '}

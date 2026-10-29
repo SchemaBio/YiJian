@@ -1,12 +1,20 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowUpRight, CheckCircle2, Clock3, CreditCard, FileText, ReceiptText, ShieldCheck } from 'lucide-react';
+import { ApiError } from '@/lib/api';
+import { getServicePolicy, SERVICE_POLICY_VERSION, type ServicePolicy } from '@/lib/service-policy';
+import policyCopy from '@/i18n/service-policy-v1.json';
+import { ServicePolicyLinks } from './ServicePolicyDocument';
 import { useText } from '@/i18n/useText';
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 import { createCheckoutSession, formatPaymentMoney, getPaymentOptions, getPaymentOrder, getPaymentOrders, type PaymentOptions, type PaymentOrder } from '@/lib/payments';
 
 export function StripeRechargePanel({ quantity, orgId, selection, manualRequest }: { quantity: number | null; orgId: string; selection?: ReactNode; manualRequest?: ReactNode }) {
   const t = useText();
+  const c = policyCopy[t.locale];
+  const [policy, setPolicy] = useState<ServicePolicy | null>(null);
+  const [accepted, setAccepted] = useState(false);
+  useEffect(() => { let active = true; setPolicy(null); setAccepted(false); void getServicePolicy().then(p => { if (active) setPolicy(p); }).catch(() => { if (active) setError(c.loadError); }); return () => { active = false; }; }, [orgId, c.loadError]);
   const [options, setOptions] = useState<PaymentOptions | null>(null), [orders, setOrders] = useState<PaymentOrder[]>([]);
   const [selected, setSelected] = useState<PaymentOrder | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [page, setPage] = useState(1), [total, setTotal] = useState(0);
@@ -34,7 +42,8 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
     return () => { active = false; window.clearInterval(timer); };
   }, [selected?.id, selected?.state]);
   async function buy() {
-    if (lock.current || quantity === null || options?.status !== 'available') return;
+    if (lock.current || quantity === null || options?.status !== 'available' || !accepted || !policy || policy.version !== SERVICE_POLICY_VERSION) return;
+    const owner = orgId;
     lock.current = true; setBusy(true); setError('');
     try {
       const storage = 'stripe-checkout:' + orgId;
@@ -44,13 +53,19 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
         request = { quantity, key: crypto.randomUUID() };
         sessionStorage.setItem(storage, JSON.stringify(request));
       }
-      const result = await createCheckoutSession({ product: 'credit', quantity }, request.key);
+      const result = await createCheckoutSession({ product: 'credit', quantity, accepted: true, policy_version: policy.version }, request.key);
+      if (scope.current !== owner) return;
       if (result.checkout_url) {
         const url = new URL(result.checkout_url);
         if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') throw new Error('invalid checkout');
         window.location.assign(url.href);
       } else { setSelected(await getPaymentOrder(result.order_id)); }
-    } catch { setError(t('stripePayments.checkoutFailed')); }
+    } catch (err) {
+      if (scope.current !== owner) return;
+      const code = err instanceof ApiError ? (err.data as {code?: string})?.code : '';
+      if (code === 'purchase_policy_outdated') { setAccepted(false); setPolicy(null); setError(c.changed); void getServicePolicy().then(setPolicy).catch(() => undefined); }
+      else setError(code && ['payment_readiness_required', 'payment_rate_limited', 'organization_payment_paused', 'too_many_pending_orders', 'payment_amount_limit', 'payment_daily_limit'].includes(code) ? c.limited : t('stripePayments.checkoutFailed'));
+    }
     finally { lock.current = false; setBusy(false); }
   }
   function status(state: string) {
@@ -82,13 +97,17 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
         <div className="space-y-5 p-5 sm:p-6">
           {error && <p role="alert" className="rounded-lg border border-danger-muted bg-danger-subtle p-3 text-sm leading-5 text-danger-fg">{error}</p>}
           {options?.simulated && available && <p role="status" className="rounded-lg border border-warning-muted bg-warning-subtle p-3 text-xs leading-5 text-warning-fg">{t('stripePayments.testNotice')}</p>}
+          <p className="text-xs leading-5 text-fg-muted">{c.purpose}</p>
+          <ServicePolicyLinks />
+          <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" className="mt-1" checked={accepted} disabled={busy || !policy || policy.version !== SERVICE_POLICY_VERSION} onChange={e => setAccepted(e.target.checked)} />{c.accept}</label>
+          {policy?.contact && <a className="text-xs underline" href={`mailto:${policy.contact}`}>{policy.contact}</a>}
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-3"><dt className="text-fg-muted">{t('stripePayments.credits')}</dt><dd className="font-medium tabular-nums text-fg-default">{quantity?.toLocaleString() ?? '—'}</dd></div>
             <div className="flex items-center justify-between gap-3"><dt className="text-fg-muted">{t('stripePayments.unitPrice')}</dt><dd className="font-medium tabular-nums text-fg-default">{available && options?.price ? formatPaymentMoney(options.price.unit_amount, options.price.currency) : '—'}</dd></div>
             <div className="flex items-end justify-between gap-3 border-t border-dashed border-border-default pt-4"><dt className="pb-1 text-fg-muted">{t('stripePayments.total')}</dt><dd className="text-3xl font-semibold tabular-nums tracking-tight text-fg-default">{available && options?.price && quantity !== null ? formatPaymentMoney(options.price.unit_amount * quantity, options.price.currency) : '—'}</dd></div>
           </dl>
           {loading ? <p className="flex items-center gap-2 text-xs text-fg-muted" role="status"><span className="h-2 w-2 animate-pulse rounded-full bg-fg-muted" />{t('stripePayments.loading')}</p> : available ? <div className="space-y-3">
-            <Button type="button" variant="primary" className="w-full justify-center" rightIcon={<ArrowUpRight className="h-4 w-4" />} loading={busy} disabled={quantity === null} onClick={() => void buy()}>{t(options?.simulated ? 'stripePayments.testPay' : 'stripePayments.pay')}</Button>
+            <Button type="button" variant="primary" className="w-full justify-center" rightIcon={<ArrowUpRight className="h-4 w-4" />} loading={busy} disabled={quantity === null || !accepted || !policy || policy.version !== SERVICE_POLICY_VERSION} onClick={() => void buy()}>{t(options?.simulated ? 'stripePayments.testPay' : 'stripePayments.pay')}</Button>
             <p className="flex items-center justify-center gap-1.5 text-xs text-fg-muted"><ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('stripePayments.checkoutHint')}</p>
             <Button type="button" variant="ghost" size="small" className="w-full justify-center text-fg-muted" disabled={busy} onClick={() => { sessionStorage.removeItem('stripe-checkout:' + orgId); setSelected(null); }}>{t('stripePayments.newOrder')}</Button>
           </div> : !error ? <div className="flex items-start gap-2.5 rounded-lg border border-border-default bg-canvas-subtle p-3"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" /><p className="text-xs leading-5 text-fg-muted">{t('stripePayments.disabled')}</p></div> : null}
