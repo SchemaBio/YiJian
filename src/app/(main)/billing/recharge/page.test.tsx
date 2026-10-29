@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import RechargePage from './page';
 import { getBillingBalance, getBillingConfig } from '@/lib/billing';
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: { email: 'preview@example.invalid' }, currentOrg: { id: 'org', name: 'preview' } }) }));
+vi.mock('@/lib/payments', async original => ({ ...await original<typeof import('@/lib/payments')>(), getPaymentOptions: vi.fn().mockResolvedValue({ status: 'disabled', price: null }), getPaymentOrders: vi.fn().mockResolvedValue({ items: [], total: 0 }) }));
 vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => 'squid' }));
 vi.mock('@/lib/billing', () => ({ getBillingBalance: vi.fn(), getBillingConfig: vi.fn(), calculateEstimatedCredits: vi.fn(() => null) }));
 beforeEach(() => {
@@ -19,7 +20,7 @@ it('recovers failed recharge information without displaying infinite runtime', a
   render(<RechargePage />);
   expect(await screen.findByRole('alert')).toHaveTextContent('余额读取失败');
   fireEvent.click(screen.getByRole('button', { name: '重试读取' }));
-  await screen.findByText('100 积分', { selector: 'p' });
+  await waitFor(() => expect(screen.getByText('当前余额').nextElementSibling).toHaveTextContent('100'));
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
   expect(getBillingBalance).toHaveBeenCalledTimes(2);
@@ -29,7 +30,7 @@ it('keeps the manual flow and validates the actual input instead of coercing it'
   const writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
   render(<RechargePage />);
-  await screen.findByText('100 积分', { selector: 'p' });
+  await waitFor(() => expect(screen.getByText('当前余额').nextElementSibling).toHaveTextContent('100'));
   const input = screen.getByRole('spinbutton');
   const copy = screen.getByRole('button', { name: '复制充值申请' });
   expect(input).toHaveValue(500);

@@ -3238,6 +3238,19 @@
     "disputed": "En disputa",
     "refundLedger": "Recuperación por reembolso",
     "disputeLedger": "Recuperación por disputa",
-    "restoreLedger": "Restauración de créditos"
+    "restoreLedger": "Restauración de créditos",
+    "pageDescription": "Elige tus créditos, revisa el total y completa el pago. Consulta tus órdenes y acreditaciones abajo.",
+    "selectStep": "01 · Elige créditos",
+    "payStep": "02 · Revisa el pago",
+    "confirmTitle": "Resumen de compra",
+    "presetAmounts": "Cantidades de créditos predefinidas",
+    "manualTitle": "Solicitud manual de créditos",
+    "checkoutHint": "Completa el pago en Stripe Checkout",
+    "loading": "Cargando información del pago…",
+    "historyTitle": "Historial de pagos",
+    "emptyTitle": "Aún no hay órdenes de pago",
+    "emptyHint": "Tus órdenes y el progreso de acreditación aparecerán aquí.",
+    "createdAt": "Creación",
+    "pageCount": "Página {p0} de {p1}"
   }
 }

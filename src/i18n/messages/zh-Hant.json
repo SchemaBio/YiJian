@@ -3238,6 +3238,19 @@
     "disputed": "付款爭議中",
     "refundLedger": "付款退款追回",
     "disputeLedger": "付款爭議追回",
-    "restoreLedger": "付款點數恢復"
+    "restoreLedger": "付款點數恢復",
+    "pageDescription": "選擇儲值數量，確認金額後完成付款。你可以在下方查看訂單與入帳進度。",
+    "selectStep": "01 · 選擇點數",
+    "payStep": "02 · 確認付款",
+    "confirmTitle": "儲值明細",
+    "presetAmounts": "快捷儲值數量",
+    "manualTitle": "人工儲值申請",
+    "checkoutHint": "付款將在 Stripe 收銀台完成",
+    "loading": "正在讀取付款資訊…",
+    "historyTitle": "儲值紀錄",
+    "emptyTitle": "尚無儲值訂單",
+    "emptyHint": "你的付款訂單與入帳進度將顯示於此。",
+    "createdAt": "建立時間",
+    "pageCount": "第 {p0} / {p1} 頁"
   }
 }

@@ -3238,6 +3238,19 @@
     "disputed": "支付争议中",
     "refundLedger": "支付退款追回",
     "disputeLedger": "支付争议追回",
-    "restoreLedger": "支付积分恢复"
+    "restoreLedger": "支付积分恢复",
+    "pageDescription": "选择充值数量，确认金额后完成支付。你可以在下方查看订单与到账进度。",
+    "selectStep": "01 · 选择积分",
+    "payStep": "02 · 确认支付",
+    "confirmTitle": "充值明细",
+    "presetAmounts": "快捷充值数量",
+    "manualTitle": "人工充值申请",
+    "checkoutHint": "付款将在 Stripe 收银台完成",
+    "loading": "正在读取支付信息…",
+    "historyTitle": "充值记录",
+    "emptyTitle": "暂无充值订单",
+    "emptyHint": "你的支付订单与到账进度将在这里显示。",
+    "createdAt": "创建时间",
+    "pageCount": "第 {p0} / {p1} 页"
   }
 }

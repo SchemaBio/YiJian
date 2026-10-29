@@ -11,8 +11,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Input } from '@schema/ui-kit';
-import { Tag } from '@/components/shared/Tag';
-import { ArrowLeft, Clock3, Coins, CreditCard } from 'lucide-react';
+import { ArrowLeft, Clock3, Coins, Check, FileText } from 'lucide-react';
 import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
@@ -81,110 +80,78 @@ export default function RechargePage() {
 
   if (!isSaaS) return null;
 
+  const selection = (
+    <section className="yj-panel min-w-0 overflow-hidden" aria-labelledby="credit-selection-title">
+      <div className="border-b border-border-default px-5 py-5 sm:px-6">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-subtle text-accent-fg"><Coins className="h-5 w-5" aria-hidden="true" /></span>
+          <div>
+            <p className="mb-0.5 text-xs font-medium tracking-wide text-fg-muted">{t('stripePayments.selectStep')}</p>
+            <h3 id="credit-selection-title" className="text-base font-semibold text-fg-default">{t("admin.creditsToAdd3d02b4")}</h3>
+          </div>
+        </div>
+      </div>
+      <div className="p-5 sm:p-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="group" aria-label={t('stripePayments.presetAmounts')}>
+          {PRESET_CREDITS.map(preset => (
+            <button key={preset} type="button" aria-pressed={amount === preset}
+              onClick={() => { setAmountInput(String(preset)); setCopied(false); }}
+              className={`relative flex min-h-[100px] flex-col items-start justify-center rounded-lg border px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis focus-visible:ring-offset-2 ${amount === preset ? 'border-accent-emphasis bg-accent-subtle text-fg-default ring-1 ring-accent-emphasis' : 'border-border-default bg-canvas-default text-fg-default hover:border-accent-muted hover:bg-canvas-subtle'}`}>
+              {amount === preset && <Check className="absolute right-2.5 top-2.5 h-4 w-4" aria-hidden="true" />}
+              <span className="text-2xl font-semibold tabular-nums tracking-tight">{preset.toLocaleString()}</span>
+              <span className="mt-1 text-xs text-fg-muted">{t("billing.creditse6d317")}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-6 border-t border-border-default pt-5">
+          <label htmlFor="recharge-amount" className="mb-2 block text-sm font-medium text-fg-default">{t("billing.customAmount6dea5d")}</label>
+          <div className="flex max-w-sm items-center gap-3">
+            <Input id="recharge-amount" aria-label={t("billing.customCreditAmountc6dcf8")} type="number" min="1" max="5000" step="1" inputMode="numeric"
+              value={amountInput} aria-invalid={amount === null} aria-describedby="recharge-quantity-help" className="h-11 text-base tabular-nums"
+              onChange={event => { setAmountInput(event.target.value); setCopied(false); }} />
+            <span className="shrink-0 text-sm text-fg-muted">{t("billing.creditse6d317")}</span>
+          </div>
+          <p id="recharge-quantity-help" role={quantityError ? 'alert' : undefined} className={`mt-2 text-xs leading-5 ${quantityError ? 'text-danger-fg' : 'text-fg-muted'}`}>{quantityError || t('payments.quantityHelp')}</p>
+        </div>
+        <div className="mt-6 rounded-lg border border-border-default bg-canvas-subtle p-4">
+          <div className="flex items-start gap-3">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-xs text-fg-muted">{t("billing.estimatedRuntimeFromThisAddition05038e")}</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-fg-default">{t("billing.about91e623")}{estimatedMinutes?.toLocaleString() ?? '--'} <span className="text-sm font-normal text-fg-muted">{t("billing.minutes5b0acd")}</span></p>
+              <p className="mt-2 text-xs leading-5 text-fg-muted">{t("billing.estimatedReservationForAMinuteTask31dcf2")}{exampleTaskCost ?? '--'} {t("billing.creditsFinalBillingUsesActualRuntimea39e18")}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+  const manualRequest = (
+    <div className="border-t border-border-default pt-5">
+      <div className="mb-2 flex items-center gap-2 text-sm font-medium text-fg-default"><FileText className="h-4 w-4 text-fg-muted" aria-hidden="true" />{t('stripePayments.manualTitle')}</div>
+      <p className="mb-4 text-xs leading-5 text-fg-muted">{t("billing.creditsArePostedAfterPlatformConfirmationSee40fdf0")}</p>
+      <Button action={copied ? 'copied' : 'copy'} variant="secondary" className="w-full justify-center" onClick={() => void copyRequest()} disabled={amount === null}>
+        {copied ? t("billing.copiede381a5") : t("billing.copyCreditRequeste67917")}
+      </Button>
+      <span role="status" className="sr-only">{copied ? t("billing.copiede381a5") : ''}</span>
+    </div>
+  );
   return (
     <PageContent className="yj-page-shell">
-      <div className="yj-page-header">
-        <div>
-          <Link href="/billing" className="mb-2 inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg-default">
-            <ArrowLeft className="h-4 w-4" />
-            {t("billing.backToBilling844842")}</Link>
-          <div className="flex items-center gap-2">
-            <h2 className="yj-page-title">{t("billing.addCreditsfa03c4")}</h2>
-          </div>
-          <p className="yj-page-subtitle">{t("billing.chooseACreditAmountAndCreateAb9ec63")}</p>
+      <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <Link href="/billing" className="mb-3 inline-flex items-center gap-1.5 text-sm text-fg-muted transition-colors hover:text-fg-default"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t("billing.backToBilling844842")}</Link>
+          <h2 className="yj-page-title">{t("billing.addCreditsfa03c4")}</h2>
         </div>
-      </div>
-
-      {loadError && <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<ActionButton action="retry" variant="ghost" type="button" className="yj-tool-button ml-3" onClick={() => setRetry(value => value + 1)}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
-      {error && (
-        <div role="alert" className="mb-4 rounded-md border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">
-          {error}
+        <div className="flex shrink-0 items-center gap-3 rounded-lg border border-border-default bg-canvas-default px-4 py-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle text-accent-fg"><Coins className="h-4 w-4" aria-hidden="true" /></span>
+          <div><p className="text-xs text-fg-muted">{t("billing.currentBalancef11215")}</p><p className="mt-0.5 text-xl font-semibold tabular-nums text-fg-default">{balance?.balance.toLocaleString() ?? '—'} <span className="text-xs font-normal text-fg-muted">{t("billing.creditse6d317")}</span></p></div>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="yj-panel p-5">
-          <div className="mb-5 flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-accent-fg" />
-            <h3 className="text-base font-medium text-fg-default">{t("admin.creditsToAdd3d02b4")}</h3>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {PRESET_CREDITS.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => { setAmountInput(String(preset)); setCopied(false); }}
-                aria-pressed={amount === preset}
-                className={`h-10 rounded-md border text-sm font-medium transition-colors ${
-                  amount === preset
-                    ? 'border-accent-emphasis bg-accent-subtle text-accent-fg'
-                    : 'border-border-default bg-canvas-default text-fg-default hover:bg-canvas-subtle'
-                }`}
-              >
-                {preset} {t("billing.creditse6d317")}</button>
-            ))}
-          </div>
-
-          <div className="mt-5 max-w-xs">
-            <label htmlFor="recharge-amount" className="mb-2 block text-sm font-medium text-fg-default">{t("billing.customAmount6dea5d")}</label>
-            <Input
-              id="recharge-amount"
-              aria-label={t("billing.customCreditAmountc6dcf8")}
-              type="number"
-              min="1"
-              max="5000"
-              step="1"
-              value={amountInput}
-              aria-invalid={amount === null}
-              aria-describedby="recharge-quantity-help"
-              onChange={(event) => { setAmountInput(event.target.value); setCopied(false); }}
-            />
-            <p id="recharge-quantity-help" role={quantityError ? 'alert' : undefined} className={`mt-2 text-sm ${quantityError ? 'text-danger-fg' : 'text-fg-muted'}`}>
-              {quantityError || t('payments.quantityHelp')}
-            </p>
-          </div>
-
-          {currentOrg?.id && <StripeRechargePanel quantity={amount} orgId={String(currentOrg.id)} />}
-          <div className="mt-6 flex flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm text-fg-muted">{t("billing.requestedAmount2e583a")}</p>
-              <p className="text-2xl font-semibold text-fg-default">{amount ?? '--'} {t("billing.creditse6d317")}</p>
-            </div>
-            <Button action="copy"
-              variant="primary"
-              className="w-full min-w-[168px] justify-center sm:w-auto"
-
-              onClick={() => void copyRequest()}
-              disabled={amount === null}
-            >
-              {copied ? t("billing.copiede381a5") : t("billing.copyCreditRequeste67917")}
-            </Button>
-          </div>
-        </section>
-
-        <aside className="space-y-4">
-          <div className="yj-panel p-4">
-            <div className="flex items-center gap-2 text-fg-muted">
-              <Coins className="h-4 w-4" />
-              <span className="text-sm">{t("billing.currentBalancef11215")}</span>
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-fg-default">{balance?.balance ?? '--'} {t("billing.creditse6d317")}</p>
-          </div>
-          <div className="yj-panel p-4">
-            <div className="flex items-center gap-2 text-fg-muted">
-              <Clock3 className="h-4 w-4" />
-              <span className="text-sm">{t("billing.estimatedRuntimeFromThisAddition05038e")}</span>
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-fg-default">{t("billing.about91e623")}{estimatedMinutes ?? '--'} {t("billing.minutes5b0acd")}</p>
-            <p className="mt-2 text-xs text-fg-muted">{t("billing.estimatedReservationForAMinuteTask31dcf2")}{exampleTaskCost ?? '--'} {t("billing.creditsFinalBillingUsesActualRuntimea39e18")}</p>
-          </div>
-          <div className="yj-panel p-4 text-sm text-fg-muted">
-            <p className="font-medium text-fg-default">{t("billing.creditPosting806aed")}</p>
-            <p className="mt-2">{t("billing.creditsArePostedAfterPlatformConfirmationSee40fdf0")}</p>
-          </div>
-        </aside>
+        <p className="yj-page-subtitle col-span-2 sm:col-span-1">{t('stripePayments.pageDescription')}</p>
       </div>
+      {loadError && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<ActionButton action="retry" variant="ghost" size="small" onClick={() => setRetry(v => v + 1)}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
+      {error && <div role="alert" className="mb-4 rounded-lg border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
+      {currentOrg?.id ? <StripeRechargePanel quantity={amount} orgId={String(currentOrg.id)} selection={selection} manualRequest={manualRequest} /> : selection}
     </PageContent>
   );
 }

@@ -3238,6 +3238,19 @@
     "disputed": "Disputed",
     "refundLedger": "Payment refund recovery",
     "disputeLedger": "Payment dispute recovery",
-    "restoreLedger": "Payment credit restoration"
+    "restoreLedger": "Payment credit restoration",
+    "pageDescription": "Choose your credits, review the total, and complete payment. Track orders and fulfillment below.",
+    "selectStep": "01 · Choose credits",
+    "payStep": "02 · Review payment",
+    "confirmTitle": "Purchase summary",
+    "presetAmounts": "Preset credit quantities",
+    "manualTitle": "Manual credit request",
+    "checkoutHint": "Complete payment on Stripe Checkout",
+    "loading": "Loading payment information…",
+    "historyTitle": "Payment history",
+    "emptyTitle": "No payment orders yet",
+    "emptyHint": "Your payment orders and fulfillment progress will appear here.",
+    "createdAt": "Created",
+    "pageCount": "Page {p0} of {p1}"
   }
 }
