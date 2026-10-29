@@ -4,7 +4,7 @@
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
 
-**最新部署以第 57 节为准：YiJian登录页重发邮件入口移除已部署，标签 `login-cleanup-20261029t152140z`，保留第56节公告按钮浮层；Cuttlefish保持第55节 `compute-design-20261029t145708z`，Squid保持第53节 `announcement-audience-20261029t112950z`，Octopus保持第51节 `ops-announcements-20261029t094949z`。正式收款与下载防护保持关闭，待应用计算配置保留一项。第 41 节为此前支付发布记录：Squid / Cuttlefish / YiJian 已部署 Stripe 接入代码，test/live 收款均关闭，Stripe 测试凭据和真实测试卡闭环验收待完成。服务器仍有待应用计算配置，支付发布以显式 preserve-applied 选项保留当前运行配置。以下 2026-10-27 镜像记录为历史状态。**
+**最新完整仓库部署以第 58 节为准：Squid / Octopus / Cuttlefish / YiJian及官网已部署，标签 `latest-repositories-20261029t153312z`；使用协议及支付安全设置已包含。正式收款与下载防护保持关闭，待应用计算配置保留一项。第 41 节为此前支付发布记录：Squid / Cuttlefish / YiJian 已部署 Stripe 接入代码，test/live 收款均关闭，Stripe 测试凭据和真实测试卡闭环验收待完成。服务器仍有待应用计算配置，支付发布以显式 preserve-applied 选项保留当前运行配置。以下 2026-10-27 镜像记录为历史状态。**
 
 **2026-10-27 当前线上：SepiLens 为 `cnv-default-draft-20261027t023827z`（第 37 节），Octopus 为 `cnv-copy-estimate-20261026t145125z`，YiJian 为 `cnv-autofill-20261027t023917z`，Squid 保持 `cnv-ai-20261026t115034z`。第 33 节修复深度估算小数拷贝数被错误拒绝，保留其估算身份、不取整。第 31 节修复 CNV 浏览器 BIGINT 区间长度在提交前序列化失败导致一直转圈，并增加有界传输超时。第 30 节接通 CNV Gain/Loss AI 自动上下文、联网候选、人工填表保存及每次 1 积分，保留正式规则批准门禁；同步修复质控大于号文案。第 28 节修正 IGV 放大后的正文与三样本轨道高度自适应，按钮移至关闭按钮左侧；第 27 节启用 CNV Region 本地初评/HPO 关联/得分排序；第 26 节补齐 Peddy 亲缘关系接口和总览展示；第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG / SVC v4 / CNV Gain / CNV Loss AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
 
@@ -12,7 +12,7 @@
 
 本机工作区为 `D:\WSL\Github\SchemaBio`，包括 YiJian（用户前端）、Squid（认证、组织、计费、云计算网关）、Octopus（样本、任务与结果）、Cuttlefish（管理控制台）、SepiLens（AI 引擎服务）、Sepiida（节点 Agent/进度服务）和 Schema_CPU（工作流及计算镜像）。
 
-本次 HPO 生产计费已经部署。**本地代码现已提交但未 push；远端仓库仍是旧基准，运行镜像含精确源码 overlay。不要从远端旧 HEAD 直接重建，否则会丢失本次更新。**
+**第58节已从origin/main拉取完整版本并部署。业务服务和官网镜像对应精确Git提交，早期overlay记录为历史；以后以最新发布节的提交、镜像及保护目录为准。**
 
 进一步资料：
 
@@ -769,3 +769,12 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 主分支提交 `621e4ec` 包含入口修正及既有登录回归断言。本机13项登录/注册挑战/验证回归和类型检查通过。为避免携带并行协议改动，部署以第56节精确版本 `0a49b1d` 仅删除登录页一行，独立提交 `4ecbe2d` 保存在本地 `codex/login-resend-cleanup-release` 分支；镜像 `schemabio/yijian:login-cleanup-20261029t152140z`。未push。
 - 服务器10项验证/挑战回归、类型检查和生产构建通过。独立公网检查登录页无verify-email链接、注册链接保留、验证页200；镜像提交一致、healthy、重启0，业务/公告摘要及计算配置保持，其他后端容器身份不变。验收模板首次误替换公告CSS名称导致断言失败，修正模板后全项通过，无产品代码变更或回退。
 - 保护目录 `/home/ubuntu/schema/backups/login-cleanup-20261029T152140Z` 保存原环境、回退镜像标签、精确源码归档及摘要、构建/测试日志、result.json及verification.json。待计算配置继续保留，收款与下载防护仍关闭；回退仅切换YiJian镜像，不恢复数据库。
+## 58. 2026-10-29 拉取完整最新版并部署使用协议及支付安全
+
+- 按用户明确要求，从远端GitHub获取并使用 `git pull --ff-only origin main` 快进六个业务仓库及官网。既有远端codex运维分支无upstream，故显式指定origin/main；未重置工作区。本机部分私有仓库Git认证未通过，已通过远端既有合法认证完成获取，不要求用户重复提供凭据。
+- 完整发布Squid `927239f`、Octopus `7c52aab`、Cuttlefish `53a98a2`、YiJian `90467be`、官网基础 `7ba7d90`。四业务及官网统一镜像标签 `latest-repositories-20261029t153312z`；SepiLens `e48d751`、Sepiida `52326bb` 已与最新提交一致，不重启。Schema_CPU镜像和云节点不变。
+- 完整版包含登录《使用协议》及默认未勾选的确认框、公开service/terms/refund政策、购买单独确认、后台收款条件/支付风险、此前公告/计算/移动端更新。真实浏览器已确认登录入口及协议正文；独立检查四语言正文、服务版本、后台准入/风险代理、鉴权、CSRF、订单组织隔离与原入口保护。
+- 官网首次启动因构建归档目录权限过严，普通用户读取 `/app/public/images` 被拒而自动回退；目录权限规范化仍命中旧COPY层，新增普通用户资源探针提前拦截，未切换。最终仅修复官网Dockerfile的public资源COPY归属（`--chown=nextjs:nodejs`），提交 `4d36b18`；通过仅含该提交的Git bundle同步到远端并快进，未push。官网实际运行源码以4d36b18为准，资源读取探针、生产构建、类型检查、健康与公开政策链接验收通过。
+- 本机YiJian56项、Cuttlefish45项相关回归及类型检查通过；一次性隔离PostgreSQL18实际执行Squid支付/风控/准入/政策/公告service、handler、router回归，未跳过数据库验证；容器及匿名卷已清理。服务器两前端同组回归、类型检查及生产构建通过，Squid/Octopus Linux镜像构建通过。不声称既有CVM全量套件问题已解决，没有真实Stripe、AI、计算或云销毁操作。
+- 独立核对四业务healthy、重启0，官网healthy；全部业务/公告摘要及计算有效/applied快照保持，待计算配置仍1项，preserve-applied继续开启。支付和下载防护保持关闭，真实Stripe测试卡/签名回调及COS/CLS验收仍待完成。支付只增量迁移准入/账户检查/预算/风险表及订单字段，没有恢复数据库。
+- 保护目录 `/home/ubuntu/schema/backups/latest-repositories-20261029T153312Z` 含两业务库dump（Squid262817字节、Octopus98337922字节）、部署配置及密钥副本、旧镜像标签、精确提交归档与摘要、构建/回归日志、官网首次失败和恢复记录、result.json、website-result.json、all-result.json及verification.json。官网编排位于 `/opt/dpanel/dpanel/compose/schema-website-20260828/docker-compose.yaml`，仅更新镜像引用，运行环境/网络/9339端口保持。回退只切换镜像且须保留在途支付处理及组织过滤能力，不恢复旧库。
