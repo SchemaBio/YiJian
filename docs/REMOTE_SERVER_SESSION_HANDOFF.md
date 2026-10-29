@@ -4,7 +4,7 @@
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
 
-**最新部署以第 52 节为准：Cuttlefish / YiJian公告视觉重设计已部署，标签 `announcement-design-20261029t111450z`；Squid / Octopus保持第51节 `ops-announcements-20261029t094949z`。正式收款与下载防护保持关闭，待应用计算配置保留一项。第 41 节为此前支付发布记录：Squid / Cuttlefish / YiJian 已部署 Stripe 接入代码，test/live 收款均关闭，Stripe 测试凭据和真实测试卡闭环验收待完成。服务器仍有待应用计算配置，支付发布以显式 preserve-applied 选项保留当前运行配置。以下 2026-10-27 镜像记录为历史状态。**
+**最新部署以第 53 节为准：Squid / Cuttlefish / YiJian公告组织UUID定向投放已部署，标签 `announcement-audience-20261029t112950z`；Octopus保持第51节 `ops-announcements-20261029t094949z`。正式收款与下载防护保持关闭，待应用计算配置保留一项。第 41 节为此前支付发布记录：Squid / Cuttlefish / YiJian 已部署 Stripe 接入代码，test/live 收款均关闭，Stripe 测试凭据和真实测试卡闭环验收待完成。服务器仍有待应用计算配置，支付发布以显式 preserve-applied 选项保留当前运行配置。以下 2026-10-27 镜像记录为历史状态。**
 
 **2026-10-27 当前线上：SepiLens 为 `cnv-default-draft-20261027t023827z`（第 37 节），Octopus 为 `cnv-copy-estimate-20261026t145125z`，YiJian 为 `cnv-autofill-20261027t023917z`，Squid 保持 `cnv-ai-20261026t115034z`。第 33 节修复深度估算小数拷贝数被错误拒绝，保留其估算身份、不取整。第 31 节修复 CNV 浏览器 BIGINT 区间长度在提交前序列化失败导致一直转圈，并增加有界传输超时。第 30 节接通 CNV Gain/Loss AI 自动上下文、联网候选、人工填表保存及每次 1 积分，保留正式规则批准门禁；同步修复质控大于号文案。第 28 节修正 IGV 放大后的正文与三样本轨道高度自适应，按钮移至关闭按钮左侧；第 27 节启用 CNV Region 本地初评/HPO 关联/得分排序；第 26 节补齐 Peddy 亲缘关系接口和总览展示；第 25 节统一管理页提醒字号，并记录本阶段本地提交。第 24 节允许缺少疾病/遗传模式时返回部分评估。第 23 节将任务编辑限制为失败/待启动状态。第 22 节修复完成结果保存误报不可用，并强制检索、自动补全 SVC 四项上下文；保留第 21 节输出合同及有界格式纠正。第 19 节家系内部编号/性别显示修复保留，第 20 节增加 SVC AI 结果一键保存。ACMG / SVC v4 / CNV Gain / CNV Loss AI 服务均按每次 1 积分收费；HPO / ACMG / SVC 的本会话免提示选择分别记录。保留正式医学规则批准门禁、SVC 草案身份及此前 HPO、家系角色和缓存修复。第 15–17 节修改已按仓库本地提交、未 push，用户自行测试，智能体不代发真实模型请求。旧 Git HEAD 不能直接重建。**
 
@@ -733,3 +733,12 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 两个前端已部署为 `schemabio/<service>:announcement-design-20261029t111450z`（cuttlefish、yijian），均healthy、重启0。Squid、Octopus、SepiLens及其他后端容器身份保持，网关检查/reload成功；没有数据库迁移、现有公告编辑、真实支付/AI/计算或云销毁操作。
 - 本机及服务器Cuttlefish7项公告/导航回归、YiJian14项公告/语言回归、类型检查与生产构建通过。合成浏览器核对桌面列表/编辑器、390px编辑抽屉、320/390px横幅及深色主题；本机预览语言资源缓存刷新后新文案正常。线上独立核对新版CSS实际提供，登录后的页面/API、非法公告输入400及CSRF拒绝403通过。
 - 发布目录 `/home/ubuntu/schema/backups/announcement-design-20261029T111450Z` 保存精确源码归档与摘要、旧镜像回退标签、原env/Compose/nginx、前后业务/现有公告摘要及构建/测试日志、result和verification。原公告内容、起止时间、状态与revision摘要不变，账务及计算配置保持；正式收款和下载防护仍关闭。仅回退前端镜像，不恢复数据库。
+
+## 53. 2026-10-29 公告按组织UUID定向投放上线
+
+- Cuttlefish编辑器新增「全部组织／指定组织」，支持每行或逗号分隔UUID，最多50个，规范化去重并验证组织存在；列表和预览显示投放范围。旧公告默认全体，旧管理客户端省略范围时保留既有定向设置。
+- Squid按认证上下文的组织过滤有效公告，忽略客户端org_id参数；用户响应不返回目标名单。YiJian公告中心与banner共用此结果，切换组织立即隐藏旧公告，重新加载并核对响应组织；失败或组织不匹配时不显示旧内容。数据库只新增audience和target_org_ids字段。
+- 功能提交：Squid `58aafcf`、Cuttlefish `8e95311`、YiJian `905fad0`，均已本地提交、未push；三服务顺序发布为 `schemabio/<service>:announcement-audience-20261029t112950z`，独立复核healthy、重启0，其他后端容器身份保持。
+- 隔离PostgreSQL实际验证旧表迁移、双组织可见范围、无效组织拒绝、旧客户端保留范围、定向变更与恢复全体，以及认证组织隔离及参数伪造；相关Go测试通过。Cuttlefish本机7项、服务器含导航9项回归，YiJian公告/语言15项回归及两个前端类型检查、生产构建通过；Squid Linux镜像构建通过。合成浏览器核对指定组织编辑器。
+- 生产只读验收认证组织过滤、伪造org_id无效、用户响应不泄漏目标UUID；未创建或修改生产公告。原有1条全体公告的内容、时间、状态、revision摘要保持，业务和账务摘要保持。待计算配置仍1项，preserve-applied继续开启；收款和下载防护仍关闭，没有真实支付、付费AI、计算任务或云销毁操作。
+- 保护目录 `/home/ubuntu/schema/backups/announcement-audience-20261029T112950Z` 含业务库备份、部署配置和密钥保护副本、旧镜像标签、精确提交归档与摘要、构建/测试日志、result.json及verification.json。回退不得恢复旧数据库；一旦存在定向公告，禁止降级到不支持组织过滤的旧Squid，发布脚本回退保护会保留兼容Squid，可单独回退前端。
