@@ -3285,6 +3285,7 @@
     "pageCount": "Page {p0} of {p1}"
   },
   "announcements": {
+    "intro": "Platform updates and service notices",
     "title": "Announcements",
     "loading": "Loading announcements…",
     "failed": "Announcements are temporarily unavailable. Please try again.",

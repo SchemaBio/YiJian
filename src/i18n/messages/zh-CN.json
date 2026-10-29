@@ -3285,6 +3285,7 @@
     "pageCount": "第 {p0} / {p1} 页"
   },
   "announcements": {
+    "intro": "平台服务动态与维护通知",
     "title": "公告",
     "loading": "正在读取公告…",
     "failed": "公告暂时无法读取，请稍后重试。",

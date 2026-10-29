@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Bell, ChevronRight, X } from 'lucide-react';
+import { Bell, CalendarDays, ChevronRight, Megaphone, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { parseAnnouncements, type Announcement } from '@/lib/announcements';
@@ -75,19 +75,38 @@ function SaaSAnnouncements({ children }: {
     return <Context.Provider value={{ items: active, loading, failed, open, setOpen, reload: () => void reload(), dismiss, dismissed }}>{children}</Context.Provider>;
 }
 export function AnnouncementButton() {
-    const state = React.useContext(Context);
-    const t = useText();
-    if (!state)
-        return null;
-    return <><button type="button" className="relative rounded-md p-2 text-fg-muted hover:bg-canvas-inset hover:text-fg-default" aria-label={t('announcements.title')} onClick={() => { state.setOpen(true); state.reload(); }}><Bell className="h-5 w-5" aria-hidden="true"/>{state.items.length > 0 && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent-emphasis" aria-hidden="true"/>}</button><AppModal open={state.open} onOpenChange={state.setOpen} title={t('announcements.title')} size="medium"><div className="space-y-4">{state.loading && <p role="status">{t('announcements.loading')}</p>}{state.failed && <div role="alert"><p>{t('announcements.failed')}</p><button className="mt-2 text-accent-fg" onClick={state.reload}>{t('billing.retryLoading7b4939')}</button></div>}{!state.loading && !state.failed && !state.items.length && <p className="py-8 text-center text-sm text-fg-muted">{t('announcements.empty')}</p>}{state.items.map(item => <article key={item.id} className="rounded-lg border border-border-default p-4"><h3 className="break-words text-base font-semibold">{item.title}</h3><p className="mt-1 text-xs text-fg-muted">{new Date(item.starts_at).toLocaleString(t.locale)} — {new Date(item.ends_at).toLocaleString(t.locale)}</p><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6">{item.body}</p></article>)}</div></AppModal></>;
+  const state = React.useContext(Context);
+  const t = useText();
+  if (!state) return null;
+  return <>
+    <button type="button" className="yj-announcement-trigger" aria-label={t('announcements.title')} title={t('announcements.title')} aria-haspopup="dialog" aria-expanded={state.open} onClick={() => { state.setOpen(true); state.reload(); }}>
+      <Bell className="h-5 w-5" aria-hidden="true"/>{state.items.length > 0 && <span className="yj-announcement-dot" aria-hidden="true"/>}
+    </button>
+    <AppModal open={state.open} onOpenChange={state.setOpen} title={t('announcements.title')} size="medium" bodyClassName="yj-announcement-modal-body">
+      <div className="yj-announcement-center">
+        <p className="yj-announcement-intro">{t('announcements.intro')}</p>
+        {state.loading && <p role="status">{t('announcements.loading')}</p>}
+        {state.failed && <div role="alert" className="yj-announcement-error"><p>{t('announcements.failed')}</p><button onClick={state.reload}>{t('billing.retryLoading7b4939')}</button></div>}
+        {!state.loading && !state.failed && !state.items.length && <div className="yj-announcement-empty"><span><Bell size={24} aria-hidden="true"/></span><p>{t('announcements.empty')}</p></div>}
+        {state.items.map(item => <article key={item.id} className="yj-announcement-article"><div className="yj-announcement-article-heading"><span className="yj-announcement-article-icon"><Megaphone size={18} aria-hidden="true"/></span><h3>{item.title}</h3></div><p className="yj-announcement-date"><CalendarDays size={13} aria-hidden="true"/><time dateTime={item.starts_at}>{new Date(item.starts_at).toLocaleString(t.locale)}</time><span aria-hidden="true">—</span><time dateTime={item.ends_at}>{new Date(item.ends_at).toLocaleString(t.locale)}</time></p><p className="yj-announcement-body">{item.body}</p></article>)}
+      </div>
+    </AppModal>
+  </>;
 }
 export function AnnouncementBanners() {
-    const state = React.useContext(Context);
-    const t = useText();
-    if (!state)
-        return null;
-    const banners = state.items.filter(item => item.banner && state.dismissed[item.id] !== item.revision);
-    if (!banners.length)
-        return null;
-    return <section aria-label={t('announcements.title')} className="max-h-[30dvh] shrink-0 overflow-y-auto border-b border-accent-muted bg-accent-subtle px-4 py-2 text-accent-fg sm:px-5">{banners.map(item => <div key={item.id} className="flex items-start gap-3 py-1"><Bell aria-hidden="true" className="mt-2 h-4 w-4 shrink-0"/><button type="button" className="min-w-0 flex-1 py-1 text-left" onClick={() => state.setOpen(true)}><span className="block break-words text-sm font-semibold">{item.title}</span><span className="mt-0.5 line-clamp-2 whitespace-pre-wrap break-words text-xs leading-5">{item.body}</span><span className="mt-1 inline-flex items-center text-xs">{t('announcements.view')}<ChevronRight aria-hidden="true" className="h-3 w-3"/></span></button><button type="button" aria-label={t('announcements.dismiss', { p0: item.title })} className="shrink-0 rounded-md p-2 hover:bg-accent-muted" onClick={() => state.dismiss(item)}><X aria-hidden="true" className="h-4 w-4"/></button></div>)}</section>;
+  const state = React.useContext(Context);
+  const t = useText();
+  if (!state) return null;
+  const banners = state.items.filter(item => item.banner && state.dismissed[item.id] !== item.revision);
+  if (!banners.length) return null;
+  return <section aria-label={t('announcements.title')} className="yj-announcement-banners">
+    {banners.map(item => <div key={item.id} className="yj-announcement-banner">
+      <span className="yj-announcement-banner-icon"><Megaphone size={16} aria-hidden="true"/></span>
+      <button type="button" className="yj-announcement-banner-content" onClick={() => state.setOpen(true)}>
+        <strong>{item.title}</strong><span className="yj-announcement-banner-separator" aria-hidden="true"/><span className="yj-announcement-banner-excerpt">{item.body.replace(/\s+/g, ' ')}</span>
+        <span className="yj-announcement-banner-link">{t('announcements.view')}<ChevronRight size={14} aria-hidden="true"/></span>
+      </button>
+      <button type="button" aria-label={t('announcements.dismiss', { p0: item.title })} className="yj-announcement-banner-close" onClick={() => state.dismiss(item)}><X size={16} aria-hidden="true"/></button>
+    </div>)}
+  </section>;
 }

@@ -3285,6 +3285,7 @@
     "pageCount": "Página {p0} de {p1}"
   },
   "announcements": {
+    "intro": "Novedades de la plataforma y avisos del servicio",
     "title": "Anuncios",
     "loading": "Cargando anuncios…",
     "failed": "Los anuncios no están disponibles temporalmente. Inténtalo de nuevo.",
