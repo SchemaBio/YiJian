@@ -5,19 +5,18 @@ const mocks=vi.hoisted(()=>({backend:'squid',orgID:'11111111-1111-4111-8111-1111
 vi.mock('@/lib/api',()=>({api:{get:mocks.get}}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mocks.backend}));
 vi.mock('@/components/providers/AuthProvider',()=>({useAuth:()=>({user:{id:'test-user',orgId:mocks.orgID},currentOrg:{id:mocks.orgID}})}));
-vi.mock('@/components/shared/AppModal',()=>({AppModal:({open,children,title}:{open:boolean;children:React.ReactNode;title:string})=>open?<div role="dialog" aria-label={title}>{children}</div>:null}));
 import {AnnouncementsProvider,AnnouncementButton,AnnouncementBanners} from './Announcements';
 const item={id:'notice-1',title:'维护通知',body:'<script>alert(1)</script>\n服务维护说明',starts_at:'2026-10-29T00:00:00Z',ends_at:'2026-10-30T00:00:00Z',banner:true,revision:1};
 const view=()=>render(<AnnouncementsProvider><AnnouncementButton/><AnnouncementBanners/></AnnouncementsProvider>);
 beforeEach(()=>{vi.clearAllMocks();mocks.backend='squid';mocks.orgID='11111111-1111-4111-8111-111111111111';localStorage.clear();mocks.get.mockResolvedValue({items:[item],org_id:mocks.orgID,server_time:new Date().toISOString()});});
-afterEach(()=>vi.useRealTimers());
+afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();});
 it('omits the feature and makes no requests in self-hosted mode',()=>{
  mocks.backend='octopus';view();expect(screen.queryByRole('button',{name:'公告'})).not.toBeInTheDocument();expect(mocks.get).not.toHaveBeenCalled();
 });
 it('keeps dismissed banners readable in the center and shows edited revisions again',async()=>{
  // Use a server-relative active window independent of the test machine clock.
  mocks.get.mockResolvedValue({items:[item],org_id:mocks.orgID,server_time:'2026-10-29T12:00:00Z'});
- const mounted=view();const close=await screen.findByRole('button',{name:'关闭公告：维护通知'});fireEvent.click(close);
+ const mounted=view();await act(async()=>{await Promise.resolve();});const close=screen.getByLabelText('关闭公告：维护通知');fireEvent.click(close);
  expect(screen.queryByRole('region',{name:'公告'})).not.toBeInTheDocument();
  fireEvent.click(screen.getByRole('button',{name:'公告'}));const dialog=screen.getByRole('dialog');expect(within(dialog).getByText('维护通知')).toBeInTheDocument();expect(dialog.querySelector('script')).toBeNull();expect(within(dialog).getByText(/<script>/)).toBeInTheDocument();
  mounted.unmount();view();await waitFor(()=>expect(mocks.get).toHaveBeenCalledTimes(3));expect(screen.queryByRole('button',{name:'关闭公告：维护通知'})).not.toBeInTheDocument();
@@ -44,4 +43,34 @@ it('clears the previous organization immediately and rejects a mismatched respon
  mocks.get.mockResolvedValue({items:[],org_id:mocks.orgID,server_time:'2026-10-29T12:00:00Z'});
  fireEvent.click(screen.getByRole('button',{name:'公告'}));await screen.findByText('当前没有公告');
  expect(mocks.get).toHaveBeenLastCalledWith('/v1/announcements',expect.objectContaining({coreApi:false}));
+});
+
+it('anchors a non-modal panel to the trigger and closes with Escape, outside pointer or a second click',async()=>{
+ mocks.get.mockResolvedValue({items:[item],org_id:mocks.orgID,server_time:'2026-10-29T12:00:00Z'});
+ view();await screen.findByLabelText('关闭公告：维护通知');
+ const trigger=screen.getByRole('button',{name:'公告'});
+ vi.spyOn(trigger,'getBoundingClientRect').mockReturnValue(new DOMRect(904,12,36,36));
+ const overflow=document.body.style.overflow;const pointerEvents=document.body.style.pointerEvents;
+ fireEvent.click(trigger);
+ const panel=screen.getByRole('dialog',{name:'公告'});
+ expect(panel).not.toHaveAttribute('aria-modal','true');
+ expect(panel).toHaveStyle({position:'fixed',top:'58px',left:'480px',width:'460px'});
+ expect(document.body.style.overflow).toBe(overflow);expect(document.body.style.pointerEvents).toBe(pointerEvents);
+ fireEvent.keyDown(document,{key:'Escape'});
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();expect(trigger).toHaveFocus();
+ fireEvent.click(trigger);fireEvent.pointerDown(document.body);
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+ fireEvent.click(trigger);fireEvent.click(trigger);
+ await act(async()=>{await Promise.resolve();});
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+it('opens from a banner at the announcement button and fits a narrow viewport',async()=>{
+ mocks.get.mockResolvedValue({items:[item],org_id:mocks.orgID,server_time:'2026-10-29T12:00:00Z'});
+ view();await screen.findByLabelText('关闭公告：维护通知');
+ vi.stubGlobal('innerWidth',320);
+ fireEvent.click(screen.getByRole('button',{name:/维护通知.*查看完整公告/}));
+ expect(screen.getByRole('dialog')).toHaveStyle({width:'296px',left:'12px'});
+ fireEvent.click(screen.getByRole('button',{name:'关闭公告'}));
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'公告'})).toHaveFocus();
 });

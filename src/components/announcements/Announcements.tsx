@@ -6,7 +6,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { parseAnnouncements, type Announcement } from '@/lib/announcements';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useText } from '@/i18n/useText';
-import { AppModal } from '@/components/shared/AppModal';
+import { createPortal } from 'react-dom';
 type AnnouncementsState = {
     items: Announcement[];
     loading: boolean;
@@ -82,12 +82,52 @@ function SaaSAnnouncements({ children }: {
 export function AnnouncementButton() {
   const state = React.useContext(Context);
   const t = useText();
+  const trigger = React.useRef<HTMLButtonElement>(null);
+  const panel = React.useRef<HTMLDivElement>(null);
+  const panelID = React.useId();
+  const [placement, setPlacement] = React.useState<React.CSSProperties>();
+  const open = state?.open ?? false;
+  const setOpen = state?.setOpen;
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    function position() {
+      const anchor = trigger.current?.getBoundingClientRect();
+      if (!anchor) return;
+      const width = Math.min(460, Math.max(0, window.innerWidth - 24));
+      const top = Math.max(12, Math.min(anchor.bottom + 10, window.innerHeight - 12));
+      setPlacement({ position: 'fixed', width, top, left: Math.max(12, Math.min(anchor.right - width, window.innerWidth - width - 12)), maxHeight: Math.min(640, Math.max(0, window.innerHeight - top - 12)) });
+    }
+    position();
+    panel.current?.focus({ preventScroll: true });
+    function outside(event: Event) {
+      const target = event.target as Node | null;
+      if (target && !panel.current?.contains(target) && !trigger.current?.contains(target)) setOpen?.(false);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.preventDefault(); setOpen?.(false); trigger.current?.focus();
+      }
+    }
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('focusin', outside);
+    document.addEventListener('keydown', escape);
+    window.addEventListener('resize', position);
+    window.addEventListener('scroll', position, true);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('focusin', outside);
+      document.removeEventListener('keydown', escape);
+      window.removeEventListener('resize', position);
+      window.removeEventListener('scroll', position, true);
+    };
+  }, [open, setOpen]);
   if (!state) return null;
   return <>
-    <button type="button" className="yj-announcement-trigger" aria-label={t('announcements.title')} title={t('announcements.title')} aria-haspopup="dialog" aria-expanded={state.open} onClick={() => { state.setOpen(true); state.reload(); }}>
+    <button ref={trigger} type="button" className="yj-announcement-trigger" data-state={open ? 'open' : 'closed'} aria-label={t('announcements.title')} title={t('announcements.title')} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelID : undefined} onClick={() => { state.setOpen(!open); if (!open) state.reload(); }}>
       <Bell className="h-5 w-5" aria-hidden="true"/>{state.items.length > 0 && <span className="yj-announcement-dot" aria-hidden="true"/>}
     </button>
-    <AppModal open={state.open} onOpenChange={state.setOpen} title={t('announcements.title')} size="medium" bodyClassName="yj-announcement-modal-body">
+    {open && createPortal(<div ref={panel} id={panelID} role="dialog" tabIndex={-1} style={placement} className="yj-announcement-popover" aria-label={t('announcements.title')}>
+      <div className="yj-announcement-popover-heading"><h2><Bell size={17} aria-hidden="true"/>{t('announcements.title')}</h2><button type="button" className="yj-announcement-popover-close" aria-label={t('common.closea1f5fe', { p0: t('announcements.title') })} onClick={() => { state.setOpen(false); trigger.current?.focus(); }}><X size={17} aria-hidden="true"/></button></div>
       <div className="yj-announcement-center">
         <p className="yj-announcement-intro">{t('announcements.intro')}</p>
         {state.loading && <p role="status">{t('announcements.loading')}</p>}
@@ -95,7 +135,7 @@ export function AnnouncementButton() {
         {!state.loading && !state.failed && !state.items.length && <div className="yj-announcement-empty"><span><Bell size={24} aria-hidden="true"/></span><p>{t('announcements.empty')}</p></div>}
         {state.items.map(item => <article key={item.id} className="yj-announcement-article"><div className="yj-announcement-article-heading"><span className="yj-announcement-article-icon"><Megaphone size={18} aria-hidden="true"/></span><h3>{item.title}</h3></div><p className="yj-announcement-date"><CalendarDays size={13} aria-hidden="true"/><time dateTime={item.starts_at}>{new Date(item.starts_at).toLocaleString(t.locale)}</time><span aria-hidden="true">—</span><time dateTime={item.ends_at}>{new Date(item.ends_at).toLocaleString(t.locale)}</time></p><p className="yj-announcement-body">{item.body}</p></article>)}
       </div>
-    </AppModal>
+    </div>, document.body)}
   </>;
 }
 export function AnnouncementBanners() {

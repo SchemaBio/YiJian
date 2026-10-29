@@ -1,6 +1,19 @@
 /* Shared workspace surfaces. Colors follow the application's theme tokens. */
 .yj-announcement-trigger { position:relative; display:grid; place-items:center; padding:8px; border-radius:7px; color:var(--yj-text-muted); }
 .yj-announcement-trigger:hover { color:var(--yj-text-strong); background:var(--yj-panel-subtle); }
+.yj-announcement-trigger[data-state='open'] { color:var(--yj-text-strong); background:var(--yj-panel-subtle); }
+.yj-announcement-popover { z-index:100; display:flex; flex-direction:column; width:min(460px,calc(100vw - 24px)); max-height:min(640px,calc(100dvh - 88px)); overflow:hidden; border:1px solid var(--yj-border-subtle); border-radius:12px; background:var(--yj-panel-bg); color:var(--yj-text-strong); box-shadow:0 12px 40px #00000020,0 2px 8px #00000008; outline:none; }
+.yj-announcement-popover-heading { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:12px; padding:14px 18px; border-bottom:1px solid var(--yj-border-subtle); }
+.yj-announcement-popover-heading h2 { display:flex; align-items:center; gap:8px; margin:0; font-size:14px; font-weight:600; }
+.yj-announcement-popover-close { display:grid; place-items:center; width:30px; height:30px; border-radius:6px; color:var(--yj-text-muted); }
+.yj-announcement-popover-close:hover { background:var(--yj-panel-subtle); color:var(--yj-text-strong); }
+.yj-announcement-popover button:focus-visible { outline:2px solid var(--color-accent-emphasis); outline-offset:2px; }
+.yj-announcement-popover .yj-announcement-center { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:18px; }
+.yj-announcement-popover .yj-announcement-intro { margin-bottom:16px; line-height:1.7; }
+.yj-announcement-popover .yj-announcement-article { padding:18px 0; }
+.yj-announcement-popover .yj-announcement-article-heading h3 { font-size:14px; }
+.yj-announcement-popover .yj-announcement-date,.yj-announcement-popover .yj-announcement-body { margin-left:0; }
+.yj-announcement-popover .yj-announcement-body { margin-top:12px; font-size:13px; line-height:1.85; }
 .yj-announcement-dot { position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:#d97706; box-shadow:0 0 0 2px var(--yj-panel-bg); }
 .yj-announcement-banners { --announcement-ink:#78350f; --announcement-copy:#92400e; --announcement-line:#f5cf83; --announcement-icon:#b45309; --announcement-icon-bg:#fef3c7; --announcement-action-bg:#fffdf7; flex-shrink:0; max-height:192px; overflow-y:auto; border-bottom:1px solid var(--announcement-line); background:#fff8e8; }
 .yj-announcement-banner { display:flex; align-items:center; gap:14px; min-height:72px; padding:10px 20px 10px 16px; border-left:4px solid #d97706; }
