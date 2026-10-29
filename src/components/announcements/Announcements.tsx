@@ -27,7 +27,10 @@ export function AnnouncementsProvider({ children }: {
 function SaaSAnnouncements({ children }: {
     children: React.ReactNode;
 }) {
-    const { user } = useAuth();
+    const { user, currentOrg } = useAuth();
+    const orgID = currentOrg?.id ?? user?.orgId ?? "";
+    const scopeKey = `${user?.id ?? "session"}:${orgID}`;
+    const [loadedScope,setLoadedScope] = React.useState("");
     const [items, setItems] = React.useState<Announcement[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [failed, setFailed] = React.useState(false);
@@ -35,7 +38,7 @@ function SaaSAnnouncements({ children }: {
     const [dismissed, setDismissed] = React.useState<Record<string, number>>({});
     const [offset, setOffset] = React.useState(0);
     const [clock, setClock] = React.useState(Date.now());
-    const key = 'yj:announcement-dismissals:' + (user?.id ?? 'session');
+    const key = 'yj:announcement-dismissals:' + scopeKey;
     React.useEffect(() => { function read() { try {
         const value = JSON.parse(localStorage.getItem(key) || '{}');
         setDismissed(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
@@ -43,12 +46,15 @@ function SaaSAnnouncements({ children }: {
     catch {
         setDismissed({});
     } } read(); window.addEventListener('storage', read); return () => window.removeEventListener('storage', read); }, [key]);
-    const active = items.filter(item => Date.parse(item.starts_at) <= clock + offset && Date.parse(item.ends_at) > clock + offset);
+    const active = (loadedScope === scopeKey ? items : []).filter(item => Date.parse(item.starts_at) <= clock + offset && Date.parse(item.ends_at) > clock + offset);
     const abort = React.useRef<AbortController | null>(null);
     const generation = React.useRef(0);
     const reload = React.useCallback(async () => { const version = ++generation.current; abort.current?.abort(); const controller = new AbortController(); abort.current = controller; try {
+        if (!orgID) throw new Error('organization_required');
         const result = parseAnnouncements(await api.get('/v1/announcements', { coreApi: false, cache: 'no-store', signal: controller.signal }));
+        if (result.org_id?.toLowerCase() !== orgID.toLowerCase()) throw new Error('announcement_scope_changed');
         if (!controller.signal.aborted && version === generation.current) {
+            setLoadedScope(scopeKey);
             setItems(result.items);
             setOffset(Date.parse(result.server_time) - Date.now());
             setClock(Date.now());
@@ -56,14 +62,13 @@ function SaaSAnnouncements({ children }: {
         }
     }
     catch {
-        if (!controller.signal.aborted && version === generation.current)
-            setFailed(true);
+        if (!controller.signal.aborted && version === generation.current) { setLoadedScope(scopeKey); setItems([]); setFailed(true); }
     }
     finally {
         if (!controller.signal.aborted && version === generation.current)
             setLoading(false);
-    } }, []);
-    React.useEffect(() => { setItems([]); setLoading(true); setOpen(false); void reload(); const timer = window.setInterval(() => { if (!document.hidden)
+    } }, [orgID, scopeKey]);
+    React.useEffect(() => { setItems([]); setLoadedScope(''); setFailed(false); setLoading(true); setOpen(false); void reload(); const timer = window.setInterval(() => { if (!document.hidden)
         void reload(); }, 60000); function visible() { if (!document.hidden)
         void reload(); } document.addEventListener('visibilitychange', visible); return () => { ++generation.current; abort.current?.abort(); window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); }; }, [reload, key]);
     React.useEffect(() => { const now = Date.now() + offset; const next = Math.min(...items.map(item => Date.parse(item.ends_at)).filter(end => end > now)); if (!Number.isFinite(next))
@@ -72,7 +77,7 @@ function SaaSAnnouncements({ children }: {
         localStorage.setItem(key, JSON.stringify(retained));
     }
     catch { /* Closing remains effective when storage is unavailable. */ } return retained; }); }
-    return <Context.Provider value={{ items: active, loading, failed, open, setOpen, reload: () => void reload(), dismiss, dismissed }}>{children}</Context.Provider>;
+    return <Context.Provider value={{ items: active, loading, failed, open: open && loadedScope === scopeKey, setOpen, reload: () => void reload(), dismiss, dismissed }}>{children}</Context.Provider>;
 }
 export function AnnouncementButton() {
   const state = React.useContext(Context);
