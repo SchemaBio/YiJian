@@ -18,6 +18,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { DnaHelix } from '@/components/DnaHelix';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 
 export default function LoginPage() {
@@ -27,12 +28,14 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
-  const [agreePrivacy, setAgreePrivacy] = React.useState(false);
+  const [agreePolicies, setAgreePolicies] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
 
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
   const privacyConsentRequired = process.env.NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED !== 'false';
+  const consentRequired = isSaaS || privacyConsentRequired;
   const accountDeleted = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('accountDeleted') === '1';
@@ -57,8 +60,8 @@ export default function LoginPage() {
       return;
     }
 
-    if (privacyConsentRequired && !agreePrivacy) {
-      setError(t("auth.readAndAcknowledgeThePrivacyPolicy36dcb7"));
+    if (consentRequired && !agreePolicies) {
+      setError(t(isSaaS ? "auth.acknowledgePrivacyAndAgreeToTerms" : "auth.readAndAcknowledgeThePrivacyPolicy36dcb7"));
       return;
     }
 
@@ -156,18 +159,21 @@ export default function LoginPage() {
               </label>
             </div>
 
-            {privacyConsentRequired && (
+            {consentRequired && (
               <label className="flex cursor-pointer items-start gap-2">
                 <input
                   type="checkbox"
-                  checked={agreePrivacy}
-                  onChange={(e) => setAgreePrivacy(e.target.checked)}
+                  checked={agreePolicies}
+                  onChange={(e) => setAgreePolicies(e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
                 />
                 <span className="text-sm leading-relaxed text-[var(--yj-text-muted)]">
                   {t("auth.iHaveReadAndUnderstood1d26a6")}{' '}
-                  <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">
+                  <Link href={`/privacy?lang=${t.locale}`} target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">
                     {t("auth.privacyPolicya09ce1")}</Link>
+                  {isSaaS && <>{' '}{t('auth.andAgreeToUserAgreement')}{' '}
+                    <Link href={`/agreement?lang=${t.locale}&version=${USER_AGREEMENT_VERSION}`} target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">{t('auth.userAgreement')}</Link>
+                  </>}
                 </span>
               </label>
             )}
@@ -176,7 +182,7 @@ export default function LoginPage() {
               type="submit"
               variant="primary"
               className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
-              disabled={loading || (privacyConsentRequired && !agreePrivacy)}
+              disabled={loading || (consentRequired && !agreePolicies)}
               leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
             >
               {t("auth.signIn21f1e8")}</Button>

@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "遗传模式尚未明确"
   },
   "auth": {
+    "andAgreeToUserAgreement": "和同意",
+    "userAgreement": "《使用协议》",
+    "acknowledgePrivacyAndAgreeToTerms": "请阅读并了解隐私政策，并同意使用协议",
     "recoverPassword86c096": "找回密码",
     "selfServiceRecoveryIsUnavailableContactYourca9d22": "暂不支持自助找回。请联系平台管理员核验身份后重置密码。",
     "backToSignInf2fe4e": "返回登录",

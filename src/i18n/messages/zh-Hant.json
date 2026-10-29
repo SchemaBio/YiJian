@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "遺傳模式尚未明確"
   },
   "auth": {
+    "andAgreeToUserAgreement": "並同意",
+    "userAgreement": "《使用協議》",
+    "acknowledgePrivacyAndAgreeToTerms": "請閱讀並了解隱私政策，並同意使用協議",
     "recoverPassword86c096": "找回密碼",
     "selfServiceRecoveryIsUnavailableContactYourca9d22": "暫不支持自助找回。請聯繫平臺管理員覈驗身份後重置密碼。",
     "backToSignInf2fe4e": "返回登錄",

@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "Mode of inheritance is not established"
   },
   "auth": {
+    "andAgreeToUserAgreement": "and agree to the",
+    "userAgreement": "User Agreement",
+    "acknowledgePrivacyAndAgreeToTerms": "Please acknowledge the privacy policy and agree to the user agreement",
     "recoverPassword86c096": "Recover password",
     "selfServiceRecoveryIsUnavailableContactYourca9d22": "Self-service recovery is unavailable. Contact your administrator to verify identity and reset your password.",
     "backToSignInf2fe4e": "Back to sign in",

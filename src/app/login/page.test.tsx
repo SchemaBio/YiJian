@@ -1,0 +1,40 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+const state = vi.hoisted(() => ({backend:'squid',login:vi.fn(),push:vi.fn()}));
+vi.mock('next/navigation', () => ({useRouter:() => ({push:state.push})}));
+vi.mock('@/components/providers/AuthProvider', () => ({useAuth:() => ({login:state.login,isLoading:false,isAuthenticated:false})}));
+vi.mock('@/components/shared/LanguageSwitcher', () => ({LanguageSwitcher:() => null}));
+vi.mock('@/components/DnaHelix', () => ({DnaHelix:() => null}));
+vi.mock('@/lib/runtime-config', () => ({getRuntimeBackendFlavor:() => state.backend}));
+import LoginPage from './page';
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
+afterEach(() => {cleanup();vi.unstubAllEnvs();});
+beforeEach(() => {vi.clearAllMocks();state.backend='squid';window.history.replaceState({},'','/login');});
+it('requires the unchecked combined acknowledgment and links to the localized agreement',async()=>{
+ const view=render(<LoginPage />);
+ const agreement=screen.getByRole('link',{name:'《使用协议》'});
+ expect(agreement).toHaveAttribute('href',`/agreement?lang=zh-CN&version=${USER_AGREEMENT_VERSION}`);
+ expect(agreement).toHaveAttribute('target','_blank');
+ const checkbox=screen.getByRole('checkbox',{name:/我已阅读并了解/});
+ expect(checkbox).not.toBeChecked();
+ expect(screen.getByRole('button',{name:'登录'})).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('邮箱'),{target:{value:'researcher@example.com'}});
+ fireEvent.change(screen.getByLabelText('密码'),{target:{value:'example-password'}});
+ fireEvent.submit(view.container.querySelector('form')!);
+ expect(await screen.findByRole('alert')).toHaveTextContent('请阅读并了解隐私政策，并同意使用协议');
+ expect(state.login).not.toHaveBeenCalled();
+ fireEvent.click(checkbox);
+ fireEvent.click(screen.getByRole('button',{name:'登录'}));
+ await waitFor(()=>expect(state.login).toHaveBeenCalledWith('researcher@example.com','example-password',false));
+});
+it('does not bypass SaaS agreement when the legacy privacy flag is disabled',()=>{
+ vi.stubEnv('NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED','false');
+ render(<LoginPage />);
+ expect(screen.getByRole('link',{name:'《使用协议》'})).toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'登录'})).toBeDisabled();
+});
+it('preserves the self-hosted privacy acknowledgment without hosted terms',()=>{
+ state.backend='octopus';render(<LoginPage />);
+ expect(screen.getByRole('link',{name:'《隐私政策》'})).toBeInTheDocument();
+ expect(screen.queryByRole('link',{name:'《使用协议》'})).not.toBeInTheDocument();
+});

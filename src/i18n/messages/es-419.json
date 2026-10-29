@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "Modo de herencia no establecido"
   },
   "auth": {
+    "andAgreeToUserAgreement": "y acepto el",
+    "userAgreement": "Acuerdo de uso",
+    "acknowledgePrivacyAndAgreeToTerms": "Lee la política de privacidad y acepta el acuerdo de uso",
     "recoverPassword86c096": "Recuperar contraseña",
     "selfServiceRecoveryIsUnavailableContactYourca9d22": "La recuperación automática no está disponible. Contacta al administrador para verificar tu identidad y restablecer la contraseña.",
     "backToSignInf2fe4e": "Volver al inicio de sesión",

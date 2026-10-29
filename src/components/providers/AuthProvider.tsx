@@ -85,7 +85,7 @@ function persistDevAuthState(nextUser: User, nextOrgs: UserOrganizationInfo[], n
 }
 
 /** Public auth pages: unauthenticated users belong here; never hard-reload them. */
-const PUBLIC_AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/privacy', '/service', '/terms', '/refund', '/verify-email'] as const;
+const PUBLIC_AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/privacy', '/agreement', '/service', '/terms', '/refund', '/verify-email'] as const;
 
 function isPublicAuthPath(pathname: string): boolean {
   return PUBLIC_AUTH_PATHS.some(

@@ -1,0 +1,186 @@
+{
+  "zh-CN": {
+    "title": "使用协议",
+    "intro": "本协议适用于 SchemaBio 运营的 YiJian 科研托管服务。请在登录使用前阅读；勾选登录页确认框，表示您已了解隐私政策并同意遵守本协议。具体签约主体和联系信息以本页公示为准。",
+    "sections": [
+      {
+        "title": "适用范围与科研用途",
+        "body": "平台面向个人科研用户、科研机构及获授权人员，提供 FASTQ 质控、生物信息分析、变异注释、结果浏览，以及 HPO 关联、ACMG 初评和 AI 辅助证据整理。服务仅供科研（RUO），不提供采样、实验室检测、个人疾病诊断、健康风险结论、治疗或用药建议，不签发诊断报告。不得将平台输出直接用于个人医疗决策。"
+      },
+      {
+        "title": "账号与组织责任",
+        "body": "请提供真实、准确的账号及组织信息，妥善保管凭据，依授权使用组织数据与付费额度，不冒用身份或擅自共享访问权限。发现异常访问或凭据泄露时，请及时联系支持并采取保护措施。账号审核或邮箱验证不代表平台确认了您提交数据的全部授权或专业资质。"
+      },
+      {
+        "title": "数据授权与保护",
+        "body": "您应具备上传、处理和共享相关数据的合法权限，并完成适用的告知、授权及必要手续。仅提交完成科研任务所需的数据；不得在样本编号、自由文本、文件名或备注中提交真实姓名、身份证件、联系方式等身份信息。使用化名不代表遗传及表型数据已经匿名。平台的数据处理、服务商使用及保留安排以隐私政策为准，阅读或勾选本协议不替代依法需要的单独同意。"
+      },
+      {
+        "title": "结果与 AI 使用边界",
+        "body": "自动分析、数据库注释、ACMG 初评及 AI 输出可能不完整、过时或有误，不能保证检出所有变异或提供确定结论。您应结合原始数据、证据来源和研究目的，由具备相应能力的人员独立核查。不得把 AI 整理的证据或候选筛选结果表述为平台签发的临床诊断。"
+      },
+      {
+        "title": "付费、计费与退款",
+        "body": "付费对象是平台科研分析与计算服务额度。积分仅用于本平台，不可转让、不支持提现，不提供第三方代收付款。币种、价格、数量、预计消耗及实际结算规则以购买和任务页面披露为准；取消或失败不必然免除已经发生的计算费用。未使用付费额度可按退款规则申请退款，已消费服务原则上不退，重复收费、计费错误及依法应退情形另行处理。购买仍需单独确认届时适用的服务条款和退款规则。"
+      },
+      {
+        "title": "保留期限与服务变更",
+        "body": "样本及任务自创建起保留 30 天，编辑或重试不延期；FASTQ 上传后 7 天、BAM 分析完成后 7 天清理，且不超过任务期限。请及时导出所需结果。平台可能进行维护、更新或因故障暂时不可用；涉及重要功能、计费或保留安排的变化，应通过平台可用渠道告知。具体数据清理安排见隐私政策及服务说明。"
+      },
+      {
+        "title": "禁止行为与违规处理",
+        "body": "不得利用服务从事违法活动、侵害第三方权益、未经授权处理数据、攻击或干扰系统、测卡或盗刷、规避权限和计费限制。针对滥用或安全风险，平台可采取限制访问、暂停新付款或相关功能等合理措施，并提供支持沟通渠道。暂停不代表既有付款已取消，不改变已发生的合法账务；相关退款或争议按实际订单和规则处理。"
+      },
+      {
+        "title": "知识产权、协议更新与联系",
+        "body": "您对提交数据及研究成果依法享有的权利不因使用服务而转移；平台仅按服务目的和隐私政策处理数据。软件、数据库和第三方资料各自适用其许可或使用条件。本协议不改变开源自部署软件的 Apache 2.0 许可，也不对独立部署新增用途限制。重要协议修订使用新版本并通过平台告知；需要重新同意时应提供确认。对账号、服务或本协议有疑问，请联系下方公示的支持渠道。任何约定不排除适用法律下不可排除的权利或责任。"
+      }
+    ],
+    "privacy": "《隐私政策》",
+    "service": "服务说明",
+    "purchase": "购买服务条款",
+    "refund": "退款规则",
+    "operator": "签约主体与联系信息",
+    "missing": "运营信息尚未完整配置，正式收款暂不可用；请勿向未核实的主体付款。",
+    "unavailable": "此使用协议版本不可用",
+    "scope": "本页说明科研托管服务的使用约定。自行部署实例的运营安排由部署者说明，开源许可不因此改变。"
+  },
+  "zh-Hant": {
+    "title": "使用協議",
+    "intro": "本協議適用於 SchemaBio 營運的 YiJian 科研託管服務。請在登入使用前閱讀；勾選登入頁確認框，表示您已了解隱私政策並同意遵守本協議。簽約主體及聯絡資訊以本頁公示為準。",
+    "sections": [
+      {
+        "title": "適用範圍與科研用途",
+        "body": "平台面向個人科研使用者、科研機構及獲授權人員，提供 FASTQ 品管、生物資訊分析、變異註釋、結果瀏覽，以及 HPO、ACMG 初評與 AI 證據整理。僅供科研（RUO），不提供採樣、實驗室檢測、個人診斷、健康風險結論、治療或用藥建議，不簽發診斷報告。不得直接用於個人醫療決策。"
+      },
+      {
+        "title": "帳號與組織責任",
+        "body": "請提供真實準確的帳號及組織資訊，妥善保管憑據，依授權使用組織資料及付費額度，不冒用身分或擅自共享權限。異常存取或憑據外洩時請及時聯絡支援並保護帳號。帳號審核或信箱驗證不代表平台已確認全部資料授權或專業資格。"
+      },
+      {
+        "title": "資料授權與保護",
+        "body": "您須具備上傳、處理與分享資料的合法權限，完成適用告知、授權與必要手續。僅提交科研任務所需資料；不得在樣本編號、自由文字、檔名或備註提交真實姓名、身分證件及聯絡方式。化名不表示遺傳及表型資料已匿名。資料處理、服務商與保留安排見隱私政策，本協議不取代依法需要的單獨同意。"
+      },
+      {
+        "title": "結果與 AI 使用邊界",
+        "body": "自動分析、資料庫註釋、ACMG 初評與 AI 輸出可能不完整、過時或有誤，不保證檢出全部變異或提供確定結論。應由具備能力的人員結合原始資料、證據及研究目的獨立核查，不得將 AI 整理或篩選結果表述為平台簽發的臨床診斷。"
+      },
+      {
+        "title": "付費、計費與退款",
+        "body": "購買對象為平台科研分析與計算服務額度，僅用於本平台，不可轉讓、不支援提現或第三方代收付款。幣別、價格、數量、預估消耗與結算規則以購買及任務頁披露為準；取消或失敗不必然免除已發生的計算費用。未使用付費額度可依退款規則申請，已消耗原則上不退，重複收費、計費錯誤與法定應退情形另行處理。購買仍須另行確認當時適用的服務條款及退款規則。"
+      },
+      {
+        "title": "保留期限與服務變更",
+        "body": "樣本及任務自建立起保留 30 天，編輯或重試不延期；FASTQ 上傳後 7 天、BAM 分析完成後 7 天清理，且不超過任務期限。請及時匯出結果。維護、更新或故障可能造成暫時不可用；重要功能、計費或保留安排變更應透過平台可用管道告知。詳細清理安排見隱私政策與服務說明。"
+      },
+      {
+        "title": "禁止行為與違規處理",
+        "body": "不得從事違法活動、侵害第三方權益、未經授權處理資料、攻擊或干擾系統、測卡盜刷或規避權限與計費限制。平台可針對濫用或安全風險合理限制存取、暫停新付款或相關功能，並提供支援溝通管道。暫停不代表既有付款取消，也不改變已發生的合法帳務；退款與爭議依實際訂單及規則處理。"
+      },
+      {
+        "title": "智慧財產、協議更新與聯絡",
+        "body": "您依法享有的資料與研究成果權利不因使用服務而移轉，平台依服務目的及隱私政策處理資料。軟體、資料庫與第三方資料適用各自授權。本協議不變更自行部署開源軟體的 Apache 2.0 授權或新增用途限制。重要修訂另用新版本並告知；須重新同意時提供確認。有疑問請聯絡下方支援管道，任何約定不排除適用法律下不可排除的權利或責任。"
+      }
+    ],
+    "privacy": "《隱私政策》",
+    "service": "服務說明",
+    "purchase": "購買服務條款",
+    "refund": "退款規則",
+    "operator": "簽約主體與聯絡資訊",
+    "missing": "營運資訊尚未完整設定，正式收款暫不可用；請勿向未核實主體付款。",
+    "unavailable": "此使用協議版本不可用",
+    "scope": "本頁說明科研託管服務約定。自行部署實例的營運安排由部署者說明，開源授權不因此變更。"
+  },
+  "en": {
+    "title": "User Agreement",
+    "intro": "This agreement covers the YiJian hosted research service operated by SchemaBio. Read it before signing in. Selecting the sign-in confirmation means you acknowledge the privacy policy and agree to this agreement. The contracting operator and contact details are disclosed below.",
+    "sections": [
+      {
+        "title": "Scope and research use",
+        "body": "The platform serves individual researchers, research organizations and authorized users with FASTQ quality control, bioinformatics analysis, variant annotation, result browsing, HPO associations, preliminary ACMG assessment and AI evidence organization. Research Use Only (RUO): no sample collection, laboratory testing, personal diagnosis, health-risk conclusions, treatment or medication advice, or signed diagnostic reports. Do not directly use outputs for personal medical decisions."
+      },
+      {
+        "title": "Accounts and organizations",
+        "body": "Provide accurate account and organization information, protect credentials and use organizational data and credits only as authorized. Do not impersonate others or share access without permission. Contact support and protect your account if access is unusual or credentials are compromised. Account approval or email verification does not verify every data authorization or professional qualification."
+      },
+      {
+        "title": "Data authorization and protection",
+        "body": "You must have lawful authority to upload, process and share data and complete applicable notices, authorizations and required procedures. Submit only research data needed for the task. Do not place real names, identity documents or contact details in sample IDs, free text, filenames or notes. Pseudonyms do not make genetic or phenotype data anonymous. Processing, service providers and retention are described in the privacy policy; this agreement does not replace any separately required consent."
+      },
+      {
+        "title": "Results and AI limitations",
+        "body": "Automated analysis, database annotations, preliminary ACMG assessments and AI outputs can be incomplete, outdated or wrong. Detection of every variant and definitive conclusions are not guaranteed. Competent personnel must independently check original data, evidence and research context. Do not present AI-organized evidence or candidate prioritization as a clinical diagnosis issued by the platform."
+      },
+      {
+        "title": "Payments, billing and refunds",
+        "body": "Purchases cover research analysis and computing credits for this platform only. Credits are non-transferable, cannot be withdrawn and cannot facilitate third-party payments. Currency, prices, quantities, estimates and settlement rules are disclosed on purchase and task pages. Cancellation or failure does not necessarily remove compute charges already incurred. Unused paid credits may be submitted for refund under the refund policy; consumed services are generally non-refundable, with duplicate charges, billing errors and legally required refunds handled separately. Purchases require separate acceptance of the then-applicable service terms and refund policy."
+      },
+      {
+        "title": "Retention and service changes",
+        "body": "Samples and tasks expire 30 days after creation; edits and retries do not extend this. FASTQ files are removed 7 days after upload and BAM files 7 days after analysis, no later than task expiry. Export results in time. Maintenance, updates or failures can temporarily interrupt service. Material changes to features, billing or retention should be communicated through available platform channels. See the privacy policy and service description for cleanup details."
+      },
+      {
+        "title": "Prohibited conduct and responses",
+        "body": "Do not use the service for unlawful activity, infringement, unauthorized data processing, system attacks or disruption, card testing, stolen-card payments, or evasion of access and billing limits. Abuse or security risks may lead to reasonable access restrictions or suspension of new payments or relevant features, with support available. Suspension does not cancel existing payments or alter legitimate accounting records. Refunds and disputes follow the actual orders and applicable policies."
+      },
+      {
+        "title": "Rights, updates and contact",
+        "body": "Using the service does not transfer your lawful rights in submitted data or research results. The platform processes data for service purposes under the privacy policy. Software, databases and third-party materials retain their respective licenses and conditions. This agreement does not change the Apache 2.0 license or add use restrictions to independently deployed open-source software. Material revisions receive new versions and notice; renewed acceptance is requested where required. Contact support below about accounts, service or this agreement. Nothing excludes rights or responsibilities that applicable law does not permit to be excluded."
+      }
+    ],
+    "privacy": "Privacy Policy",
+    "service": "Service description",
+    "purchase": "Purchase service terms",
+    "refund": "Refund policy",
+    "operator": "Contracting operator and contact",
+    "missing": "Operator information is incomplete. Live payments are unavailable; do not pay an unverified operator.",
+    "unavailable": "User agreement version unavailable",
+    "scope": "This page describes the hosted research service. Independent deployers describe their own operation; the open-source license is unchanged."
+  },
+  "es-419": {
+    "title": "Acuerdo de uso",
+    "intro": "Este acuerdo se aplica al servicio YiJian alojado para investigación, operado por SchemaBio. Léelo antes de iniciar sesión. Marcar la confirmación significa que conoces la política de privacidad y aceptas este acuerdo. El operador contratante y sus datos aparecen abajo.",
+    "sections": [
+      {
+        "title": "Alcance y uso para investigación",
+        "body": "La plataforma ofrece a investigadores individuales, instituciones y personal autorizado control de calidad FASTQ, análisis bioinformático, anotación de variantes, consulta de resultados, HPO, evaluación preliminar ACMG y organización de evidencia con IA. Solo para investigación (RUO): no incluye toma de muestras, pruebas de laboratorio, diagnósticos personales, conclusiones de riesgo de salud, tratamientos, recomendaciones de medicamentos ni informes diagnósticos firmados. No uses los resultados directamente para decisiones médicas personales."
+      },
+      {
+        "title": "Cuentas y organizaciones",
+        "body": "Proporciona información correcta de cuenta y organización, protege tus credenciales y usa datos y créditos únicamente con autorización. No suplantes identidades ni compartas permisos sin autorización. Contacta a soporte y protege la cuenta ante accesos inusuales o filtración de credenciales. La aprobación de cuenta o verificación del correo no valida todas las autorizaciones ni cualificaciones profesionales."
+      },
+      {
+        "title": "Autorización y protección de datos",
+        "body": "Debes contar con facultades legales para cargar, procesar y compartir datos y cumplir avisos, autorizaciones y procedimientos aplicables. Envía solo lo necesario para investigar. No incluyas nombres reales, documentos de identidad ni contactos en identificadores de muestras, texto libre, archivos o notas. Los seudónimos no anonimizan necesariamente datos genéticos o fenotípicos. La privacidad, proveedores y conservación se describen en la política de privacidad; este acuerdo no sustituye consentimientos separados exigidos."
+      },
+      {
+        "title": "Resultados y límites de IA",
+        "body": "Los análisis automáticos, anotaciones, evaluaciones ACMG y resultados de IA pueden ser incompletos, antiguos o erróneos. No se garantiza detectar todas las variantes ni emitir conclusiones definitivas. Personal competente debe revisar de forma independiente datos originales, evidencia y contexto. No presentes evidencia organizada por IA ni candidatos priorizados como diagnósticos clínicos emitidos por la plataforma."
+      },
+      {
+        "title": "Pagos, cobros y reembolsos",
+        "body": "Se compran créditos de análisis y cómputo para investigación, exclusivos de esta plataforma, no transferibles, retirables ni utilizables para pagos a terceros. Moneda, precios, cantidades, estimaciones y liquidación se muestran en las páginas de compra y tareas. Cancelar o fallar no elimina necesariamente cargos de cómputo ya incurridos. Los créditos pagados sin usar pueden solicitarse como reembolso según su política; los servicios consumidos generalmente no se reembolsan, con tratamiento separado para duplicados, errores y obligaciones legales. La compra requiere aceptar por separado los términos y reembolsos vigentes."
+      },
+      {
+        "title": "Conservación y cambios del servicio",
+        "body": "Muestras y tareas vencen 30 días después de crearse; editar o reintentar no amplía el plazo. Los FASTQ se eliminan 7 días después de cargarlos y los BAM 7 días después del análisis, sin superar el vencimiento de la tarea. Exporta resultados a tiempo. Mantenimiento, actualizaciones o fallas pueden interrumpir temporalmente el servicio. Los cambios importantes en funciones, cobros o conservación deben comunicarse por los canales disponibles. Consulta privacidad y descripción del servicio para detalles."
+      },
+      {
+        "title": "Conductas prohibidas y medidas",
+        "body": "Se prohíben actividades ilegales, infracciones, tratamiento sin autorización, ataques o interferencias, pruebas de tarjetas, pagos robados y evasión de permisos o límites de cobro. El abuso o riesgos pueden motivar restricciones razonables de acceso o suspensión de pagos nuevos o funciones, con un canal de soporte. Suspender no cancela pagos existentes ni cambia registros contables legítimos. Reembolsos y disputas siguen los pedidos y políticas aplicables."
+      },
+      {
+        "title": "Derechos, actualizaciones y contacto",
+        "body": "Usar el servicio no transfiere tus derechos legales sobre datos o resultados. La plataforma procesa datos con fines del servicio según privacidad. Software, bases y materiales de terceros conservan sus licencias. Este acuerdo no modifica Apache 2.0 ni añade restricciones al software abierto desplegado de forma independiente. Las revisiones importantes reciben nueva versión y aviso; se pide nueva aceptación cuando corresponde. Contacta al soporte indicado abajo. No se excluyen derechos ni responsabilidades que la ley aplicable no permita excluir."
+      }
+    ],
+    "privacy": "Política de privacidad",
+    "service": "Descripción del servicio",
+    "purchase": "Términos de compra",
+    "refund": "Política de reembolso",
+    "operator": "Operador contratante y contacto",
+    "missing": "Faltan datos del operador. Los pagos reales no están disponibles; no pagues a un operador sin verificar.",
+    "unavailable": "Versión del acuerdo no disponible",
+    "scope": "Esta página describe el servicio alojado para investigación. Cada despliegue independiente define su operación; la licencia abierta no cambia."
+  }
+}
