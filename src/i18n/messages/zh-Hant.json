@@ -1,4 +1,35 @@
 {
+  "downloadProtection": {
+    "boundIP": "本申請固定公網IP：{p0}",
+    "usage": "已觀測流量 {p0}；停發門檻 {p1}（檔案大小1.3倍）",
+    "synced": "最近計數更新：{p0}",
+    "noObservation": "尚無相符日誌",
+    "delay": "統計有延遲且可能不完整；達到門檻後停止續發，舊連結及傳輸中的請求不會立即撤銷。",
+    "requestNetwork": "從目前網路申請管理員審核換綁",
+    "requestSent": "網路變更申請已提交；審核不會重設流量或延長原有效期。",
+    "repurchase": "重新購買下載授權（下一步確認費用）",
+    "policy": "下載授權固定公網IP，網路變化需管理員審核；日誌觀測到檔案大小1.3倍流量後停止續發。",
+    "ipError": "網路與本申請綁定IP不符，請回到原網路或申請管理員換綁。",
+    "ipUnavailable": "無法可靠取得公網IP，未簽發連結、未新增扣費。",
+    "thresholdError": "已觀測流量達到1.3倍停發門檻；請確認費用後重新購買授權。",
+    "usageUnavailable": "流量統計暫不可用，已暫停新連結簽發，請稍後重試原申請。",
+    "unavailable": "下載申請目前無法操作，請檢查有效期或聯絡管理員。",
+    "pending": "已有待處理網路申請，請等待管理員審核。",
+    "unchanged": "目前網路與已綁定IP相同，無須換綁。",
+    "legacy": "舊版下載申請正在等待自然到期，請聯絡管理員。",
+    "state": {
+      "active": "可領取連結",
+      "threshold": "已達流量停發門檻",
+      "paused": "管理員已暫停新連結簽發",
+      "rebind_wait": "換綁已批准，等待舊憑據過期後領取"
+    },
+    "network": {
+      "pending": "網路變更待審核",
+      "approved_wait": "已批准，等待舊憑據到期",
+      "applied": "網路換綁已套用",
+      "rejected": "管理員已拒絕換綁申請"
+    }
+  },
   "structuredInputEvidence": {"contextOnly":"結構化欄位及來源可追溯；條款適用性仍須由規則或專業覆核確認，不能直接作為已驗證條款。","omitted":"本次建議的結構化輸入檢視省略了 {p0} 個欄位；這些欄位保持未知，完整輸入仍保存在受保護記錄中。"},
   "retrievalEvidence":{"title":"檢索問題與材料狀態","explanation":"同一文獻的多份記錄不代表獨立病例；未查詢的問題和未找到記錄不代表陰性證據。","remaining":"仍有 {p0} 個問題尚未查詢，相關資訊保持未知。","sourceGroupConflict":"同一文獻出現對象已匹配且材料已核查的衝突記錄，目前依據需覆核。","purpose":{"variant_conflict":"變異記錄與衝突線索","functional_evidence":"功能與機制證據","gene_disease_validity":"基因、疾病與遺傳模式","case_segregation":"病例與共分離證據","dosage_sensitivity":"劑量敏感性證據","unknown":"其他證據問題"},"status":{"supported":"已有相關獨立證據","pending_review":"找到材料，適用性待核實","conflicting":"來源有衝突標記，需覆核","not_found":"本次查詢未傳回記錄","unavailable":"檢索未完成或無法使用","unknown":"未記錄此狀態"}},
   "evidenceBindings": {

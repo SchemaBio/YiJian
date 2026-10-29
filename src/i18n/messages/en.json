@@ -1,4 +1,35 @@
 {
+  "downloadProtection": {
+    "boundIP": "Public IP fixed for this grant: {p0}",
+    "usage": "Observed traffic {p0}; issuance threshold {p1} (1.3 times file size)",
+    "synced": "Last counter update: {p0}",
+    "noObservation": "No matching log observed",
+    "delay": "Logs may be delayed or incomplete. Crossing the threshold stops new links, but does not immediately revoke existing links or transfers.",
+    "requestNetwork": "Ask an administrator to approve this network",
+    "requestSent": "Network request submitted. Approval does not reset usage or extend the original deadline.",
+    "repurchase": "Buy another download grant (confirm cost next)",
+    "policy": "The grant is bound to one public IP. Network changes require administrator approval. Observed traffic of 1.3 times file size stops new links.",
+    "ipError": "This network differs from the bound IP. Return to the original network or request administrator approval.",
+    "ipUnavailable": "A reliable public IP is unavailable. No link was issued or new charge made.",
+    "thresholdError": "Observed traffic reached the 1.3-times threshold. Confirm the cost to buy another grant.",
+    "usageUnavailable": "Traffic statistics are unavailable. New links are paused; retry the original grant later.",
+    "unavailable": "This grant is unavailable. Check its deadline or contact an administrator.",
+    "pending": "A network request is already pending administrator review.",
+    "unchanged": "This network already matches the bound IP.",
+    "legacy": "This legacy grant is being drained. Contact an administrator.",
+    "state": {
+      "active": "Links available",
+      "threshold": "Traffic threshold reached",
+      "paused": "New links paused by administrator",
+      "rebind_wait": "Rebinding approved; wait for old credentials to expire"
+    },
+    "network": {
+      "pending": "Network change pending review",
+      "approved_wait": "Approved; waiting for credential expiry",
+      "applied": "Network change applied",
+      "rejected": "Network change rejected"
+    }
+  },
   "structuredInputEvidence": {"contextOnly":"The structured field and source are traceable. Rule applicability still requires rules or professional review; this is not a verified criterion.","omitted":"The structured input view for this suggestion omitted {p0} fields. These fields remain unknown; complete inputs remain in the protected record."},
   "retrievalEvidence":{"title":"Retrieval questions and material status","explanation":"Multiple records of one publication do not establish independent cases. Unqueried questions and empty results are not negative evidence.","remaining":"{p0} questions remain unqueried; their information remains unknown.","sourceGroupConflict":"The same publication has an object-matched, material-verified conflict record; review this support.","purpose":{"variant_conflict":"Variant records and conflict leads","functional_evidence":"Functional and mechanism evidence","gene_disease_validity":"Gene, disease and inheritance","case_segregation":"Case and segregation evidence","dosage_sensitivity":"Dosage sensitivity evidence","unknown":"Other evidence question"},"status":{"supported":"Related independent baseline evidence exists","pending_review":"Material found; applicability requires review","conflicting":"Source has a conflict flag; review required","not_found":"This query returned no records","unavailable":"Retrieval incomplete or unavailable","unknown":"Status not recorded"}},
   "evidenceBindings": {

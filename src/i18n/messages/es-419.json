@@ -1,4 +1,35 @@
 {
+  "downloadProtection": {
+    "boundIP": "IP publica fija de esta autorizacion: {p0}",
+    "usage": "Trafico observado {p0}; umbral {p1} (1,3 veces el archivo)",
+    "synced": "Ultima actualizacion del contador: {p0}",
+    "noObservation": "No se observaron registros coincidentes",
+    "delay": "Los registros pueden demorarse o ser incompletos. El umbral detiene nuevos enlaces, sin revocar de inmediato enlaces o transferencias existentes.",
+    "requestNetwork": "Solicitar aprobacion de esta red al administrador",
+    "requestSent": "Solicitud enviada. La aprobacion no reinicia el uso ni extiende el plazo original.",
+    "repurchase": "Comprar otra autorizacion (confirmar costo despues)",
+    "policy": "La autorizacion se vincula a una IP publica. Los cambios requieren aprobacion. Un trafico observado de 1,3 veces el archivo detiene nuevos enlaces.",
+    "ipError": "La red no coincide con la IP vinculada. Regrese a la red original o solicite aprobacion.",
+    "ipUnavailable": "No se pudo obtener una IP publica confiable. No se emitio un enlace ni un nuevo cobro.",
+    "thresholdError": "El trafico observado alcanzo el umbral de 1,3 veces. Confirme el costo para comprar otra autorizacion.",
+    "usageUnavailable": "Las estadisticas no estan disponibles. Se pausan nuevos enlaces; reintente la autorizacion original.",
+    "unavailable": "La autorizacion no esta disponible. Revise el plazo o contacte al administrador.",
+    "pending": "Ya hay una solicitud de red pendiente de revision.",
+    "unchanged": "Esta red ya coincide con la IP vinculada.",
+    "legacy": "Esta autorizacion anterior esta por vencer. Contacte al administrador.",
+    "state": {
+      "active": "Enlaces disponibles",
+      "threshold": "Umbral de trafico alcanzado",
+      "paused": "Nuevos enlaces pausados por el administrador",
+      "rebind_wait": "Cambio aprobado; espere a que venzan las credenciales anteriores"
+    },
+    "network": {
+      "pending": "Cambio de red pendiente",
+      "approved_wait": "Aprobado; esperando vencimiento",
+      "applied": "Cambio de red aplicado",
+      "rejected": "Cambio de red rechazado"
+    }
+  },
   "structuredInputEvidence": {"contextOnly":"El campo estructurado y la fuente son rastreables. La aplicabilidad del criterio aún requiere reglas o revisión profesional; no es un criterio verificado.","omitted":"La vista de entradas estructuradas de esta sugerencia omitió {p0} campos. Estos campos siguen siendo desconocidos; las entradas completas permanecen en el registro protegido."},
   "retrievalEvidence":{"title":"Preguntas de búsqueda y estado del material","explanation":"Varios registros de una publicación no demuestran casos independientes. Las preguntas no consultadas y los resultados vacíos no son evidencia negativa.","remaining":"Quedan {p0} preguntas sin consultar; su información sigue siendo desconocida.","sourceGroupConflict":"La misma publicación tiene un registro contradictorio con objeto coincidente y material verificado; revise este respaldo.","purpose":{"variant_conflict":"Registros de variantes e indicios de conflicto","functional_evidence":"Evidencia funcional y de mecanismo","gene_disease_validity":"Gen, enfermedad y herencia","case_segregation":"Evidencia de casos y segregación","dosage_sensitivity":"Evidencia de sensibilidad a la dosis","unknown":"Otra pregunta de evidencia"},"status":{"supported":"Existe evidencia independiente relacionada en la evaluación inicial","pending_review":"Material encontrado; la aplicabilidad requiere revisión","conflicting":"La fuente tiene una marca de conflicto; requiere revisión","not_found":"Esta consulta no devolvió registros","unavailable":"Búsqueda incompleta o no disponible","unknown":"Estado no registrado"}},
   "evidenceBindings": {

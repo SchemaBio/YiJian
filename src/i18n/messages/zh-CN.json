@@ -1,4 +1,35 @@
 {
+  "downloadProtection": {
+    "boundIP": "本申请固定公网IP：{p0}",
+    "usage": "已观测流量 {p0}；停发阈值 {p1}（文件大小1.3倍）",
+    "synced": "最近计数更新：{p0}",
+    "noObservation": "尚无匹配日志",
+    "delay": "统计有延迟且可能不完整；达到阈值后停止续发，旧链接及正在传输的请求不会立即撤销。",
+    "requestNetwork": "从当前网络申请管理员审核换绑",
+    "requestSent": "网络变更申请已提交；审核不会重置流量或延长原有效期。",
+    "repurchase": "重新购买下载授权（下一步确认费用）",
+    "policy": "下载授权固定公网IP，网络变化需管理员审核；按日志观测到文件大小1.3倍流量后停止续发。",
+    "ipError": "网络与本申请绑定IP不符，请回到原网络或申请管理员换绑。",
+    "ipUnavailable": "无法可靠取得公网IP，未签发链接、未新增扣费。",
+    "thresholdError": "已观测流量达到1.3倍停发阈值；请确认费用后重新购买授权。",
+    "usageUnavailable": "流量统计暂不可用，已暂停新链接签发，请稍后重试原申请。",
+    "unavailable": "下载申请当前不可操作，请检查有效期或联系管理员。",
+    "pending": "已有待处理网络申请，请等待管理员审核。",
+    "unchanged": "当前网络与已绑定IP相同，无需换绑。",
+    "legacy": "旧版下载申请正在等待自然到期，请联系管理员。",
+    "state": {
+      "active": "可领取链接",
+      "threshold": "已达到流量停发阈值",
+      "paused": "管理员已暂停新链接签发",
+      "rebind_wait": "换绑已批准，等待旧凭据过期后领取"
+    },
+    "network": {
+      "pending": "网络变更待审核",
+      "approved_wait": "已批准，等待旧凭据到期",
+      "applied": "网络换绑已应用",
+      "rejected": "管理员已拒绝换绑申请"
+    }
+  },
   "structuredInputEvidence": {"contextOnly":"结构化字段及来源可追溯；条款适用性仍须由规则或专业复核确认，不能直接作为已验证条款。","omitted":"本次建议的结构化输入视图省略了 {p0} 个字段；这些字段保持未知，完整输入仍保存在受保护记录中。"},
   "retrievalEvidence":{"title":"检索问题与材料状态","explanation":"同一文献的多份记录不代表独立病例；未查询的问题和未找到记录不代表阴性证据。","remaining":"仍有 {p0} 个问题尚未查询，相关信息保持未知。","sourceGroupConflict":"同一文献出现对象已匹配且材料已核查的冲突记录，当前依据需复核。","purpose":{"variant_conflict":"变异记录与冲突线索","functional_evidence":"功能与机制证据","gene_disease_validity":"基因、疾病与遗传模式","case_segregation":"病例与共分离证据","dosage_sensitivity":"剂量敏感性证据","unknown":"其他证据问题"},"status":{"supported":"已有相关独立证据","pending_review":"找到材料，适用性待核实","conflicting":"来源有冲突标记，需复核","not_found":"本次查询未返回记录","unavailable":"检索未完成或不可用","unknown":"未记录此状态"}},
   "evidenceBindings": {

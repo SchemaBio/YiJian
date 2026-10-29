@@ -14,10 +14,11 @@ import { Download, FileArchive, HardDrive, Coins, Clock3, AlertTriangle } from '
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { api } from '@/lib/api';
 import { SelfHostedResultDownloads } from './SelfHostedResultDownloads';
+import { DownloadProtectionStatus, type ProtectedDownloadGrant } from './DownloadProtectionStatus';
 
 interface DownloadFile { id: string; filename: string; size_bytes: number; credits: number; role?: string }
-interface Catalog { bam_expires_at?: string; bam_retention_days?: number; bam_status?: string; attempt_id: string; zip_status: string; zip_error?: string; zip?: DownloadFile; bams: DownloadFile[]; missing: string[] }
-interface Quote { id: string; kind: string; filename: string; size_bytes: number; credits: number; charged_at?: string; expires_at?: string }
+interface Catalog { download_protection_enabled?: boolean; bam_expires_at?: string; bam_retention_days?: number; bam_status?: string; attempt_id: string; zip_status: string; zip_error?: string; zip?: DownloadFile; bams: DownloadFile[]; missing: string[] }
+interface Quote extends ProtectedDownloadGrant { protection_planned?: boolean; id: string; kind: string; filename: string; file_id?: string; size_bytes: number; credits: number; charged_at?: string; expires_at?: string }
 interface Issued { kind?: string; id: string; url: string; filename: string; credits_charged: number; expires_at: string; grant_expires_at: string; refresh_after: string; remaining_issues: number; traffic_limit_bps: number; ip_bound: boolean }
 const gb = (size: number, t: TextTranslator = chineseText) => `${(size / 1_000_000_000).toLocaleString(t.locale, { maximumFractionDigits: 3 })} GB`;
 const labels: Record<string, string> = { mt_vcf: '线粒体 VCF', snp_indel: 'SNP/InDel 注释结果', mt: '线粒体注释结果', cnv_region: 'CNV 区域', cnv_gene: 'CNV 外显子', mei: 'MEI', upd: 'UPD', roh: 'ROH', qc_result: 'QC 报告', str: 'STR' };
@@ -45,6 +46,14 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
   const generation = React.useRef(0);
   const catalogExpiry = React.useRef<number | null>(null);
   const base = `/v1/tasks/${encodeURIComponent(taskId)}/downloads`;
+  const reloadActive = async () => {
+    const current=generation.current;
+    try { const rows=await api.get<Quote[]>(`${base}/active`); if(current===generation.current)setActive(rows); }
+    catch(cause) {if(current===generation.current)setError(errorText(cause,t));}
+  };
+  React.useEffect(()=>{const timer=window.setInterval(()=>void reloadActive(),15000);return()=>window.clearInterval(timer);},[base]); // eslint-disable-line react-hooks/exhaustive-deps
+  const issuedProtection=active.find(item=>item.id===issued?.id);
+  const issuanceBlocked=!!issuedProtection?.protection_version && issuedProtection.issuance_state!=='active';
   const refreshIssued = async () => {
     if (!issued || busyRef.current) return;
     const current = generation.current;
@@ -84,7 +93,7 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
         const next = await api.post<Catalog>(`${base}/prepare`, {});
         if (current === generation.current) { setCatalog(next); polling.current = next.zip_status === 'building'; }
       } else {
-        if (issued && issued.kind === kind && (kind === 'zip' || issued.filename === file?.filename) && Date.parse(issued.grant_expires_at) > Date.now()) { setLinkOpen(true); return; }
+        if (!issuanceBlocked && issued && issued.kind === kind && (kind === 'zip' || issued.filename === file?.filename) && Date.parse(issued.grant_expires_at) > Date.now()) { setLinkOpen(true); return; }
         const next = await api.post<Quote>(`${base}/quote`, { kind, file_id: file?.id });
         if (current === generation.current) setQuote(next);
       }
@@ -148,7 +157,7 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
           {catalog&&!catalog.bams.length&&<p className="rounded-lg bg-canvas-subtle p-4 text-sm text-fg-muted">{catalog.bam_status === 'deleted' ? t("tasks.expiredBamAndIndexFilesHaveBeen23c958") : ['expired', 'cleanup_pending'].includes(catalog.bam_status || '') ? t("tasks.bamRetentionExpiredDownloadingAndReadReview397612") : t("tasks.noDownloadableBamArchivedForThisExecution0a8b70")}</p>}
           {!catalog&&<p className="text-sm text-fg-muted">{t("tasks.readingBamFilesAndSizes7280da")}</p>}
         </div>
-        <p className="mt-4 text-xs leading-5 text-fg-muted">{t("tasks.downloadDirectlyFromObjectStorageWithoutIpae48b2")}</p>
+        <p className="mt-4 text-xs leading-5 text-fg-muted">{catalog?.download_protection_enabled ? t('downloadProtection.policy') : t("tasks.downloadDirectlyFromObjectStorageWithoutIpae48b2")}</p>
       </article>}
     </div>
     {isSaaS&&catalog?.bam_status !== 'not_provided'&&<div role="note" className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><p><strong>{t("tasks.bamRetainedForDays9f64b9")}</strong>{t("tasks.bamIsDeletedDaysAfterCompletionDisabling86a6fc")}</p></div>}
@@ -159,17 +168,17 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
       <p className="break-all text-sm font-medium">{t("tasks.downloadLinkReady4c818d")}{issued.filename}</p>
       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-fg-muted"><span>{t("tasks.requestCost396221")}{issued.credits_charged} {t("billing.creditse6d317")}</span><span>{t("tasks.linkExpiresf23884")}{new Date(issued.expires_at).toLocaleString(t.locale)}</span><span>{t("tasks.requestDeadline3d4137")}{new Date(issued.grant_expires_at).toLocaleString(t.locale)}</span><span>{t("tasks.perRequestRateLimit41dbdf")}{issued.traffic_limit_bps / 8 / 1024 / 1024} {t("tasks.mibSRemainingLinkIssuances846a23")}{issued.remaining_issues} {t("tasks.label793578")}</span></div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {!linkExpired && !grantExpired ? <a href={issued.url} download={issued.filename} rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-sm text-fg-on-emphasis"><Download className="h-4 w-4"/>{t("tasks.downloadResume94a53a")}</a> : <span className="text-sm">{grantExpired ? t("tasks.requestExpired7b97fe") : t("tasks.linkExpiredRefreshFree826119")}</span>}
-        <Button action="copy" size="small" variant="secondary" disabled={linkExpired || grantExpired} className="whitespace-nowrap"  onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError(t("tasks.copyFailedAllowClipboardAccesscdac42")));}}>{copied?t("tasks.linkCopiedc66304"):t("tasks.copyDownloadLink79a65e")}</Button>
-        <Button size="small" variant="secondary" disabled={busy || grantExpired || refreshSeconds > 0 || issued.remaining_issues <= 0} onClick={()=>void refreshIssued()}>{refreshSeconds > 0 ? t("tasks.refreshAvailableInSecondscffaf7", {p0: String(refreshSeconds)}) : t("tasks.refreshLinkFree0912d2")}</Button>
+        {!issuanceBlocked && !linkExpired && !grantExpired ? <a href={issued.url} download={issued.filename} rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-emphasis px-3 text-sm text-fg-on-emphasis"><Download className="h-4 w-4"/>{t("tasks.downloadResume94a53a")}</a> : <span className="text-sm">{grantExpired ? t("tasks.requestExpired7b97fe") : t("tasks.linkExpiredRefreshFree826119")}</span>}
+        <Button action="copy" size="small" variant="secondary" disabled={issuanceBlocked || linkExpired || grantExpired} className="whitespace-nowrap"  onClick={()=>{void navigator.clipboard.writeText(issued.url).then(()=>setCopied(true)).catch(()=>setError(t("tasks.copyFailedAllowClipboardAccesscdac42")));}}>{copied?t("tasks.linkCopiedc66304"):t("tasks.copyDownloadLink79a65e")}</Button>
+        <Button size="small" variant="secondary" disabled={busy || issuanceBlocked || grantExpired || refreshSeconds > 0 || issued.remaining_issues <= 0} onClick={()=>void refreshIssued()}>{refreshSeconds > 0 ? t("tasks.refreshAvailableInSecondscffaf7", {p0: String(refreshSeconds)}) : t("tasks.refreshLinkFree0912d2")}</Button>
         <span className="text-xs text-fg-muted">{t("tasks.refreshDoesNotExtendRequestValidityResume92d40a")}</span>
       </div>
     </div></AppModal>}
-    {!!active.length&&<details open className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">{t("tasks.existingRequestRetrievingAPaidLinkIncurs83fe7c")}</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?t("tasks.retrievePaidLink2b6fc5"):t("tasks.continueOriginalRequest6993b2")}</Button></div>)}</div></details>}
+    {!!active.length&&<details open className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">{t("tasks.existingRequestRetrievingAPaidLinkIncurs83fe7c")}</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy || (!!item.protection_version && !['active','rebind_wait'].includes(item.issuance_state || ''))} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?t("tasks.retrievePaidLink2b6fc5"):t("tasks.continueOriginalRequest6993b2")}</Button><div className="w-full"><DownloadProtectionStatus taskId={taskId} grant={item} onUpdated={()=>void reloadActive()} onRepurchase={()=>void request(item.kind as 'bam' | 'zip', catalog?.bams.find(file=>file.id===item.file_id))} /></div></div>)}</div></details>}
     <AppModal open={!!quote} onOpenChange={open=>{if(!open&&!busy)setQuote(null);}} title={quote?.charged_at?t("tasks.retrieveExistingDownloadLink7e9525"):t("tasks.confirmDownloadCost458ee4")} size="small" closeOnEscape={!busy} closeOnOverlayClick={!busy}
       footer={<><Button variant="secondary" disabled={busy} onClick={()=>setQuote(null)}>{t("admin.cancel4d0b46")}</Button><Button permission={null} variant="primary" className="whitespace-nowrap" loading={busy} onClick={()=>void confirm()}>{quote?.charged_at?t("tasks.retrieveDownloadLinked0404"):quote?.kind==='bam'?t("tasks.payCreditsAndGetLink7efa0c", {p0: String(quote?.credits)}):t("tasks.payCreditAndGetZipLink07d19b")}</Button></>}
     >
-      <div className="space-y-4 text-sm"><p className="break-all font-medium">{quote?.filename}</p><div className="flex items-center justify-between rounded-lg bg-canvas-subtle p-4"><span>{quote&&gb(quote.size_bytes, t)}</span><strong className="text-xl text-accent-fg">{quote?.charged_at?t("tasks.noDuplicateCharge10d341"):t("pipeline.credits0193ac", {p0: String(quote?.credits)})}</strong></div>{quote?.kind==='bam'&&<p className="text-xs text-fg-muted">{t("tasks.actualSize937f87")}{quote.size_bytes.toLocaleString(t.locale)} {t("tasks.bytesCreditPerGbRoundedUpb20477")}</p>}<p className="text-xs leading-5 text-fg-muted">{quote?.charged_at?t("tasks.originalRequestAlreadyPaidRetrievalKeepsIts88513c"):t("tasks.chargeAndLinkIssuanceFollowConfirmationCanceling5ac9ae")}{t("tasks.noIpBindingLinksCanBeRefreshedc75142")}</p>{error&&<p role="alert" className="text-danger-fg">{error}{t("tasks.retryingThisRequestIncursNoDuplicateChargee75379")}</p>}</div>
+      <div className="space-y-4 text-sm"><p className="break-all font-medium">{quote?.filename}</p><div className="flex items-center justify-between rounded-lg bg-canvas-subtle p-4"><span>{quote&&gb(quote.size_bytes, t)}</span><strong className="text-xl text-accent-fg">{quote?.charged_at?t("tasks.noDuplicateCharge10d341"):t("pipeline.credits0193ac", {p0: String(quote?.credits)})}</strong></div>{quote?.kind==='bam'&&<p className="text-xs text-fg-muted">{t("tasks.actualSize937f87")}{quote.size_bytes.toLocaleString(t.locale)} {t("tasks.bytesCreditPerGbRoundedUpb20477")}</p>}<p className="text-xs leading-5 text-fg-muted">{quote?.charged_at?t("tasks.originalRequestAlreadyPaidRetrievalKeepsIts88513c"):t("tasks.chargeAndLinkIssuanceFollowConfirmationCanceling5ac9ae")}{quote?.protection_planned || quote?.protection_version ? t('downloadProtection.policy') : t("tasks.noIpBindingLinksCanBeRefreshedc75142")}</p>{error&&<p role="alert" className="text-danger-fg">{error}{t("tasks.retryingThisRequestIncursNoDuplicateChargee75379")}</p>}</div>
     </AppModal>
   </section>;
 }
