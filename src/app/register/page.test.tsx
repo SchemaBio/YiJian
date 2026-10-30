@@ -1,20 +1,20 @@
 import * as React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ backend: 'squid', enabled: true, post: vi.fn(), push: vi.fn(), hash: vi.fn() }));
+const state = vi.hoisted(() => ({ backend: 'squid', enabled: true, mode: 'manual' as string | undefined, post: vi.fn(), push: vi.fn(), hash: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: state.push }) }));
 vi.mock('@/lib/api', () => ({ api: { post: state.post }, ApiError: class extends Error {}, clearLegacyAuthTokens: vi.fn() }));
 vi.mock('@/lib/crypto', () => ({ hashPassword: state.hash }));
 vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => state.backend }));
 vi.mock('@/components/shared/LanguageSwitcher', () => ({ LanguageSwitcher: () => null }));
 vi.mock('@/components/shared/ServicePolicyDocument', () => ({ ServicePolicyLinks: () => null }));
-vi.mock('@/components/auth/RegistrationVerification', () => ({ RegistrationVerification: () => <p>Email verification pending</p> }));
+vi.mock('@/components/auth/RegistrationVerification', () => ({ RegistrationVerification: () => <p>Manual review pending</p> }));
 vi.mock('@/components/auth/RegistrationChallenge', () => ({
-  useRegistrationAvailability: () => ({ enabled: state.enabled, site_key: 'test' }),
+  useRegistrationAvailability: () => ({ enabled: state.enabled, site_key: 'test', review_mode: state.mode }),
   RegistrationChallenge: ({ onToken }: { onToken: (token: string) => void }) => <button type="button" onClick={() => onToken('challenge-token')}>Complete verification</button>,
 }));
 import RegisterPage from './page';
-beforeEach(() => { vi.clearAllMocks(); state.backend = 'squid'; state.enabled = true; state.hash.mockResolvedValue('hashed-password'); state.post.mockResolvedValue({ message: 'Pending' }); });
+beforeEach(() => { vi.clearAllMocks(); state.backend = 'squid'; state.enabled = true; state.mode = 'manual'; state.hash.mockResolvedValue('hashed-password'); state.post.mockResolvedValue({ message: 'Pending' }); });
 afterEach(cleanup);
 function fill(password = 'Test-password-42', confirmation = password) {
   fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: ' User@Example.org ' } });
@@ -35,7 +35,7 @@ it('registers with email and matching passwords while omitting all optional fiel
   for (const id of ['register-name', 'register-org-name', 'register-org-slug']) expect(document.getElementById(id)).not.toBeRequired();
   expect(screen.getByRole('button', { name: '注册' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Complete verification' })); submit();
-  await screen.findByText('Email verification pending');
+  await screen.findByText('Manual review pending');
   expect(state.hash).toHaveBeenCalledWith('Test-password-42', 'user@example.org');
   expect(state.post).toHaveBeenCalledWith('/v1/auth/register', { email: 'user@example.org', password: 'hashed-password', turnstile_token: 'challenge-token', locale: 'zh-CN' }, { coreApi: false });
 });
@@ -56,4 +56,9 @@ it('supports optional names and password confirmation in self-hosted mode withou
   state.backend = 'octopus'; state.post.mockResolvedValue({ access_token: 'test' }); render(<RegisterPage />); fill(); submit();
   await waitFor(() => expect(state.push).toHaveBeenCalledWith('/dashboard'));
   expect(state.post).toHaveBeenCalledWith('/v1/auth/register', { email: 'user@example.org', password: 'hashed-password' }, { coreApi: false });
+});
+
+it('blocks mixed-version SaaS signup until the server advertises manual review',()=>{
+ state.mode=undefined;render(<RegisterPage/>);fill();fireEvent.click(screen.getByRole('button',{name:'Complete verification'}));submit();
+ expect(screen.getByRole('button',{name:'注册'})).toBeDisabled();expect(state.post).not.toHaveBeenCalled();
 });

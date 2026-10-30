@@ -9,7 +9,7 @@ type ChallengeAPI = {
   remove(id: string): void;
 };
 declare global { interface Window { turnstile?: ChallengeAPI } }
-export type RegistrationAvailability = { enabled: boolean; site_key: string };
+export type RegistrationAvailability = { enabled: boolean; site_key: string; review_mode?: 'manual' };
 
 export function useRegistrationAvailability(enabled = true) {
   const [config, setConfig] = useState<RegistrationAvailability | null>(null);

@@ -21,3 +21,8 @@ it('preserves unknown messages and explicit frontend errors', () => {
   expect(errorText('constructor', t)).toBe('constructor');
   expect(errorText(new LocalizedError('请求失败'), t)).toBe('Request failed');
 });
+
+it.each(['zh-CN','zh-Hant','en','es-419'] as const)('localizes pending manual review in %s',locale=>{
+ const t=createTextTranslator(locale);
+ expect(errorText('account is pending approval',t)).toBe(t('registration.manualPending'));
+});

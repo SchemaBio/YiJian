@@ -76,7 +76,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (isSaaS && (!registrationConfig?.enabled || !challenge)) { setError(t('registration.unavailable')); return; }
+    if (isSaaS && (!registrationConfig?.enabled || registrationConfig.review_mode !== 'manual' || !challenge)) { setError(t('registration.unavailable')); return; }
     setLoading(true);
     try {
       const hashedPassword = await hashPassword(password, email);
@@ -212,7 +212,7 @@ export default function RegisterPage() {
             type="submit"
             variant="primary"
             className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
-            disabled={loading || (isSaaS && (!registrationConfig?.enabled || !challenge))}
+            disabled={loading || (isSaaS && (!registrationConfig?.enabled || registrationConfig.review_mode !== 'manual' || !challenge))}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
             {t("auth.registerda0e5f")}</Button>
