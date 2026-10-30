@@ -103,7 +103,7 @@ export default function RechargePage() {
             </button>
           ))}
         </div>
-        <div className="mt-6 border-t border-border-default pt-5">
+        <div className="mt-6 grid gap-5 border-t border-border-default pt-5 sm:grid-cols-2"><div>
           <label htmlFor="recharge-amount" className="mb-2 block text-sm font-medium text-fg-default">{t("billing.customAmount6dea5d")}</label>
           <div className="flex max-w-sm items-center gap-3">
             <Input id="recharge-amount" aria-label={t("billing.customCreditAmountc6dcf8")} type="number" min="1" max="5000" step="1" inputMode="numeric"
@@ -113,7 +113,7 @@ export default function RechargePage() {
           </div>
           <p id="recharge-quantity-help" role={quantityError ? 'alert' : undefined} className={`mt-2 text-xs leading-5 ${quantityError ? 'text-danger-fg' : 'text-fg-muted'}`}>{quantityError || t('payments.quantityHelp')}</p>
         </div>
-        <div className="mt-6 rounded-lg border border-border-default bg-canvas-subtle p-4">
+        <div className="rounded-lg border border-border-default bg-canvas-subtle p-4">
           <div className="flex items-start gap-3">
             <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
             <div className="min-w-0">
@@ -123,21 +123,21 @@ export default function RechargePage() {
             </div>
           </div>
         </div>
-      </div>
+      </div></div>
     </section>
   );
   const manualRequest = (
-    <div className="border-t border-border-default pt-5">
+    <section className="yj-panel p-5 sm:p-6">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-fg-default"><FileText className="h-4 w-4 text-fg-muted" aria-hidden="true" />{t('stripePayments.manualTitle')}</div>
       <p className="mb-4 text-xs leading-5 text-fg-muted">{t("billing.creditsArePostedAfterPlatformConfirmationSee40fdf0")}</p>
-      <Button action={copied ? 'copied' : 'copy'} variant="secondary" className="w-full justify-center" onClick={() => void copyRequest()} disabled={amount === null}>
+      <Button action={copied ? 'copied' : 'copy'} variant="secondary" className="w-full justify-center sm:w-auto" onClick={() => void copyRequest()} disabled={amount === null}>
         {copied ? t("billing.copiede381a5") : t("billing.copyCreditRequeste67917")}
       </Button>
       <span role="status" className="sr-only">{copied ? t("billing.copiede381a5") : ''}</span>
-    </div>
+    </section>
   );
   return (
-    <PageContent className="yj-page-shell">
+    <PageContent className="yj-page-shell"><div className="mx-auto w-full max-w-[1280px]">
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2">
         <div className="min-w-0">
           <Link href="/billing" className="mb-3 inline-flex items-center gap-1.5 text-sm text-fg-muted transition-colors hover:text-fg-default"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t("billing.backToBilling844842")}</Link>
@@ -152,6 +152,6 @@ export default function RechargePage() {
       {loadError && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{loadError}<ActionButton action="retry" variant="ghost" size="small" onClick={() => setRetry(v => v + 1)}>{t("billing.retryLoading7b4939")}</ActionButton></div>}
       {error && <div role="alert" className="mb-4 rounded-lg border border-danger-muted bg-danger-subtle px-4 py-3 text-sm text-danger-fg">{error}</div>}
       {currentOrg?.id ? <StripeRechargePanel quantity={amount} orgId={String(currentOrg.id)} selection={selection} manualRequest={manualRequest} /> : selection}
-    </PageContent>
+    </div></PageContent>
   );
 }

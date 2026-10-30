@@ -82,8 +82,8 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
   const loading = !options && !error;
   const pages = Math.max(1, Math.ceil(total / 20));
   return <div className="space-y-6">
-    <div className={selection ? 'grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]' : ''}>
-      {selection}
+    <div className={selection ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,1fr)]' : ''}>
+      {selection && <div className="min-w-0 space-y-5">{selection}{manualRequest}</div>}
       <aside className="yj-panel min-w-0 overflow-hidden lg:sticky lg:top-5" aria-label={t('stripePayments.title')}>
         <div className="border-b border-border-default px-5 py-5 sm:px-6">
           <div className="flex items-center justify-between gap-3">
@@ -97,21 +97,23 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
         <div className="space-y-5 p-5 sm:p-6">
           {error && <p role="alert" className="rounded-lg border border-danger-muted bg-danger-subtle p-3 text-sm leading-5 text-danger-fg">{error}</p>}
           {options?.simulated && available && <p role="status" className="rounded-lg border border-warning-muted bg-warning-subtle p-3 text-xs leading-5 text-warning-fg">{t('stripePayments.testNotice')}</p>}
-          <p className="text-xs leading-5 text-fg-muted">{c.purpose}</p>
-          <ServicePolicyLinks />
-          <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" className="mt-1" checked={accepted} disabled={busy || !policy || policy.version !== SERVICE_POLICY_VERSION} onChange={e => setAccepted(e.target.checked)} />{c.accept}</label>
-          {policy?.contact && <a className="text-xs underline" href={`mailto:${policy.contact}`}>{policy.contact}</a>}
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-3"><dt className="text-fg-muted">{t('stripePayments.credits')}</dt><dd className="font-medium tabular-nums text-fg-default">{quantity?.toLocaleString() ?? '—'}</dd></div>
             <div className="flex items-center justify-between gap-3"><dt className="text-fg-muted">{t('stripePayments.unitPrice')}</dt><dd className="font-medium tabular-nums text-fg-default">{available && options?.price ? formatPaymentMoney(options.price.unit_amount, options.price.currency) : '—'}</dd></div>
-            <div className="flex items-end justify-between gap-3 border-t border-dashed border-border-default pt-4"><dt className="pb-1 text-fg-muted">{t('stripePayments.total')}</dt><dd className="text-3xl font-semibold tabular-nums tracking-tight text-fg-default">{available && options?.price && quantity !== null ? formatPaymentMoney(options.price.unit_amount * quantity, options.price.currency) : '—'}</dd></div>
+            <div className="flex items-end justify-between gap-3 border-t border-dashed border-border-default pt-4"><dt className="pb-1 text-fg-muted">{t('stripePayments.total')}</dt><dd className="break-words text-right text-3xl font-semibold tabular-nums tracking-tight text-fg-default">{available && options?.price && quantity !== null ? formatPaymentMoney(options.price.unit_amount * quantity, options.price.currency) : '—'}</dd></div>
           </dl>
+          <div className="space-y-3 rounded-lg border border-border-default bg-canvas-subtle p-4">
+          <p className="text-sm leading-6 text-fg-muted">{c.purpose}</p>
+          <div className="text-sm leading-6 [&>nav]:justify-start [&>nav]:gap-x-4 [&>nav]:gap-y-2"><ServicePolicyLinks /></div>
+          <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-accent-emphasis" checked={accepted} disabled={busy || !policy || policy.version !== SERVICE_POLICY_VERSION} onChange={e => setAccepted(e.target.checked)} />{c.accept}</label>
+          {policy?.contact && <a className="text-xs underline" href={`mailto:${policy.contact}`}>{policy.contact}</a>}
+          </div>
           {loading ? <p className="flex items-center gap-2 text-xs text-fg-muted" role="status"><span className="h-2 w-2 animate-pulse rounded-full bg-fg-muted" />{t('stripePayments.loading')}</p> : available ? <div className="space-y-3">
             <Button type="button" variant="primary" className="w-full justify-center" rightIcon={<ArrowUpRight className="h-4 w-4" />} loading={busy} disabled={quantity === null || !accepted || !policy || policy.version !== SERVICE_POLICY_VERSION} onClick={() => void buy()}>{t(options?.simulated ? 'stripePayments.testPay' : 'stripePayments.pay')}</Button>
             <p className="flex items-center justify-center gap-1.5 text-xs text-fg-muted"><ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('stripePayments.checkoutHint')}</p>
             <Button type="button" variant="ghost" size="small" className="w-full justify-center text-fg-muted" disabled={busy} onClick={() => { sessionStorage.removeItem('stripe-checkout:' + orgId); setSelected(null); }}>{t('stripePayments.newOrder')}</Button>
           </div> : !error ? <div className="flex items-start gap-2.5 rounded-lg border border-border-default bg-canvas-subtle p-3"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" /><p className="text-xs leading-5 text-fg-muted">{t('stripePayments.disabled')}</p></div> : null}
-          {manualRequest}
+          {!selection && manualRequest}
         </div>
       </aside>
     </div>
@@ -123,7 +125,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
         <div className="flex items-center gap-2.5"><ReceiptText className="h-4 w-4 text-fg-muted" aria-hidden="true" /><h3 id="recharge-history-title" className="text-sm font-semibold text-fg-default">{t('stripePayments.historyTitle')}</h3>{total > 0 && <span className="rounded-full bg-canvas-subtle px-2 py-0.5 text-xs tabular-nums text-fg-muted">{total}</span>}</div>
         <Button type="button" action="refresh" variant="ghost" size="small" disabled={busy} onClick={() => void refresh().catch(() => setError(t('stripePayments.loadFailed')))}>{t('stripePayments.refresh')}</Button>
       </div>
-      {!options && !error ? <div className="space-y-4 p-6" aria-label={t('stripePayments.loading')} aria-busy="true">{[0, 1, 2].map(i => <div key={i} className="h-5 animate-pulse rounded bg-canvas-subtle" />)}</div> : orders.length === 0 ? <div className="flex flex-col items-center px-6 py-12 text-center"><span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-canvas-subtle text-fg-muted"><FileText className="h-5 w-5" aria-hidden="true" /></span><p className="text-sm font-medium text-fg-default">{t('stripePayments.emptyTitle')}</p><p className="mt-1.5 max-w-sm text-xs leading-5 text-fg-muted">{t('stripePayments.emptyHint')}</p></div> : <>
+      {!options && !error ? <div className="space-y-4 p-6" aria-label={t('stripePayments.loading')} aria-busy="true">{[0, 1, 2].map(i => <div key={i} className="h-5 animate-pulse rounded bg-canvas-subtle" />)}</div> : orders.length === 0 ? <div className="flex flex-col items-center px-6 py-8 text-center"><span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-canvas-subtle text-fg-muted"><FileText className="h-5 w-5" aria-hidden="true" /></span><p className="text-sm font-medium text-fg-default">{t('stripePayments.emptyTitle')}</p><p className="mt-1.5 max-w-sm text-xs leading-5 text-fg-muted">{t('stripePayments.emptyHint')}</p></div> : <>
         <div className="divide-y divide-border-default sm:hidden">{orders.map(o => <div key={o.id} className={`px-5 py-4 ${selected?.id === o.id ? 'bg-accent-subtle' : ''}`}>
           <div className="flex items-center justify-between gap-3"><button type="button" onClick={() => setSelected(o)} aria-label={o.id} className="rounded font-mono text-xs font-medium text-accent-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis">{o.id.slice(0, 8)}…{o.id.slice(-4)}</button><span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusStyle(o.state)}`}>{status(o.state)}</span></div>
           <div className="mt-3 flex items-end justify-between gap-3"><div><p className="text-sm text-fg-default">{o.quantity.toLocaleString()} <span className="text-xs text-fg-muted">{t('billing.creditse6d317')}</span>{o.simulated && <span className="ml-2 text-xs text-warning-fg">{t('stripePayments.testPay')}</span>}</p><p className="mt-1 text-xs tabular-nums text-fg-muted">{o.created_at && !Number.isNaN(Date.parse(o.created_at)) ? new Date(o.created_at).toLocaleString() : '—'}</p></div><p className="text-base font-semibold tabular-nums text-fg-default">{formatPaymentMoney(o.amount, o.currency)}</p></div>
