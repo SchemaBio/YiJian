@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "遺傳模式尚未明確"
   },
   "auth": {
+    "registrationConfirmPassword": "確認密碼",
+    "registrationPasswordsMismatch": "兩次輸入的密碼不一致",
+    "registrationNameOptional": "姓名（選填）",
     "andAgreeToUserAgreement": "並同意",
     "userAgreement": "《使用協議》",
     "acknowledgePrivacyAndAgreeToTerms": "請閱讀並了解隱私政策，並同意使用協議",

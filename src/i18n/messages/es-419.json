@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "Modo de herencia no establecido"
   },
   "auth": {
+    "registrationConfirmPassword": "Confirmar contraseña",
+    "registrationPasswordsMismatch": "Las contraseñas no coinciden",
+    "registrationNameOptional": "Nombre (opcional)",
     "andAgreeToUserAgreement": "y acepto el",
     "userAgreement": "Acuerdo de uso",
     "acknowledgePrivacyAndAgreeToTerms": "Lee la política de privacidad y acepta el acuerdo de uso",

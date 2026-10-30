@@ -2231,6 +2231,9 @@
     "svcMissingMOI": "Mode of inheritance is not established"
   },
   "auth": {
+    "registrationConfirmPassword": "Confirm password",
+    "registrationPasswordsMismatch": "Passwords do not match",
+    "registrationNameOptional": "Name (optional)",
     "andAgreeToUserAgreement": "and agree to the",
     "userAgreement": "User Agreement",
     "acknowledgePrivacyAndAgreeToTerms": "Please acknowledge the privacy policy and agree to the user agreement",

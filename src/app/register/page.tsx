@@ -28,6 +28,7 @@ export default function RegisterPage() {
   const [form, setForm] = React.useState({
     email: '',
     password: '',
+    confirmPassword: '',
     name: '',
     orgName: '',
     orgSlug: '',
@@ -35,8 +36,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const backendFlavor = getRuntimeBackendFlavor();
-  const requireOrgFields = backendFlavor === 'squid';
-  const registrationConfig = useRegistrationAvailability(requireOrgFields);
+  const isSaaS = backendFlavor === 'squid';
+  const registrationConfig = useRegistrationAvailability(isSaaS);
   const [challenge, setChallenge] = React.useState('');
   const [generation, setGeneration] = React.useState(0);
   const [submitted, setSubmitted] = React.useState(false);
@@ -55,7 +56,7 @@ export default function RegisterPage() {
     const orgName = form.orgName.trim();
     const orgSlug = form.orgSlug.trim().toLowerCase();
 
-    if (!email || !password || !name || (requireOrgFields && (!orgName || !orgSlug))) {
+    if (!email || !password || !form.confirmPassword) {
       setError(t("auth.completeAllRequiredFields61d4e1"));
       return;
     }
@@ -65,27 +66,32 @@ export default function RegisterPage() {
       return;
     }
 
+    if (password !== form.confirmPassword) {
+      setError(t('auth.registrationPasswordsMismatch'));
+      return;
+    }
+
     if (orgSlug && !ORG_SLUG_PATTERN.test(orgSlug)) {
       setError(t("auth.organizationSlugMustBeLowercaseLettersDigitsdff5c0"));
       return;
     }
 
-    if (requireOrgFields && (!registrationConfig?.enabled || !challenge)) { setError(t('registration.unavailable')); return; }
+    if (isSaaS && (!registrationConfig?.enabled || !challenge)) { setError(t('registration.unavailable')); return; }
     setLoading(true);
     try {
       const hashedPassword = await hashPassword(password, email);
       const response = await api.post<{ access_token?: string; message?: string }>('/v1/auth/register', {
         email,
-        ...(requireOrgFields ? { turnstile_token: challenge, locale: t.locale } : {}),
+        ...(isSaaS ? { turnstile_token: challenge, locale: t.locale } : {}),
         password: hashedPassword,
-        name,
+        ...(name ? { name } : {}),
         ...(orgName ? { org_name: orgName } : {}),
         ...(orgSlug ? { org_slug: orgSlug } : {}),
       }, { coreApi: false });
 
       clearLegacyAuthTokens();
       if (!response?.access_token && response?.message) {
-        if (requireOrgFields) { setSubmitted(true); setLoading(false); return; }
+        if (isSaaS) { setSubmitted(true); setLoading(false); return; }
         router.push('/login?registered=pending');
         return;
       }
@@ -117,7 +123,7 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-[28px] font-semibold leading-tight tracking-normal text-[var(--yj-text-strong)]">{t("auth.createAccount4742b5")}</h2>
           <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
-            {requireOrgFields ? t("auth.createATeamAccountAdministratorApprovalIsf98187") : t("auth.createAnAccountToStartUsingYijian2be3bc")}
+            {isSaaS ? t("auth.createATeamAccountAdministratorApprovalIsf98187") : t("auth.createAnAccountToStartUsingYijian2be3bc")}
           </p>
           <p className="mt-3 text-xs leading-relaxed text-[var(--yj-text-muted)]">{t(backendFlavor === 'squid' ? 'research.audience' : 'research.selfHostedScope')}</p>
         </div>
@@ -130,20 +136,10 @@ export default function RegisterPage() {
           )}
 
           <Input
-            id="register-name"
-            aria-label={t("samples.namebe4c26")}
-            type="text"
-            value={form.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder={t("samples.name2b9e1a")}
-            autoComplete="name"
-            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
-          />
-
-          <Input
             id="register-email"
             aria-label={t("settings.email9ed627")}
             type="email"
+            required
             maxLength={100}
             value={form.email}
             onChange={(e) => handleChange('email', e.target.value)}
@@ -156,6 +152,8 @@ export default function RegisterPage() {
             id="register-password"
             aria-label={t("auth.passwordAtLeastCharacters692b63")}
             type="password"
+            required
+            minLength={8}
             value={form.password}
             onChange={(e) => handleChange('password', e.target.value)}
             placeholder={t("auth.passwordAtLeastCharacters8adf42")}
@@ -164,31 +162,57 @@ export default function RegisterPage() {
           />
 
           <Input
+            id="register-confirm-password"
+            aria-label={t('auth.registrationConfirmPassword')}
+            type="password"
+            required
+            minLength={8}
+            value={form.confirmPassword}
+            onChange={(e) => handleChange('confirmPassword', e.target.value)}
+            placeholder={t('auth.registrationConfirmPassword')}
+            autoComplete="new-password"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
+          />
+
+          <Input
+            id="register-name"
+            aria-label={t('auth.registrationNameOptional')}
+            type="text"
+            value={form.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder={t('auth.registrationNameOptional')}
+            autoComplete="name"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
+          />
+
+          <Input
             id="register-org-name"
-            aria-label={t("auth.teamOrganizationNamea2fbbb")}
+            aria-label={t("auth.teamOrganizationNameOptionalfc3dfe")}
             type="text"
             value={form.orgName}
             onChange={(e) => handleChange('orgName', e.target.value)}
-            placeholder={requireOrgFields ? t("auth.teamOrganizationName265315") : t("auth.teamOrganizationNameOptionalfc3dfe")}
+            placeholder={t("auth.teamOrganizationNameOptionalfc3dfe")}
             autoComplete="organization"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
 
           <Input
             id="register-org-slug"
-            aria-label={t("auth.organizationSlugc4ef74")}
+            aria-label={t("auth.organizationSlugOptional2da1c3")}
             type="text"
             value={form.orgSlug}
             onChange={(e) => handleChange('orgSlug', e.target.value)}
-            placeholder={requireOrgFields ? t("auth.organizationSlugEGMyLab16fa51") : t("auth.organizationSlugOptional2da1c3")}
+            placeholder={t("auth.organizationSlugOptional2da1c3")}
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+
+          {isSaaS && (registrationConfig?.enabled ? <RegistrationChallenge siteKey={registrationConfig.site_key} action="registration" generation={generation} onToken={setChallenge} /> : <p role="status" className="text-sm text-fg-muted">{t('registration.unavailable')}</p>)}
 
           <Button loading={loading} loadingLabel={t("auth.registeringed5c1a")}
             type="submit"
             variant="primary"
             className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
-            disabled={loading || (requireOrgFields && (!registrationConfig?.enabled || !challenge))}
+            disabled={loading || (isSaaS && (!registrationConfig?.enabled || !challenge))}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
             {t("auth.registerda0e5f")}</Button>
