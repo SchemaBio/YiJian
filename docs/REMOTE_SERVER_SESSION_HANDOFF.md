@@ -12,6 +12,10 @@
 
 本次保护目录：`/home/ubuntu/schema/backups/agreement-contact-20261030T014053Z`，保存源码归档及摘要、部署配置、旧镜像回退标签、构建/测试日志、`result.json` 和 `verification.json`。本地类型检查、此前12项协议回归及服务器17项协议/登录/充值回归通过；镜像healthy、重启0，四语言源站及中英文公网主体/邮箱核对通过（Cloudflare邮箱保护编码已解码核对）。业务/公告摘要、计算配置及其他容器身份保持，仅更新YiJian；回退仅切换前端镜像，不恢复数据库。代码已本地提交，未push GitHub。
 
+**2026-10-30 公告已读状态增量发布：YiJian 最新镜像为 `schemabio/yijian:announcement-reads-20261030t021208z`，精确提交 `29231e82947654ee0449e57361bb798c05fa4a66`，替代上述协议联系信息镜像并保留其功能。公告中心展示完整正文后将当前版本记为已读，红点按未读版本判断；浏览器 localStorage 按用户/组织隔离保存，支持跨标签页同步，新公告/新版重新提醒。横幅关闭记录独立，存储不可用时本次访问仍可清除红点。**
+
+本次保护目录 `/home/ubuntu/schema/backups/announcement-reads-20261030T021208Z` 保存源码归档及摘要、原部署配置、旧镜像回退标签、构建/测试日志、result和verification。本地12项公告回归与类型检查通过，远端29项公告/协议/登录/充值回归、类型检查及生产构建通过；容器healthy、重启0，公网脚本与镜像中包含已读修复的静态资源摘要一致。行为验收基于自动化回归，未操作生产用户公告已读记录；业务/公告摘要、计算配置及其他服务容器身份不变。仅切换YiJian前端，不恢复数据库，未push GitHub。
+
 ## 1. 新对话先读
 
 本机工作区为 `D:\WSL\Github\SchemaBio`，包括 YiJian（用户前端）、Squid（认证、组织、计费、云计算网关）、Octopus（样本、任务与结果）、Cuttlefish（管理控制台）、SepiLens（AI 引擎服务）、Sepiida（节点 Agent/进度服务）和 Schema_CPU（工作流及计算镜像）。
