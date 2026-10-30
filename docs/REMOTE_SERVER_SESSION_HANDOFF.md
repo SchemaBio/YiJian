@@ -16,6 +16,12 @@
 
 本次保护目录 `/home/ubuntu/schema/backups/announcement-reads-20261030T021208Z` 保存源码归档及摘要、原部署配置、旧镜像回退标签、构建/测试日志、result和verification。本地12项公告回归与类型检查通过，远端29项公告/协议/登录/充值回归、类型检查及生产构建通过；容器healthy、重启0，公网脚本与镜像中包含已读修复的静态资源摘要一致。行为验收基于自动化回归，未操作生产用户公告已读记录；业务/公告摘要、计算配置及其他服务容器身份不变。仅切换YiJian前端，不恢复数据库，未push GitHub。
 
+**2026-10-30 注册优化最新增量部署：Squid `60f6f5ac67f930abaf5b9596c4d9e5702e28cf6c`、Octopus `b74c2e90e9f1df5761fd35cee4d07ca80d1ebeed`、YiJian `a27a734abf78703e4afdf366359dc8893f8d3460`，三服务统一镜像标签 `registration-optional-20261030t050735z`，替代各自此前运行版本。注册增加密码确认；姓名、机构名称及机构标识选填，空字段由后端生成默认显示名/工作区和唯一组织标识；仍保留验证码、邮箱验证、待审核与租户隔离。补齐注册页验证码组件渲染；自部署Octopus支持省略姓名。**
+
+保护目录 `/home/ubuntu/schema/backups/registration-optional-20261030T050735Z` 保存两业务库dump（Squid278084字节、Octopus98337922字节）、原部署配置/密钥保护副本、旧镜像回退标签、三仓库精确归档/摘要、构建/测试日志、本机隔离PostgreSQL注册测试证据、result和verification。按Squid→Octopus→YiJian切换，三服务healthy、重启0；远端44项前端回归、类型检查及生产构建通过，两个后端Linux镜像构建通过。本地18项前端回归、Squid注册handler及实际隔离PostgreSQL注册全组、Octopus选填姓名绑定验证通过，临时数据库容器已清理。
+
+独立源站及四种语言参数公网注册页核对必填/选填属性、登录接口及精确镜像提交成功；不以公网请求创建测试账户或发送邮件。业务/公告摘要和计算有效/applied配置保持，未切换服务容器身份保持；收款及下载防护设置未改，待计算配置保护继续保留。回退只切换镜像，不恢复业务库或改历史账务。三个功能提交及本交接记录已本地提交，未push GitHub。
+
 ## 1. 新对话先读
 
 本机工作区为 `D:\WSL\Github\SchemaBio`，包括 YiJian（用户前端）、Squid（认证、组织、计费、云计算网关）、Octopus（样本、任务与结果）、Cuttlefish（管理控制台）、SepiLens（AI 引擎服务）、Sepiida（节点 Agent/进度服务）和 Schema_CPU（工作流及计算镜像）。
