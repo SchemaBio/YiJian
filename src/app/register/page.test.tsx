@@ -20,6 +20,8 @@ function fill(password = 'Test-password-42', confirmation = password) {
   fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: ' User@Example.org ' } });
   fireEvent.change(screen.getByLabelText(/^密码/), { target: { value: password } });
   fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: confirmation } });
+  const consent = screen.getByRole('checkbox');
+  if (!(consent as HTMLInputElement).checked) fireEvent.click(consent);
 }
 function submit() { fireEvent.submit(document.querySelector('form')!); }
 it('requires a second password and blocks mismatches before hashing or sending a request', async () => {
@@ -61,4 +63,46 @@ it('supports optional names and password confirmation in self-hosted mode withou
 it('blocks mixed-version SaaS signup until the server advertises manual review',()=>{
  state.mode=undefined;render(<RegisterPage/>);fill();fireEvent.click(screen.getByRole('button',{name:'Complete verification'}));submit();
  expect(screen.getByRole('button',{name:'注册'})).toBeDisabled();expect(state.post).not.toHaveBeenCalled();
+});
+
+
+it('keeps visible field labels after entry and rechecks confirmation when either password changes', () => {
+  render(<RegisterPage />); fill();
+  for (const id of ['register-email', 'register-password', 'register-confirm-password', 'register-name', 'register-org-name', 'register-org-slug']) {
+    const label = document.querySelector(`label[for="${id}"]`);
+    expect(label).toBeVisible();
+    expect(label?.textContent?.trim()).not.toBe('');
+  }
+  const confirmation = screen.getByLabelText('确认密码');
+  expect(confirmation).toBeRequired();
+  fireEvent.blur(confirmation);
+  expect(confirmation).toHaveAttribute('aria-invalid', 'false');
+  fireEvent.change(screen.getByLabelText(/^密码/), { target: { value: 'Changed-password-42' } });
+  expect(confirmation).toHaveAttribute('aria-invalid', 'true');
+  expect(confirmation).toHaveAccessibleDescription('两次输入的密码不一致');
+  fireEvent.change(confirmation, { target: { value: 'Changed-password-42' } });
+  expect(confirmation).toHaveAttribute('aria-invalid', 'false');
+  expect(document.getElementById('register-confirm-password-error')).not.toBeInTheDocument();
+  fireEvent.change(confirmation, { target: { value: '' } });
+  expect(confirmation).toHaveAttribute('aria-invalid', 'true');
+  expect(confirmation).toHaveAccessibleDescription('请填写所有必填字段');
+  expect(state.post).not.toHaveBeenCalled();
+});
+
+
+it('requires explicit agreement and links to the existing unified agreement without split terms', () => {
+  render(<RegisterPage />);
+  const consent = screen.getByRole('checkbox');
+  expect(consent).not.toBeChecked(); expect(consent).toBeRequired();
+  expect(screen.getByRole('link', { name: '《隐私政策》' })).toHaveAttribute('href', '/privacy?lang=zh-CN');
+  expect(screen.getByRole('link', { name: '《使用协议》' })).toHaveAttribute('href', expect.stringMatching(/^\/agreement\?lang=zh-CN&version=/));
+  expect(document.querySelector('a[href^="/terms"]')).toBeNull();
+  expect(document.querySelector('a[href^="/refund"]')).toBeNull();
+  fill(); fireEvent.click(screen.getByRole('button', { name: 'Complete verification' }));
+  fireEvent.click(consent);
+  expect(screen.getByRole('button', { name: '注册' })).toBeDisabled();
+  submit(); expect(state.hash).not.toHaveBeenCalled(); expect(state.post).not.toHaveBeenCalled();
+  expect(screen.getByRole('alert')).toHaveTextContent('请阅读并了解隐私政策，并同意使用协议');
+  fireEvent.click(consent);
+  expect(screen.getByRole('button', { name: '注册' })).toBeEnabled();
 });

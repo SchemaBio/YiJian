@@ -1,5 +1,5 @@
 'use client';
-import { ServicePolicyLinks } from '@/components/shared/ServicePolicyDocument';
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
 import { useText } from '@/i18n/useText';
 import { errorText } from '@/i18n/errors';
 
@@ -33,6 +33,12 @@ export default function RegisterPage() {
     orgName: '',
     orgSlug: '',
   });
+  const [confirmationTouched, setConfirmationTouched] = React.useState(false);
+  const confirmationError = confirmationTouched
+    ? !form.confirmPassword ? t('auth.completeAllRequiredFields61d4e1')
+      : form.password !== form.confirmPassword ? t('auth.registrationPasswordsMismatch') : ''
+    : '';
+  const [agreePolicies, setAgreePolicies] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const backendFlavor = getRuntimeBackendFlavor();
@@ -49,6 +55,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setConfirmationTouched(true);
 
     const email = form.email.trim().toLowerCase();
     const password = form.password;
@@ -75,6 +82,8 @@ export default function RegisterPage() {
       setError(t("auth.organizationSlugMustBeLowercaseLettersDigitsdff5c0"));
       return;
     }
+
+    if (!agreePolicies) { setError(t('auth.acknowledgePrivacyAndAgreeToTerms')); return; }
 
     if (isSaaS && (!registrationConfig?.enabled || registrationConfig.review_mode !== 'manual' || !challenge)) { setError(t('registration.unavailable')); return; }
     setLoading(true);
@@ -135,6 +144,8 @@ export default function RegisterPage() {
             </div>
           )}
 
+          <div className="space-y-2">
+            <label htmlFor="register-email" className="block text-sm font-medium text-[var(--yj-text-strong)]">{t("settings.email9ed627")} <span aria-hidden="true" className="text-danger-fg">*</span></label>
           <Input
             id="register-email"
             aria-label={t("settings.email9ed627")}
@@ -147,7 +158,10 @@ export default function RegisterPage() {
             autoComplete="email"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+          </div>
 
+          <div className="space-y-2">
+            <label htmlFor="register-password" className="block text-sm font-medium text-[var(--yj-text-strong)]">{t("auth.passwordAtLeastCharacters692b63")} <span aria-hidden="true" className="text-danger-fg">*</span></label>
           <Input
             id="register-password"
             aria-label={t("auth.passwordAtLeastCharacters692b63")}
@@ -160,12 +174,19 @@ export default function RegisterPage() {
             autoComplete="new-password"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+          </div>
 
+          <div className="space-y-2">
+            <label htmlFor="register-confirm-password" className="block text-sm font-medium text-[var(--yj-text-strong)]">{t('auth.registrationConfirmPassword')} <span aria-hidden="true" className="text-danger-fg">*</span></label>
           <Input
             id="register-confirm-password"
             aria-label={t('auth.registrationConfirmPassword')}
             type="password"
             required
+            aria-required="true"
+            aria-invalid={!!confirmationError}
+            aria-describedby={confirmationError ? "register-confirm-password-error" : undefined}
+            onBlur={() => setConfirmationTouched(true)}
             minLength={8}
             value={form.confirmPassword}
             onChange={(e) => handleChange('confirmPassword', e.target.value)}
@@ -173,7 +194,11 @@ export default function RegisterPage() {
             autoComplete="new-password"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+            {confirmationError && <p id="register-confirm-password-error" className="text-sm text-danger-fg" aria-live="polite">{confirmationError}</p>}
+          </div>
 
+          <div className="space-y-2">
+            <label htmlFor="register-name" className="block text-sm font-medium text-[var(--yj-text-strong)]">{t('auth.registrationNameOptional')}</label>
           <Input
             id="register-name"
             aria-label={t('auth.registrationNameOptional')}
@@ -184,7 +209,10 @@ export default function RegisterPage() {
             autoComplete="name"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+          </div>
 
+          <div className="space-y-2">
+            <label htmlFor="register-org-name" className="block text-sm font-medium text-[var(--yj-text-strong)]">{t("auth.teamOrganizationNameOptionalfc3dfe")}</label>
           <Input
             id="register-org-name"
             aria-label={t("auth.teamOrganizationNameOptionalfc3dfe")}
@@ -195,7 +223,10 @@ export default function RegisterPage() {
             autoComplete="organization"
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+          </div>
 
+          <div className="space-y-2">
+            <label htmlFor="register-org-slug" className="block text-sm font-medium text-[var(--yj-text-strong)]">{t("auth.organizationSlugOptional2da1c3")}</label>
           <Input
             id="register-org-slug"
             aria-label={t("auth.organizationSlugOptional2da1c3")}
@@ -205,14 +236,26 @@ export default function RegisterPage() {
             placeholder={t("auth.organizationSlugOptional2da1c3")}
             className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
           />
+          </div>
 
-          {isSaaS && (registrationConfig?.enabled ? <RegistrationChallenge siteKey={registrationConfig.site_key} action="registration" generation={generation} onToken={setChallenge} /> : <p role="status" className="text-sm text-fg-muted">{t('registration.unavailable')}</p>)}
+          {isSaaS && (registrationConfig?.enabled ? <RegistrationChallenge siteKey={registrationConfig.site_key} action="registration" generation={generation} onToken={setChallenge} /> : <p role="status" className="text-sm text-fg-muted">{t(registrationConfig ? 'registration.unavailable' : 'registration.loading')}</p>)}
+
+          <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border-default bg-canvas-subtle p-3">
+            <input type="checkbox" required checked={agreePolicies} onChange={e => setAgreePolicies(e.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-border-default text-success-emphasis focus:ring-success-emphasis" />
+            <span className="text-sm leading-6 text-[var(--yj-text-muted)]">
+              {t('auth.iHaveReadAndUnderstood1d26a6')}{' '}
+              <Link href={`/privacy?lang=${t.locale}`} target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">{t('auth.privacyPolicya09ce1')}</Link>{' '}
+              {t('auth.andAgreeToUserAgreement')}{' '}
+              <Link href={`/agreement?lang=${t.locale}&version=${USER_AGREEMENT_VERSION}`} target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">{t('auth.userAgreement')}</Link>
+            </span>
+          </label>
 
           <Button loading={loading} loadingLabel={t("auth.registeringed5c1a")}
             type="submit"
             variant="primary"
             className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
-            disabled={loading || (isSaaS && (!registrationConfig?.enabled || registrationConfig.review_mode !== 'manual' || !challenge))}
+            disabled={loading || !agreePolicies || (isSaaS && (!registrationConfig?.enabled || registrationConfig.review_mode !== 'manual' || !challenge))}
             leftIcon={loading ? undefined : <UserPlus className="w-4 h-4" />}
           >
             {t("auth.registerda0e5f")}</Button>
@@ -223,7 +266,6 @@ export default function RegisterPage() {
               {t("auth.signIn21f1e8")}</Link>
           </p>
         </form>
-        <div className="mt-6"><ServicePolicyLinks /></div>
       </div>
     </div>
   );
