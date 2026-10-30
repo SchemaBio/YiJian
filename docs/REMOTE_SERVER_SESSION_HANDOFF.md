@@ -2,6 +2,7 @@
 
 核对日期：**2026-10-30，Asia/Shanghai**。本文替代此前 2026-10-08 的版本。
 主机、服务和仓库状态均已重新只读核实；新对话开始时仍需核对现场状态。
+**最新注册链路以第59节为准：三端已部署人工审核与Resend通知；公开注册仍待Turnstile和可信入口配置，邮件Token由管理员在Cuttlefish填写。**
 本文只记录凭据位置和使用方式，不保存私钥、密码、令牌、完整 DSN 或签名链接。
 
 **最新完整仓库部署以第 58 节为准：Squid / Octopus / Cuttlefish / YiJian及官网已部署，标签 `latest-repositories-20261029t153312z`；使用协议及支付安全设置已包含。正式收款与下载防护保持关闭，待应用计算配置保留一项。第 41 节为此前支付发布记录：Squid / Cuttlefish / YiJian 已部署 Stripe 接入代码，test/live 收款均关闭，Stripe 测试凭据和真实测试卡闭环验收待完成。服务器仍有待应用计算配置，支付发布以显式 preserve-applied 选项保留当前运行配置。以下 2026-10-27 镜像记录为历史状态。**
@@ -792,3 +793,16 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 本机YiJian56项、Cuttlefish45项相关回归及类型检查通过；一次性隔离PostgreSQL18实际执行Squid支付/风控/准入/政策/公告service、handler、router回归，未跳过数据库验证；容器及匿名卷已清理。服务器两前端同组回归、类型检查及生产构建通过，Squid/Octopus Linux镜像构建通过。不声称既有CVM全量套件问题已解决，没有真实Stripe、AI、计算或云销毁操作。
 - 独立核对四业务healthy、重启0，官网healthy；全部业务/公告摘要及计算有效/applied快照保持，待计算配置仍1项，preserve-applied继续开启。支付和下载防护保持关闭，真实Stripe测试卡/签名回调及COS/CLS验收仍待完成。支付只增量迁移准入/账户检查/预算/风险表及订单字段，没有恢复数据库。
 - 保护目录 `/home/ubuntu/schema/backups/latest-repositories-20261029T153312Z` 含两业务库dump（Squid262817字节、Octopus98337922字节）、部署配置及密钥副本、旧镜像标签、精确提交归档与摘要、构建/回归日志、官网首次失败和恢复记录、result.json、website-result.json、all-result.json及verification.json。官网编排位于 `/opt/dpanel/dpanel/compose/schema-website-20260828/docker-compose.yaml`，仅更新镜像引用，运行环境/网络/9339端口保持。回退只切换镜像且须保留在途支付处理及组织过滤能力，不恢复旧库。
+
+
+## 59. 2026-10-30 人工注册审核与Resend通知部署
+
+- 已部署Squid `52566b3`、Cuttlefish `2878651`、YiJian `c32b7b6`，统一镜像标签 `manual-review-20261030t061831z`。注册直接进入人工待审核，不发验证码或验证邮件；通过后立即启用账号/组织并排队通过通知，拒绝不发邮件。姓名/机构选填、二次密码确认、Turnstile、限流及示例发放事务保持。未验证的历史申请可审批，但不伪造verified_at。
+- Cuttlefish注册审核页新增“注册通知邮件”：默认SchemaBio / no-reply@schema-bio.com / support@schema-bio.com，可配置Resend只写Token、显式清除、测试邮件（仅当前管理员邮箱）和通过通知重试。Squid加密保存配置及版本；发送在事务外，租约、固定请求幂等键、每日限额和有界重试生效。Resend接受不等于送达，未知结果不盲目换键补发。
+- 增量迁移取消历史未发验证/拒绝通知、撤销验证token，历史未发通过通知仅标记人工处理；不自动批准，不修改密码，不集中补发邮件。旧verify/resend接口410，旧verify-email页仅显示流程更新并清除URL token。找回密码及Octopus自部署注册未调整。
+- 现场确认此前没有邮件主密钥、通知origin、Turnstile和注册入口配置。首次建立保护文件 `/home/ubuntu/schema/saas-deploy/secrets/registration/mail-master.key`（base64的32字节主密钥，UID1000、0400），只读挂载 `/run/secrets/registration_mail_key`；以后必须保留、备份，禁止重新生成覆盖。Squid设置固定通知origin为https://yijian.schema-bio.com，新增Turnstile/入口的空配置映射。既有业务密钥、网关和Cloudflare规则未更改。
+- **当前公开注册仍关闭**：Turnstile site/secret和可信入口尚未配置；不能绕过这些条件开放注册。邮件主密钥就绪，可在Cuttlefish填写Resend Token；发件域名还需在Resend验证。Token当前未配置，无真实邮件发送、生产注册或人工审批验收。注册与邮件就绪状态已分离，邮件配置缺失不再是注册开关条件。
+- 发布目录 `/home/ubuntu/schema/backups/manual-review-20261030T061831Z` 保存两业务库dump、原env/Compose/nginx/override与secrets副本、新邮件主密钥保护副本、三仓库精确归档/摘要、原镜像标签、构建/测试日志、本地数据库证据、result与verification。构建前暂存暂停状态，完成后恢复原值；切换顺序Squid→Cuttlefish→YiJian，三个容器healthy、重启0，其他容器身份及业务/公告摘要、计算有效/applied快照保持。
+- 本机YiJian26项、Cuttlefish21项相关回归、类型检查及两个生产构建通过；隔离PostgreSQL实际执行注册/配置/队列/迁移/原子审计和示例发放回归，模拟Resend覆盖HTTP故障、凭据修正、租约恢复、固定正文/版本、重试窗口及每日限额；临时库容器已清理。服务器YiJian52项、Cuttlefish23项、类型检查和生产构建通过，Squid Linux构建通过；独立公网与认证接口、旧验证退役及后台静态资源摘要核对成功。
+- 发布验收脚本先在切换前修正固定英文假设，随后因把本次已退出的临时测试容器纳入并发检查而停止；两次均未切换运行服务。核对生产容器和数据基线未变化后，排除该临时容器并复用已验证镜像完成切换；相关脚本/日志保留，未通过修改产品或恢复数据库掩盖问题。
+- 回退必须保留已生效审批、新任务状态与主密钥；不得恢复旧库，不直接启用会无视新通知状态的旧邮件worker。完整配置、接口和回退说明见Squid `deploy/registration.md`、Cuttlefish `docs/registration-mail.md`。本轮功能及本记录已本地提交，未push GitHub。
