@@ -1,14 +1,14 @@
 import * as React from 'react';
 import {act,fireEvent,render,screen,within,waitFor} from '@testing-library/react';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-const mocks=vi.hoisted(()=>({backend:'squid',orgID:'11111111-1111-4111-8111-111111111111',get:vi.fn()}));
+const mocks=vi.hoisted(()=>({backend:'squid',userID:'test-user',orgID:'11111111-1111-4111-8111-111111111111',get:vi.fn()}));
 vi.mock('@/lib/api',()=>({api:{get:mocks.get}}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mocks.backend}));
-vi.mock('@/components/providers/AuthProvider',()=>({useAuth:()=>({user:{id:'test-user',orgId:mocks.orgID},currentOrg:{id:mocks.orgID}})}));
+vi.mock('@/components/providers/AuthProvider',()=>({useAuth:()=>({user:{id:mocks.userID,orgId:mocks.orgID},currentOrg:{id:mocks.orgID}})}));
 import {AnnouncementsProvider,AnnouncementButton,AnnouncementBanners} from './Announcements';
 const item={id:'notice-1',title:'维护通知',body:'<script>alert(1)</script>\n服务维护说明',starts_at:'2026-10-29T00:00:00Z',ends_at:'2026-10-30T00:00:00Z',banner:true,revision:1};
 const view=()=>render(<AnnouncementsProvider><AnnouncementButton/><AnnouncementBanners/></AnnouncementsProvider>);
-beforeEach(()=>{vi.clearAllMocks();mocks.backend='squid';mocks.orgID='11111111-1111-4111-8111-111111111111';localStorage.clear();mocks.get.mockResolvedValue({items:[item],org_id:mocks.orgID,server_time:new Date().toISOString()});});
+beforeEach(()=>{vi.clearAllMocks();mocks.backend='squid';mocks.userID='test-user';mocks.orgID='11111111-1111-4111-8111-111111111111';localStorage.clear();mocks.get.mockResolvedValue({items:[item],org_id:mocks.orgID,server_time:new Date().toISOString()});});
 afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();});
 it('omits the feature and makes no requests in self-hosted mode',()=>{
  mocks.backend='octopus';view();expect(screen.queryByRole('button',{name:'公告'})).not.toBeInTheDocument();expect(mocks.get).not.toHaveBeenCalled();
@@ -73,4 +73,52 @@ it('opens from a banner at the announcement button and fits a narrow viewport',a
  fireEvent.click(screen.getByRole('button',{name:'关闭公告'}));
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
  expect(screen.getByRole('button',{name:'公告'})).toHaveFocus();
+});
+
+const readKey=()=>`yj:announcement-reads:${mocks.userID}:${mocks.orgID}`;
+const dot=()=>screen.getByRole('button',{name:'公告'}).querySelector('.yj-announcement-dot');
+function activeResponse(revision=1) { return {items:[{...item,revision}],org_id:mocks.orgID,server_time:'2026-10-29T12:00:00Z'}; }
+it('clears the dot after opening full announcements and remembers reads across remounts',async()=>{
+ mocks.get.mockResolvedValue(activeResponse());const mounted=view();
+ await screen.findByLabelText('关闭公告：维护通知');expect(dot()).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'公告'}));
+ await waitFor(()=>expect(dot()).toBeNull());
+ expect(JSON.parse(localStorage.getItem(readKey())!)).toEqual({'notice-1':1});
+ // Reading and closing the banner remain separate choices.
+ expect(screen.getByLabelText('关闭公告：维护通知')).toBeInTheDocument();
+ mounted.unmount();view();await screen.findByLabelText('关闭公告：维护通知');expect(dot()).toBeNull();
+});
+it('shows the dot for edited revisions and marks refreshed content read while the center is open',async()=>{
+ localStorage.setItem(readKey(),JSON.stringify({'notice-1':1}));mocks.get.mockResolvedValue(activeResponse(2));view();
+ await screen.findByLabelText('关闭公告：维护通知');expect(dot()).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'公告'}));await waitFor(()=>expect(dot()).toBeNull());
+ mocks.get.mockResolvedValue(activeResponse(3));
+ fireEvent(document,new Event('visibilitychange'));
+ await waitFor(()=>expect(JSON.parse(localStorage.getItem(readKey())!)).toEqual({'notice-1':3}));
+ expect(dot()).toBeNull();
+});
+it('isolates read records by organization and user',async()=>{
+ mocks.get.mockResolvedValue(activeResponse());const mounted=view();await screen.findByLabelText('关闭公告：维护通知');
+ fireEvent.click(screen.getByRole('button',{name:'公告'}));await waitFor(()=>expect(dot()).toBeNull());
+ mocks.orgID='22222222-2222-4222-8222-222222222222';mocks.get.mockResolvedValue(activeResponse());
+ mounted.rerender(<AnnouncementsProvider><AnnouncementButton/><AnnouncementBanners/></AnnouncementsProvider>);
+ await screen.findByLabelText('关闭公告：维护通知');expect(dot()).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'公告'}));await waitFor(()=>expect(dot()).toBeNull());
+ mocks.userID='another-user';mounted.rerender(<AnnouncementsProvider><AnnouncementButton/><AnnouncementBanners/></AnnouncementsProvider>);
+ await screen.findByLabelText('关闭公告：维护通知');expect(dot()).toBeInTheDocument();
+});
+it('syncs read records from another tab and tolerates malformed storage',async()=>{
+ localStorage.setItem(readKey(),'invalid json');mocks.get.mockResolvedValue(activeResponse());view();
+ await screen.findByLabelText('关闭公告：维护通知');expect(dot()).toBeInTheDocument();
+ localStorage.setItem(readKey(),JSON.stringify({'notice-1':1}));
+ fireEvent(window,new StorageEvent('storage',{key:readKey()}));expect(dot()).toBeNull();
+ localStorage.removeItem(readKey());fireEvent(window,new StorageEvent('storage',{key:readKey()}));expect(dot()).toBeInTheDocument();
+});
+it('marks announcements read from the banner even when browser persistence fails',async()=>{
+ mocks.get.mockResolvedValue(activeResponse());view();await screen.findByLabelText('关闭公告：维护通知');
+ const write=vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new Error('storage unavailable');});
+ try {
+  fireEvent.click(screen.getByRole('button',{name:/维护通知.*查看完整公告/}));
+  await waitFor(()=>expect(dot()).toBeNull());expect(screen.getByRole('dialog')).toBeInTheDocument();
+ } finally {write.mockRestore();}
 });

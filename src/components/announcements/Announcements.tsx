@@ -16,6 +16,7 @@ type AnnouncementsState = {
     reload: () => void;
     dismiss: (item: Announcement) => void;
     dismissed: Record<string, number>;
+    unread: boolean;
 };
 const Context = React.createContext<AnnouncementsState | null>(null);
 export function AnnouncementsProvider({ children }: {
@@ -39,6 +40,23 @@ function SaaSAnnouncements({ children }: {
     const [offset, setOffset] = React.useState(0);
     const [clock, setClock] = React.useState(Date.now());
     const key = 'yj:announcement-dismissals:' + scopeKey;
+    const readKey = 'yj:announcement-reads:' + scopeKey;
+    const [readState, setReadState] = React.useState<{ scope: string; revisions: Record<string, number> }>({ scope: '', revisions: {} });
+    React.useEffect(() => {
+        function read() {
+            let revisions: Record<string, number> = {};
+            try {
+                const value = JSON.parse(localStorage.getItem(readKey) || '{}');
+                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                    revisions = Object.fromEntries(Object.entries(value).filter(([, revision]) => Number.isSafeInteger(revision) && (revision as number) > 0)) as Record<string, number>;
+                }
+            } catch { /* Reading still works when browser storage is unavailable. */ }
+            setReadState({ scope: scopeKey, revisions });
+        }
+        function sync(event: StorageEvent) { if (event.key === readKey || event.key === null) read(); }
+        read(); window.addEventListener('storage', sync);
+        return () => window.removeEventListener('storage', sync);
+    }, [readKey, scopeKey]);
     React.useEffect(() => { function read() { try {
         const value = JSON.parse(localStorage.getItem(key) || '{}');
         setDismissed(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
@@ -47,6 +65,16 @@ function SaaSAnnouncements({ children }: {
         setDismissed({});
     } } read(); window.addEventListener('storage', read); return () => window.removeEventListener('storage', read); }, [key]);
     const active = (loadedScope === scopeKey ? items : []).filter(item => Date.parse(item.starts_at) <= clock + offset && Date.parse(item.ends_at) > clock + offset);
+    const unread = active.some(item => readState.scope !== scopeKey || readState.revisions[item.id] !== item.revision);
+    React.useEffect(() => {
+        if (!open || loading || failed || loadedScope !== scopeKey || readState.scope !== scopeKey || !unread) return;
+        // The center displays full announcement bodies, including revisions fetched while open.
+        const revisions = { ...readState.revisions };
+        for (const item of active) revisions[item.id] = item.revision;
+        try { localStorage.setItem(readKey, JSON.stringify(revisions)); }
+        catch { /* Keep this visit read even when persistence is unavailable. */ }
+        setReadState({ scope: scopeKey, revisions });
+    }, [open, loading, failed, loadedScope, scopeKey, readState, unread, items, clock, offset, readKey]);
     const abort = React.useRef<AbortController | null>(null);
     const generation = React.useRef(0);
     const reload = React.useCallback(async () => { const version = ++generation.current; abort.current?.abort(); const controller = new AbortController(); abort.current = controller; try {
@@ -77,7 +105,7 @@ function SaaSAnnouncements({ children }: {
         localStorage.setItem(key, JSON.stringify(retained));
     }
     catch { /* Closing remains effective when storage is unavailable. */ } return retained; }); }
-    return <Context.Provider value={{ items: active, loading, failed, open: open && loadedScope === scopeKey, setOpen, reload: () => void reload(), dismiss, dismissed }}>{children}</Context.Provider>;
+    return <Context.Provider value={{ items: active, loading, failed, open: open && loadedScope === scopeKey, setOpen, reload: () => void reload(), dismiss, dismissed, unread }}>{children}</Context.Provider>;
 }
 export function AnnouncementButton() {
   const state = React.useContext(Context);
@@ -124,7 +152,7 @@ export function AnnouncementButton() {
   if (!state) return null;
   return <>
     <button ref={trigger} type="button" className="yj-announcement-trigger" data-state={open ? 'open' : 'closed'} aria-label={t('announcements.title')} title={t('announcements.title')} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelID : undefined} onClick={() => { state.setOpen(!open); if (!open) state.reload(); }}>
-      <Bell className="h-5 w-5" aria-hidden="true"/>{state.items.length > 0 && <span className="yj-announcement-dot" aria-hidden="true"/>}
+      <Bell className="h-5 w-5" aria-hidden="true"/>{state.unread && <span className="yj-announcement-dot" aria-hidden="true"/>}
     </button>
     {open && createPortal(<div ref={panel} id={panelID} role="dialog" tabIndex={-1} style={placement} className="yj-announcement-popover" aria-label={t('announcements.title')}>
       <div className="yj-announcement-popover-heading"><h2><Bell size={17} aria-hidden="true"/>{t('announcements.title')}</h2><button type="button" className="yj-announcement-popover-close" aria-label={t('common.closea1f5fe', { p0: t('announcements.title') })} onClick={() => { state.setOpen(false); trigger.current?.focus(); }}><X size={17} aria-hidden="true"/></button></div>
