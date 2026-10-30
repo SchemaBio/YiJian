@@ -24,6 +24,8 @@ export function UserAgreementDocument({ locale, version, purchaseVersion, initia
   const { isAuthenticated, isLoading } = useAuth();
   const supported = (!version || version === USER_AGREEMENT_VERSION) && (!purchaseVersion || purchaseVersion === SERVICE_POLICY_VERSION);
   const [policy, setPolicy] = useState(initialPolicy ?? null);
+  const operator = policy?.operator?.trim() || 'SchemaBio';
+  const contact = policy?.contact?.trim() || 'support@schema-bio.com';
   useEffect(() => {
     if (!supported || getRuntimeBackendFlavor() !== 'squid') return;
     let active = true;
@@ -65,7 +67,7 @@ export function UserAgreementDocument({ locale, version, purchaseVersion, initia
           </section>)}
           <section id="contact" className="scroll-mt-6">
             <h2 className="mb-3 text-base font-semibold text-fg-default">{c.operator}</h2>
-            <div className="space-y-3 pl-0 text-sm leading-relaxed text-fg-muted md:pl-6">{policy?.configured ? <><p>{policy.operator}</p><p>{policy.address}</p><a className="break-all text-accent-fg underline" href={`mailto:${policy.contact}`}>{policy.contact}</a></> : <p role="status">{c.missing}</p>}</div>
+            <div className="space-y-3 pl-0 text-sm leading-relaxed text-fg-muted md:pl-6"><p>{operator}</p>{policy?.address && <p>{policy.address}</p>}<a className="break-all text-accent-fg underline" href={`mailto:${contact}`}>{contact}</a></div>
           </section>
         </article>
       </> : <div className="yj-panel yj-legal-card"><p className="break-all text-sm text-fg-muted">{version && version!==USER_AGREEMENT_VERSION ? version : purchaseVersion}</p></div>}
