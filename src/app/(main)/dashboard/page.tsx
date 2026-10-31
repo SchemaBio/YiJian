@@ -1,4 +1,5 @@
 'use client';
+import { TaskProgressCell } from '@/components/shared/TaskProgressCell';
 import { useText } from '@/i18n/useText';
 import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
 
@@ -230,16 +231,7 @@ function DashboardPageContent() {
                     <span aria-hidden="true" />{translateUI(taskStatusConfig[taskDisplayStatus(task)].label, t)}
                   </span>
                   <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
-                    {task.status === 'running' && (
-                      typeof task.progress === 'number' && Number.isFinite(task.progress) ? (
-                        <>
-                          <span className="w-8 text-right text-xs font-medium tabular-nums text-fg-default">{Math.min(100, Math.max(0, task.progress))}%</span>
-                          <div role="progressbar" aria-label={t("common.taskProgress042f14")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.max(0, task.progress))} className="h-1.5 w-[92px] overflow-hidden rounded-full bg-canvas-inset">
-                            <div className="h-full rounded-full bg-accent-emphasis" style={{ width: `${Math.min(100, Math.max(0, task.progress))}%` }} />
-                          </div>
-                        </>
-                      ) : <span className="text-xs text-fg-muted">{t("common.progressUnavailableb7105e")}</span>
-                    )}
+                    <TaskProgressCell task={task} />
                   </div>
                 </Link>
               ))}

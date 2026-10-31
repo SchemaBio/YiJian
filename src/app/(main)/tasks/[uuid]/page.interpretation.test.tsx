@@ -11,6 +11,7 @@ vi.mock('@/components/layout', () => ({ PageContent: ({ children }: { children: 
 vi.mock('./result-api', () => ({ getResultContext: vi.fn().mockResolvedValue({ state: 'ready', reference: {} }) }));
 vi.mock('./hooks/useTabState', () => ({ useTabState: () => ({ activeTab: 'overview', hasExplicitTab: true, setActiveTab: vi.fn() }) }));
 vi.mock('./components/AssessmentStatusBar', () => ({ AssessmentStatusBar: () => null }));
+vi.mock('./components/TaskRuntimeTab', () => ({ TaskRuntimeTab: ({ taskId }: { taskId: string }) => <section aria-label="任务运行进度">{taskId}</section> }));
 vi.mock('./components', () => ({
   TaskHeader: ({ completionControl }: { completionControl: React.ReactNode }) => <header>{completionControl}</header>,
   ResultTabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -25,6 +26,14 @@ describe('task interpretation completion control', () => {
     vi.mocked(tasksApi.get).mockReset().mockResolvedValue(openTask as never);
     vi.mocked(tasksApi.getSample).mockResolvedValue(null as never);
     vi.mocked(tasksApi.setInterpretationCompleted).mockReset();
+  });
+
+  it('opens the runtime progress view for queued tasks instead of interpretation results', async () => {
+    vi.mocked(tasksApi.get).mockResolvedValue({ ...openTask, status: 'queued', executionPhase: 'bootstrapping' } as never);
+    render(<Page />);
+    expect(await screen.findByRole('region', { name: '任务运行进度' })).toHaveTextContent('task');
+    expect(screen.queryByRole('button', { name: '修改判读' })).toBeNull();
+    expect(tasksApi.getSample).not.toHaveBeenCalled();
   });
 
   it('finishes and reopens with the current attempt and restores editing', async () => {

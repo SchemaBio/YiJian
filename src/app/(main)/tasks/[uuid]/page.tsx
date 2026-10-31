@@ -14,6 +14,7 @@ import { InterpretationReadOnlyContext } from './components/InterpretationLock';
 import { useParams, useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
 import { tasksApi } from '@/lib/tasks';
+import { TaskRuntimeTab } from './components/TaskRuntimeTab';
 import {AssessmentStatusBar} from './components/AssessmentStatusBar';
 import { useTabState } from './hooks/useTabState';
 import { getResultContext, clearTaskRowSnapshots } from './result-api';
@@ -93,11 +94,9 @@ export default function AnalysisDetailPage() {
       try {
         const taskData = await tasksApi.get(uuid);
         if (controller.signal.aborted) return;
-        if (!canInterpretTask(taskData) && !isTaskResultPreparing(taskData) && !isTaskResultImportFailed(taskData)) {
-          setNotFound(true); setTask(null); setSample(null); setResultContext(null);
-          return;
+        if (!['completed', 'pending_interpretation'].includes(taskData.status) || !canInterpretTask(taskData)) {
+          setTask(taskData); setSample(null); setResultContext(null); return;
         }
-        if (isTaskResultPreparing(taskData) || isTaskResultImportFailed(taskData)) { setTask(taskData); setSample(null); setResultContext(null); return; }
         const [sampleData, contextData] = await Promise.all([
           tasksApi.getSample(uuid).catch(() => null),
 			getResultContext(uuid, controller.signal).catch(cause => {
@@ -122,7 +121,7 @@ export default function AnalysisDetailPage() {
   }, [uuid]);
 
 	React.useEffect(() => {
-		if (loading || !task || !canInterpretTask(task)) return;
+		if (loading || !task || !['completed', 'pending_interpretation'].includes(task.status) || !canInterpretTask(task)) return;
 		let disposed = false;
 		let requestInFlight = false;
 		const refreshContext = async () => {
@@ -212,14 +211,14 @@ export default function AnalysisDetailPage() {
 
   React.useEffect(()=>{if(task?.template==='vcf2anno' && !['overview','snv-indel','files'].includes(activeTab))setActiveTab('snv-indel');},[task?.template,activeTab,setActiveTab]);
   React.useEffect(() => {
-    if (!task || (!isTaskResultPreparing(task) && !isTaskResultImportFailed(task))) return;
+    if (!task || (!['waiting_for_data', 'queued', 'running'].includes(task.status) && !isTaskResultPreparing(task) && !isTaskResultImportFailed(task))) return;
     let disposed = false, pending = false;
     const timer = window.setInterval(async () => {
       if (pending) return; pending = true;
       try {
         const next = await tasksApi.get(uuid);
         if (disposed) return;
-        if (canInterpretTask(next)) {
+        if (['completed', 'pending_interpretation'].includes(next.status) && canInterpretTask(next)) {
           const [sampleData, contextData] = await Promise.all([tasksApi.getSample(uuid).catch(() => null), getResultContext(uuid)]);
           if (disposed) return;
           setSample(sampleData); setResultContext(contextData);
@@ -229,7 +228,7 @@ export default function AnalysisDetailPage() {
       finally { pending = false; }
     }, 5000);
     return () => { disposed = true; window.clearInterval(timer); };
-  }, [uuid, task?.resultImportStatus]);
+  }, [uuid, task?.status, task?.resultImportStatus]);
   // 404页面
   if (notFound) {
     return (
@@ -262,7 +261,10 @@ export default function AnalysisDetailPage() {
     return null;
   }
 
-  if (isTaskResultPreparing(task) || isTaskResultImportFailed(task)) return <PageContent><div role={isTaskResultImportFailed(task) ? 'alert' : 'status'} className="mx-auto max-w-xl space-y-4 py-16 text-center"><h2 className={`text-xl font-semibold ${isTaskResultImportFailed(task) ? 'text-danger-fg' : ''}`}>{t(isTaskResultImportFailed(task) ? 'tasks.resultImportFailed81188a' : 'uploadExperience.resultsPreparing')}</h2><p className="text-fg-muted">{t(isTaskResultImportFailed(task) ? 'tasks.archivedResultsAreNotFullyImportedRetryb18849' : 'uploadExperience.resultsPreparingDetail')}</p><button type="button" className="text-accent-fg hover:underline" onClick={handleBack}>{t('tasks.backToTaskListcd3b22')}</button></div></PageContent>;
+  if (!['completed', 'pending_interpretation'].includes(task.status) || !canInterpretTask(task)) return <PageContent>
+    <TaskHeader task={task} onBack={handleBack} />
+    <TaskRuntimeTab taskId={uuid} initialStatus={task.status} onResultImportChange={async () => { setTask(await tasksApi.get(uuid)); }} />
+  </PageContent>;
 
   // 渲染当前标签页内容
   const renderTabContent = () => {

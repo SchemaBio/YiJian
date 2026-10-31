@@ -22,10 +22,11 @@ export function taskOverallProgress(task: Partial<TaskProgressResponse>) {
     || task.result_import_status === 'failed';
   const raw = task.analysis_progress?.percent ?? task.progress ?? 0;
   const analysis = Number.isFinite(raw) ? Math.min(98, Math.max(0, raw)) : 0;
-  const workflowDone = ['completed', 'succeeded', 'success'].includes(status);
+  const workflowDone = ['completed', 'succeeded', 'success', 'pending_interpretation'].includes(status);
   // New tasks already have import status "pending" before any analysis starts.
-  const importPending = ['running', 'failed'].includes(task.result_import_status ?? '')
-    || (workflowDone && ['pending', 'queued'].includes(task.result_import_status ?? ''));
+  const importPending = !['baseline_fix', 'germline_baseline_fix'].includes(task.template ?? '')
+    && (['running', 'failed'].includes(task.result_import_status ?? '')
+      || (workflowDone && ['pending', 'queued'].includes(task.result_import_status ?? '')));
   const completed = workflowDone && !importPending;
   let percent = 0, step = 0, detail = status === 'waiting_for_data' ? 'waitingData' : 'queue';
 

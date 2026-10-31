@@ -39,6 +39,14 @@ function taskList(items: AnalysisTask[]) {
   return { items, total: items.length, page: 1, page_size: 6, total_pages: 1 };
 }
 
+it('shows reported initialization progress on the dashboard before analysis starts', async () => {
+  availableStats();
+  vi.mocked(tasksApi.list).mockResolvedValue(taskList([{ ...task('initializing', 'queued'), progress: 0, executionPhase: 'bootstrapping', bootstrapPhase: 'references', resultImportStatus: 'pending' }]));
+  render(<DashboardPage />);
+  expect(await screen.findByRole('progressbar', { name: '任务总进度' })).toHaveAttribute('aria-valuenow', '14');
+  expect(screen.getByText('正在准备参考数据')).toBeVisible();
+});
+
 it('does not turn unavailable dashboard data into zero-count hints or an empty task list', async () => {
   vi.mocked(api.get).mockRejectedValue(new Error('stats unavailable'));
   vi.mocked(tasksApi.list).mockRejectedValue(new Error('tasks unavailable'));
