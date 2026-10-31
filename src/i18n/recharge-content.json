@@ -1,0 +1,42 @@
+{
+  "zh-CN": {
+    "timeTitle": "项目分析时间参考",
+    "estimateBadge": "预估",
+    "duration": "约 {minutes} 分钟",
+    "singleExome": "单个外显子分析",
+    "familyExome": "父母子家系分析",
+    "baseline": "单样本基线校对",
+    "timeNote": "以上时间均为预估，仅供参考，不代表完成时限。实际耗时会受数据量、排队情况、计算资源和分析流程影响。",
+    "researchUse": "确认仅用于科研，不用于个人医疗决策。"
+  },
+  "zh-Hant": {
+    "timeTitle": "專案分析時間參考",
+    "estimateBadge": "預估",
+    "duration": "約 {minutes} 分鐘",
+    "singleExome": "單個外顯子分析",
+    "familyExome": "父母子家系分析",
+    "baseline": "單樣本基線校對",
+    "timeNote": "以上時間均為預估，僅供參考，不代表完成時限。實際耗時會受資料量、排隊情況、運算資源和分析流程影響。",
+    "researchUse": "確認僅用於科研，不用於個人醫療決策。"
+  },
+  "en": {
+    "timeTitle": "Estimated analysis times",
+    "estimateBadge": "Estimates",
+    "duration": "About {minutes} minutes",
+    "singleExome": "Single exome analysis",
+    "familyExome": "Parent–child trio analysis",
+    "baseline": "Single-sample baseline calibration",
+    "timeNote": "These times are estimates for reference, not completion guarantees. Actual durations depend on data volume, queue times, computing resources, and the analysis workflow.",
+    "researchUse": "For research use only, not for personal medical decisions."
+  },
+  "es-419": {
+    "timeTitle": "Tiempos estimados de análisis",
+    "estimateBadge": "Estimaciones",
+    "duration": "Aproximadamente {minutes} minutos",
+    "singleExome": "Análisis de un exoma",
+    "familyExome": "Análisis de trío: padres e hijo",
+    "baseline": "Calibración de referencia de una muestra",
+    "timeNote": "Estos tiempos son estimaciones de referencia, no plazos garantizados. La duración real depende del volumen de datos, la espera en cola, los recursos de cómputo y el flujo de análisis.",
+    "researchUse": "Solo para investigación, no para decisiones médicas personales."
+  }
+}

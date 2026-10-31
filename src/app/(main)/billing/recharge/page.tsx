@@ -17,12 +17,15 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { parseCreditQuantity } from '@/lib/payments';
+import rechargeContent from '@/i18n/recharge-content.json';
 import { StripeRechargePanel } from '@/components/shared/StripeRechargePanel';
 
 const PRESET_CREDITS = [100, 500, 1000, 5000];
+const ANALYSIS_TIME_ESTIMATES = [{ key: 'singleExome', minutes: 50 }, { key: 'familyExome', minutes: 100 }, { key: 'baseline', minutes: 15 }] as const;
 
 export default function RechargePage() {
   const t = useText();
+  const copy = rechargeContent[t.locale];
   const router = useRouter();
   const { user, currentOrg } = useAuth();
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
@@ -123,7 +126,13 @@ export default function RechargePage() {
             </div>
           </div>
         </div>
-      </div></div>
+      </div>
+        <section className="mt-6 border-t border-border-default pt-5" aria-labelledby="analysis-time-reference-title">
+          <div className="mb-3 flex flex-wrap items-center gap-2"><Clock3 className="h-4 w-4 text-fg-muted" aria-hidden="true"/><h4 id="analysis-time-reference-title" className="text-sm font-semibold text-fg-default">{copy.timeTitle}</h4><span className="rounded-full border border-border-default px-2 py-0.5 text-xs text-fg-muted">{copy.estimateBadge}</span></div>
+          <dl className="grid gap-3 sm:grid-cols-3">{ANALYSIS_TIME_ESTIMATES.map(item=><div key={item.key} className="min-w-0 rounded-lg border border-border-default p-3"><dt className="text-xs leading-5 text-fg-muted">{copy[item.key]}</dt><dd className="mt-1 text-sm font-semibold tabular-nums text-fg-default">{copy.duration.replace('{minutes}',item.minutes.toLocaleString(t.locale))}</dd></div>)}</dl>
+          <p className="mt-3 text-xs leading-5 text-fg-muted">{copy.timeNote}</p>
+        </section>
+      </div>
     </section>
   );
   const manualRequest = (

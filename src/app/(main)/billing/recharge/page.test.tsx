@@ -52,3 +52,16 @@ it('keeps the manual flow and validates the actual input instead of coercing it'
   }
   expect(screen.queryByRole('button', { name: /Stripe/ })).not.toBeInTheDocument();
 });
+
+it('shows the three reference durations as estimates independently of the selected credit amount', async()=>{
+ render(<RechargePage/>);
+ await waitFor(()=>expect(screen.getByText('当前余额').nextElementSibling).toHaveTextContent('100'));
+ expect(screen.getByRole('heading',{name:'项目分析时间参考'})).toBeInTheDocument();
+ for(const [label,duration] of [['单个外显子分析','约 50 分钟'],['父母子家系分析','约 100 分钟'],['单样本基线校对','约 15 分钟']]){
+  expect(screen.getByText(label).nextElementSibling).toHaveTextContent(duration);
+ }
+ expect(screen.getByText(/以上时间均为预估，仅供参考，不代表完成时限/)).toBeInTheDocument();
+ fireEvent.change(screen.getByRole('spinbutton'),{target:{value:'1000'}});
+ expect(screen.getByText('单个外显子分析').nextElementSibling).toHaveTextContent('约 50 分钟');
+ expect(screen.getByText(/实际耗时会受数据量、排队情况、计算资源和分析流程影响/)).toBeInTheDocument();
+});

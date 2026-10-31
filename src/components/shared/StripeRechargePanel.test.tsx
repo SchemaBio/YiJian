@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { StripeRechargePanel } from './StripeRechargePanel';
 import { createCheckoutSession, getPaymentOptions, getPaymentOrders, getPaymentOrder } from '@/lib/payments';
 import { ApiError } from '@/lib/api';
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
 import { getServicePolicy, SERVICE_POLICY_VERSION } from '@/lib/service-policy';
 vi.mock('@/lib/service-policy', async original => ({ ...await original<typeof import('@/lib/service-policy')>(), getServicePolicy: vi.fn().mockResolvedValue({version:'research-service-2026-10-29-v1',configured:true}) }));
 vi.mock('@/lib/payments', async original => ({ ...await original<typeof import('@/lib/payments')>(), createCheckoutSession: vi.fn(), getPaymentOptions: vi.fn(), getPaymentOrders: vi.fn(), getPaymentOrder: vi.fn() }));
@@ -57,4 +58,19 @@ it('requires fresh confirmation after a server policy-version rejection', async 
  expect(screen.getByRole('checkbox')).not.toBeChecked();
  expect(screen.getByRole('button',{name:'测试支付'})).toBeDisabled();
  expect(getServicePolicy).toHaveBeenCalledTimes(2);
+});
+
+it('links consent to the privacy policy and unified agreement without separate service or refund links', async()=>{
+ vi.mocked(getPaymentOptions).mockResolvedValue({provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'usd',unit_amount:100}});
+ render(<StripeRechargePanel quantity={500} orgId="org"/>);
+ const privacy=screen.getByRole('link',{name:'《隐私政策》'});
+ const agreement=screen.getByRole('link',{name:'《使用协议》'});
+ expect(privacy).toHaveAttribute('href','/privacy?lang=zh-CN');
+ expect(agreement).toHaveAttribute('href',`/agreement?lang=zh-CN&version=${USER_AGREEMENT_VERSION}&purchase_version=${SERVICE_POLICY_VERSION}`);
+ for(const link of screen.getAllByRole('link'))expect(link.getAttribute('href')).not.toMatch(/#(?:service|terms|refund)|^\/(?:service|terms|refund)(?:\?|$)/);
+ const consent=screen.getByRole('checkbox');expect(consent).not.toBeChecked();expect(consent).toBeRequired();
+ await waitFor(()=>expect(consent).toBeEnabled());
+ expect(screen.getByRole('button',{name:'测试支付'})).toBeDisabled();
+ expect(screen.getByText('确认仅用于科研，不用于个人医疗决策。')).toBeInTheDocument();
+ expect(createCheckoutSession).not.toHaveBeenCalled();
 });

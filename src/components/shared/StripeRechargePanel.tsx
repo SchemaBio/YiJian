@@ -4,7 +4,9 @@ import { ArrowUpRight, CheckCircle2, Clock3, CreditCard, FileText, ReceiptText, 
 import { ApiError } from '@/lib/api';
 import { getServicePolicy, SERVICE_POLICY_VERSION, type ServicePolicy } from '@/lib/service-policy';
 import policyCopy from '@/i18n/service-policy-v1.json';
-import { ServicePolicyLinks } from './ServicePolicyDocument';
+import Link from 'next/link';
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
+import rechargeContent from '@/i18n/recharge-content.json';
 import { useText } from '@/i18n/useText';
 import { ActionButton as Button } from '@/components/shared/ActionButton';
 import { createCheckoutSession, formatPaymentMoney, getPaymentOptions, getPaymentOrder, getPaymentOrders, type PaymentOptions, type PaymentOrder } from '@/lib/payments';
@@ -104,8 +106,14 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
           </dl>
           <div className="space-y-3 rounded-lg border border-border-default bg-canvas-subtle p-4">
           <p className="text-sm leading-6 text-fg-muted">{c.purpose}</p>
-          <div className="text-sm leading-6 [&>nav]:justify-start [&>nav]:gap-x-4 [&>nav]:gap-y-2"><ServicePolicyLinks /></div>
-          <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-accent-emphasis" checked={accepted} disabled={busy || !policy || policy.version !== SERVICE_POLICY_VERSION} onChange={e => setAccepted(e.target.checked)} />{c.accept}</label>
+          <label className="flex items-start gap-2 text-sm leading-6"><input type="checkbox" required className="mt-1 h-4 w-4 shrink-0 accent-accent-emphasis" checked={accepted} disabled={busy || !policy || policy.version !== SERVICE_POLICY_VERSION} onChange={e => setAccepted(e.target.checked)} />
+            <span>{t('auth.iHaveReadAndUnderstood1d26a6')}{' '}
+              <Link href={`/privacy?lang=${t.locale}`} target="_blank" rel="noopener noreferrer" className="font-medium text-accent-fg underline underline-offset-2">{t('auth.privacyPolicya09ce1')}</Link>{' '}
+              {t('auth.andAgreeToUserAgreement')}{' '}
+              <Link href={`/agreement?lang=${t.locale}&version=${USER_AGREEMENT_VERSION}&purchase_version=${SERVICE_POLICY_VERSION}`} target="_blank" rel="noopener noreferrer" className="font-medium text-accent-fg underline underline-offset-2">{t('auth.userAgreement')}</Link>
+              <span className="mt-1 block text-xs text-fg-muted">{rechargeContent[t.locale].researchUse}</span>
+            </span>
+          </label>
           {policy?.contact && <a className="text-xs underline" href={`mailto:${policy.contact}`}>{policy.contact}</a>}
           </div>
           {loading ? <p className="flex items-center gap-2 text-xs text-fg-muted" role="status"><span className="h-2 w-2 animate-pulse rounded-full bg-fg-muted" />{t('stripePayments.loading')}</p> : available ? <div className="space-y-3">
