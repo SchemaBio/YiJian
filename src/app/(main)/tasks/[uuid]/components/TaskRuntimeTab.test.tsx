@@ -104,7 +104,23 @@ describe('TaskRuntimeTab', () => {
     expect(await screen.findByText(/工作流：SingleWES/)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '计算节点' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sepiida Agent' })).not.toBeInTheDocument();
-    expect(screen.getByText('分析进度')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: '任务总进度' })).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('shows initialization before the workflow starts and updates on reported milestones', async () => {
+    getProgress.mockResolvedValueOnce(progressResponse({
+      status: 'queued', progress: 0, execution_phase: 'bootstrapping', bootstrap_phase: 'references', result_import_status: 'pending',
+    })).mockResolvedValueOnce(progressResponse({
+      status: 'queued', progress: 0, execution_phase: 'bootstrapping', bootstrap_phase: 'downloading', result_import_status: 'pending',
+    }));
+    render(<TaskRuntimeTab taskId="task-1" initialStatus="queued" />);
+    const bar = await screen.findByRole('progressbar', { name: '任务总进度' });
+    expect(bar).toHaveAttribute('aria-valuenow', '14');
+    expect(screen.getByText('正在准备参考数据')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: '分析进度' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    await waitFor(() => expect(bar).toHaveAttribute('aria-valuenow', '16'));
+    expect(screen.getByText('正在下载分析输入文件')).toBeVisible();
   });
 
   it('recovers a failed structured import from the archived attempt', async () => {

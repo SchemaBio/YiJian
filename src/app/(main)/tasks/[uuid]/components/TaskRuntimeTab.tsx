@@ -14,6 +14,8 @@ import * as React from 'react';
 import { Tag } from '@/components/shared/Tag';
 import { AlertCircle, Clock3, FileText, Loader2, RefreshCw, Server } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
+import { taskOverallProgress } from '@/lib/task-overall-progress';
+import { TaskOverallProgress } from './TaskOverallProgress';
 import type { TaskProgressResponse, TaskStatus } from '@/types/task';
 
 interface TaskRuntimeTabProps {
@@ -225,7 +227,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
       'archiving',
       'terminating',
     ].includes(phase ?? '');
-    const importStillActive = status === 'completed' && progress?.result_import_status === 'running';
+    const importStillActive = status === 'completed' && ['pending', 'queued', 'running'].includes(progress?.result_import_status ?? '');
     if (!['waiting_for_data', 'queued', 'running'].includes(status) && !executionStillActive && !importStillActive) return;
     const timer = window.setInterval(() => void loadRuntime(true), 5000);
     return () => window.clearInterval(timer);
@@ -272,6 +274,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
     : executionPhaseLabels[executionPhase ?? ''];
   const initializingWithoutProgress = ['bootstrapping', 'diagnostic_hold'].includes(executionPhase ?? '') && (progress?.progress ?? 0) === 0;
   const analysisProgress = progress?.analysis_progress;
+  const overallProgress = taskOverallProgress(progress ?? { status: initialStatus });
   const canRetryImport = progress?.status === 'completed'
     && (progress.result_import_status === 'failed' || progress.result_import_status === 'running');
 
@@ -354,14 +357,12 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
         <div className="grid grid-cols-2 divide-x divide-y divide-[var(--yj-border-subtle)] md:grid-cols-5 md:divide-y-0">
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label={t("tasks.taskStatusb7d412")} value={<Tag variant={statusVariant(progress?.status || initialStatus)}>{taskStatusText(progress?.status || initialStatus, t)}</Tag>} />
           <RuntimeMetric icon={<Server className="h-4 w-4" />} label={t("tasks.spotInstancea176b8")} value={vmStatusLabel(vmStatus, t)} />
-          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label={t("tasks.analysisProgressa1cede")} value={initializingWithoutProgress || !analysisProgress ? '—' : `${analysisProgress.percent}%`} />
+          <RuntimeMetric icon={<Clock3 className="h-4 w-4" />} label={t("taskLifecycle.title")} value={progress ? `${overallProgress.percent}%` : '—'} />
           <RuntimeMetric icon={<FileText className="h-4 w-4" />} label={t("tasks.resultImport88c130")} value={taskStatusText(progress?.result_import_status, t)} />
           <RuntimeMetric icon={<RefreshCw className="h-4 w-4" />} label={t("tasks.importAttemptsdcc827")} value={String(progress?.result_import_attempts ?? 0)} />
         </div>
         <div className="border-t border-[var(--yj-border-subtle)] p-4">
-          {!initializingWithoutProgress && analysisProgress && <div className="h-2 overflow-hidden rounded-full bg-canvas-inset">
-            <div className="h-full rounded-full bg-accent-emphasis transition-[width]" style={{ width: `${analysisProgress.percent}%` }} />
-          </div>}
+          {progress && <TaskOverallProgress task={progress} />}
           <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-fg-muted">
             <span>{t("tasks.workflowe83800")}{progress?.template || progress?.name || '-'}</span>
             <span>{t("tasks.createdAt4c01f3")}{formatTime(progress?.created_at, t)}</span>
