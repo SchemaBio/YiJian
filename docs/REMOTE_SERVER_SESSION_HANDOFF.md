@@ -1,5 +1,11 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 保存交互简化已上线：YiJian当前为 `schemabio/yijian:assessment-save-20261101t064634z`，移除额外复核勾选，主按钮改为“确认保存”。Octopus保持第66节坐标修复。详见第67节，相关修复已本地提交，未push。**
+
+**2026-11-01 AI投递BAD_REQUEST修复已上线：Octopus当前为 `schemabio/octopus:ai-coordinate-20261101t063056z`，YiJian保留第65节版本；其余服务保持第64节。详见第66节；后续本地提交见第67节。**
+
+**2026-11-01 AI位点身份字段传递修复已上线：YiJian当前为 `schemabio/yijian:ai-row-identity-20261101t050744z`，其余服务保持第64节状态。详见第65节；后续本地提交见第67节。**
+
 **2026-11-01 统一变异评估流程已上线：SepiLens / Octopus / YiJian 当前标签均为 `assessment-workflow-20261101t042816z`，详见第64节。部署源码现已本地提交，远端 Git 未移动；精确线上身份仍以第64节构建快照为准，Squid 保留第63节版本。**
 
 **2026-11-01 节点preflight状态协议修复已上线：Squid最新为 `schemabio/squid:node-preflight-20261101t015651z`，保留镜像即时应用及 `img-dv8zcpyc`。详见第63节；四文件补丁已本地提交 `54a4bdc`、未push，远端Git仍为旧基准，不要直接按HEAD重建。**
@@ -873,3 +879,31 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 发布后公网login、原任务读取、已有结果覆盖层和AI设置均200；公网评估JS资源摘要与运行镜像一致。发布前后任务、人工调整、AI请求、计算设置摘要相同；正式引擎/计费门槛、余额和账务流水摘要保持。NCBI公开精确查询独立探测200、返回5条相关记录，仅证明网络可达，不代表材料临床适用性已验证。历史AI结果未重算，后续新请求使用修复链路。
 - 保护目录 `/home/ubuntu/schema/backups/assessment-workflow-20261101T042816Z` 包含Octopus库dump、SepiLens SQLite在线备份、原部署配置、回退镜像、三仓库基准归档/最终补丁/完整构建上下文、`source-manifest-final.json`、构建回归日志、`result.json`与`verification.json`。镜像以`org.schemabio.source.dirty=true`及补丁SHA256标记。构建使用固定基础镜像和腾讯依赖镜像源；测试构建显式包含被常规dockerignore排除的固定样例，实际配方保存在保护目录。早期构建工具修正日志保留，最终回归与验证均成功。
 - 远端Git未移动。基准SepiLens `9a4f42b203b23b54797b979870d282e3d7d467fa`、Octopus `25b41472f63cce34c6c51261267dc79a769a53ba`、YiJian `dd4c38d6e022b8aabe4c76539a578c83046b991d`；实际源码须使用本节最终构建上下文和补丁清单。此前未提交的总览预加载改动已保留，并在清单中单独标明；共享浏览器文件同时包含预加载和本轮覆盖层变更。后续已按用户要求本地提交：SepiLens `8e78cda`、Octopus `efc3350`；YiJian 总览预加载单独提交 `45ddbdd`，统一评估界面及本节交接记录另作功能提交。未push、未重新部署；线上镜像仍为本节已验证快照。工作流契约见 `docs/VARIANT_ASSESSMENT_WORKFLOW.md`。
+
+
+## 65. 2026-11-01 AI请求被误报位点已变化修复
+
+- 用户再次评估原任务位点时提示“变异结果已变化或不可读取”。已复现为第64节前端遗漏：浏览器Parquet行包含rowOrdinal、attemptId、datasetVersion，但`mapSNV`调用的`normalizeReview`没有传递这些字段，详情对象和`aiVariantContext`因此缺少服务端必需身份信息。并非要求用户反复刷新即可解决的数据变化；后端拒绝缺少身份的请求是预期保护。
+- `VariantReviewStatus`明确声明三项身份字段，公共映射保留原执行ID和数据版本，只接受非负安全整数行号并保留0，不从缺失值猜造身份。新增真实浏览器结果→getSNVIndels→详情→aiVariantContext→请求序列化链路回归，同时覆盖ACMG/SVC请求以及行号0/1。该测试在修复前确实因三字段全部丢失而失败，修复后通过。
+- 本地类型检查、45项相关交互/请求回归及结果映射回归通过；远端13个测试文件共107项通过，生产类型检查及构建通过。仅重建/替换YiJian，镜像 `schemabio/yijian:ai-row-identity-20261101t050744z`，healthy、重启0。Squid、Octopus、SepiLens、Cuttlefish、gateway容器身份保持，gateway仅reload。
+- 对任务 `45a68d1f-feff-4dee-b8bb-8a2bb5e306f9` 的当前数据集第0行进行线上无作业探测：省略幂等键并明确confirmedCharge=false。缺少身份时复现原提示；完整身份在ACMG/SVC均通过校验和服务端Parquet读取，随后由Submit首部返回`Idempotency-Key required`，在创建请求、扣费及模型调用前停止。请求表、余额及流水摘要保持。此探测不是该致病位点的一次完整收费AI评估。
+- 公网login和任务读取200，新版结果映射JS资源摘要与运行镜像一致。保护目录 `/home/ubuntu/schema/backups/ai-row-identity-20261101T050744Z` 保存原配置、回退标签、完整YiJian构建上下文、三文件补丁哈希、构建/107项回归日志、result、verification和no-submit-verification。父上下文为第64节已验证YiJian快照，保留所有评估流程与预加载改动；镜像标记dirty=true、local HEAD `5f62233`及增量补丁SHA256。未变更后端、历史评估、余额或计算配置；未发起收费模型或真实分析。本次修复未commit/push。
+
+
+## 66. 2026-11-01 AI坐标类型转换与投递BAD_REQUEST修复
+
+- 用户修复前端身份传递后再次调用，新的请求 `8f572baf-65f5-4bf3-ac28-3b20de3f90c7` 在Octopus中failed/error_code=BAD_REQUEST、上游job_id为空、billable=false；Squid对应账务state=refunded，预扣已自动退回。未重发或修改此历史请求。
+- 已离线复现另一处服务端遗漏：归档报告的Parquet `Position`为UTF-8字符串，`canonicalAISequenceRow`原先只做JSON roundtrip，不能将字符串转成数字；`BuildPayload`的number助手只接受float64，原本的`10544634`因而被变成pos=0，遭SepiLens输入校验拒绝。此形态与本次BAD_REQUEST/无上游作业一致。上一轮无作业探测只覆盖身份与结果读取，未覆盖其后的BuildPayload，不能视为完整上游载荷验收。
+- 现在在服务端不可变行映射边界规范化坐标，要求有限、正整数且不超过安全整数范围；保留annotationValues中的原始字符串。BuildPayload额外拒绝未规范化或非法坐标，防止生成pos=0载荷并在创建请求/预扣前失败。CNV坐标和医学分类规则未改。
+- 新回归从公开MYH3文本报告实际生成Parquet并读取，再经服务端映射和ACMG/SVC BuildPayload验证坐标、后果和HGVS；同时生成固定公开JSON契约。SepiLens用同一字节契约做strict JSON解码和Normalize，确认两版合法载荷通过、pos=0继续被拒绝，未制造医学条款。包含非法/非有限/分数/越界坐标和数值Parquet兼容测试。Octopus受影响四包完整回归与远端隔离PostgreSQL通过，临时数据库容器/卷已清理。
+- 对线上SepiLens仅使用公开合成契约探测：pos=0返回BAD_REQUEST/invalid variant；正常数值坐标通过输入校验后因显式留空provider_profile_id返回provider profile required，确定在创建作业和模型调用前停止。未发起真实收费模型或分析，未读取/导出线上加密临床输入；敏感密文诊断被自动审批拒绝后已放弃该路径。
+- 仅重建/切换Octopus，镜像 `schemabio/octopus:ai-coordinate-20261101t063056z`，healthy、重启0；运行二进制摘要与通过回归的builder二进制一致。公网login、原任务读取、AI设置读取均200。其他五个服务容器身份、AI请求、人工结果覆盖层、余额及流水摘要保持，正式引擎和SVC实验边界未变。当前YiJian仍是第65节镜像。
+- 保护目录 `/home/ubuntu/schema/backups/ai-coordinate-20261101T063056Z` 保存Octopus库dump、原部署配置/回退镜像、完整构建上下文、五文件增量哈希、同字节跨服务公开契约、隔离回归日志、result、verification和public-validation。父上下文为第64节已验证Octopus，local HEAD `efc3350`加未提交补丁，镜像dirty=true及补丁SHA256；远端Git未移动。测试挂载问题修正记录已保留，最终契约与回归全部通过。Octopus实现、SepiLens新增契约测试以及第65节YiJian修复均尚未commit/push。
+
+
+## 67. 2026-11-01 移除额外复核勾选并简化保存按钮
+
+- 按用户明确要求移除现版ACMG的“我已逐条复核候选证据、强度及适用性”复选框及对应状态门槛，主按钮统一显示“确认保存”（四语言同步），仍执行保存并采用；“仅保存本版”继续独立保留。编辑证据不再重置隐藏确认状态，保存过程中和权限限制仍正常禁用。
+- 现版证据不足/空证据草稿也可点击保存，服务端仍重算为insufficient_evidence、不制造分类或分值；这是显式保存当前版本，不改数据库参考分类。SVC既有实验版计算/适用性确认及采用门槛保持，仅共用主按钮短文案。新增直接保存空证据AI草稿回归；保留并发失败保留草稿、仅保存与采用分离、只读等测试。
+- 本地37项针对性交互/语言回归与类型检查通过；远端13个文件108项回归、类型检查、生产构建通过。仅切换YiJian为 `schemabio/yijian:assessment-save-20261101t064634z`，healthy、重启0，其他服务容器身份保持。公网login/原任务读取200，含新保存逻辑、无额外勾选逻辑的JS资源摘要与运行镜像一致。AI请求/人工覆盖层/余额/账务流水摘要保持，未触发模型或真实分析。
+- 保护目录 `/home/ubuntu/schema/backups/assessment-save-20261101T064634Z` 保存配置、回退标签、完整构建上下文、八文件增量哈希、构建回归日志、result和verification。父上下文为第65节YiJian修复，保留不可变行身份字段；Octopus仍为第66节镜像，未被回退。镜像以local HEAD `5f62233`加未提交补丁、dirty=true及SHA256标记。后续按用户要求本地提交：YiJian 行身份修复 `d73d096`、Octopus 坐标修复 `7737087`、SepiLens 跨服务契约回归 `541ed12`；YiJian 保存交互与本节交接记录单独提交。未push、未重新部署，远端Git未移动；线上精确身份仍以各节构建上下文、镜像及补丁清单为准。

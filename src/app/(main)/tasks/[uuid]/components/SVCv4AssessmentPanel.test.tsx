@@ -36,20 +36,20 @@ describe('SVCv4 guided assessment',()=>{
   await screen.findByText('意义未明 · VUS-low · 0 分');
   expect(evaluateSVCv4).toHaveBeenCalledWith('task',expect.objectContaining({disease:'OMIM:1',moi:'AD',confirmed:false}));
   fireEvent.click(screen.getByRole('checkbox'));
-  fireEvent.click(screen.getByRole('button',{name:'确认保存并采用此版本'}));
+  fireEvent.click(screen.getByRole('button',{name:'确认保存'}));
   await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),'',true,undefined));
   fireEvent.change(screen.getByLabelText('新版证据调整理由'),{target:{value:'核验后保存'}});
-  fireEvent.click(screen.getByRole('button',{name:'确认保存并采用此版本'}));
+  fireEvent.click(screen.getByRole('button',{name:'确认保存'}));
   await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),'核验后保存',true,undefined));
   fireEvent.change(screen.getByLabelText('疾病（名称或 CURIE，人工确认）'),{target:{value:'OMIM:2'}});
   expect(screen.queryByText('意义未明 · VUS-low · 0 分')).not.toBeInTheDocument();
-  expect(screen.getByRole('button',{name:'确认保存并采用此版本'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'确认保存'})).toBeDisabled();
  });
  it('shows saved result in read-only mode with editing disabled',async()=>{
   render(<SVCv4AssessmentPanel taskId="task" variant={{...variant,svcv4Assessment:{disease:'D',moi:'AD',confirmed:true,inputs:{}}}} readOnly />);
   await screen.findByRole('button',{name:'计算新版评定'});
   expect(screen.getByLabelText('遗传模式')).toBeDisabled();
-  expect(screen.queryByRole('button',{name:'确认保存并采用此版本'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'确认保存'})).not.toBeInTheDocument();
  });
 });
 

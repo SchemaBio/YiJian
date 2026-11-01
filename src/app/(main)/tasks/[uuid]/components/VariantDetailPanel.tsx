@@ -146,8 +146,6 @@ function ACMGPointsEditor({
   const [reason, setReason] = React.useState(aiDraft?.reason ?? '');
   const [restoreAutomatic, setRestoreAutomatic] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-  const [reviewed, setReviewed] = React.useState(false);
-  React.useEffect(() => setReviewed(false), [evidence, override, overrideReason]);
   const [error, setError] = React.useState('');
   const score = Object.values(evidence).reduce((sum, item) => {
     if (item.code === 'BA1') return sum;
@@ -155,7 +153,6 @@ function ACMGPointsEditor({
     return sum + (item.code.startsWith('B') ? -points : points);
   }, 0);
   const calculated = Object.values(evidence).some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, Object.keys(evidence).length);
-  const effective = override || calculated;
   const auto = variant.automaticAcmg;
 
   const toggle = (code: string, checked: boolean) => { setRestoreAutomatic(false); setEvidence(previous => {
@@ -212,8 +209,7 @@ function ACMGPointsEditor({
     <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={t("tasks.evidenceChangeReasonOptional")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
     {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
     <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason(t("tasks.restoreCurrentAutomaticAssessmentBaselineffd9de")); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">{t('variantAssessment.restoreDraft')}</ActionButton>
-    {aiDraft && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />{t('variantAssessment.confirm')}</label>}
-    <div className="flex flex-wrap gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="primary" type="button" disabled={saving || (!!aiDraft && !reviewed) || (!effective && !restoreAutomatic)} onClick={() => void save(true)} className="flex-1">{t('variantAssessment.saveAdopt')}</ActionButton><ActionButton action="save" variant="ghost" type="button" disabled={saving || (!!aiDraft && (!reviewed || !Object.keys(evidence).length))} onClick={() => void save(false)}>{t('variantAssessment.saveOnly')}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
+    <div className="flex flex-wrap gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="primary" type="button" disabled={saving} onClick={() => void save(true)} className="flex-1">{t('variantAssessment.saveAdopt')}</ActionButton><ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => void save(false)}>{t('variantAssessment.saveOnly')}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
   </div>;
 }
 

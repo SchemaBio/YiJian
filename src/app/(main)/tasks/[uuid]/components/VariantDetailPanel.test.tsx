@@ -20,14 +20,25 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
-  it.each([['确认保存并采用此版本', true], ['仅保存本版', false]] as const)('atomically saves reviewed AI evidence with %s', async (button, adopt) => {
+  it('directly saves an insufficient-evidence AI draft without a review checkbox or fabricated classification', async()=>{
+    const save=vi.fn().mockResolvedValue(undefined);
+    const row={...variant('A'),acmgAIResult:{feature:'acmg',requestId:'ai-empty',summary:'Evidence missing',resultKind:'evidence_only',classification:'insufficient_data',evidence:[]}} as SNVIndel;
+    render(<VariantDetailPanel taskId="task" variant={row} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
+    fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
+    fireEvent.click(screen.getByRole('button',{name:'查看并补充证据'}));
+    expect(screen.queryByRole('checkbox',{name:'我已逐条复核候选证据、强度及适用性'})).not.toBeInTheDocument();
+    const button=screen.getByRole('button',{name:'确认保存'});expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({id:'A'}),expect.objectContaining({acmgEvidence:[],acmgOverride:'',activeAcmgVersion:'legacy',acmgAIResult:'ai-empty'}),expect.any(String)));
+  });
+
+  it.each([['确认保存', true], ['仅保存本版', false]] as const)('atomically saves reviewed AI evidence with %s', async (button, adopt) => {
     const save=vi.fn().mockResolvedValue(undefined);
     const row={...variant('A'), acmgEvidence:[{code:'PP3',strength:'supporting',source:'manual'}], acmgAIResult:{feature:'acmg',requestId:'request-fixed',summary:'Synthetic snapshot',resultKind:'evidence_only',evidence:[{code:'PM2',status:'met',strength:'Moderate',reason:'Synthetic verified source'}]}} as SNVIndel;
     render(<VariantDetailPanel taskId="task" variant={row} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
     fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
     fireEvent.click(screen.getByRole('button',{name:'审核并填入本版计算器'}));
     expect(save).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('checkbox',{name:'我已逐条复核候选证据、强度及适用性'}));
     fireEvent.click(screen.getByRole('button',{name:button}));
     await waitFor(()=>expect(save).toHaveBeenCalledTimes(1));
     const changes=save.mock.calls[0][1];
@@ -42,7 +53,6 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
     fireEvent.click(screen.getByRole('button',{name:'查看并补充证据'}));
     fireEvent.click(screen.getByRole('checkbox',{name:'选择 ACMG 证据 PP3'}));
-    fireEvent.click(screen.getByRole('checkbox',{name:'我已逐条复核候选证据、强度及适用性'}));
     fireEvent.click(screen.getByRole('button',{name:'仅保存本版'}));
     expect(await screen.findByRole('alert')).toHaveTextContent('Concurrent save conflict');
     expect(screen.getByRole('checkbox',{name:'选择 ACMG 证据 PP3'})).toBeChecked();
@@ -76,8 +86,7 @@ describe('same-screen interpretation', () => {
     expect(save).not.toHaveBeenCalled();
     expect(screen.getAllByText('旧快速初评说明').some(element=>!element.closest('[hidden]'))).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: '审核并填入本版计算器' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: '我已逐条复核候选证据、强度及适用性' }));
-    fireEvent.click(screen.getByRole('button', { name: '确认保存并采用此版本' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认保存' }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PM2', strength: 'moderate', source: 'sepilens_ai_reviewed', note: expect.stringContaining('ai-request-review') })], '', '', expect.stringContaining('人工复核采纳'), false));
     await waitFor(() => expect(screen.queryByRole('checkbox', { name: '选择 ACMG 证据 PM2' })).not.toBeInTheDocument());
     expect(screen.getByText('证据积分').parentElement).toHaveTextContent('2 分');
@@ -130,7 +139,7 @@ describe('same-screen interpretation', () => {
     fireEvent.change(override, { target: { value: 'Pathogenic' } });
     expect(screen.getByPlaceholderText('人工覆写理由（选填）')).toHaveValue('');
     expect(screen.getByPlaceholderText('本次证据调整理由（选填）')).toHaveValue('');
-    fireEvent.click(screen.getByRole('button', { name: '确认保存并采用此版本' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认保存' }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PP3',note:'Manual evidence with a public source' })], 'Pathogenic', '', '', false));
   });
   it('links each dbSNP identifier in the annotation tab and rejects non-rs values', () => {
