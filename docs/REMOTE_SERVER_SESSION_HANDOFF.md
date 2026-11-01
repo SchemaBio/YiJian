@@ -1,5 +1,11 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 CNV 修复已提交并部署：Octopus `b83bbe0` / `schemabio/octopus:cnv-save-20261101t125621z`，YiJian `82bcf37` / `schemabio/yijian:cnv-mapping-20261101t124133z`，详见第75节。第73–74节“尚未部署”为历史状态。独立 ACMG 快照直接写入问题仍待处理。**
+
+**2026-11-01 YiJian 最新更新已部署：镜像 `schemabio/yijian:yijian-refresh-20261101t113512z`，提交 `38b0491`；其他服务保持第70节版本。详见第72节。**
+
+**2026-11-01 CNV 界面更新已部署：YiJian 当前镜像 `schemabio/yijian:cnv-refresh-20261101t105010z`，提交 `fbc819f`；其余服务保持第70节版本。详见第71节。**
+
 **2026-11-01 最新仓库与镜像发布：Squid、Octopus、Cuttlefish、YiJian、SepiLens 及官网镜像标签均为 `latest-main-20261101t095936z`，详见第70节。用户确认 YiJian 现用域名为 `yijian-dev.schema-bio.com`；旧域名不再用作入口健康判断。**
 
 **2026-11-01 保存交互简化已上线：YiJian当前为 `schemabio/yijian:assessment-save-20261101t064634z`，移除额外复核勾选，主按钮改为“确认保存”。Octopus保持第66节坐标修复。详见第67节，相关修复已本地提交，未push。**
@@ -932,3 +938,38 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 验收 `https://yijian-dev.schema-bio.com/login`、认证后的指定任务读取、Cuttlefish 公网、YiJian 新旧 Host 的源站登录、官网 `127.0.0.1:9339/` 均200；`https://schema-bio.com/` 在服务器请求为 URLError，本次无法确认官网公网。旧 YiJian 域名返回521，但用户已确认迁移，不能据此判断现用入口。未进行真实任务/AI/支付。
 - 域名配置提示：Squid `SQUID_REGISTRATION_PUBLIC_ORIGIN` 已为新域名，但 `CORS_ALLOWED_ORIGINS` 和 `PAYMENT_PUBLIC_ORIGIN` 仍含旧域名；此次未修改，支付跳转及跨源访问启用前应专门核查。示例数据清理开关和备份核验标记仍为 false，第69节所述发放阻碍未解决。
 - 保护目录 `/home/ubuntu/schema/backups/latest-main-20261101T095936Z` 包含原环境与编排配置、原镜像身份、各仓库精确构建上下文、构建/回归/切换日志与结果；按研究数据保留要求没有新增全库 dump。回退需针对具体服务保留数据库兼容性，不恢复数据库。官网与 SaaS 的编排分别保留在该目录。未 push；此交接记录为本地工作区变更。
+
+## 71. 2026-11-01 更新并部署 CNV 详情和评估界面
+
+- 远端原 ubuntu 用户 fetch 各服务 origin/main；仅 YiJian 有新提交，工作区干净，快进至 `fbc819f0b68fdd932f1c7157da358c3fe8fbc5f1`。CNV Region/Exon 详情、四轨评估、内嵌 ClinGen 计算器及 AI 评估总览更新随之发布；其他服务仓库无新提交。
+- 从精确提交归档构建 `schemabio/yijian:cnv-refresh-20261101t105010z`，生产类型检查和构建通过；CNV 详情/评估/图形/自动填充/AI、CNV 本地评分及 Parquet 浏览共14个测试文件71项通过。仅更换 YiJian，容器 healthy、重启0；其他服务容器身份保持，网关配置检查后重载。
+- 新入口 `https://yijian-dev.schema-bio.com/login` 与认证后的既有任务读取均200；含 CNV 新界面逻辑的两个公网 JS 资源 SHA256 与运行镜像相同。未执行真实 AI、CNV 计算或人工保存，不代表全链路人工操作验收。示例数据清理门槛仍关闭。
+- 保护目录 `/home/ubuntu/schema/backups/cnv-refresh-20261101T105010Z` 保存原 env/Compose/override、原镜像身份、精确源码归档与构建上下文、构建/测试/切换日志及结果；没有新增业务数据库 dump。回退只切换 YiJian 镜像，不恢复数据库。此交接更新为本地未提交修改。
+
+## 72. 2026-11-01 YiJian CNV 计算器和评估更新
+
+- 远端以 ubuntu 用户抓取 origin/main；YiJian 工作区干净，由 `fbc819f` 快进到 `38b049195eea0f005e542cc943ea4e19e67cd40c`。更新涉及 Gain/Loss 计算器切换、标签导航、待处理表型过滤及总览结果采用。
+- 以精确提交归档构建并仅切换 YiJian 镜像 `schemabio/yijian:yijian-refresh-20261101t113512z`；容器 healthy、重启0，其他 SaaS 容器身份保持，网关检查后重载。构建和类型检查成功，CNV/结果浏览14个测试文件71项通过。
+- `https://yijian-dev.schema-bio.com/login` 和认证后的既有任务读取均200；两个含 CNV 逻辑的公网 JS 文件与运行镜像 SHA256 相同。未发起真实 AI 请求、计算或保存，未将自动测试视为完整人工流程验收。示例数据发放保留第69节门槛。
+- 保护目录 `/home/ubuntu/schema/backups/yijian-refresh-20261101T113512Z` 保存原配置、旧镜像身份、精确源码归档、构建回归及部署记录；没有新增数据库 dump。回退只切换前端镜像，不恢复数据库。本地交接记录尚未提交。
+
+## 73. 2026-11-01 YiJian/Octopus CNV 最新代码已拉取，暂未切换生产
+
+- 用户要求更新 YiJian，补充 Octopus 也有更新。远端以 ubuntu 用户 fetch 并快进干净仓库：YiJian `82bcf37696d8b705ce5b678980c8ea28fe2a37b2`、Octopus `b8d385cbb5b99b88b092c8b145272ca05b74b4c7`。已构建候选镜像 `schemabio/yijian:cnv-mapping-20261101t124133z` 和 `schemabio/octopus:cnv-update-20261101t124348z`；分别在 `/home/ubuntu/schema/backups/cnv-mapping-20261101T124133Z`、`/home/ubuntu/schema/backups/octopus-cnv-20261101T124348Z` 留存源码归档、构建和测试日志。前端构建与类型检查及15文件81项测试通过；后端隔离 PostgreSQL 的31项针对性回归通过、0跳过，测试容器和卷已清理。
+- **没有切换生产容器**：核对 Octopus `internal/service/result_row_adjustment.go` 发现新增 `adoptedACMG` 接受客户端对象并合入最终结果，除非同时采用版本才由服务端重新生成，突破第64节已采用快照只读约束；`cnvAIResult` 对象形态在 handler 仅核对 requestId 的用户/任务/功能归属，服务端只在字符串形态调用 `SavedCNVResult`，对象内容直接保存，且该保存接口没有校验结果与 CNV 行身份绑定。通过测试未覆盖这些结果完整性问题。需要按四轨采用和服务端可核验溯源的实际产品合同修复并补充隔离回归，再一同部署前后端；不能把候选镜像视为已上线。
+- 当前实际运行 YiJian 仍为 `schemabio/yijian:yijian-refresh-20261101t113512z`、Octopus 仍为 `schemabio/octopus:latest-main-20261101t095936z`，均 healthy；远端 Git HEAD 已领先当前镜像，禁止把远端 HEAD 误认为运行版本。未修改生产数据库、触发计算或 AI。
+
+## 74. 2026-11-01 CNV 保存完整性修复完成，尚未切换生产
+
+- 按用户要求修复 CNV 并区分 SaaS/自部署。本地 Octopus 基于 b8d385c 修改 `internal/assistance/acmg_saved_result.go`、`internal/service/result_row_adjustment.go`，新增两组回归及 `docs/CNV_RESULT_SAVE.md`。对象形态 CNV AI 结果只提取 requestId，再从服务端归档重读；验证当前任务、CNV 功能、状态和行绑定，清除客户端审核标志。历史缺少位点绑定且原输入已清除时拒绝猜测。
+- SaaS 保留组织 scope 与原用户身份，缺少用户身份拒绝；自部署保持有任务编辑权限的跨用户协作，但不能跨任务/位点。AI 采用使用已保存服务端建议结论，ClinGen 采用从条款重新计算；记录服务器操作者和时间。数据库参考/快速初评保持显式人工来源选择，不冒充服务端重新注释。
+- 本地针对性 Go 回归与 diff 检查通过；远端独立 PostgreSQL 针对性回归记录36个 PASS（包含 SaaS/自部署两个子测试），0跳过，测试容器和卷清理完成；修复候选镜像 `schemabio/octopus:cnv-save-fix-20261101t124939z` 构建成功。保护目录 `/home/ubuntu/schema/backups/cnv-save-fix-20261101T124939Z` 保存基准归档、四文件补丁摘要、完整构建上下文和日志，镜像 dirty=true；不是远端 Git HEAD 的纯源码镜像。
+- 尚未部署、未 commit/push。生产镜像仍是第73节记载版本；独立的 adoptedACMG 可直接客户端写入问题不属于本次 CNV 修复，仍需处理才能解除上一轮整体发布阻碍。没有修改历史临床数据或触发真实 AI/计算。
+
+## 75. 2026-11-01 提交并部署 CNV 保存修复
+
+- 用户明确要求 commit 和部署。Octopus 五文件修复及说明已提交 `b83bbe011c5d00e8595e774dd7bc262d62122819`，未push；使用仅含该提交的 Git bundle 同步远端，原干净仓库从 b8d385c 快进。按精确提交归档重新构建正式镜像，四个实现/测试文件 SHA256 与第74节隔离验证补丁完全相同。
+- 实际运行 Octopus `schemabio/octopus:cnv-save-20261101t125621z`（b83bbe0），YiJian `schemabio/yijian:cnv-mapping-20261101t124133z`（82bcf37）。部署前无运行/排队任务、活动计算、未结束/未结算AI或待应用计算配置；Compose 仅镜像变化，按 Octopus→YiJian 顺序切换并检查、重载网关。两容器 healthy、重启0，其他服务保持。
+- 后端复用第74节已通过的隔离验证证据（36条PASS，含两个模式子测试，0跳过），前端15文件81项回归、类型检查和生产构建通过。公网新入口 `https://yijian-dev.schema-bio.com/login` 与正常登录后的既有任务读取200；两个CNV JS资源的公网SHA256与镜像相同。未操作生产评估保存或真实AI/计算，不宣称完成真实端到端保存验收。
+- 保护目录 `/home/ubuntu/schema/backups/cnv-release-20261101T125621Z` 保存精确后端源码、原配置和镜像身份、构建/切换日志、targets与result；测试证据在第73–74节目录。回退只切换镜像，不恢复数据库。没有新增业务数据库dump；示例发放两个核验开关仍false。
+- 此次按用户授权部署CNV修复及配套前端，独立的 adoptedACMG 客户端直接写入问题仍未修改；部署前已明确告知，不能将本次结果描述为所有评估完整性问题已修复。交接记录单独本地提交，未push。
