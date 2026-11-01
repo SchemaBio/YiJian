@@ -1,5 +1,7 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 节点preflight状态协议修复已上线：Squid最新为 `schemabio/squid:node-preflight-20261101t015651z`，保留镜像即时应用及 `img-dv8zcpyc`。详见第63节；四文件补丁已本地提交 `54a4bdc`、未push，远端Git仍为旧基准，不要直接按HEAD重建。**
+
 **2026-11-01 镜像配置即时应用已上线：Squid/Cuttlefish 最新标签均为 `image-hot-reload-20261101t012249z`，新任务系统镜像 `img-dv8zcpyc`，配置版本4/生效4，无待重启配置。详见第62节；包含第61节节点镜像仓库兼容修复，相关补丁已本地提交、未push。**
 
 **2026-11-01 任务镜像拉取修复已上线：Squid 当前为 `schemabio/squid:workflow-image-20261101t005436z`，基于 `1c469de` 叠加未提交的节点默认镜像预检修复；最新状态见第61节。不要直接用旧 HEAD 重建。**
@@ -845,3 +847,13 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 隔离PostgreSQL验证配置事务、并发版本冲突、凭据保护、多副本可见性、旧/新任务各自的实际RunInstances镜像及未知请求重放通过。临时数据库容器/匿名卷已清理。Linux节点启动/镜像准备及云请求回归通过；Cuttlefish 9项相关回归、类型检查与生产构建通过，本地对应检查通过。
 - 最终通过正常管理员接口保存用户选定的同一镜像验证，无生产临时镜像切换：保存/生效版本均4，`restart_required=false`，保存前后服务容器ID不变；两服务healthy、重启0。Cuttlefish公网正常登录与 `/api/manage/saas-settings` 返回200，保存/生效镜像均为 `img-dv8zcpyc`。未创建真实计算实例或重跑分析，不代表新系统镜像内部内容已完成真实任务验收。代码尚未commit/push。
 - 后续按用户要求本地提交：Squid `85e8927`（包含第61节节点镜像预检与本节即时应用/执行快照），Cuttlefish `7e94e09`，Schema_CPU `1496019`。schema-germline工作区已干净，本轮未重复提交。相关验证已在发布时完成，本次仅提交及更新交接记录，未push、未重新部署。Squid提交位于本地主分支，祖先包含未上线英文邮件改动；线上仍以本节基准归档加补丁清单为准，不能把本地主分支整棵源码视为当前线上精确版本。
+
+## 63. 2026-11-01 节点 preflight 心跳被误拒绝修复
+
+- 任务 `45a68d1f-feff-4dee-b8bb-8a2bb5e306f9` 的新尝试 `e1c2e60c-c139-49b1-ba2d-387faaea14bf` 已保存系统镜像快照 `img-dv8zcpyc`，节点 `ins-q48rvd9k` 初始化阶段收到节点状态回调HTTP400后退出，最终已释放。诊断摘要含 `node status callback returned HTTP 400`，业务错误却显示REFERENCE_DATABASE_FAILED；尚未开始分析。
+- 根因为第61节新增预检用 `run_bootstrap_stage preflight` 上报phase=preflight，服务端 `nodeStatusPhaseRank` 没有该阶段，返回invalid phase/400；后台心跳退出使后续mounting阶段健康检查失败。旧代码单元回归已复现preflight rank=0，本次补齐starting→preflight→mounting的阶段顺序。延迟的合法阶段只刷新心跳，不回退工作流；未知阶段继续拒绝。
+- 同步修复终态错误覆盖：监督器生成failed状态时保留已记录的回调/Agent就绪错误类别及脱敏摘要，避免被外层trap按mounting错误归为数据库问题。历史失败和账务记录保持，不直接改为成功。
+- 最新镜像 `schemabio/squid:node-preflight-20261101t015651z`，基于第62节完整线上构建上下文，仅叠加 `cvm_bootstrap.go`、`cvm_diagnostics_test.go`、`cvm_node.go`、`cvm_node_phase_test.go`。补丁清单摘要 `42ae68322a9b42e60d6568cde00d10bb9d9324d5c8a5d938aaebda4feb5dcd16`，source.dirty=true。保护目录 `/home/ubuntu/schema/backups/node-preflight-20261101T015651Z` 含Squid库dump、原部署配置、完整源码上下文、补丁清单、构建/回归日志及result/verification；父上下文为第62节备份。远端Git未变化，本轮未commit/push。
+- 本地节点状态/监督器/引导回归通过；Linux隔离PostgreSQL真实NodeHTTP回调按全部初始化阶段返回204并保存心跳，延迟阶段不回退，未知阶段400；失败状态保留回调原因、镜像热应用/执行固定镜像、未知云请求重放等相关回归通过。临时数据库容器和匿名卷已清理。
+- 只替换Squid，healthy、重启0，其他服务身份与任务/托管配置摘要保持。公网认证后读取该任务200，系统镜像仍 `img-dv8zcpyc`、无待重启配置。未创建计算实例、未自动重试任务；本次验收不代表真实样本全流程已通过。
+- 后续按用户要求提交Squid `54a4bdc`：preflight合法阶段、失败回调原因保留及对应回归。未push、未重新部署；线上源码身份仍以本节构建上下文与补丁清单为准。
