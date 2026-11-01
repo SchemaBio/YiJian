@@ -298,6 +298,18 @@ export interface SNVIndel extends VariantReviewStatus {
 // ============ CNV变异(片段级别) ============
 export type CNVType = 'Amplification' | 'Deletion' | 'Normal' | 'Unknown';
 
+export type CNVAdoptedSource = 'database' | 'quick' | 'ai' | 'clingen';
+
+export interface CNVAdoptedAssessment {
+  source: CNVAdoptedSource;
+  classification?: ClinGenClassification | '缺失' | string;
+  score?: number;
+  criteria?: string[];
+  savedAt?: string;
+  savedBy?: string;
+  automatic?: boolean;
+}
+
 export interface CNVSegment extends VariantReviewStatus {
   coordinateSystem?: '0-based-half-open'|'1-based-inclusive';
   interpretation?: string;
@@ -305,6 +317,8 @@ export interface CNVSegment extends VariantReviewStatus {
   annotationValues?: Record<string, string>;
   iscnCandidate?: string;
   assessment?: CNVAssessment;
+  adoptedCNV?: CNVAdoptedAssessment;
+  cnvAIResult?: import('@/lib/ai-assistance').AIAssistanceResult;
   id: string;
   chromosome: string;
   startPosition: number;
@@ -328,6 +342,8 @@ export interface CNVExon extends VariantReviewStatus {
   annotationValues?: Record<string, string>;
   iscnCandidate?: string;
   assessment?: CNVAssessment;
+  adoptedCNV?: CNVAdoptedAssessment;
+  cnvAIResult?: import('@/lib/ai-assistance').AIAssistanceResult;
   id: string;
   gene: string;
   transcript: string;            // 转录本

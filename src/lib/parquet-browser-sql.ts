@@ -1,8 +1,8 @@
 import { LocalizedError } from '@/i18n/errors';
 // The worker queries one immutable dataset and its versioned server overlays.
 // Only registered fields/operators may become SQL; values are escaped literals.
-export const OVERLAY_FIELDS = ['adoptedACMG', 'priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'svcv4AIResult', 'acmgAIResult', 'acmgSavedAt', 'acmgSavedBy', 'svcv4SavedAt', 'svcv4SavedBy', 'acmgVusSubclass', 'acmgTrial'];
-const NUMERIC_FIELDS = new Set(['adoptedACMG', 'priorityScore', 'acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
+export const OVERLAY_FIELDS = ['adoptedACMG', 'adoptedCNV', 'priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'svcv4AIResult', 'acmgAIResult', 'cnvAIResult', 'acmgSavedAt', 'acmgSavedBy', 'svcv4SavedAt', 'svcv4SavedBy', 'acmgVusSubclass', 'acmgTrial'];
+const NUMERIC_FIELDS = new Set(['adoptedACMG', 'adoptedCNV', 'priorityScore', 'acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
 export interface LocalFilter {
     column: string;
     operator: string;
@@ -21,7 +21,7 @@ export const literal = (s: unknown) => "'" + String(s).replaceAll("'", "''") + "
 export function fieldType(s: string): 'text' | 'number' | 'enum' | 'boolean' {
     if (s === 'pinned' || s === 'reviewed' || s === 'focused')
         return 'boolean';
-    if (s === 'acmgClassification')
+    if (s === 'acmgClassification' || s === 'cnvClassification')
         return 'enum';
     if (NUMERIC_FIELDS.has(s) || /(^|_)(af|vaf|depth|score|count|size|start|end|position|ratio|length|fraction|percent|heteroplasmy)(_|$)/i.test(s))
         return 'number';
@@ -39,10 +39,10 @@ export function effectiveField(s: string, raw: string[]): string {
         return `COALESCE(${overlay}, CASE WHEN ${active} OR json_exists(o.payload,'$.acmgEvidence') OR json_exists(o.payload,'$.acmgOverride') OR json_exists(o.payload,'$.cnvAssessment') THEN CASE WHEN (CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END) IN ('Pathogenic','Likely_Pathogenic') THEN 'true' ELSE 'false' END ELSE COALESCE(json_extract_string(a.baseline,'$.pinned'),'false') END)`;
     if (s === 'reviewed' || s === 'focused')
         return `COALESCE(${overlay}, 'false')`;
-    if (s === 'cnvAssessment')
+    if (s === 'cnvAssessment' || s === 'cnvAIResult')
         return overlay;
     if (s === 'cnvClassification' || s === 'cnvScore')
-        return `CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN json_extract_string(o.payload, ${literal('$.cnvAssessment.' + (s === 'cnvScore' ? 'totalScore' : 'classification'))}) ELSE json_extract_string(a.baseline, ${literal('$.'+s)}) END`;
+        return `CASE WHEN json_exists(o.payload,'$.adoptedCNV') THEN CASE WHEN json_extract_string(o.payload,'$.adoptedCNV.automatic')='true' THEN json_extract_string(a.baseline, ${literal('$.'+s)}) ELSE json_extract_string(o.payload, ${literal('$.adoptedCNV.' + (s === 'cnvScore' ? 'score' : 'classification'))}) END WHEN json_exists(o.payload,'$.cnvAssessment') THEN json_extract_string(o.payload, ${literal('$.cnvAssessment.' + (s === 'cnvScore' ? 'totalScore' : 'classification'))}) ELSE json_extract_string(a.baseline, ${literal('$.'+s)}) END`;
     if(s==='priorityScore')return `json_extract_string(a.baseline,'$.priorityScore')`;
     const names: Record<string, string> = { acmgClassification: 'classification', acmgScore: 'score', acmgProfile: 'profile', acmgState: 'state', acmgEvidence: 'criteria' };
     if (s in names) {

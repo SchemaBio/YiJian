@@ -1,5 +1,7 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 最新仓库与镜像发布：Squid、Octopus、Cuttlefish、YiJian、SepiLens 及官网镜像标签均为 `latest-main-20261101t095936z`，详见第70节。用户确认 YiJian 现用域名为 `yijian-dev.schema-bio.com`；旧域名不再用作入口健康判断。**
+
 **2026-11-01 保存交互简化已上线：YiJian当前为 `schemabio/yijian:assessment-save-20261101t064634z`，移除额外复核勾选，主按钮改为“确认保存”。Octopus保持第66节坐标修复。详见第67节，相关修复已本地提交，未push。**
 
 **2026-11-01 AI投递BAD_REQUEST修复已上线：Octopus当前为 `schemabio/octopus:ai-coordinate-20261101t063056z`，YiJian保留第65节版本；其余服务保持第64节。详见第66节；后续本地提交见第67节。**
@@ -103,9 +105,9 @@ ssh.exe -p 53729 -i 'D:/WSL/Github/SchemaBio/ssh-login-key' ubuntu@106.53.190.24
 
 | 服务 | 当前入口 | 认证方式与凭据位置 |
 | --- | --- | --- |
-| YiJian | `https://yijian.schema-bio.com/login` | Squid 用户邮箱/密码；API `POST /api/v1/auth/login`，JSON `email`、`password` |
+| YiJian | `https://yijian-dev.schema-bio.com/login` | Squid 用户邮箱/密码；API `POST /api/v1/auth/login`，JSON `email`、`password` |
 | Cuttlefish | `https://cuttlefish-dev.schema-bio.com/` | 首页登录；API `POST /api/auth/login`，JSON `username`、`password` |
-| Octopus | `https://yijian.schema-bio.com/api/v1/octopus` | 经 Squid 使用当前用户认证及组织上下文，没有独立浏览器登录页 |
+| Octopus | `https://yijian-dev.schema-bio.com/api/v1/octopus` | 经 Squid 使用当前用户认证及组织上下文，没有独立浏览器登录页 |
 | Sepiida | `https://sepiida-dev.schema-bio.com` | 查询 API 用 Bearer query key；Agent 回调用当前执行的任务令牌 |
 | SepiLens | 内网 `http://sepilens:8080` | 专用服务 Bearer token，不发布公网端口 |
 
@@ -921,3 +923,12 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 对象清单预检 `--objects` 在 GetBucketVersioning 返回403而中止，不能当作版本清单为空。Octopus 和 Squid 当前对象存储凭据均无权读取桶的 versioning、lifecycle、replication、object-lock 配置；Octopus 账号可列举 organizations 前缀对象历史版本及未完成分片。尚未证明删除全部历史版本、终止分片的权限或不存在保留锁。
 - 两个服务现有腾讯云账号查询 PostgreSQL DescribeDBInstances 被 CAM 拒绝，CBS DescribeSnapshots / DescribeAutoSnapshotPolicies 被拒绝；云数据库自动/手动备份、PITR/WAL、云硬盘快照和异地复制均无法据此核验。本地受保护备份目录按名称识别到35个 Octopus dump 和44个 SQL 候选；对其中一个 PostgreSQL dump 只读列目录，确认包含 samples、tasks 表数据。该计数不是全量副本盘点，不能因当前没有到期资源断言备份策略已满足。保留现有备份，未删除或更改任何策略。
 - 没有获取可用云管理会话；尝试读取现有 Edge 窗口时 Computer Use 返回未获批准。需要云管理员提供相应只读核查权限或在控制台协助核实；完成云端与本机副本、备份未来允许列表、对象保留/清除权限核验并处理发现的问题后，才能重新评估清理。当前没有开启清理或将备份验证标志设为真；模板仍未向用户发放。
+
+## 70. 2026-11-01 拉取最新仓库并重建服务
+
+- 用户要求远端拉取最新版并更新镜像、重启服务；之后明确 YiJian 现用域名为 `yijian-dev.schema-bio.com`。远端以原 ubuntu 身份 fetch origin/main，工作区均干净；Octopus、Cuttlefish、YiJian、SepiLens、Sepiida、schema-website 快进或已是最新。Squid 线上运维分支与 main 分叉，保留原分支，另切换 `codex/latest-main-20261101` 指向 main。远端无 Schema_CPU 仓库。
+- 新运行源码：Squid `54a4bdc`、Octopus `7737087`、Cuttlefish `7e94e09`、YiJian `8418865`、SepiLens `541ed12`、schema-website `59ce1e0`；六个镜像各为 `schemabio/<service>:latest-main-20261101t095936z`，服务均 healthy、重启0。Sepiida HEAD `52326bb` 无更新，沿用既有健康容器；Schema_CPU 计算镜像未重建。官网仅最新文档发生变化，仍按用户要求重建并切换。
+- 发布前逐项比对此前线上后端补丁（包含换行规范化），已纳入最新仓库；YiJian 的部分文件属于后续前端变更。生产构建成功，YiJian 类型检查、构建及7个测试文件80项回归通过；未宣称全部仓库测试均运行。切换前活动计算、运行/排队任务、未结束或未结算 AI 请求、待应用计算配置均为0；保留原环境配置，确认 Compose 实际差异仅镜像，按 SepiLens→Octopus→Squid→Cuttlefish→YiJian 切换并检查、重载网关；官网单独切换且验证静态资源权限。
+- 验收 `https://yijian-dev.schema-bio.com/login`、认证后的指定任务读取、Cuttlefish 公网、YiJian 新旧 Host 的源站登录、官网 `127.0.0.1:9339/` 均200；`https://schema-bio.com/` 在服务器请求为 URLError，本次无法确认官网公网。旧 YiJian 域名返回521，但用户已确认迁移，不能据此判断现用入口。未进行真实任务/AI/支付。
+- 域名配置提示：Squid `SQUID_REGISTRATION_PUBLIC_ORIGIN` 已为新域名，但 `CORS_ALLOWED_ORIGINS` 和 `PAYMENT_PUBLIC_ORIGIN` 仍含旧域名；此次未修改，支付跳转及跨源访问启用前应专门核查。示例数据清理开关和备份核验标记仍为 false，第69节所述发放阻碍未解决。
+- 保护目录 `/home/ubuntu/schema/backups/latest-main-20261101T095936Z` 包含原环境与编排配置、原镜像身份、各仓库精确构建上下文、构建/回归/切换日志与结果；按研究数据保留要求没有新增全库 dump。回退需针对具体服务保留数据库兼容性，不恢复数据库。官网与 SaaS 的编排分别保留在该目录。未 push；此交接记录为本地工作区变更。

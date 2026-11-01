@@ -20,7 +20,7 @@ import { DataTable, Input } from '@schema/ui-kit';
 import { Tag } from '@/components/shared/Tag';
 import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
-import type { CNVSegment, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
+import type { CNVSegment, CNVExon, ClinGenClassification, TableFilterState, PaginatedResult, CNVAssessment, LossAssessmentCriteria, GainAssessmentCriteria } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
 import { getCNVSegments, focusVariant, pinVariant, saveCNVAssessment, saveResultRowAdjustment } from '../result-api';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
@@ -30,8 +30,7 @@ import { CNVDetailPanel } from './CNVDetailPanel';
 import type { CNVPlotAnchor } from './CNVPlotWindow';
 import { CNVPathogenicityTag } from './CNVPathogenicityTag';
 import { VariantTypeBadge } from './VariantTypeBadge';
-import { CNVAssessmentPanel } from './CNVAssessmentPanel';
-import { useCNVAssessment } from '../hooks/useCNVAssessment';
+import type { InspectorSection } from '@/components/shared/WorkspaceInspector';
 import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface CNVSegmentTabProps {
@@ -63,8 +62,7 @@ export function CNVSegmentTab({
   const [requestError, setRequestError] = React.useState<string | null>(null);
   const [operationError, setOperationError] = React.useState<string | null>(null);
   const [pendingVariantIDs, setPendingVariantIDs] = React.useState<Set<string>>(() => new Set());
-  const [assessmentError, setAssessmentError] = React.useState<string | null>(null);
-  const [assessmentSaving, setAssessmentSaving] = React.useState(false);
+  const [reloadToken, setReloadToken] = React.useState(0);
   const [reviewStatus, setReviewStatus] = React.useState<Record<string, { pinned: boolean; focused: boolean }>>({});
   React.useEffect(()=>{
     const sync=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.taskId===taskId&&d?.table==='cnv-segment')setReviewStatus({});};
@@ -75,21 +73,7 @@ export function CNVSegmentTab({
   // 详情面板状态
   const [selectedVariant, setSelectedVariant] = React.useState<CNVSegment | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = React.useState(false);
-
-  // 评估面板状态
-  const [initialAIResult,setInitialAIResult]=React.useState<AIAssistanceResult>();
-  const [assessmentVariant, setAssessmentVariant] = React.useState<CNVSegment | null>(null);
-  const [assessmentPanelOpen, setAssessmentPanelOpen] = React.useState(false);
-
-  // 评估状态管理
-  const {
-    assessment,
-    updateCriteria,
-    resetAssessment,
-    saveAssessment,
-    loadAssessment,
-    initializeAssessment,
-  } = useCNVAssessment(assessmentVariant);
+  const [inspectorSection, setInspectorSection] = React.useState<InspectorSection>('overview');
 
   // 存储每个CNV的评估结果
   const [assessmentCache, setAssessmentCache] = React.useState<Record<string, CNVAssessment>>({});
@@ -106,9 +90,9 @@ export function CNVSegmentTab({
     setPlotAnchor({ top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right });
   }, [selectedVariant, detailPanelOpen]);
 
-  // 点击行打开详情面板
+  // 点击行打开详情面板（总览）
   const handleRowClick = React.useCallback((variant: CNVSegment) => {
-    setAssessmentPanelOpen(false);
+    setInspectorSection('overview');
     setSelectedVariant({ ...variant, assessment: assessmentCache[variant.id] ?? variant.assessment });
     setDetailPanelOpen(true);
   }, [assessmentCache]);
@@ -118,48 +102,54 @@ export function CNVSegmentTab({
     setDetailPanelOpen(false);
   }, []);
 
-  // 打开评估面板
-  const handleOpenAssessmentPanel = React.useCallback((variant: CNVSegment, result?:AIAssistanceResult) => {
-    setInitialAIResult(result);
+  // 打开 ClinGen 评估计算器
+  const handleOpenClingen = React.useCallback((variant: CNVSegment) => {
     if (variant.type === 'Normal' || variant.type === 'Unknown') return;
-    const cached = assessmentCache[variant.id] ?? variant.assessment;
-    setAssessmentVariant({ ...variant, adjustmentVersion: cached?.adjustmentVersion ?? variant.adjustmentVersion });
-    if (cached) {
-      loadAssessment(cached);
-    } else {
-      initializeAssessment(variant);
-    }
-    setDetailPanelOpen(false);
-    setAssessmentPanelOpen(true);
-    setAssessmentError(null);
-  }, [assessmentCache, initializeAssessment, loadAssessment]);
+    setInspectorSection('clingen');
+    setSelectedVariant({ ...variant, assessment: assessmentCache[variant.id] ?? variant.assessment });
+    setDetailPanelOpen(true);
+  }, [assessmentCache]);
 
-  // 关闭评估面板
-  const handleCloseAssessmentPanel = React.useCallback(() => {
-    setAssessmentPanelOpen(false);
-  }, []);
-
-  // 保存评估
-  const handleSaveAssessment = React.useCallback(async (_savedAssessment: CNVAssessment) => {
-    if (!assessmentVariant) return;
-    const finalized = saveAssessment();
-    if (!finalized) return;
-    setAssessmentSaving(true);
-    setAssessmentError(null);
-    try {
-      const persisted = await saveCNVAssessment(taskId, 'cnv-segment', assessmentVariant.id, finalized, assessmentVariant.adjustmentVersion ?? 0);
+  // 保存版本调整通用逻辑
+  const handleSaveVersionedAssessment = React.useCallback(async (variant: CNVSegment | CNVExon, adjustments: Record<string, unknown>, reason: string) => {
+    const saved = await saveResultRowAdjustment(taskId, 'cnv-segment', variant.id, variant.adjustmentVersion ?? 0, adjustments, reason);
+    if (scopeRef.current !== taskId) return;
+    const payload = saved.adjustment.adjustments;
+    const updatedAssessment = payload.cnvAssessment as CNVAssessment | undefined;
+    const adopted = payload.adoptedCNV as CNVSegment['adoptedCNV'];
+    setReloadToken(value => value + 1);
+    if (updatedAssessment) {
       setAssessmentCache(prev => ({
         ...prev,
-        [persisted.cnvId]: persisted,
+        [variant.id]: updatedAssessment,
       }));
-      setResult(prev => prev ? { ...prev, data: prev.data.map(item => item.id === persisted.cnvId ? { ...item, adjustmentVersion: persisted.adjustmentVersion } : item) } : prev);
-      setAssessmentPanelOpen(false);
-    } catch (err) {
-      setAssessmentError(err instanceof Error ? errorText(err, t) : t("tasks.unableToSaveCnvAssessment5c60a2"));
-    } finally {
-      setAssessmentSaving(false);
     }
-  }, [assessmentVariant, saveAssessment, taskId, t]);
+    const updatedChanges = {
+      assessment: updatedAssessment ?? variant.assessment,
+      adoptedCNV: adopted ?? variant.adoptedCNV,
+      cnvAIResult: (payload.cnvAIResult as CNVSegment['cnvAIResult']) ?? variant.cnvAIResult,
+      adjustmentVersion: saved.adjustment.version,
+    };
+    setSelectedVariant(current => current?.id !== variant.id ? current : { ...current, ...updatedChanges });
+    setResult(prev => prev ? {
+      ...prev,
+      data: prev.data.map(item => item.id === variant.id ? { ...item, ...updatedChanges } : item),
+    } : prev);
+  }, [taskId]);
+
+  // 保存 ClinGen 评估
+  const handleSaveAssessment = React.useCallback(async (variant: CNVSegment | CNVExon, finalized: CNVAssessment) => {
+    const adoptedData: NonNullable<CNVSegment['adoptedCNV']> = {
+      source: 'clingen',
+      classification: finalized.classification,
+      score: finalized.totalScore,
+      savedAt: new Date().toISOString(),
+    };
+    await handleSaveVersionedAssessment(variant as CNVSegment, {
+      cnvAssessment: { ...finalized, cnvId: variant.id },
+      adoptedCNV: adoptedData,
+    }, 'ClinGen 评估保存');
+  }, [handleSaveVersionedAssessment]);
 
   // 获取CNV的评估结果
   const getAssessmentForCNV = React.useCallback((cnvId: string): CNVAssessment | null => {
@@ -194,7 +184,7 @@ export function CNVSegmentTab({
     }
     void loadData();
     return () => controller.abort();
-  }, [taskId, filterState]);
+  }, [taskId, filterState, reloadToken]);
 
   const handleSearch = React.useCallback((query: string) => {
     setFilterState({ ...filterState, searchQuery: query, page: 1 });
@@ -359,20 +349,21 @@ export function CNVSegmentTab({
           return <Tag variant="neutral">{t("tasks.notApplicableeec46c")}</Tag>;
         }
         const cachedAssessment = getAssessmentForCNV(row.id);
-        // 如果有缓存的评估结果，使用缓存；否则显示默认VUS
-        if (!cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenAssessmentPanel(row); }} className="text-xs text-accent-fg hover:underline">{t("tasks.awaitingAssessmentCalculator7816f6")}</button>;
-        if(cachedAssessment.assessmentState==='insufficient_evidence')return <HoverHint content={cachedAssessment.autoEvidenceNotes?.join('；')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenAssessmentPanel(row);}} className="text-xs text-fg-muted hover:underline" >{t("tasks.insufficientEvidenceCalculatorc6de1e")}</button></HoverHint>;
-        const classification = cachedAssessment.classification;
-        const score = cachedAssessment?.totalScore ?? 0;
-        const isUserModified = cachedAssessment?.isUserModified ?? false;
+        const adopted = row.adoptedCNV;
+        const classification = (adopted?.classification as ClinGenClassification) || cachedAssessment?.classification || (row.automaticAssessment?.cnvClassification as ClinGenClassification);
+        const score = adopted?.score ?? cachedAssessment?.totalScore ?? row.automaticAssessment?.cnvScore ?? 0;
+        const isUserModified = adopted?.source === 'clingen' || (cachedAssessment?.isUserModified ?? false);
+
+        if (!classification && !cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenClingen(row); }} className="text-xs text-accent-fg hover:underline">{t("tasks.awaitingAssessmentCalculator7816f6")}</button>;
+        if (!adopted && cachedAssessment?.assessmentState==='insufficient_evidence') return <HoverHint content={cachedAssessment.autoEvidenceNotes?.join('；')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenClingen(row);}} className="text-xs text-fg-muted hover:underline" >{t("tasks.insufficientEvidenceCalculatorc6de1e")}</button></HoverHint>;
 
         return (
           <CNVPathogenicityTag
             cnvType={row.type}
-            classification={classification}
+            classification={classification || 'VUS'}
             score={score}
             isUserModified={isUserModified}
-            onClick={() => handleOpenAssessmentPanel(row)}
+            onClick={() => handleOpenClingen(row)}
           />
         );
       },
@@ -414,7 +405,7 @@ export function CNVSegmentTab({
     <div onClickCapture={event => {
       const row = (event.target as HTMLElement).closest('tbody tr');
       if (row) clickedRow.current = row;
-    }} data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen || assessmentPanelOpen ? 'yj-has-inspector' : ''}`}>
+    }} data-density={tableView.density} className={`variant-tab-panel yj-interpretation-panel flex h-full min-h-0 flex-col overflow-hidden ${detailPanelOpen ? 'yj-has-inspector' : ''}`}>
       <div className="yj-variant-toolbar">
       <p className="text-xs text-fg-muted">{t('cnvLocal.note')}</p>
       <ParquetColumnFilterBar taskId={taskId} table="cnv-segment" columns={localizeDisplay(result?.columns ?? [], t)} columnTypes={result?.columnTypes} columnLabels={resultColumnLabels(columns, result, 'cnv-segment', t)} state={filterState} onChange={setFilterState} viewControls={<TableViewControls columns={localizeDisplay(columns, t)} view={tableView} />} />
@@ -505,6 +496,7 @@ export function CNVSegmentTab({
       {/* CNV 详情面板 */}
       <CNVDetailPanel
         plotAnchor={plotAnchor}
+        initialSection={inspectorSection}
         onSaveInterpretation={async (variant, interpretation) => {
           const saved = await saveResultRowAdjustment(taskId, 'cnv-segment', variant.id, variant.adjustmentVersion ?? 0, { interpretation }, t("tasks.updateCnvInterpretationfbe6af"));
           if (scopeRef.current !== taskId) return;
@@ -514,43 +506,22 @@ export function CNVSegmentTab({
           setResult(current => current ? { ...current, data: current.data.map(row => row.id === variant.id ? { ...row, ...changes } : row) } : current);
         }}
         taskId={taskId}
-        onOpenAssessment={(variant,result) => handleOpenAssessmentPanel(variant as CNVSegment,result)}
         variant={selectedVariant}
         variantType="segment"
+        assessment={selectedVariant ? (assessmentCache[selectedVariant.id] ?? selectedVariant.assessment) : null}
+        onSaveAssessment={handleSaveAssessment}
+        onSaveVersionedAssessment={handleSaveVersionedAssessment}
         isOpen={detailPanelOpen}
         onClose={handleCloseDetailPanel}
         allSegments={result?.data || []}
         referenceId={referenceId}
       />
 
-      {/* CNV 评估面板 */}
-      {assessmentError && (
-        <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
-          {assessmentError}
-        </div>
-      )}
       {operationError && (
         <div className="mt-3 rounded-md border border-danger-muted bg-danger-subtle px-3 py-2 text-sm text-danger-fg">
           {operationError}
         </div>
       )}
-      {assessmentSaving && (
-        <div className="mt-3 text-sm text-fg-muted">{t("tasks.savingCnvAssessment4161a9")}</div>
-      )}
-      <CNVAssessmentPanel
-        initialAIResult={initialAIResult}
-        taskId={taskId}
-        referenceId={referenceId}
-        cnv={assessmentVariant}
-        assessment={assessment}
-        isOpen={assessmentPanelOpen}
-        onClose={handleCloseAssessmentPanel}
-        onSave={handleSaveAssessment}
-        saving={assessmentSaving}
-        error={assessmentError}
-        onReset={resetAssessment}
-        onCriteriaChange={updateCriteria}
-      />
     </div>
   );
 }
