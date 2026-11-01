@@ -123,11 +123,11 @@ describe('same-screen interpretation', () => {
     expect(screen.getAllByText('频率需人工核验').length).toBeGreaterThan(0);
     expect(screen.queryByRole('checkbox', { name: '我已逐条复核候选证据、强度及适用性' })).not.toBeInTheDocument();
 
-    // 验证 AI 评估结果同步至评估总览的 AI 证据建议卡片
+    // 验证 AI 评估结果同步至评估总览的 AI 证据建议卡片（同步结论与证据登记项）
     fireEvent.click(screen.getByRole('tab', { name: '评估总览' }));
     expect(screen.getByText('AI 证据建议')).toBeVisible();
     expect(screen.getAllByText('Pathogenic').length).toBeGreaterThan(0);
-    expect(screen.getByText(/依据: PM2\(Moderate\)/)).toBeVisible();
+    expect(screen.getByText('依据: PM2')).toBeVisible();
   });
 
   it('requests SepiLens AI in AI tab and shows result in AIResultCard', async () => {

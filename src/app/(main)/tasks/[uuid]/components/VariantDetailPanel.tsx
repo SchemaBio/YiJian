@@ -571,7 +571,6 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               ai={aiResult}
               aiError={aiError}
               onCalculator={() => setSection('acmg')}
-              onAIEvaluation={() => setSection('ai')}
               onAdoptSource={handleAdoptSource}
             />
           </section>
