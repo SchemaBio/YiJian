@@ -667,29 +667,29 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
           {/* 4. AI 评估 */}
           <section hidden={section !== 'ai'} className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
-              <div>
-                <h4 className="text-sm font-semibold text-fg-default">ACMG 智能研判</h4>
-                <p className="text-xs text-fg-muted mt-0.5">
-                  基于现版 ACMG 证据体系与算法模型生成评估建议，结果将自动归档保存
-                </p>
+            <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="w-4 h-4 text-accent-fg shrink-0" />
+                <h4 className="text-sm font-semibold text-fg-default truncate">ACMG 智能研判</h4>
               </div>
-              <AIAssistanceAction
-                onError={setAIError}
-                key={`${taskId}/${variant.id}/acmg-ai`}
-                disabled={readOnly || versionBusy}
-                input={{
-                  feature: 'acmg',
-                  taskId,
-                  reference: referenceGenome,
-                  variant: aiVariantContext(variant),
-                  calculator: {
-                    evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria,
-                    override: variant.acmgOverride,
-                  },
-                }}
-                onResult={handleAIResult}
-              />
+              <div className="shrink-0 flex items-center justify-end ml-auto">
+                <AIAssistanceAction
+                  onError={setAIError}
+                  key={`${taskId}/${variant.id}/acmg-ai`}
+                  disabled={readOnly || versionBusy}
+                  input={{
+                    feature: 'acmg',
+                    taskId,
+                    reference: referenceGenome,
+                    variant: aiVariantContext(variant),
+                    calculator: {
+                      evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria,
+                      override: variant.acmgOverride,
+                    },
+                  }}
+                  onResult={handleAIResult}
+                />
+              </div>
             </div>
 
             {versionBusy && (
