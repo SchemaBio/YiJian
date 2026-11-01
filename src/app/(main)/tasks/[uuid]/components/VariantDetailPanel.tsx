@@ -116,37 +116,6 @@ function adjustmentDiff(beforeJSON: Record<string, unknown> | string, afterJSON:
   }
 }
 
-function buildInterpretationDraft(v: SNVIndel, currentEvidenceList: ACMGEvidenceEntry[], classificationName?: string | null): string {
-  const gene = v.gene || '该基因';
-  const hgvsParts = [v.transcript, v.hgvsc, v.hgvsp].filter(Boolean);
-  const hgvs = hgvsParts.length ? hgvsParts.join(' : ') : `${v.chromosome}:${v.position} ${v.ref}>${v.alt}`;
-  const zygosityMap: Record<string, string> = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合子' };
-  const zygosityStr = zygosityMap[v.zygosity] || v.zygosity || '';
-  const classLabel = classificationName && ACMG_CONFIG[classificationName as ACMGClassification] ? ACMG_CONFIG[classificationName as ACMGClassification].label : classificationName || '意义未明 (VUS)';
-
-  const lines: string[] = [
-    `【变异概述】`,
-    `受检者在 ${gene} 基因检测到 ${hgvs} ${zygosityStr}变异。`,
-    ``,
-    `【ACMG 致病性评估依据】`,
-    `根据 ACMG/AMP 遗传变异分类指南，该变异被评定为：${classLabel}。`,
-  ];
-
-  if (currentEvidenceList.length > 0) {
-    lines.push(`命中的证据条款如下：`);
-    for (const e of currentEvidenceList) {
-      const notePart = e.note ? `（${e.note.split('\n')[0]}）` : '';
-      lines.push(`- ${e.code} [${e.strength}]：${e.source || '人工核定'}${notePart}`);
-    }
-  }
-
-  if (v.diseaseAssociation) {
-    lines.push(``, `【临床疾病关联】`, `关联疾病：${v.diseaseAssociation}${v.inheritanceMode ? `，遗传模式：${v.inheritanceMode}` : ''}。`);
-  }
-
-  return lines.join('\n');
-}
-
 function ACMGPointsEditor({
   variant,
   onSave,
@@ -739,46 +708,59 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
             {aiResult ? (
               <div className="space-y-4">
+                {/* 1. AI 评定证据与结论（置顶放置） */}
+                <div className="rounded-lg border border-border-subtle bg-canvas-subtle p-3.5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle/60 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-fg-default">AI评定证据与结论</span>
+                      {((aiResult.suggestedClassification || aiResult.classification) as ACMGClassification | undefined) && (
+                        <ClinicalSignificanceBadge value={((aiResult.suggestedClassification || aiResult.classification) as ACMGClassification)}>
+                          {ACMG_CONFIG[((aiResult.suggestedClassification || aiResult.classification) as ACMGClassification)]?.label ?? (aiResult.suggestedClassification || aiResult.classification)}
+                        </ClinicalSignificanceBadge>
+                      )}
+                    </div>
+                    {aiResult.requestId && (
+                      <span className="text-xs text-fg-muted font-mono">
+                        归档ID: {aiResult.requestId}
+                      </span>
+                    )}
+                  </div>
+
+                  {(() => {
+                    const effectiveEvidence = (aiResult.evidence ?? []).filter(item => item.status !== 'insufficient_data' && item.status !== 'not_applicable');
+                    return effectiveEvidence.length > 0 ? (
+                      <div className="space-y-2">
+                        {effectiveEvidence.map((item, idx) => (
+                          <div
+                            key={item.code || idx}
+                            className="rounded border border-border-default/60 bg-canvas-default p-2.5 text-xs space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-1.5 py-0.5 rounded font-bold text-xs ${item.code?.startsWith('B') ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'}`}>
+                                  {item.code}
+                                </span>
+                                <span className="font-semibold text-fg-default">{item.strength}</span>
+                                {item.status && <span className="text-fg-muted">· {item.status}</span>}
+                              </div>
+                            </div>
+                            {item.reason && (
+                              <p className="text-fg-muted leading-relaxed pl-0.5">{item.reason}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-fg-muted py-1">未产生满足条件的证据项。</p>
+                    );
+                  })()}
+                </div>
+
+                {/* 2. AI 研究内容（放在评定证据与结论下方） */}
                 <AIResultCard
                   result={aiResult}
                   humanReviewSaved={Boolean(aiResult.requestId && variant.acmgAIResult?.requestId === aiResult.requestId)}
                 />
-
-                <div className="rounded-lg border border-border-subtle bg-canvas-subtle p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-fg-default">AI 最终评定证据与建议</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-fg-muted">已自动归档：</span>
-                      <span className="text-xs font-mono font-medium text-accent-fg">{aiResult.requestId || '已保存'}</span>
-                    </div>
-                  </div>
-
-                  {aiResult.evidence && aiResult.evidence.length > 0 ? (
-                    <div className="space-y-2">
-                      {aiResult.evidence.map((item, idx) => (
-                        <div
-                          key={item.code || idx}
-                          className="rounded border border-border-default/60 bg-canvas-default p-2.5 text-xs space-y-1"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-1.5 py-0.5 rounded font-bold text-xs ${item.code?.startsWith('B') ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'}`}>
-                                {item.code}
-                              </span>
-                              <span className="font-semibold text-fg-default">{item.strength}</span>
-                              <span className="text-fg-muted">· {item.status}</span>
-                            </div>
-                          </div>
-                          {item.reason && (
-                            <p className="text-fg-muted leading-relaxed pl-0.5">{item.reason}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-fg-muted">AI 未产生额外的满足条件的证据条款。</p>
-                  )}
-                </div>
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border-subtle p-8 text-center text-fg-muted space-y-2">
@@ -805,29 +787,13 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {/* 6. 人工解读 */}
           <section hidden={section !== 'interpretation'}>
             <SectionTitle icon={MessageSquare} title={t("tasks.manualInterpretation1fcaef")} />
-            {!readOnly && (
-              <div className="mb-2 flex items-center justify-between text-xs">
-                <span className="text-fg-muted">基于已选证据快速起草：</span>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-accent-fg font-medium hover:underline"
-                  onClick={() => {
-                    const draft = buildInterpretationDraft(variant, currentEvidence, activeClassification);
-                    setInterpretation(previous => previous.trim() ? `${previous}\n\n${draft}` : draft);
-                  }}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-accent-fg" />
-                  生成标准解读词
-                </button>
-              </div>
-            )}
             <div className="space-y-0">
               <textarea
                 readOnly={readOnly}
                 value={interpretation}
                 onChange={(e) => setInterpretation(e.target.value)}
                 placeholder={t("tasks.enterYourInterpretationOfThisVariantee0d51")}
-                className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
+                className="w-full min-h-[260px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent leading-relaxed"
               />
               <div className="mt-2 space-y-2">
                 <div className="flex items-center justify-between gap-2">

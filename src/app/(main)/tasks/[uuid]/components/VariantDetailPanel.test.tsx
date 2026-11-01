@@ -83,6 +83,7 @@ describe('same-screen interpretation', () => {
         evidence: [
           { code: 'PM2', status: 'met', strength: 'Moderate', reason: '频率需人工核验' },
           { code: 'PVS1', status: 'not_applicable', strength: 'VeryStrong', reason: '机制未确认' },
+          { code: 'PP3', status: 'insufficient_data', strength: 'Supporting', reason: '证据不足待补充' },
         ],
       }),
     };
@@ -103,6 +104,14 @@ describe('same-screen interpretation', () => {
       expect.objectContaining({ acmgAIResult: 'ai-request-review' }),
       'AI评估自动保存'
     ));
+
+    expect(await screen.findByText('AI评定证据与结论')).toBeVisible();
+    expect(screen.getByText('AI 研究候选建议')).toBeVisible();
+
+    // 验证结论排在候选建议前面
+    const conclusion = screen.getByText('AI评定证据与结论');
+    const research = screen.getByText('AI 研究候选建议');
+    expect(conclusion.compareDocumentPosition(research) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     expect(await screen.findByText('合成 AI 建议')).toBeVisible();
     expect(screen.getAllByText('PM2').length).toBeGreaterThan(0);
@@ -232,10 +241,13 @@ describe('same-screen interpretation', () => {
     ));
   });
 
-  it('restores manual interpretation without embedded ACMG calculator', () => {
+  it('restores manual interpretation without embedded ACMG calculator and without draft generator', () => {
     render(<VariantDetailPanel taskId="task" variant={variant('A')} isOpen onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: '人工解读' }));
-    expect(screen.getByPlaceholderText('请输入您对该变异的解读分析...')).toBeVisible();
+    const textarea = screen.getByPlaceholderText('请输入您对该变异的解读分析...');
+    expect(textarea).toBeVisible();
+    expect(textarea.className).toContain('min-h-[260px]');
+    expect(screen.queryByText('生成标准解读词')).not.toBeInTheDocument();
     expect(screen.queryByText('与评估总览实时联动')).not.toBeInTheDocument();
   });
 
