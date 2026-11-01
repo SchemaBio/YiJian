@@ -1,5 +1,7 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 文件页免费参考基因组下载已上线：YiJian `4d153aa`，镜像 `schemabio/yijian:reference-downloads-20261101t132924z`；其余服务保持第75节状态。详见第76节。**
+
 **2026-11-01 CNV 修复已提交并部署：Octopus `b83bbe0` / `schemabio/octopus:cnv-save-20261101t125621z`，YiJian `82bcf37` / `schemabio/yijian:cnv-mapping-20261101t124133z`，详见第75节。第73–74节“尚未部署”为历史状态。独立 ACMG 快照直接写入问题仍待处理。**
 
 **2026-11-01 YiJian 最新更新已部署：镜像 `schemabio/yijian:yijian-refresh-20261101t113512z`，提交 `38b0491`；其他服务保持第70节版本。详见第72节。**
@@ -973,3 +975,10 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 后端复用第74节已通过的隔离验证证据（36条PASS，含两个模式子测试，0跳过），前端15文件81项回归、类型检查和生产构建通过。公网新入口 `https://yijian-dev.schema-bio.com/login` 与正常登录后的既有任务读取200；两个CNV JS资源的公网SHA256与镜像相同。未操作生产评估保存或真实AI/计算，不宣称完成真实端到端保存验收。
 - 保护目录 `/home/ubuntu/schema/backups/cnv-release-20261101T125621Z` 保存精确后端源码、原配置和镜像身份、构建/切换日志、targets与result；测试证据在第73–74节目录。回退只切换镜像，不恢复数据库。没有新增业务数据库dump；示例发放两个核验开关仍false。
 - 此次按用户授权部署CNV修复及配套前端，独立的 adoptedACMG 客户端直接写入问题仍未修改；部署前已明确告知，不能将本次结果描述为所有评估完整性问题已修复。交接记录单独本地提交，未push。
+
+## 76. 2026-11-01 文件页常驻免费参考基因组下载
+
+- 按用户要求新增 ReferenceGenomeDownloads 组件，在任务解读文件页顶部常驻，SaaS 与自部署共用；提供 GRCh38(hg38)、GRCh37(hg19) gzip FASTA 文件。按钮直连用户指定 Hugging Face 仓库相同文件的 resolve/main 地址（download=true），新窗口打开，不调用计费或应用下载授权接口；四语言显示免费且不扣积分。
+- 功能提交 `4d153aa37014731fdcc46135eb68c884dbc3a937`，未push；Git bundle 同步远端，干净工作区快进后按精确提交构建。镜像 `schemabio/yijian:reference-downloads-20261101t132924z` 已上线，healthy、重启0；其他容器身份保持，网关检查后重载。
+- 本地与远端类型检查、文件页/结果下载/语言3文件17项回归通过，生产构建成功。新域名登录和认证后的既有任务读取200；含两套参考基因组文件名的两个公网脚本与运行镜像摘要一致。未下载完整参考基因组或提交收费请求；不宣称外部文件下载完成验收。
+- 保护目录 `/home/ubuntu/schema/backups/reference-downloads-20261101T132924Z` 保存原配置及镜像身份、精确源码归档/上下文、构建回归及部署日志、result和verification。回退只切换前端镜像，不恢复数据库。此交接记录另行本地提交，未push。
