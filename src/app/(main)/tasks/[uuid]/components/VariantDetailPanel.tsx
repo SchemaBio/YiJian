@@ -361,7 +361,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   React.useEffect(() => {
     setSection('overview');
     setAIError('');
-    setAIResult(variant?.acmgAIResult);
+    setAIResult(typeof variant?.acmgAIResult === 'object' && variant.acmgAIResult !== null ? variant.acmgAIResult : undefined);
     setLocalClassification(null);
     setLocalCriteria(null);
     setLocalEvidence(null);
@@ -412,10 +412,10 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const handleAIResult = async (result: AIAssistanceResult) => {
     setAIResult(result);
     setAIError('');
-    if (onSaveVersionedAssessment && result.requestId) {
+    if (onSaveVersionedAssessment) {
       setVersionBusy(true);
       try {
-        await saveVersioned({ acmgAIResult: result.requestId }, 'AI评估自动保存');
+        await saveVersioned({ acmgAIResult: result }, 'AI评估自动保存');
       } catch (e) {
         setAIError(e instanceof Error ? errorText(e, t) : '保存AI评估失败');
       } finally {
@@ -571,6 +571,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               ai={aiResult}
               aiError={aiError}
               onCalculator={() => setSection('acmg')}
+              onAIEvaluation={() => setSection('ai')}
               onAdoptSource={handleAdoptSource}
             />
           </section>

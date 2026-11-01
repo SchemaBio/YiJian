@@ -15,6 +15,7 @@ export function VariantAssessmentOverview({
   svcAI,
   aiError,
   onCalculator,
+  onAIEvaluation,
   onInterpretation,
   onAdoptSource,
 }: {
@@ -23,6 +24,7 @@ export function VariantAssessmentOverview({
   svcAI?: AIAssistanceResult;
   aiError?: string;
   onCalculator: () => void;
+  onAIEvaluation?: () => void;
   onInterpretation?: () => void;
   onAdoptSource?: (source: AdoptedSource, classification?: string | null) => Promise<void> | void;
 }) {
@@ -60,23 +62,33 @@ export function VariantAssessmentOverview({
   ].filter(Boolean).join(' · ');
 
   // 3. AI 证据建议
-  const effectiveAI = ai ?? variant.acmgAIResult;
+  const effectiveAI: AIAssistanceResult | undefined = (ai && typeof ai === 'object')
+    ? ai
+    : (variant.acmgAIResult && typeof variant.acmgAIResult === 'object')
+      ? variant.acmgAIResult
+      : undefined;
+
   const rawAI = (effectiveAI?.suggestedClassification || effectiveAI?.classification)?.trim();
   const aiValue = !rawAI || ['.', '-'].includes(rawAI)
     ? (effectiveAI ? '缺失' : '尚未进行 AI 评估')
     : rawAI === 'insufficient_data'
       ? t('variantAssessment.insufficient')
       : rawAI;
-  const aiMetCriteria = effectiveAI?.evidence?.filter(e => e.status === 'met').map(e => e.code).join(', ');
-  const aiDetail = isHumanConfirmed
-    ? '已完成人工复核并转入正式评估'
-    : effectiveAI
-      ? [
-          effectiveAI.model,
-          aiMetCriteria ? `候选条目: ${aiMetCriteria}` : '',
-          effectiveAI.generatedAt ? new Date(effectiveAI.generatedAt).toLocaleTimeString() : '',
-        ].filter(Boolean).join(' · ')
-      : '';
+
+  const effectiveAiEvidence = (effectiveAI?.evidence ?? []).filter(
+    item => item.status !== 'insufficient_data' && item.status !== 'not_applicable'
+  );
+  const aiCriteriaStr = effectiveAiEvidence.length > 0
+    ? `依据: ${effectiveAiEvidence.map(e => `${e.code}${e.strength ? `(${e.strength})` : ''}`).join(', ')}`
+    : effectiveAI?.summary && effectiveAI.summary !== 'More evidence required' ? effectiveAI.summary : '';
+
+  const aiDetail = effectiveAI
+    ? [
+        aiCriteriaStr,
+        effectiveAI.model,
+        effectiveAI.generatedAt ? new Date(effectiveAI.generatedAt).toLocaleTimeString() : '',
+      ].filter(Boolean).join(' · ')
+    : '';
 
   // 4. 人工评估
   const rawManual = (variant.acmgOverride || variant.legacyAcmgClassification || (isHumanConfirmed ? variant.acmgClassification : null))?.trim();
@@ -273,6 +285,10 @@ export function VariantAssessmentOverview({
                   <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-emphasis px-2 py-0.5 text-[10px] font-semibold text-fg-on-emphasis">
                     ✓ 当前采用
                   </span>
+                ) : isHumanConfirmed && effectiveAI ? (
+                  <span className="rounded bg-success-emphasis/15 px-1.5 py-0.5 text-[10px] font-medium text-success-fg">
+                    已完成人工复核并转入正式评估
+                  </span>
                 ) : showAiPendingReview ? (
                   <span className="rounded bg-accent-emphasis/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-fg">
                     待复核提案
@@ -288,6 +304,21 @@ export function VariantAssessmentOverview({
             <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed">
               {aiDetail || (effectiveAI ? '—' : '尚未进行 AI 评估')}
             </p>
+            {onAIEvaluation && (
+              <div className="mt-3 pt-2 border-t border-border-subtle flex items-center">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-subtle hover:border-accent-emphasis/50 transition-colors shadow-2xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAIEvaluation();
+                  }}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  前往AI评估
+                </button>
+              </div>
+            )}
           </section>
 
           {/* 卡片 4: 人工评估 */}

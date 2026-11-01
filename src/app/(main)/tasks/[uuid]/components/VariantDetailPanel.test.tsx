@@ -101,7 +101,12 @@ describe('same-screen interpretation', () => {
     // AI 生成完成后自动保存，无需审核弹窗或复核勾选
     await waitFor(() => expect(save).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'A' }),
-      expect.objectContaining({ acmgAIResult: 'ai-request-review' }),
+      expect.objectContaining({
+        acmgAIResult: expect.objectContaining({
+          requestId: 'ai-request-review',
+          suggestedClassification: 'Pathogenic',
+        }),
+      }),
       'AI评估自动保存'
     ));
 
@@ -117,6 +122,12 @@ describe('same-screen interpretation', () => {
     expect(screen.getAllByText('PM2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('频率需人工核验').length).toBeGreaterThan(0);
     expect(screen.queryByRole('checkbox', { name: '我已逐条复核候选证据、强度及适用性' })).not.toBeInTheDocument();
+
+    // 验证 AI 评估结果同步至评估总览的 AI 证据建议卡片
+    fireEvent.click(screen.getByRole('tab', { name: '评估总览' }));
+    expect(screen.getByText('AI 证据建议')).toBeVisible();
+    expect(screen.getAllByText('Pathogenic').length).toBeGreaterThan(0);
+    expect(screen.getByText(/依据: PM2\(Moderate\)/)).toBeVisible();
   });
 
   it('requests SepiLens AI in AI tab and shows result in AIResultCard', async () => {
