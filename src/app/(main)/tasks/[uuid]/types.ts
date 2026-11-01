@@ -191,6 +191,10 @@ export type ACMGClassification =
 // ============ SNP/InDel变异 ============
 // ============ 变异审核状态 ============
 export interface VariantReviewStatus {
+  // Immutable result identity must survive mapping into detail/AI forms.
+  rowOrdinal?: number;
+  attemptId?: string;
+  datasetVersion?: string;
   automaticAssessment?: import('@/lib/assessment/types').AutomaticAssessment;
   pinReasons?: string[];
   pinned: boolean;              // 重要位点：独立于历史复核

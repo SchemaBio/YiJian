@@ -147,6 +147,9 @@ function nums(value: unknown): number[] {
 function normalizeReview(row: BackendRow): VariantReviewStatus {
   const review = row.reviewStatus ?? row.review_status ?? {};
   return {
+    rowOrdinal: typeof row.rowOrdinal === 'number' && Number.isSafeInteger(row.rowOrdinal) && row.rowOrdinal >= 0 ? row.rowOrdinal : undefined,
+    attemptId: typeof row.attemptId === 'string' ? row.attemptId : undefined,
+    datasetVersion: typeof row.datasetVersion === 'string' ? row.datasetVersion : undefined,
     pinned: row.pinned === true || review.pinned === true,
     automaticAssessment: row.automaticAssessment as VariantReviewStatus['automaticAssessment'],
     pinReasons: Array.isArray(row.pinReasons) ? row.pinReasons.filter((x):x is string=>typeof x==='string') : undefined,

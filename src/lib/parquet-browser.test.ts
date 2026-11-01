@@ -1,6 +1,8 @@
 import {afterAll,afterEach,beforeAll,beforeEach,expect,it,vi} from 'vitest';
 import {api} from './api';
 import {DEFAULT_FILTER_STATE} from '@/app/(main)/tasks/[uuid]/types';
+import {aiVariantContext} from '@/app/(main)/tasks/[uuid]/utils/ai-context';
+import {prepareAIRequestInput} from './ai-request-input';
 import {getSNVIndels} from '@/app/(main)/tasks/[uuid]/result-api';
 import {assessmentStatus,cancelAssessment} from './assessment/client';
 import {clearBrowserResults,preloadBrowserParquet,queryBrowserParquet} from './parquet-browser';
@@ -209,5 +211,18 @@ it('materializes all trio VAF columns and carries individual AD through the brow
  for(const name of ['Sample_VAF','Sample_VAF_father','Sample_VAF_mother']){
   expect(mocks.query.mock.calls.some(([sql])=>String(sql).includes('ADD COLUMN "'+name+'" DOUBLE'))).toBe(true);
   expect(page.columns).toContain(name);
+ }
+});
+
+it('preserves immutable identity from browser rows through mapped details into both AI request versions',async()=>{
+ const pending=getSNVIndels('ai-identity-task',{...DEFAULT_FILTER_STATE});
+ await vi.waitFor(()=>expect(assessmentStatus('ai-identity-task')?.state).toBe('checking'));
+ cancelAssessment('ai-identity-task');
+ const page=await pending;
+ for(const [index,variant] of page.data.entries()) {
+  for(const feature of ['acmg','svcv4'] as const) {
+   const input=prepareAIRequestInput({feature,taskId:'ai-identity-task',variant:aiVariantContext(variant)});
+   expect(input.variant).toMatchObject({id:`row-${index+1}`,rowOrdinal:index,attemptId:dataset.dataset.executionAttemptId,datasetVersion:dataset.dataset.dataVersion});
+  }
  }
 });
