@@ -1,5 +1,7 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 镜像配置即时应用已上线：Squid/Cuttlefish 最新标签均为 `image-hot-reload-20261101t012249z`，新任务系统镜像 `img-dv8zcpyc`，配置版本4/生效4，无待重启配置。详见第62节；包含第61节节点镜像仓库兼容修复，相关补丁已本地提交、未push。**
+
 **2026-11-01 任务镜像拉取修复已上线：Squid 当前为 `schemabio/squid:workflow-image-20261101t005436z`，基于 `1c469de` 叠加未提交的节点默认镜像预检修复；最新状态见第61节。不要直接用旧 HEAD 重建。**
 
 **2026-10-31 组织重置功能已部署，最新三服务镜像与提交见第60节；支持UUID二次确认、指定初始积分及可选示例数据。Cuttlefish公网正常；额外发现YiJian公网登录521、源站200，入口问题待排查。**
@@ -832,3 +834,14 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 保护目录 `/home/ubuntu/schema/backups/workflow-image-20261101T005436Z` 保存Squid库dump、原部署配置、基础源码归档、构建上下文、补丁清单、回退镜像、测试/拉取日志、result与verification。只切换Squid，其他服务容器身份、任务和托管计算配置保持；healthy、重启0，公网登录页及认证后任务读取200，节点回调仍为 `https://yijian-dev.schema-bio.com/api/v1/cvm/node`。
 - 本地及Linux节点启动/压缩/引导回归通过；实际发布的germline容器内15项分段与9项CNV链路合成回归通过，真实Docker缓存别名准备验证通过。镜像OCI index摘要 `sha256:ef4d5e92e1fbbc29ae3e9add32927abfa25e76b75ff3091c8807d1e68651422e`。未创建计算节点、未重跑任务、未修改历史账务或失败记录，不能视作完整真实样本流程验收。
 - 本地另同步修改 `schema-germline/conf/{local,lsf,slurm}.cfg` 为发布仓库完整名称，更新README；`Schema_CPU/images_list_cpu.txt` 的germline从v0.1.8更新为v0.2.1。尚未commit，未替用户重制计算系统镜像。未来commit/部署需保留本节服务端修复；直接从远端旧HEAD重建会丢失补丁。
+
+## 62. 2026-11-01 Cuttlefish 系统镜像保存后即时生效
+
+- 用户在Cuttlefish把系统镜像从 `img-321m2op8` 改为 `img-dv8zcpyc`。现场保存版本3/生效2，仅image_id待生效、活动执行0、preserve_applied=false；根因为旧实现只在Squid启动时应用配置，并非前端漏存。
+- Squid现在将image_id在保存事务内写入加密applied快照，返回 `hot_reload_fields:["image_id"]`；读取API按共享applied镜像展示effective_values，新执行接收时从DB读取并持久化 `cvm_execution_attempts.image_id`。进程启动配置不做并发原地修改，多副本无需重启；旧执行的镜像在配额/容量等待及重试期间保留，未知云请求继续重放原CloudRequestJSON。其他字段仍按原安全重启规则处理。撤销待生效修改不会回滚已即时生效的镜像。
+- Cuttlefish摘要改为“新任务镜像”，确认和成功提示说明保存后直接用于新任务、已有执行保留原镜像；旧后端无能力标志时仍显示重启提示。只修改镜像不再显示待重启状态。
+- 最新Squid镜像 `schemabio/squid:image-hot-reload-20261101t012249z`、Cuttlefish镜像 `schemabio/cuttlefish:image-hot-reload-20261101t012249z`。分别从线上干净基准 `1c469de60a28aa38e4a096e59cad95a877e44f88` / `437678a0e92f69cf691f6c2a088ae7d1f066cf6c` 归档叠加本机修复，标记source.dirty=true，补丁摘要与文件清单见保护目录。包含上一节未提交节点镜像预检；不包含尚未部署的英文注册邮件提交。远端Git工作区保持干净基准，不能直接用基准HEAD重建当前服务。
+- 保护目录 `/home/ubuntu/schema/backups/image-hot-reload-20261101T012249Z`：Squid库dump、原env/compose/nginx/override、回退镜像、源码归档和完整构建上下文、patch-manifests、测试与构建日志、result与verification。只替换Squid/Cuttlefish，其他服务身份、业务任务及积分余额保持。新增可空镜像快照列；未回填/改写历史执行，回退无需恢复数据库，但旧代码不支持镜像热应用。
+- 隔离PostgreSQL验证配置事务、并发版本冲突、凭据保护、多副本可见性、旧/新任务各自的实际RunInstances镜像及未知请求重放通过。临时数据库容器/匿名卷已清理。Linux节点启动/镜像准备及云请求回归通过；Cuttlefish 9项相关回归、类型检查与生产构建通过，本地对应检查通过。
+- 最终通过正常管理员接口保存用户选定的同一镜像验证，无生产临时镜像切换：保存/生效版本均4，`restart_required=false`，保存前后服务容器ID不变；两服务healthy、重启0。Cuttlefish公网正常登录与 `/api/manage/saas-settings` 返回200，保存/生效镜像均为 `img-dv8zcpyc`。未创建真实计算实例或重跑分析，不代表新系统镜像内部内容已完成真实任务验收。代码尚未commit/push。
+- 后续按用户要求本地提交：Squid `85e8927`（包含第61节节点镜像预检与本节即时应用/执行快照），Cuttlefish `7e94e09`，Schema_CPU `1496019`。schema-germline工作区已干净，本轮未重复提交。相关验证已在发布时完成，本次仅提交及更新交接记录，未push、未重新部署。Squid提交位于本地主分支，祖先包含未上线英文邮件改动；线上仍以本节基准归档加补丁清单为准，不能把本地主分支整棵源码视为当前线上精确版本。
