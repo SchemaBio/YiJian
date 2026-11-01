@@ -3369,5 +3369,10 @@
     "complete": "Task completed",
     "stopped": "Execution stopped or requires attention",
     "explanation": "Progress follows reported backend milestones, including node preparation and initialization. Percentages estimate stage completion, not elapsed or remaining time."
+  },
+  "referenceGenomes": {
+    "title": "Reference genome downloads",
+    "description": "Free GRCh38 (hg38) and GRCh37 (hg19) reference genomes in gzip-compressed FASTA format. No credits charged.",
+    "download": "Download free"
   }
 }

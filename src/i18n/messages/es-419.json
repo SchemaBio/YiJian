@@ -3369,5 +3369,10 @@
     "complete": "Tarea completada",
     "stopped": "La ejecución se detuvo o requiere atención",
     "explanation": "El progreso sigue las etapas reportadas por el servidor, incluida la preparación e inicialización del nodo. Los porcentajes estiman el avance por etapas, no el tiempo transcurrido ni restante."
+  },
+  "referenceGenomes": {
+    "title": "Descarga de genomas de referencia",
+    "description": "Genomas de referencia GRCh38 (hg38) y GRCh37 (hg19) gratuitos en formato FASTA comprimido con gzip. Sin cargo de créditos.",
+    "download": "Descargar gratis"
   }
 }

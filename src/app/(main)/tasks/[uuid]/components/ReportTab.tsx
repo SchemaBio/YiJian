@@ -16,6 +16,7 @@ import { AppModal } from '@/components/shared';
 import { CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { RawResultDownloads } from './RawResultDownloads';
+import { ReferenceGenomeDownloads } from './ReferenceGenomeDownloads';
 import { reportsApi, saveDownload, type ReportTemplate } from '@/lib/reports';
 
 interface ReportTabProps {
@@ -171,5 +172,5 @@ export function ReportTab({ taskId }: ReportTabProps) {
 
 export function FilesTab(props: ReportTabProps) {
   const isSaaS = getRuntimeBackendFlavor() === 'squid';
-  return <div className={`mx-auto w-full px-4 py-5 sm:px-6 ${isSaaS ? 'max-w-6xl' : 'max-w-7xl'}`}>{isSaaS ? <RawResultDownloads taskId={props.taskId} template={props.template} /> : <ReportTab {...props} />}</div>;
+  return <div className={`mx-auto w-full space-y-5 px-4 py-5 sm:px-6 ${isSaaS ? 'max-w-6xl' : 'max-w-7xl'}`}><ReferenceGenomeDownloads />{isSaaS ? <RawResultDownloads taskId={props.taskId} template={props.template} /> : <ReportTab {...props} />}</div>;
 }

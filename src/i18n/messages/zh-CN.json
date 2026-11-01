@@ -3369,5 +3369,10 @@
     "complete": "任务已完成",
     "stopped": "执行已中止或需要处理",
     "explanation": "进度依据后端上报的阶段更新，包含节点准备与初始化；百分比为阶段进展估算，不代表耗时比例或剩余时间。"
+  },
+  "referenceGenomes": {
+    "title": "参考基因组下载",
+    "description": "免费提供 GRCh38（hg38）和 GRCh37（hg19）参考基因组，FASTA 格式（gzip 压缩），不扣积分。",
+    "download": "免费下载"
   }
 }
