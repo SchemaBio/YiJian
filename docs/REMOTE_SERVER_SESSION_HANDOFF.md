@@ -1,5 +1,7 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 任务镜像拉取修复已上线：Squid 当前为 `schemabio/squid:workflow-image-20261101t005436z`，基于 `1c469de` 叠加未提交的节点默认镜像预检修复；最新状态见第61节。不要直接用旧 HEAD 重建。**
+
 **2026-10-31 组织重置功能已部署，最新三服务镜像与提交见第60节；支持UUID二次确认、指定初始积分及可选示例数据。Cuttlefish公网正常；额外发现YiJian公网登录521、源站200，入口问题待排查。**
 
 核对日期：**2026-10-30，Asia/Shanghai**。本文替代此前 2026-10-08 的版本。
@@ -821,3 +823,12 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 发布脚本先因过时的“必须有preserve-applied开关”前提停止；只读确认待应用配置为0后修正前提。重入时修正已有备份目录的处理，均未切换服务。首次切换后的只读检查发现无重置记录的空响应被BFF重复封装，自动镜像回退；修正并提交后重新构建/发布成功。相关失败、回退和恢复记录保留，未恢复数据库、未覆盖业务资料。
 - 回退仅切换镜像，不恢复旧数据库。一旦接收真实重置请求，必须保留支持重置隔离/回执的Squid与Octopus后端；不能用旧后端绕过进行中的清理。物理删除不可通过镜像回退恢复，禁止用真实组织作破坏性验收。
 - 最终独立只读核对：三个容器healthy、重启0，镜像revision与远端仓库HEAD一致；Cuttlefish公网及源站均200。额外发现YiJian公网 `/login` 从服务器和用户本机检查均返回521，而 `127.0.0.1:8080/login` 携带原Host的源站为200、其容器身份保持。本轮未改动YiJian、Tunnel或Cloudflare配置，公网521原因尚未确认，不能宣称YiJian公网登录验收通过；结果已记录在保护目录verification.json。
+
+## 61. 2026-11-01 germline 默认镜像仓库修复
+
+- 任务 `45a68d1f-feff-4dee-b8bb-8a2bb5e306f9` 最新尝试 `9e239092-5cb8-449f-a51c-45cc804bb66c` 于北京时间01:00启动分析，01:02失败。FixBed/CreateMitoBed 所需 `schemabio/germline:v0.2.1` 在 Docker Hub 不存在，实际版本发布在 `docker.schema-bio.com/schemabio/germline:v0.2.1`。节点已正常首报，FASTQ质控运行过，本次尚未进入CNV；更早尝试的CNV边界异常不是本次根因。页面通用 `BOOTSTRAP_FAILED` 标签未区分此工作流拉取失败。
+- Squid新增节点默认镜像预检，在磁盘挂载、参考库准备及分析前读取实际miniwdl配置。已有镜像复用；仅对已知短名 `schemabio/germline:<tag>` 从发布仓库拉取同版本并补本地别名，保留其他仓库/摘要引用，不降级或覆盖已有别名。缺失时在preflight以missing_dependency失败。可兼容现有系统镜像 `img-321m2op8`，未修改该配置。
+- 当前Squid镜像 `schemabio/squid:workflow-image-20261101t005436z`：以线上干净提交 `1c469de60a28aa38e4a096e59cad95a877e44f88` 归档仅叠加 `cvm_manager.go`、`cvm_workflow_image.go` 和测试文件；补丁清单摘要 `000c5b8a3499beb4d573f155cbe8fd0c220e1b7a7863b2b5da6936d0a39e648c`。镜像标记source.dirty=true，远端Git仍干净停留该基准，不包含本地尚未发布的英文邮件改动。本轮未commit/push。
+- 保护目录 `/home/ubuntu/schema/backups/workflow-image-20261101T005436Z` 保存Squid库dump、原部署配置、基础源码归档、构建上下文、补丁清单、回退镜像、测试/拉取日志、result与verification。只切换Squid，其他服务容器身份、任务和托管计算配置保持；healthy、重启0，公网登录页及认证后任务读取200，节点回调仍为 `https://yijian-dev.schema-bio.com/api/v1/cvm/node`。
+- 本地及Linux节点启动/压缩/引导回归通过；实际发布的germline容器内15项分段与9项CNV链路合成回归通过，真实Docker缓存别名准备验证通过。镜像OCI index摘要 `sha256:ef4d5e92e1fbbc29ae3e9add32927abfa25e76b75ff3091c8807d1e68651422e`。未创建计算节点、未重跑任务、未修改历史账务或失败记录，不能视作完整真实样本流程验收。
+- 本地另同步修改 `schema-germline/conf/{local,lsf,slurm}.cfg` 为发布仓库完整名称，更新README；`Schema_CPU/images_list_cpu.txt` 的germline从v0.1.8更新为v0.2.1。尚未commit，未替用户重制计算系统镜像。未来commit/部署需保留本节服务端修复；直接从远端旧HEAD重建会丢失补丁。
