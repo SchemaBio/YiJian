@@ -20,7 +20,7 @@ import { dbSnpIdentifiers } from '../utils/variant-resource-links';
 import { ClinVarBadge } from './ClinVarBadge';
 import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
 import { PhenotypeSummary, AnnotationScreeningNotes } from './PhenotypeSummary';
-import { ExternalLink, FileText, Database, Dna, MessageSquare } from 'lucide-react';
+import { ExternalLink, FileText, Database, Dna, MessageSquare, Sparkles, Calculator } from 'lucide-react';
 import { Tag } from '@/components/shared/Tag';
 import type { SNVIndel, ACMGEvidenceEntry, ACMGClassification } from '../types';
 import { ACMG_CONFIG } from '../result-api';
@@ -30,7 +30,7 @@ import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistan
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
 import { aiACMGReviewCandidates, mergeAIReviewEvidence } from '../utils/ai-acmg';
-import { VariantAssessmentOverview } from './VariantAssessmentOverview';
+import { VariantAssessmentOverview, type AdoptedSource } from './VariantAssessmentOverview';
 import { SVCv4AssessmentPanel } from './SVCv4AssessmentPanel';
 import type { SVCv4Assessment } from '@/lib/svcv4';
 
@@ -125,6 +125,37 @@ function adjustmentDiff(beforeJSON: Record<string, unknown> | string, afterJSON:
   }
 }
 
+function buildInterpretationDraft(v: SNVIndel, currentEvidenceList: ACMGEvidenceEntry[], classificationName?: string | null): string {
+  const gene = v.gene || '该基因';
+  const hgvsParts = [v.transcript, v.hgvsc, v.hgvsp].filter(Boolean);
+  const hgvs = hgvsParts.length ? hgvsParts.join(' : ') : `${v.chromosome}:${v.position} ${v.ref}>${v.alt}`;
+  const zygosityMap: Record<string, string> = { Heterozygous: '杂合', Homozygous: '纯合', Hemizygous: '半合子' };
+  const zygosityStr = zygosityMap[v.zygosity] || v.zygosity || '';
+  const classLabel = classificationName && ACMG_CONFIG[classificationName as ACMGClassification] ? ACMG_CONFIG[classificationName as ACMGClassification].label : classificationName || '意义未明 (VUS)';
+
+  const lines: string[] = [
+    `【变异概述】`,
+    `受检者在 ${gene} 基因检测到 ${hgvs} ${zygosityStr}变异。`,
+    ``,
+    `【ACMG 致病性评估依据】`,
+    `根据 ACMG/AMP 遗传变异分类指南，该变异被评定为：${classLabel}。`,
+  ];
+
+  if (currentEvidenceList.length > 0) {
+    lines.push(`命中的证据条款如下：`);
+    for (const e of currentEvidenceList) {
+      const notePart = e.note ? `（${e.note.split('\n')[0]}）` : '';
+      lines.push(`- ${e.code} [${e.strength}]：${e.source || '人工核定'}${notePart}`);
+    }
+  }
+
+  if (v.diseaseAssociation) {
+    lines.push(``, `【临床疾病关联】`, `关联疾病：${v.diseaseAssociation}${v.inheritanceMode ? `，遗传模式：${v.inheritanceMode}` : ''}。`);
+  }
+
+  return lines.join('\n');
+}
+
 function ACMGPointsEditor({
   variant,
   onSave,
@@ -154,6 +185,18 @@ function ACMGPointsEditor({
   }, 0);
   const calculated = Object.values(evidence).some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, Object.keys(evidence).length);
   const auto = variant.automaticAcmg;
+  const suggested = React.useMemo(() => {
+    const list: Array<{ code: string; label: string; source: string }> = [];
+    for (const item of auto?.criteria ?? []) {
+      if (!evidence[item.code]) list.push({ code: item.code, label: `${item.code} (规则推荐)`, source: 'auto' });
+    }
+    for (const item of aiDraft?.proposal?.evidence ?? []) {
+      if (item.status === 'met' && !evidence[item.code] && !list.some(x => x.code === item.code)) {
+        list.push({ code: item.code, label: `${item.code} (AI建议)`, source: 'ai' });
+      }
+    }
+    return list;
+  }, [auto, aiDraft, evidence]);
 
   const toggle = (code: string, checked: boolean) => { setRestoreAutomatic(false); setEvidence(previous => {
     const next = { ...previous };
@@ -186,6 +229,36 @@ function ACMGPointsEditor({
       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{t("tasks.automaticAssessmentc4ff36")}{auto?.profile ?? 'acmg-snv-points-v2'}</span><span>{t("tasks.automaticClassification8daa4b")}{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : t("tasks.insufficientEvidence70568c")} · {auto?.score ?? 0} {t("tasks.pointsdecb3b")}</span></div>
       {auto?.pending?.length ? <p className="mt-1 text-xs text-fg-muted">{t("tasks.unconfirmed7c7684")}{auto.pending.join('；')}</p> : <p className="mt-1 text-xs text-fg-muted">{t("tasks.populationDiseaseMechanismFamilyAndLaboratoryEvidencebc757f")}</p>}
     </div>
+    {suggested.length > 0 && (
+      <div className="rounded-lg border border-accent-subtle bg-accent-subtle/15 p-2.5">
+        <span className="text-xs font-semibold text-accent-fg">💡 算法初评与 AI 候选推荐（点击快速采纳）：</span>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {suggested.map(s => (
+            <button
+              key={s.code}
+              type="button"
+              onClick={() => toggle(s.code, true)}
+              className="inline-flex items-center gap-1 rounded border border-accent-emphasis/30 bg-canvas-default px-2 py-0.5 text-xs text-accent-fg hover:bg-accent-subtle transition-colors shadow-xs"
+            >
+              <span className="font-bold">+</span>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    {Object.keys(evidence).length > 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-canvas-subtle p-2 text-xs">
+        <span className="text-fg-muted">已激活 <strong>{Object.keys(evidence).length}</strong> 项证据条款</span>
+        <div className="flex flex-wrap gap-1">
+          {Object.keys(evidence).map(c => (
+            <span key={c} className={`rounded px-1.5 py-0.5 font-semibold text-xs ${c.startsWith('B') ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'}`}>
+              {c}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
     {POINT_CRITERIA.map(group => <section key={group.title} className="space-y-2">
       <h5 className="text-sm font-semibold text-fg-default">{translateUI(group.title, t)}</h5>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -226,6 +299,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
   const [localEvidence, setLocalEvidence] = React.useState<ACMGEvidenceEntry[] | null>(null);
   const [localSource, setLocalSource] = React.useState<SNVIndel['acmgAssessmentSource']>();
+  const [localAdoptedACMG, setLocalAdoptedACMG] = React.useState<SNVIndel['adoptedACMG'] | null>(null);
   const [aiDraft, setAIDraft] = React.useState<{ key: string; evidence: ACMGEvidenceEntry[]; reason: string; proposal?: AIAssistanceResult }>();
   const [interpretation, setInterpretation] = React.useState('');
   const [versionBusy,setVersionBusy]=React.useState(false);
@@ -247,6 +321,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     setLocalClassification(null);
     setLocalCriteria(null);
     setLocalEvidence(null); setLocalSource(undefined); setAIDraft(undefined);
+    setLocalAdoptedACMG(null);
     setInterpretation(variant?.interpretation ?? '');
     setVersionError('');setVersionBusy(false);setSvcUnsaved(false);
     setInterpretationError('');
@@ -264,6 +339,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   if (!isOpen || !variant) return null;
 
+  const effectiveAdopted = localAdoptedACMG ?? variant.adoptedACMG;
   const currentClassification = localClassification ?? variant.legacyAcmgClassification ?? variant.acmgClassification;
   const currentCriteria = localCriteria ?? variant.acmgCriteria ?? [];
   const currentEvidence = localEvidence ?? variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
@@ -271,8 +347,12 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const currentScore = assessmentSource === 'automatic' ? variant.automaticAcmg?.score : currentEvidence.reduce((sum, item) => sum + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
   const aiCandidates = aiResult ? aiACMGReviewCandidates(aiResult) : [];
   const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
-  const activeClassification=variant.adoptedACMG?variant.acmgClassification:variant.activeAcmgVersion==='svcv4'?variant.svcv4Assessment?.result?.classification:currentClassification;
-  const activeConfig=activeClassification?ACMG_CONFIG[activeClassification]:undefined;
+  const activeClassification = effectiveAdopted?.classification ?? (
+    effectiveAdopted ? variant.acmgClassification :
+    variant.activeAcmgVersion === 'svcv4' ? variant.svcv4Assessment?.result?.classification :
+    (currentClassification ?? variant.automaticAcmg?.classification)
+  );
+  const activeConfig = activeClassification ? ACMG_CONFIG[activeClassification] : undefined;
   const saveVersioned=async(adjustments:Record<string,unknown>,reason:string)=>{
     if(!onSaveVersionedAssessment)return;
     await onSaveVersionedAssessment(variant,adjustments,reason);
@@ -280,10 +360,31 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
       try{const history=await getResultRowAdjustmentHistory(taskId,'snv-indel',variant.id);if(selectedRef.current===variant.id)setAdjustmentHistory(history);}catch{/* Saved data remains successful if history refresh fails. */}
     }
   };
-  const selectVersion=async(version:'legacy'|'svcv4')=>{
-    if(readOnly || versionBusy || !onSaveVersionedAssessment)return;
-    setVersionBusy(true);setVersionError('');
-    try{await saveVersioned({activeAcmgVersion:version},'');}catch(e){if(selectedRef.current===variant.id)setVersionError(e instanceof Error ? errorText(e, t):t("tasks.switchFailed9e2fdc"));}finally{if(selectedRef.current===variant.id)setVersionBusy(false);}
+
+  const handleAdoptSource = async (source: AdoptedSource, classification?: string | null) => {
+    if (readOnly) return;
+    const targetClass = (classification && !['缺失', '尚未评定', '尚未进行 AI 评估', '证据不足，待补充'].includes(classification))
+      ? classification as ACMGClassification
+      : undefined;
+
+    const adoptedData: NonNullable<SNVIndel['adoptedACMG']> = {
+      version: variant.activeAcmgVersion ?? 'legacy',
+      source,
+      classification: targetClass,
+      savedAt: new Date().toISOString(),
+    };
+
+    setLocalAdoptedACMG(adoptedData);
+
+    if (onSaveVersionedAssessment) {
+      const labelMap: Record<AdoptedSource, string> = {
+        database: '数据库参考',
+        quick: '本地快速初评',
+        ai: 'AI证据建议',
+        manual: '人工评估',
+      };
+      await saveVersioned({ adoptedACMG: adoptedData }, `采用${labelMap[source]}结果`);
+    }
   };
 
   const annotation = (column: string, fallback?: string | number) => sourceAnnotation(variant, column, fallback);
@@ -293,9 +394,29 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   // 保存 ACMG 分类
   const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false, adopt = true) => {
+    const score = evidence.reduce((total, item) => total + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
+    const calculated = override || (evidence.some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, evidence.length)) || null;
+
     if (onSaveVersionedAssessment) {
-      const changes: Record<string, unknown> = { acmgEvidence: evidence, acmgOverride: override, acmgOverrideReason: overrideReason, resetAcmg: reset };
-      if (adopt) changes.activeAcmgVersion = 'legacy';
+      const changes: Record<string, unknown> = {
+        acmgEvidence: evidence,
+        acmgOverride: override,
+        acmgOverrideReason: overrideReason,
+        resetAcmg: reset,
+        acmgSavedAt: new Date().toISOString(),
+      };
+      if (adopt) {
+        changes.activeAcmgVersion = 'legacy';
+        const adoptedData: NonNullable<SNVIndel['adoptedACMG']> = {
+          version: 'legacy',
+          source: 'manual',
+          classification: calculated ?? undefined,
+          score,
+          savedAt: new Date().toISOString(),
+        };
+        changes.adoptedACMG = adoptedData;
+        setLocalAdoptedACMG(adoptedData);
+      }
       if (aiDraft && aiResult?.requestId) changes.acmgAIResult = aiResult.requestId;
       await saveVersioned(changes, reason);
     } else if (onUpdateClassification) await onUpdateClassification(variant, evidence, override, overrideReason, reason, reset);
@@ -308,8 +429,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     } catch {
       // The saved assessment remains successful even if history refresh is unavailable.
     }
-    const score = evidence.reduce((total, item) => total + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
-    setLocalClassification(override || (evidence.some(item => item.code === 'BA1') ? 'Benign' : classifyPoints(score, evidence.length)) || null);
+    setLocalClassification(calculated);
     setLocalCriteria(evidence.map(item => item.code));
     setLocalEvidence(evidence);
     setLocalSource(reset ? 'automatic' : override ? 'manual_override' : 'manual_evidence');
@@ -334,6 +454,197 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
     }
   };
 
+  const renderACMGCalculator = (idPrefix: string) => (
+    <div className="space-y-4">
+      <InspectorTabs
+        id={`${idPrefix}-calculator`}
+        value={acmgTab}
+        onChange={value => { if (value === 'acmg' || value === 'svcv4') setAcmgTab(value); }}
+        sections={['acmg', 'svcv4']}
+        labels={{ acmg: t("tasks.currentEdition7b034e"), svcv4: t("tasks.svcV6cd501") }}
+        ariaLabel={t("display.acmgCalculatorVersion6cc1e9")}
+      />
+      <div id={`${idPrefix}-calculator-content`} role="tabpanel" aria-labelledby={`${idPrefix}-calculator-${acmgTab}`} className="pt-3">
+        <section hidden={acmgTab !== 'svcv4'}>
+          <SVCv4AssessmentPanel
+            onUnsavedChange={setSvcUnsaved}
+            onAIResult={setSvcAIResult}
+            key={`${taskId}/${variant.id}/svcv4`}
+            taskId={taskId}
+            reference={referenceGenome}
+            variant={variant}
+            readOnly={readOnly}
+            onSaveAI={onSaveVersionedAssessment ? requestId => saveVersioned({ svcv4AIResult: requestId }, '') : undefined}
+            onSave={onSaveVersionedAssessment ? (assessment: SVCv4Assessment, reason: string, adopt = false, aiRequestId?: string) => {
+              const adoptedData: SNVIndel['adoptedACMG'] = adopt ? {
+                version: 'svcv4',
+                source: 'manual',
+                classification: assessment.result?.classification ?? undefined,
+                score: assessment.result?.score ?? undefined,
+                vusSubclass: assessment.result?.vusSubclass ?? undefined,
+                savedAt: new Date().toISOString(),
+              } : undefined;
+              if (adoptedData) setLocalAdoptedACMG(adoptedData);
+              return saveVersioned({
+                svcv4Assessment: assessment,
+                svcv4SavedAt: new Date().toISOString(),
+                ...(adopt ? { activeAcmgVersion: 'svcv4', adoptedACMG: adoptedData } : {}),
+                ...(aiRequestId ? { svcv4AIResult: aiRequestId } : {})
+              }, reason);
+            } : undefined}
+          />
+        </section>
+        <section hidden={acmgTab !== 'acmg'}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-semibold">{t("tasks.currentAcmgEdition8379ee")}</span>
+            {!isEditingACMG && (
+              <AIAssistanceAction
+                onError={setAIError}
+                key={`${taskId}/${variant.id}/acmg`}
+                disabled={readOnly}
+                input={{
+                  feature: 'acmg',
+                  taskId,
+                  reference: referenceGenome,
+                  variant: aiVariantContext(variant),
+                  calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride }
+                }}
+                onResult={setAIResult}
+              />
+            )}
+          </div>
+          {aiResult && (
+            <AIResultCard
+              result={aiResult}
+              humanReviewSaved={Boolean(aiResult.requestId && currentEvidence.some(item => item.source === 'sepilens_ai_reviewed' && item.note?.includes(`AI request: ${aiResult.requestId}`)))}
+              reviewLabel={t(aiCandidates.length ? 'variantAssessment.review' : 'variantAssessment.supplement')}
+              onReviewEvidence={canEditACMG ? () => {
+                setAIDraft({
+                  key: crypto.randomUUID(),
+                  proposal: aiResult,
+                  evidence: mergeAIReviewEvidence(localEvidence ?? (variant.acmgAssessmentSource === 'automatic' ? [] : variant.acmgEvidence ?? []), aiCandidates),
+                  reason: `${t('assistance.acmgAIReviewReason')}${aiResult.requestId ? ` (${aiResult.requestId})` : ''}`
+                });
+                setIsEditingACMG(true);
+              } : undefined}
+            />
+          )}
+          {aiResult?.requestId && !readOnly && onSaveVersionedAssessment && (
+            <div className="space-y-1 mb-3">
+              <ActionButton
+                action="save"
+                variant="ghost"
+                type="button"
+                loading={versionBusy}
+                disabled={versionBusy || variant.acmgAIResult?.requestId === aiResult.requestId}
+                onClick={async () => {
+                  setVersionBusy(true);
+                  setVersionError('');
+                  try {
+                    await saveVersioned({ acmgAIResult: aiResult.requestId }, '');
+                  } catch (e) {
+                    setVersionError(errorText(e, t));
+                  } finally {
+                    setVersionBusy(false);
+                  }
+                }}
+              >
+                {t(variant.acmgAIResult?.requestId === aiResult.requestId ? 'variantAssessment.saved' : 'variantAssessment.archive')}
+              </ActionButton>
+              <p className="text-xs text-fg-muted">{t('variantAssessment.archiveNotice')}</p>
+            </div>
+          )}
+          {/* ACMG 分类 */}
+          <SectionTitle
+            icon={FileText}
+            title={t("tasks.acmgClassification52bcef")}
+            action={
+              canEditACMG && !isEditingACMG && (
+                <ActionButton
+                  action="edit"
+                  variant="ghost"
+                  onClick={() => { setAIDraft(undefined); setIsEditingACMG(true); }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
+                >
+                  {t("admin.edita7f814")}
+                </ActionButton>
+              )
+            }
+          />
+          <div className="space-y-0">
+            {isEditingACMG ? (
+              <ACMGPointsEditor
+                key={aiDraft?.key ?? 'manual'}
+                variant={{ ...variant, acmgEvidence: localEvidence ?? variant.acmgEvidence }}
+                aiDraft={aiDraft}
+                onSave={handleSaveACMG}
+                renderAIAction={calculator => (
+                  <AIAssistanceAction
+                    disabled={readOnly}
+                    input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator }}
+                    onResult={setAIResult}
+                  />
+                )}
+                onCancel={() => setIsEditingACMG(false)}
+              />
+            ) : (
+              <>
+                <InfoItem
+                  label={t("tasks.classification435c52")}
+                  value={acmgConfig ? <ClinicalSignificanceBadge value={currentClassification}>{acmgConfig.label}</ClinicalSignificanceBadge> : t("tasks.notAssessedd94e42")}
+                />
+                <InfoItem
+                  label={t("tasks.assessmentSource3f01c0")}
+                  value={
+                    assessmentSource === 'manual_override'
+                      ? t("tasks.manualOverrideef74b5")
+                      : assessmentSource === 'manual_evidence'
+                      ? t("tasks.savedEvidencePoints874a14")
+                      : variant.automaticAcmg?.classificationBasis === 'clinvar_reference'
+                      ? t("tasks.quickAssessmentClinvarReferenceb1b550")
+                      : variant.automaticAcmg?.classificationBasis === 'population_screening'
+                      ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f")
+                      : variant.automaticAcmg?.classificationBasis === 'screening_conflict'
+                      ? t("tasks.quickAssessmentConflictNeedsReviewf3c456")
+                      : variant.automaticAcmg?.classificationBasis === 'screening_vus'
+                      ? t("tasks.quickAssessmentVusNeedsReview79d7da")
+                      : t("tasks.automaticEvidencePointsb87a06")
+                  }
+                />
+                {assessmentSource === 'automatic' && variant.automaticAcmg?.screeningNotes?.length ? (
+                  <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">
+                    {variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}
+                  </div>
+                ) : null}
+                <PhenotypeSummary assessment={variant.automaticAcmg} />
+                <AnnotationScreeningNotes details={variant.automaticAcmg?.annotationDetails} />
+                <InfoItem
+                  label={t(assessmentSource === 'automatic' ? "tasks.automaticEvidencePointsb87a06" : "tasks.evidencePoints76bde1")}
+                  value={currentScore !== undefined ? t("tasks.pointsc91542", { p0: String(currentScore) }) : undefined}
+                />
+                {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">{t("tasks.currentAnnotationsCannotEstablishAnAcmgClassification3d8581")}</p>}
+                <InfoItem
+                  label={t("tasks.evidenceItem13948e")}
+                  value={
+                    currentCriteria.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {currentCriteria.map((c) => (
+                          <span key={c} className="px-1.5 py-0.5 text-xs bg-canvas-inset rounded">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    ) : undefined
+                  }
+                />
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <WorkspaceInspector label={t("tasks.variantDetails7ca440")} onClose={onClose}>
@@ -346,7 +657,6 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           <IconActionButton label={t("tasks.close6c14bd")} action="close" variant="ghost"
             onClick={onClose}
             className="p-1.5 text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-
            />
         </div>
 
@@ -359,99 +669,73 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
         {/* 内容区域 */}
         <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['overview', 'annotation', 'evidence', 'acmg', 'interpretation', 'history']} labels={{overview:t('variantAssessment.overview')}} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
-          <section hidden={section !== 'overview'}><VariantAssessmentOverview variant={variant} ai={aiResult} svcAI={svcAIResult} aiError={aiError} onCalculator={() => setSection('acmg')} onInterpretation={() => setSection('interpretation')} /></section>
-          <section hidden={section !== 'interpretation'} >
-          {/* 人工解读 */}
-          <SectionTitle icon={MessageSquare} title={t("tasks.manualInterpretation1fcaef")} />
-          <div className="space-y-0">
-            <textarea
-              readOnly={readOnly}
-              value={interpretation}
-              onChange={(e) => setInterpretation(e.target.value)}
-              placeholder={t("tasks.enterYourInterpretationOfThisVariantee0d51")}
-              className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
+          <section hidden={section !== 'overview'}>
+            <VariantAssessmentOverview
+              variant={{
+                ...variant,
+                adoptedACMG: effectiveAdopted,
+                acmgClassification: localClassification ?? variant.acmgClassification,
+                acmgEvidence: localEvidence ?? variant.acmgEvidence,
+                acmgAssessmentSource: localSource ?? variant.acmgAssessmentSource,
+              }}
+              ai={aiResult}
+              svcAI={svcAIResult}
+              aiError={aiError}
+              onCalculator={() => setSection('acmg')}
+              onInterpretation={() => setSection('interpretation')}
+              onAdoptSource={handleAdoptSource}
             />
-            <div className="mt-2 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-fg-muted">{interpretation.length} {t("tasks.characters9f8ba6")}</span>
-                <ActionButton loading={interpretationSaving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost" type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveInterpretationac1ec3")}</ActionButton>
+          </section>
+          <section hidden={section !== 'interpretation'} >
+            {/* 人工解读 */}
+            <SectionTitle icon={MessageSquare} title={t("tasks.manualInterpretation1fcaef")} />
+            {!readOnly && (
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span className="text-fg-muted">基于已选证据快速起草：</span>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-accent-fg font-medium hover:underline"
+                  onClick={() => {
+                    const draft = buildInterpretationDraft(variant, currentEvidence, activeClassification);
+                    setInterpretation(previous => previous.trim() ? `${previous}\n\n${draft}` : draft);
+                  }}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-accent-fg" />
+                  生成标准解读词
+                </button>
               </div>
-              {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
+            )}
+            <div className="space-y-0">
+              <textarea
+                readOnly={readOnly}
+                value={interpretation}
+                onChange={(e) => setInterpretation(e.target.value)}
+                placeholder={t("tasks.enterYourInterpretationOfThisVariantee0d51")}
+                className="w-full min-h-[90px] px-3 py-2 text-sm border border-border-default rounded-md bg-canvas-default text-fg-default resize-y focus:outline-none focus:ring-2 focus:ring-accent-emphasis focus:border-transparent"
+              />
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-fg-muted">{interpretation.length} {t("tasks.characters9f8ba6")}</span>
+                  <ActionButton loading={interpretationSaving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="ghost" type="button" disabled={readOnly || interpretationSaving || interpretation === (variant.interpretation ?? '')} onClick={() => void handleSaveInterpretation()} className="rounded-md bg-accent-emphasis px-3 py-1.5 text-sm text-fg-on-emphasis disabled:opacity-50">{t("tasks.saveInterpretationac1ec3")}</ActionButton>
+                </div>
+                {interpretationError && <p role="alert" className="text-sm text-danger-fg">{interpretationError}</p>}
+              </div>
             </div>
-          </div>
 
+            {/* 下方嵌入同步的 ACMG 计算器 */}
+            <div className="mt-6 pt-4 border-t border-border-subtle">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-accent-fg" />
+                  <h4 className="text-sm font-semibold text-fg-default">ACMG 证据计算器</h4>
+                </div>
+                <span className="text-xs text-fg-muted">与评估总览实时联动</span>
+              </div>
+              {section === 'interpretation' && renderACMGCalculator('interp-acmg')}
+            </div>
           </section>
           <section hidden={section !== 'acmg'}>
-            <InspectorTabs id="variant-acmg-calculator" value={acmgTab}
-              onChange={value => { if (value === 'acmg' || value === 'svcv4') setAcmgTab(value); }}
-              sections={['acmg', 'svcv4']} labels={{ acmg: t("tasks.currentEdition7b034e"), svcv4: t("tasks.svcV6cd501") }} ariaLabel={t("display.acmgCalculatorVersion6cc1e9")} />
-            <div id="variant-acmg-calculator-content" role="tabpanel" aria-labelledby={`variant-acmg-calculator-${acmgTab}`} className="pt-3">
-            {!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
-              <ActionButton permission="interpretation_reports.manage" action="completed" type="button" loading={versionBusy} loadingLabel={t("tasks.switching717bbf")} disabled={versionBusy || (acmgTab==='acmg'?isEditingACMG:svcUnsaved) || ((variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4') && (!variant.adoptedACMG || variant.adoptedACMG.savedAt===(acmgTab==='acmg'?variant.acmgSavedAt:variant.svcv4SavedAt)))||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')}>{t('variantAssessment.adoptSaved')}</ActionButton>
-              {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
-            </div>}
-              <section hidden={acmgTab !== 'svcv4'}>
-                <SVCv4AssessmentPanel onUnsavedChange={setSvcUnsaved} onAIResult={setSvcAIResult} key={`${taskId}/${variant.id}`} taskId={taskId} reference={referenceGenome} variant={variant} readOnly={readOnly} onSaveAI={onSaveVersionedAssessment?requestId=>saveVersioned({svcv4AIResult:requestId},''):undefined} onUseAIInterpretation={onSaveInterpretation ? result => { setInterpretation(previous => [previous, formatAIInterpretation(result)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string,adopt=false,aiRequestId?:string)=>saveVersioned({svcv4Assessment:assessment,...(adopt?{activeAcmgVersion:'svcv4'}:{}),...(aiRequestId?{svcv4AIResult:aiRequestId}:{})},reason):undefined} />
-              </section>
-              <section hidden={acmgTab !== 'acmg'}>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold">{t("tasks.currentAcmgEdition8379ee")}</span>
-                {!isEditingACMG && <AIAssistanceAction onError={setAIError} key={`${taskId}/${variant.id}/acmg`} disabled={readOnly} input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride } }} onResult={setAIResult} />}
-              </div>
-              {aiResult && <AIResultCard result={aiResult} humanReviewSaved={Boolean(aiResult.requestId && currentEvidence.some(item => item.source === 'sepilens_ai_reviewed' && item.note?.includes(`AI request: ${aiResult.requestId}`)))} reviewLabel={t(aiCandidates.length ? 'variantAssessment.review' : 'variantAssessment.supplement')} onReviewEvidence={canEditACMG ? () => { setAIDraft({ key: crypto.randomUUID(), proposal:aiResult, evidence: mergeAIReviewEvidence(localEvidence ?? (variant.acmgAssessmentSource === 'automatic' ? [] : variant.acmgEvidence ?? []), aiCandidates), reason: `${t('assistance.acmgAIReviewReason')}${aiResult.requestId ? ` (${aiResult.requestId})` : ''}` }); setIsEditingACMG(true); } : undefined} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
-              {aiResult?.requestId && !readOnly && onSaveVersionedAssessment && <div className="space-y-1"><ActionButton action="save" variant="ghost" type="button" loading={versionBusy} disabled={versionBusy || variant.acmgAIResult?.requestId === aiResult.requestId} onClick={async()=>{setVersionBusy(true);setVersionError('');try{await saveVersioned({acmgAIResult:aiResult.requestId},'');}catch(e){setVersionError(errorText(e,t));}finally{setVersionBusy(false);}}}>{t(variant.acmgAIResult?.requestId === aiResult.requestId ? 'variantAssessment.saved':'variantAssessment.archive')}</ActionButton><p className="text-xs text-fg-muted">{t('variantAssessment.archiveNotice')}</p></div>}
-              {/* ACMG 分类 */}
-              <SectionTitle
-                icon={FileText}
-                title={t("tasks.acmgClassification52bcef")}
-                action={
-                  canEditACMG && !isEditingACMG && (
-                    <ActionButton action="edit" variant="ghost"
-                      onClick={() => { setAIDraft(undefined); setIsEditingACMG(true); }}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-fg-muted hover:text-fg-default hover:bg-canvas-inset rounded transition-colors"
-                    >
-
-                      {t("admin.edita7f814")}</ActionButton>
-                  )
-                }
-              />
-              <div className="space-y-0">
-                {isEditingACMG ? (
-                  <ACMGPointsEditor
-                    key={aiDraft?.key ?? 'manual'}
-                    variant={{ ...variant, acmgEvidence: localEvidence ?? variant.acmgEvidence }}
-                    aiDraft={aiDraft}
-                    onSave={handleSaveACMG}
-                    renderAIAction={calculator => <AIAssistanceAction disabled={readOnly} input={{feature:'acmg',taskId,reference:referenceGenome,variant:aiVariantContext(variant),calculator}} onResult={setAIResult} />}
-                  onCancel={() => setIsEditingACMG(false)}
-                  />
-                ) : (
-                  <>
-                    <InfoItem label={t("tasks.classification435c52")} value={acmgConfig ? <ClinicalSignificanceBadge value={currentClassification}>{acmgConfig.label}</ClinicalSignificanceBadge> : t("tasks.notAssessedd94e42")} />
-                    <InfoItem label={t("tasks.assessmentSource3f01c0")} value={assessmentSource === 'manual_override' ? t("tasks.manualOverrideef74b5") : assessmentSource === 'manual_evidence' ? t("tasks.savedEvidencePoints874a14") : variant.automaticAcmg?.classificationBasis === 'clinvar_reference' ? t("tasks.quickAssessmentClinvarReferenceb1b550") : variant.automaticAcmg?.classificationBasis === 'population_screening' ? t("tasks.quickAssessmentGnomadFrequencyScreenf23e0f") : variant.automaticAcmg?.classificationBasis === 'screening_conflict' ? t("tasks.quickAssessmentConflictNeedsReviewf3c456") : variant.automaticAcmg?.classificationBasis === 'screening_vus' ? t("tasks.quickAssessmentVusNeedsReview79d7da") : t("tasks.automaticEvidencePointsb87a06")} />
-                    {assessmentSource === 'automatic' && variant.automaticAcmg?.screeningNotes?.length ? <div className="space-y-1 rounded bg-canvas-subtle p-3 text-xs text-fg-muted">{variant.automaticAcmg.screeningNotes.map(note => <p key={note}>{note}</p>)}</div> : null}
-                    <PhenotypeSummary assessment={variant.automaticAcmg} />
-                    <AnnotationScreeningNotes details={variant.automaticAcmg?.annotationDetails} />
-                    <InfoItem label={t(assessmentSource === 'automatic' ? "tasks.automaticEvidencePointsb87a06" : "tasks.evidencePoints76bde1")} value={currentScore !== undefined ? t("tasks.pointsc91542", {p0: String(currentScore)}) : undefined} />
-                    {!acmgConfig && <p className="mt-2 text-xs text-fg-muted">{t("tasks.currentAnnotationsCannotEstablishAnAcmgClassification3d8581")}</p>}
-                    <InfoItem
-                      label={t("tasks.evidenceItem13948e")}
-                      value={currentCriteria.length ? (
-                        <div className="flex flex-wrap gap-1">
-                          {currentCriteria.map((c) => (
-                            <span key={c} className="px-1.5 py-0.5 text-xs bg-canvas-inset rounded">
-                              {c}
-                            </span>
-                          ))}
-                        </div>
-                      ) : undefined}
-                    />
-                  </>
-                )}
-              </div>
-
-              </section>
-            </div>
+            {section !== 'interpretation' && renderACMGCalculator('main-acmg')}
           </section>
           <section hidden={section !== 'evidence'} >
           {/* 测序质量 */}

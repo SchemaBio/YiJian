@@ -92,7 +92,7 @@ describe('same-screen interpretation', () => {
     expect(screen.getByText('证据积分').parentElement).toHaveTextContent('2 分');
     expect(screen.getByText('已保存证据积分')).toBeVisible();
     expect(screen.getByText(/^已保存人工复核证据；原 AI 建议与规则校验结果保留供追溯。/)).toBeVisible();
-    expect(screen.getAllByText('旧快速初评说明')[0]).not.toBeVisible();
+    expect(screen.queryByText('旧快速初评说明')).not.toBeInTheDocument();
     expect(client.generate).toHaveBeenCalledTimes(1);
   });
   it('requests SepiLens AI for the selected variant and leaves adoption to the reviewer', async () => {
@@ -183,7 +183,7 @@ describe('same-screen interpretation', () => {
     await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({id:'A'}),'',''));
   });
 
-  it('browses both assessment tabs without adoption and adopts without entering a reason', async () => {
+  it('browses both assessment tabs without adoption and adopts via overview without entering a reason', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const assessed = {...variant('A'), activeAcmgVersion:'legacy' as const, svcv4Assessment:{revision:'fixed',source:'https://example.org',authoritative:false,disease:'疾病',moi:'AD',confirmed:true,inputs:{},result:{state:'classified',classification:'VUS',score:0,vusSubclass:'VUS-low',warnings:[],breakdown:{},details:{}}}} as SNVIndel;
     render(<VariantDetailPanel taskId="task" variant={assessed} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
@@ -198,9 +198,19 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('tab',{name:'现版'}));
     expect(save).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('tab',{name:'SVC v4.0版'}));
-    fireEvent.click(screen.getByRole('button',{name:'采用已保存的本版结果'}));
-    expect(screen.queryByLabelText('版本切换理由')).not.toBeInTheDocument();
-    await waitFor(()=>expect(save).toHaveBeenCalledWith(assessed,{activeAcmgVersion:'svcv4'},''));
+    expect(screen.queryByRole('button',{name:'采用已保存的本版结果'})).not.toBeInTheDocument();
+    // 切换到评估总览通过四选一卡片采用
+    fireEvent.click(screen.getByRole('tab',{name:'评估总览'}));
+    fireEvent.click(screen.getByRole('button',{name:/人工评估/}));
+    await waitFor(()=>expect(save).toHaveBeenCalledWith(assessed,expect.objectContaining({adoptedACMG:expect.objectContaining({source:'manual'})}),expect.any(String)));
+  });
+
+  it('renders synchronized ACMG calculator below manual interpretation', () => {
+    render(<VariantDetailPanel taskId="task" variant={variant('A')} isOpen onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '人工解读' }));
+    expect(screen.getByPlaceholderText('请输入您对该变异的解读分析...')).toBeVisible();
+    expect(screen.getByText('ACMG 证据计算器')).toBeVisible();
+    expect(screen.getByText('与评估总览实时联动')).toBeVisible();
   });
 
   it('shows both AI entries even when the AI service is unavailable', async () => {
