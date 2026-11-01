@@ -29,7 +29,8 @@ import { getResultRowAdjustmentHistory, type ResultRowAdjustmentEvent } from '..
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import { formatAIInterpretation, type AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
-import { aiACMGReviewCandidates } from '../utils/ai-acmg';
+import { aiACMGReviewCandidates, mergeAIReviewEvidence } from '../utils/ai-acmg';
+import { VariantAssessmentOverview } from './VariantAssessmentOverview';
 import { SVCv4AssessmentPanel } from './SVCv4AssessmentPanel';
 import type { SVCv4Assessment } from '@/lib/svcv4';
 
@@ -131,10 +132,10 @@ function ACMGPointsEditor({
   renderAIAction,
   aiDraft,
 }: {
-  aiDraft?: { evidence: ACMGEvidenceEntry[]; reason: string };
+  aiDraft?: { evidence: ACMGEvidenceEntry[]; reason: string; proposal?: AIAssistanceResult };
   renderAIAction?: (calculator: unknown) => React.ReactNode;
   variant: SNVIndel;
-  onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean) => Promise<void>;
+  onSave: (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset?: boolean, adopt?: boolean) => Promise<void>;
   onCancel: () => void;
 }) {
   const t = useText();
@@ -145,6 +146,8 @@ function ACMGPointsEditor({
   const [reason, setReason] = React.useState(aiDraft?.reason ?? '');
   const [restoreAutomatic, setRestoreAutomatic] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [reviewed, setReviewed] = React.useState(false);
+  React.useEffect(() => setReviewed(false), [evidence, override, overrideReason]);
   const [error, setError] = React.useState('');
   const score = Object.values(evidence).reduce((sum, item) => {
     if (item.code === 'BA1') return sum;
@@ -162,15 +165,15 @@ function ACMGPointsEditor({
       if (code === 'PP3') delete next.BP4;
       if (code === 'BP4') delete next.PP3;
       const strength = code === 'BA1' ? 'standalone' : (code === 'PVS1' ? 'very_strong' : code.startsWith('P') && code.slice(0, 2) === 'PS' || code.startsWith('B') && code.slice(0, 2) === 'BS' ? 'strong' : code.startsWith('PM') ? 'moderate' : 'supporting');
-      next[code] = { code, strength, source: code === 'PP3' || code === 'BP4' ? 'AlphaMissense' : t("tasks.manualEvidencea288d3") };
+      next[code] = { code, strength, source: t("tasks.manualEvidencea288d3") };
     }
     return next;
   }); };
 
-  const save = async () => {
+  const save = async (adopt = true) => {
     setSaving(true); setError('');
     try {
-      await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim(), restoreAutomatic);
+      await onSave(Object.values(evidence), override, overrideReason.trim(), reason.trim(), restoreAutomatic, adopt);
     } catch (cause) {
       setError(cause instanceof Error ? errorText(cause, t) : t("tasks.unableToSaveAcmgEvidencedb2f9e"));
     } finally {
@@ -179,7 +182,8 @@ function ACMGPointsEditor({
   };
 
   return <div className="space-y-4">
-    {aiDraft && <p role="note" className="rounded-md border border-accent-subtle bg-accent-subtle/20 p-3 text-sm">{t('assistance.acmgReviewDraftNotice')}</p>}
+    {aiDraft && <p role="note" className="rounded-md border border-accent-subtle bg-accent-subtle/20 p-3 text-sm">{t('variantAssessment.draftNotice')}</p>}
+    {aiDraft?.proposal && <section className="space-y-2 rounded border border-border-subtle p-3"><h5 className="text-sm font-semibold">{t('variantAssessment.preview')}</h5>{aiDraft.proposal.evidence?.map(item=>{const previous=(variant.acmgAssessmentSource==='automatic'?[]:variant.acmgEvidence??[]).find(old=>old.code===item.code || (old.code==='PP3'&&item.code==='BP4') || (old.code==='BP4'&&item.code==='PP3'));const delta=item.status!=='met'?'missing':previous?'conflict':'added';return <div key={item.code} className="text-xs"><strong>{item.code} · {t(`variantAssessment.${delta}`)} · {item.status} · {item.strength}</strong><p>{item.reason}</p>{previous&&<p className="text-warning-fg">{t('variantAssessment.draftNotice')}</p>}</div>;})}</section>}
     {renderAIAction && <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.generatedFromCurrentEditedEvidence1c1c7c")}</span>{renderAIAction({ evidence: Object.values(evidence), override, overrideReason, score })}</div>}
     <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{t("tasks.automaticAssessmentc4ff36")}{auto?.profile ?? 'acmg-snv-points-v2'}</span><span>{t("tasks.automaticClassification8daa4b")}{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : t("tasks.insufficientEvidence70568c")} · {auto?.score ?? 0} {t("tasks.pointsdecb3b")}</span></div>
@@ -190,13 +194,14 @@ function ACMGPointsEditor({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {group.items.map(code => {
           const item = evidence[code];
-          return <div key={code} className={`flex min-w-0 items-center gap-2 rounded-md border p-2 ${item ? (code.startsWith('B') ? 'border-success-emphasis/40 bg-success-subtle/30' : 'border-danger-emphasis/40 bg-danger-subtle/30') : 'border-border-subtle bg-canvas-default'}`}>
+          return <div key={code} className={`flex min-w-0 flex-wrap items-center gap-2 rounded-md border p-2 ${item ? (code.startsWith('B') ? 'border-success-emphasis/40 bg-success-subtle/30' : 'border-danger-emphasis/40 bg-danger-subtle/30') : 'border-border-subtle bg-canvas-default'}`}>
             <input type="checkbox" checked={Boolean(item)} onChange={event => toggle(code, event.target.checked)} aria-label={t("tasks.selectAcmgEvidencef17a92", {p0: String(code)})} />
             <span className="w-12 shrink-0 text-xs font-semibold">{code}</span>
             {item && code !== 'BA1' && <select value={item.strength} onChange={event => { setRestoreAutomatic(false); setEvidence(previous => ({ ...previous, [code]: { ...previous[code], strength: event.target.value as ACMGEvidenceEntry['strength'] } })); }} aria-label={t("tasks.strengthc0b275", {p0: String(code)})} className="min-w-0 flex-1 rounded border border-border-default bg-canvas-default px-1.5 py-1 text-xs">
               {([['supporting',t("tasks.supportinga9aab1")],['moderate',t("tasks.moderate839de2")],['strong',t("tasks.strong275680")],...(code.startsWith('P') ? [['very_strong',t("tasks.veryStrong103c20")]] : [])]).map(([value, label]) => <option key={value} value={value}>{label}（{POINTS[value]} {t("tasks.points505d62")}</option>)}
             </select>}
             {item && code === 'BA1' && <span className="text-xs text-success-fg">{t("tasks.independentBenignEvidence8ecbad")}</span>}
+            {item && <label className="basis-full space-y-1 text-xs text-fg-muted"><span>{t('variantAssessment.evidenceReason')} · {item.source}</span><textarea aria-label={`${code} ${t('variantAssessment.evidenceReason')}`} className="min-h-16 w-full rounded border border-border-default bg-canvas-default p-2 text-fg-default" value={item.note??''} onChange={event=>{setRestoreAutomatic(false);setEvidence(previous=>({...previous,[code]:{...previous[code],note:event.target.value}}));}} /></label>}
           </div>;
         })}
       </div>
@@ -206,15 +211,18 @@ function ACMGPointsEditor({
     {override && <textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder={t("tasks.overrideReasonOptional")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />}
     <textarea value={reason} onChange={event => setReason(event.target.value)} placeholder={t("tasks.evidenceChangeReasonOptional")} className="min-h-16 w-full rounded-md border border-border-default bg-canvas-default p-2 text-sm" />
     {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
-    <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason(t("tasks.restoreCurrentAutomaticAssessmentBaselineffd9de")); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">{t("tasks.restoreAutomaticBaselineAndSave7ecc58")}</ActionButton>
-    <div className="flex gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="primary" type="button" disabled={saving} onClick={() => void save()} className="flex-1">{t("tasks.saveEvidenceAndClassificationd8ed29")}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
+    <ActionButton action="save" variant="ghost" type="button" disabled={saving} onClick={() => { setEvidence(Object.fromEntries((auto?.criteria ?? []).map(item => [item.code, item]))); setOverride(''); setOverrideReason(''); setReason(t("tasks.restoreCurrentAutomaticAssessmentBaselineffd9de")); setRestoreAutomatic(true); }} className="rounded-md border border-border-default px-3 py-2 text-sm">{t('variantAssessment.restoreDraft')}</ActionButton>
+    {aiDraft && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />{t('variantAssessment.confirm')}</label>}
+    <div className="flex flex-wrap gap-2"><ActionButton loading={saving} loadingLabel={t("tasks.saving6644f0")} action="save" variant="primary" type="button" disabled={saving || (!!aiDraft && !reviewed) || (!effective && !restoreAutomatic)} onClick={() => void save(true)} className="flex-1">{t('variantAssessment.saveAdopt')}</ActionButton><ActionButton action="save" variant="ghost" type="button" disabled={saving || (!!aiDraft && (!reviewed || !Object.keys(evidence).length))} onClick={() => void save(false)}>{t('variantAssessment.saveOnly')}</ActionButton><ActionButton variant="ghost" type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-2 text-sm">{t("admin.cancel4d0b46")}</ActionButton></div>
   </div>;
 }
 
 export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, onClose, onUpdateClassification, onSaveInterpretation,onSaveVersionedAssessment }: VariantDetailPanelProps) {
   const t = useText();
-  const [section, setSection] = React.useState<InspectorSection>('annotation');
+  const [section, setSection] = React.useState<InspectorSection>('overview');
   const [aiResult, setAIResult] = React.useState<AIAssistanceResult>();
+  const [aiError,setAIError]=React.useState('');
+  const [svcAIResult,setSvcAIResult]=React.useState<AIAssistanceResult>();
   const [acmgTab, setAcmgTab] = React.useState<'acmg' | 'svcv4'>('acmg');
   const selectedRef = React.useRef(variant?.id); selectedRef.current = variant?.id;
   const [isEditingACMG, setIsEditingACMG] = React.useState(false);
@@ -222,28 +230,29 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const [localCriteria, setLocalCriteria] = React.useState<string[] | null>(null);
   const [localEvidence, setLocalEvidence] = React.useState<ACMGEvidenceEntry[] | null>(null);
   const [localSource, setLocalSource] = React.useState<SNVIndel['acmgAssessmentSource']>();
-  const [aiDraft, setAIDraft] = React.useState<{ key: string; evidence: ACMGEvidenceEntry[]; reason: string }>();
+  const [aiDraft, setAIDraft] = React.useState<{ key: string; evidence: ACMGEvidenceEntry[]; reason: string; proposal?: AIAssistanceResult }>();
   const [interpretation, setInterpretation] = React.useState('');
   const [versionBusy,setVersionBusy]=React.useState(false);
   const [versionError,setVersionError]=React.useState('');
+  const [svcUnsaved,setSvcUnsaved]=React.useState(false);
   const [interpretationSaving, setInterpretationSaving] = React.useState(false);
   const [interpretationError, setInterpretationError] = React.useState('');
   const [adjustmentHistory, setAdjustmentHistory] = React.useState<ResultRowAdjustmentEvent[]>([]);
   const readOnly = useInterpretationReadOnly();
-  const canEditACMG = !readOnly && Boolean(onUpdateClassification);
+  const canEditACMG = !readOnly && Boolean(onUpdateClassification || onSaveVersionedAssessment);
   React.useEffect(() => { if (readOnly) setIsEditingACMG(false); }, [readOnly]);
 
   // 当 variant 变化时重置编辑状态
   React.useEffect(() => {
-    setSection('annotation');
+    setSection('overview');
     setAcmgTab('acmg');
-    setAIResult(undefined);
+    setAIError('');setAIResult(variant?.acmgAIResult);setSvcAIResult(variant?.svcv4AIResult);
     setIsEditingACMG(false);
     setLocalClassification(null);
     setLocalCriteria(null);
     setLocalEvidence(null); setLocalSource(undefined); setAIDraft(undefined);
     setInterpretation(variant?.interpretation ?? '');
-    setVersionError('');setVersionBusy(false);
+    setVersionError('');setVersionBusy(false);setSvcUnsaved(false);
     setInterpretationError('');
     setInterpretationSaving(false);
   }, [taskId, variant?.id]);
@@ -259,14 +268,14 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
 
   if (!isOpen || !variant) return null;
 
-  const currentClassification = localClassification ?? (variant.activeAcmgVersion==='svcv4'?variant.legacyAcmgClassification:variant.acmgClassification);
+  const currentClassification = localClassification ?? variant.legacyAcmgClassification ?? variant.acmgClassification;
   const currentCriteria = localCriteria ?? variant.acmgCriteria ?? [];
   const currentEvidence = localEvidence ?? variant.acmgEvidence ?? variant.automaticAcmg?.criteria ?? [];
   const assessmentSource = localSource ?? variant.acmgAssessmentSource ?? 'automatic';
   const currentScore = assessmentSource === 'automatic' ? variant.automaticAcmg?.score : currentEvidence.reduce((sum, item) => sum + (item.code === 'BA1' ? 0 : (item.code.startsWith('B') ? -1 : 1) * (POINTS[item.strength] ?? 0)), 0);
   const aiCandidates = aiResult ? aiACMGReviewCandidates(aiResult) : [];
   const acmgConfig = currentClassification ? ACMG_CONFIG[currentClassification] : undefined;
-  const activeClassification=variant.activeAcmgVersion==='svcv4'?variant.svcv4Assessment?.result?.classification:currentClassification;
+  const activeClassification=variant.adoptedACMG?variant.acmgClassification:variant.activeAcmgVersion==='svcv4'?variant.svcv4Assessment?.result?.classification:currentClassification;
   const activeConfig=activeClassification?ACMG_CONFIG[activeClassification]:undefined;
   const saveVersioned=async(adjustments:Record<string,unknown>,reason:string)=>{
     if(!onSaveVersionedAssessment)return;
@@ -287,9 +296,14 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
   const transcriptInfo = transcriptLocation(variant);
 
   // 保存 ACMG 分类
-  const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false) => {
-    if (!onUpdateClassification) return;
-    await onUpdateClassification(variant, evidence, override, overrideReason, reason, reset);
+  const handleSaveACMG = async (evidence: ACMGEvidenceEntry[], override: ACMGClassification | '', overrideReason: string, reason: string, reset = false, adopt = true) => {
+    if (onSaveVersionedAssessment) {
+      const changes: Record<string, unknown> = { acmgEvidence: evidence, acmgOverride: override, acmgOverrideReason: overrideReason, resetAcmg: reset };
+      if (adopt) changes.activeAcmgVersion = 'legacy';
+      if (aiDraft && aiResult?.requestId) changes.acmgAIResult = aiResult.requestId;
+      await saveVersioned(changes, reason);
+    } else if (onUpdateClassification) await onUpdateClassification(variant, evidence, override, overrideReason, reason, reset);
+    else return;
     if (selectedRef.current !== variant.id) return;
     try {
       const history = await getResultRowAdjustmentHistory(taskId, 'snv-indel', variant.id);
@@ -347,8 +361,9 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {!activeConfig && <p className="mt-1 text-warning-fg">{t("tasks.insufficientEvidenceForAcmgClassification822f20")}</p>}
         </div>
         {/* 内容区域 */}
-        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['annotation', 'evidence', 'acmg', 'interpretation', 'history']} />
+        <InspectorTabs id="variant-inspector" value={section} onChange={setSection} sections={['overview', 'annotation', 'evidence', 'acmg', 'interpretation', 'history']} labels={{overview:t('variantAssessment.overview')}} />
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
+          <section hidden={section !== 'overview'}><VariantAssessmentOverview variant={variant} ai={aiResult} svcAI={svcAIResult} aiError={aiError} onCalculator={() => setSection('acmg')} onInterpretation={() => setSection('interpretation')} /></section>
           <section hidden={section !== 'interpretation'} >
           {/* 人工解读 */}
           <SectionTitle icon={MessageSquare} title={t("tasks.manualInterpretation1fcaef")} />
@@ -376,18 +391,19 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
               sections={['acmg', 'svcv4']} labels={{ acmg: t("tasks.currentEdition7b034e"), svcv4: t("tasks.svcV6cd501") }} ariaLabel={t("display.acmgCalculatorVersion6cc1e9")} />
             <div id="variant-acmg-calculator-content" role="tabpanel" aria-labelledby={`variant-acmg-calculator-${acmgTab}`} className="pt-3">
             {!readOnly&&onSaveVersionedAssessment&&<div className="space-y-2 border-b border-border-subtle p-3">
-              <ActionButton permission="interpretation_reports.manage" action="completed" type="button" loading={versionBusy} loadingLabel={t("tasks.switching717bbf")} disabled={(variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4')||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')}>{t("tasks.use365456")}{acmgTab==='acmg'?t("tasks.currentEdition7b034e"):t("tasks.svcVExperimentaldc2093")}{t("tasks.result0a2c91")}</ActionButton>
+              <ActionButton permission="interpretation_reports.manage" action="completed" type="button" loading={versionBusy} loadingLabel={t("tasks.switching717bbf")} disabled={versionBusy || (acmgTab==='acmg'?isEditingACMG:svcUnsaved) || ((variant.activeAcmgVersion??'legacy')===(acmgTab==='acmg'?'legacy':'svcv4') && (!variant.adoptedACMG || variant.adoptedACMG.savedAt===(acmgTab==='acmg'?variant.acmgSavedAt:variant.svcv4SavedAt)))||(acmgTab==='svcv4'&&(!variant.svcv4Assessment?.confirmed||!variant.svcv4Assessment.result?.classification))} onClick={()=>void selectVersion(acmgTab==='acmg'?'legacy':'svcv4')}>{t('variantAssessment.adoptSaved')}</ActionButton>
               {versionError&&<p role="alert" className="text-sm text-danger-fg">{versionError}</p>}
             </div>}
               <section hidden={acmgTab !== 'svcv4'}>
-                <SVCv4AssessmentPanel key={`${taskId}/${variant.id}`} taskId={taskId} reference={referenceGenome} variant={variant} readOnly={readOnly} onSaveAI={onSaveVersionedAssessment?requestId=>saveVersioned({svcv4AIResult:requestId},''):undefined} onUseAIInterpretation={onSaveInterpretation ? result => { setInterpretation(previous => [previous, formatAIInterpretation(result)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string)=>saveVersioned({svcv4Assessment:assessment},reason):undefined} />
+                <SVCv4AssessmentPanel onUnsavedChange={setSvcUnsaved} onAIResult={setSvcAIResult} key={`${taskId}/${variant.id}`} taskId={taskId} reference={referenceGenome} variant={variant} readOnly={readOnly} onSaveAI={onSaveVersionedAssessment?requestId=>saveVersioned({svcv4AIResult:requestId},''):undefined} onUseAIInterpretation={onSaveInterpretation ? result => { setInterpretation(previous => [previous, formatAIInterpretation(result)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} onSave={onSaveVersionedAssessment?(assessment:SVCv4Assessment,reason:string,adopt=false,aiRequestId?:string)=>saveVersioned({svcv4Assessment:assessment,...(adopt?{activeAcmgVersion:'svcv4'}:{}),...(aiRequestId?{svcv4AIResult:aiRequestId}:{})},reason):undefined} />
               </section>
               <section hidden={acmgTab !== 'acmg'}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold">{t("tasks.currentAcmgEdition8379ee")}</span>
-                {!isEditingACMG && <AIAssistanceAction key={`${taskId}/${variant.id}/acmg`} disabled={readOnly} input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride } }} onResult={setAIResult} />}
+                {!isEditingACMG && <AIAssistanceAction onError={setAIError} key={`${taskId}/${variant.id}/acmg`} disabled={readOnly} input={{ feature: 'acmg', taskId, reference: referenceGenome, variant: aiVariantContext(variant), calculator: { evidence: variant.acmgEvidence ?? variant.automaticAcmg?.criteria, override: variant.acmgOverride } }} onResult={setAIResult} />}
               </div>
-              {aiResult && <AIResultCard result={aiResult} humanReviewSaved={Boolean(aiResult.requestId && currentEvidence.some(item => item.source === 'sepilens_ai_reviewed' && item.note?.includes(`AI request: ${aiResult.requestId}`)))} onReviewEvidence={canEditACMG && aiCandidates.length > 0 ? () => { setAIDraft({ key: crypto.randomUUID(), evidence: aiCandidates, reason: `${t('assistance.acmgAIReviewReason')}${aiResult.requestId ? ` (${aiResult.requestId})` : ''}` }); setIsEditingACMG(true); } : undefined} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
+              {aiResult && <AIResultCard result={aiResult} humanReviewSaved={Boolean(aiResult.requestId && currentEvidence.some(item => item.source === 'sepilens_ai_reviewed' && item.note?.includes(`AI request: ${aiResult.requestId}`)))} reviewLabel={t(aiCandidates.length ? 'variantAssessment.review' : 'variantAssessment.supplement')} onReviewEvidence={canEditACMG ? () => { setAIDraft({ key: crypto.randomUUID(), proposal:aiResult, evidence: mergeAIReviewEvidence(localEvidence ?? (variant.acmgAssessmentSource === 'automatic' ? [] : variant.acmgEvidence ?? []), aiCandidates), reason: `${t('assistance.acmgAIReviewReason')}${aiResult.requestId ? ` (${aiResult.requestId})` : ''}` }); setIsEditingACMG(true); } : undefined} onUseInterpretation={!readOnly && onSaveInterpretation ? () => { setInterpretation(previous => [previous, formatAIInterpretation(aiResult)].filter(Boolean).join('\n\n')); setSection('interpretation'); } : undefined} />}
+              {aiResult?.requestId && !readOnly && onSaveVersionedAssessment && <div className="space-y-1"><ActionButton action="save" variant="ghost" type="button" loading={versionBusy} disabled={versionBusy || variant.acmgAIResult?.requestId === aiResult.requestId} onClick={async()=>{setVersionBusy(true);setVersionError('');try{await saveVersioned({acmgAIResult:aiResult.requestId},'');}catch(e){setVersionError(errorText(e,t));}finally{setVersionBusy(false);}}}>{t(variant.acmgAIResult?.requestId === aiResult.requestId ? 'variantAssessment.saved':'variantAssessment.archive')}</ActionButton><p className="text-xs text-fg-muted">{t('variantAssessment.archiveNotice')}</p></div>}
               {/* ACMG 分类 */}
               <SectionTitle
                 icon={FileText}

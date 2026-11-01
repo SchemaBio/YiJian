@@ -14,8 +14,8 @@ import { AIRequestError, AI_FEATURE_LABELS, type AIClinicalContext, type AIAssis
 import { notifyBillingUpdated } from '@/lib/billing';
 import {EvidenceQualityPanel} from './EvidenceQualityPanel';
 
-export function AIAssistanceAction({ input, disabled = false, onResult, onBusyChange }: {
-  input: AIAssistanceInput; disabled?: boolean; onResult: (result: AIAssistanceResult) => void; onBusyChange?: (busy: boolean) => void;
+export function AIAssistanceAction({ input, disabled = false, onResult, onBusyChange, onError }: {
+  input: AIAssistanceInput; disabled?: boolean; onResult: (result: AIAssistanceResult) => void; onBusyChange?: (busy: boolean) => void; onError?: (error:string)=>void;
 }) {
   const t = useText();
   const { adapter, settings, deployment, skipConfirmation, setSkipConfirmation } = useAIAssistance();
@@ -58,7 +58,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
   React.useEffect(() => () => controller.current?.abort(), []);
   const generate = async (confirmed: boolean) => {
     if (running.current || disabled || unavailable) return;
-    running.current = true; setBusy(true); onBusyChange?.(true); setError('');
+    running.current = true; setBusy(true); onBusyChange?.(true); setError(''); onError?.('');
     const originalScope = scope;
     const nextController = new AbortController(); controller.current = nextController;
     try {
@@ -76,7 +76,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
       onResult(result); request.current = undefined;
     } catch (cause) {
       if (!nextController.signal.aborted && scopeRef.current === originalScope && cause instanceof AIRequestError && cause.safeToRegenerate) request.current = undefined;
-      if (!nextController.signal.aborted && scopeRef.current === originalScope) setError(cause instanceof Error ? errorText(cause, t) : t("assistance.aiGenerationFailedRetryLater8bf8b5"));
+      if (!nextController.signal.aborted && scopeRef.current === originalScope) {const message=cause instanceof Error ? errorText(cause, t) : t("assistance.aiGenerationFailedRetryLater8bf8b5");setError(message);onError?.(message); }
     } finally {
       if (controller.current === nextController) { running.current = false; setBusy(false); setServerRequestId(''); setCancelling(false); onBusyChange?.(false); if (charge) notifyBillingUpdated(); }
     }
@@ -122,7 +122,7 @@ function classificationLabel(value: string): string {
   return normalized === 'insufficientdata' ? 'assistance.verifiedEvidenceInsufficient' : CLASS_LABELS[aliases[normalized] ?? value] ?? value;
 }
 const STATUS_KEYS: Record<string, string> = { met: 'met', not_met: 'notMet', not_applicable: 'notApplicable', insufficient_data: 'insufficient', conflicting: 'conflicting' };
-export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, humanReviewSaved = false, statusLabel }: { result: AIAssistanceResult; onUseInterpretation?: () => void; onReviewEvidence?: () => void; humanReviewSaved?: boolean; statusLabel?: string }) {
+export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, humanReviewSaved = false, statusLabel, reviewLabel }: { result: AIAssistanceResult; onUseInterpretation?: () => void; onReviewEvidence?: () => void; humanReviewSaved?: boolean; statusLabel?: string; reviewLabel?: string }) {
   const t = useText();
   const rule = result.ruleEngineResult && typeof result.ruleEngineResult === 'object' ? result.ruleEngineResult as Record<string, unknown> : undefined;
   const reviewer = result.reviewerDecision && typeof result.reviewerDecision === 'object' ? result.reviewerDecision as Record<string, unknown> : undefined;
@@ -132,6 +132,7 @@ export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, hu
   const reconciled = Array.isArray(proposal?.reconciliation) ? proposal.reconciliation as Array<Record<string, unknown>> : [];
   return <section aria-label={t("assistance.aiSuggestions89d49e")} className="space-y-3 rounded-lg border border-accent-subtle bg-accent-subtle/20 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="flex items-center gap-1.5 text-sm font-semibold"><Sparkles className="h-4 w-4 text-accent-fg" />{t("assistance.aiSuggestions89d49e")}</h4>{result.classification && result.feature !== 'acmg' && <span className="text-sm font-medium">{t(classificationLabel(result.classification))}</span>}</div>
+    {onReviewEvidence && <div className="flex flex-wrap items-center gap-2"><ActionButton variant="primary" type="button" onClick={onReviewEvidence}>{reviewLabel ?? t(result.feature === 'acmg' || result.feature === 'svcv4' ? 'variantAssessment.review' : 'assistance.cnvReviewAction')}</ActionButton><span className="text-xs text-fg-muted">{t('variantAssessment.reviewFirst')}</span></div>}
     <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{result.summary}</p>
     {result.feature!=='hpo'&&<EvidenceQualityPanel proposal={proposal}/>}
     {result.suggestedClassification && <p className="text-sm">{t('assistance.aiCandidateClassification')}{t(classificationLabel(result.suggestedClassification))}</p>}
@@ -146,7 +147,8 @@ export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, hu
       return <div key={`${item.code}-${index}`} className="rounded border border-border-subtle p-2"><dt className="flex flex-wrap items-center gap-2 text-xs font-semibold"><span>{item.code}</span>{item.status && <span className="rounded bg-canvas-inset px-1.5 py-0.5 font-normal">{STATUS_KEYS[item.status] ? t(`assistance.criterionStatus.${STATUS_KEYS[item.status]}`) : item.status}</span>}{item.strength && <span className="font-normal text-fg-muted">{item.strength}</span>}</dt><dd className="mt-1 space-y-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-fg-muted"><p>{item.reason}</p>{result.feature === 'acmg' && status && <p>{t('assistance.criterionRuleStatus', { p0: STATUS_KEYS[status] ? t(`assistance.criterionStatus.${STATUS_KEYS[status]}`) : status })}{typeof checked?.reason === 'string' ? ` · ${checked.reason}` : ''}</p>}{result.feature === 'acmg' && decision?.accepted === false && <p>{t('assistance.criterionNotAccepted')}</p>}</dd></div>;
     })}</dl>}
     {result.feature === 'acmg' && <p className="text-xs text-fg-muted">{t('assistance.acmgHumanReviewNotice')}</p>}
+    {Array.isArray(proposal?.sources) && <div className="flex flex-wrap gap-2 text-xs">{(proposal.sources as Array<Record<string,unknown>>).map((source,index)=>typeof source.url==='string'&&/^https:\/\//.test(source.url)?<a key={index} href={source.url} target="_blank" rel="noopener noreferrer" className="text-accent-fg underline">{String(source.title||source.id)}</a>:null)}</div>}
     {!!result.warnings?.length && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{result.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{statusLabel ?? t(humanReviewSaved ? "assistance.acmgHumanReviewSaved" : "assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span><div className="flex flex-wrap gap-2">{onReviewEvidence && (result.feature === 'acmg' || result.feature === 'cnv_gain' || result.feature === 'cnv_loss') && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="primary" type="button" className="yj-tool-button" onClick={onReviewEvidence}>{t(result.feature === 'acmg' ? 'assistance.acmgReviewAction' : 'assistance.cnvReviewAction')}</ActionButton>}{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div></div>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{statusLabel ?? t(humanReviewSaved ? "assistance.acmgHumanReviewSaved" : "assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span><div className="flex flex-wrap gap-2">{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div></div>
   </section>;
 }

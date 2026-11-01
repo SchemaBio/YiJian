@@ -455,8 +455,15 @@ class BrowserTable {
             row.acmgAssessmentSource = 'manual_override';
         else if ('acmgEvidence' in overlay)
             row.acmgAssessmentSource = 'manual_evidence';
+        const adopted=object(overlay.adoptedACMG);
+        if(Object.keys(adopted).length) {
+            row.activeAcmgVersion=adopted.version;
+            const values=adopted.automatic===true?auto:adopted;
+            for(const key of ['classification','score','profile','state','vusSubclass']) row['acmg'+key[0].toUpperCase()+key.slice(1)]=values[key];
+            row.acmgAssessmentSource=adopted.source;
+        }
         // Explicit false is an enduring user override, not a missing value.
-        const effectiveClass = overlay.activeAcmgVersion==='svcv4' ? row.acmgClassification : overlay.acmgOverride || row.acmgClassification || object(overlay.cnvAssessment).classification;
+        const effectiveClass = row.acmgClassification || object(overlay.cnvAssessment).classification;
         const manualClassification=overlay.activeAcmgVersion==='svcv4' || !!overlay.acmgOverride || 'acmgEvidence' in overlay || 'cnvAssessment' in overlay;
         row.pinned = typeof overlay.pinned === 'boolean' ? overlay.pinned : manualClassification ? ['Pathogenic', 'Likely_Pathogenic'].includes(String(effectiveClass)) : auto.pinned===true;
         row.pinSource = typeof overlay.pinned === 'boolean' || manualClassification ? 'manual' : row.pinned ? 'automatic' : undefined;

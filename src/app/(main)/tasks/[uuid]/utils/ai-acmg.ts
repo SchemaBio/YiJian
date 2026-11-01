@@ -4,6 +4,17 @@ import type { ACMGEvidenceEntry } from '../types';
 const CODES = new Set('PVS1 PS1 PS2 PS3 PS4 PM1 PM2 PM3 PM4 PM5 PM6 PP1 PP2 PP3 PP4 PP5 BA1 BS1 BS2 BS3 BS4 BP1 BP2 BP3 BP4 BP5 BP6 BP7'.split(' '));
 const STRENGTHS: Record<string, ACMGEvidenceEntry['strength']> = { supporting: 'supporting', moderate: 'moderate', strong: 'strong', verystrong: 'very_strong', standalone: 'standalone' };
 
+// Existing human evidence always wins conflicts; AI does not silently negate
+// or change its strength. The editor exposes both the proposal and old values.
+export function mergeAIReviewEvidence(current: ACMGEvidenceEntry[], proposed: ACMGEvidenceEntry[]): ACMGEvidenceEntry[] {
+  const merged = new Map(current.map(item => [item.code, item]));
+  for (const item of proposed) {
+    if (merged.has(item.code) || (item.code === 'PP3' && merged.has('BP4')) || (item.code === 'BP4' && merged.has('PP3'))) continue;
+    merged.set(item.code, item);
+  }
+  return [...merged.values()];
+}
+
 /** Only structured, unambiguous met candidates may seed a human review draft.
  * This does not approve rule evidence or save a classification. */
 export function aiACMGReviewCandidates(result: AIAssistanceResult): ACMGEvidenceEntry[] {
@@ -15,6 +26,6 @@ export function aiACMGReviewCandidates(result: AIAssistanceResult): ACMGEvidence
     const strength = STRENGTHS[String(item.strength ?? '').replace(/[\s_-]/g, '').toLowerCase()];
     if (item.status !== 'met' || !CODES.has(item.code) || counts.get(item.code) !== 1 || !strength || !item.reason?.trim()) return [];
     if (item.code === 'BA1' ? strength !== 'standalone' : strength === 'standalone' || (item.code.startsWith('B') && strength === 'very_strong')) return [];
-    return [{ code: item.code, strength, source: 'sepilens_ai_reviewed', note: [`SepiLens AI candidate; human-reviewed on save`, result.requestId ? `AI request: ${result.requestId}` : '', result.model ? `Model: ${result.model}` : '', result.generatedAt ? `Generated: ${result.generatedAt}` : '', item.reason].filter(Boolean).join('\n') }];
+    return [{ code: item.code, strength, source: 'sepilens_ai_reviewed', note: [`SepiLens AI candidate; human-reviewed on save`, result.requestId ? `AI request: ${result.requestId}` : '', result.model ? `Model: ${result.model}` : '', result.generatedAt ? `Generated: ${result.generatedAt}` : '', item.reason, ...(result.calculatorDraft?.changes.find(change=>change.path===`acmgEvidence.${item.code}`)?.sourceIds??[]).map(id=>`Source: ${id}`)].filter(Boolean).join('\n') }];
   });
 }

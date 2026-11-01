@@ -35,6 +35,7 @@ export interface SVCAIContext {
  sources?:Array<{id:string;title:string;url?:string;pmid?:string}>;retrieval_status?:string;
 }
 export interface AIAssistanceResult {
+ calculatorDraft?: {version:"acmg"|"svcv4"; changes:Array<{path:string;value:unknown;status:string;reason:string;sourceIds?:string[]}>};
   variantId?:string;
  svcContext?:SVCAIContext;
   requestId?: string;

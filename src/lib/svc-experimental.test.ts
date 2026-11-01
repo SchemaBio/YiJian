@@ -15,3 +15,11 @@ describe('SVC experimental method and Unicode spans', () => {
     expect(() => unicodeSpanToUTF16('甲',0,2)).toThrow();
   });
 });
+
+it('requires explicit review and never overwrites existing SVC context or confirms it',async()=>{
+ const {mergeSVCAIReview}=await import('./svc-experimental');
+ const field=(value:string)=>({value,reason:'Referenced candidate',source_ids:['annotation']});
+ const draft={disease:'reviewed disease',moi:'AR',inputs:{workflow:'frameshift',impact:{retained:true}},confirmed:true};
+ const next=mergeSVCAIReview(draft,{disease:field('AI disease'),moi:field('AD'),geneDiseaseValidity:field('MODERATE'),workflow:field('missense')});
+ expect(next.disease).toBe('reviewed disease');expect(next.moi).toBe('AR');expect(next.inputs).toEqual(draft.inputs);expect(next.confirmed).toBe(false);expect(next.result).toBeUndefined();expect(next.geneDiseaseValidity).toBe('MODERATE');
+});

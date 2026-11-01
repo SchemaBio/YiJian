@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
-import { aiACMGReviewCandidates } from './ai-acmg';
+import { aiACMGReviewCandidates, mergeAIReviewEvidence } from './ai-acmg';
 
 const result = (evidence: AIAssistanceResult['evidence']): AIAssistanceResult => ({ feature: 'acmg', requestId: 'request-1', model: 'synthetic', summary: 'PM2 满足；这是文本而不是结构化证据', evidence });
 describe('structured ACMG AI review candidates', () => {
@@ -25,4 +25,13 @@ describe('structured ACMG AI review candidates', () => {
     expect(aiACMGReviewCandidates({ ...valid, resultKind: 'experimental' })).toEqual([]);
     expect(aiACMGReviewCandidates({ ...valid, feature: 'cnv_loss' })).toEqual([]);
   });
+});
+
+it('preserves existing reviewed strengths and excludes conflicting AI additions',()=>{
+ const current=[{code:'PS3',strength:'strong' as const,source:'reviewer',note:'Verified assay'},{code:'BP4',strength:'supporting' as const,source:'reviewer'}];
+ const proposed=[{code:'PS3',strength:'supporting' as const,source:'AI'},{code:'PP3',strength:'supporting' as const,source:'AI'},{code:'PM2',strength:'supporting' as const,source:'AI'}];
+ const merged=mergeAIReviewEvidence(current,proposed);
+ expect(merged.find(item=>item.code==='PS3')).toEqual(current[0]);
+ expect(merged.some(item=>item.code==='PP3')).toBe(false);
+ expect(merged.find(item=>item.code==='PM2')).toEqual(proposed[2]);
 });

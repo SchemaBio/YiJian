@@ -12,7 +12,7 @@ import type { SNVIndel } from '../types';
 import { AIAssistanceAction, AIResultCard } from '@/components/shared/AIAssistanceAction';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import { aiVariantContext } from '../utils/ai-context';
-import { svcExperimentalInput, applySVCAIContext } from '@/lib/svc-experimental';
+import { svcExperimentalInput, mergeSVCAIReview } from '@/lib/svc-experimental';
 import { ACMG_CONFIG } from '../result-api';
 
 const LABELS:Record<string,string>={
@@ -69,19 +69,21 @@ export function EvidenceFields({schema,root=schema,value,onChange,label,disabled
   </label>;
 }
 
-export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,onSaveAI,onUseAIInterpretation}: {reference?:string;taskId:string;variant:SNVIndel;readOnly:boolean;onUseAIInterpretation?:(result:AIAssistanceResult)=>void;onSaveAI?:(requestId:string)=>Promise<void>;onSave?:(assessment:SVCv4Assessment,reason:string)=>Promise<void>}) {
+export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,onSaveAI,onUseAIInterpretation,onAIResult,onUnsavedChange}: {onUnsavedChange?:(dirty:boolean)=>void;onAIResult?:(result:AIAssistanceResult)=>void;reference?:string;taskId:string;variant:SNVIndel;readOnly:boolean;onUseAIInterpretation?:(result:AIAssistanceResult)=>void;onSaveAI?:(requestId:string)=>Promise<void>;onSave?:(assessment:SVCv4Assessment,reason:string,adopt?:boolean,aiRequestId?:string)=>Promise<void>}) {
   const t = useText();
   const [aiResult,setAIResult]=React.useState<AIAssistanceResult|undefined>(variant.svcv4AIResult);
   const [savedAIRequestId,setSavedAIRequestId]=React.useState(variant.svcv4AIResult?.requestId);
   const [schema,setSchema]=React.useState<SVCv4Schema>();
-  const [draft,setDraft]=React.useState<SVCv4Assessment>(()=>applySVCAIContext(variant.svcv4Assessment??{disease:'',moi:'',inputs:{},confirmed:false},variant.svcv4AIResult?.svcContext));
+  const [draft,setDraft]=React.useState<SVCv4Assessment>(()=>variant.svcv4Assessment??{disease:'',moi:'',inputs:{},confirmed:false});
   const [dirty,setDirty]=React.useState(false),[reason,setReason]=React.useState(''),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
   React.useEffect(()=>{const controller=new AbortController();void getSVCv4Schema(taskId,controller.signal).then(setSchema).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error ? errorText(e, t):t("tasks.unableToLoadNewRules9e8115"));});return()=>controller.abort();},[taskId]);
-  const receiveAI=(result:AIAssistanceResult)=>{setAIResult(result);setError('');if(result.svcContext){setDraft(old=>applySVCAIContext(old,result.svcContext));setDirty(true);}};
+  const receiveAI=(result:AIAssistanceResult)=>{setAIResult(result);onAIResult?.(result);setError('');};
+ const reviewAI=()=>{if(!aiResult)return;setDraft(old=>mergeSVCAIReview(old,aiResult.svcContext));setDirty(true);};
+  React.useEffect(()=>{onUnsavedChange?.(JSON.stringify(draft)!==JSON.stringify(variant.svcv4Assessment??{disease:'',moi:'',inputs:{},confirmed:false}));},[draft,variant.svcv4Assessment,onUnsavedChange]);
   const update=(change:Partial<SVCv4Assessment>)=>{setDraft(old=>({...old,...change,confirmed:false,result:undefined}));setDirty(true);};
   const evidence=(key:string,value:unknown)=>update({inputs:{...draft.inputs,[key]:value}});
   const calculate=async()=>{setBusy(true);setError('');try{setDraft(await evaluateSVCv4(taskId,{...draft,confirmed:false}));setDirty(false);}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.calculationFailed95b6cf"));}finally{setBusy(false);}};
-  const save=async()=>{if(!onSave)return;setBusy(true);setError('');try{await onSave(draft,reason.trim());setReason('');}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.saveFailed40525a"));}finally{setBusy(false);}};
+  const save=async(adopt=false)=>{if(!onSave)return;setBusy(true);setError('');try{await onSave(draft,reason.trim(),adopt,aiResult?.requestId);setReason('');}catch(e){setError(e instanceof Error ? errorText(e, t):t("tasks.saveFailed40525a"));}finally{setBusy(false);}};
   const saveAI=async()=>{
     const requestId=aiResult?.requestId;
     if(readOnly||busy||!onSaveAI||!requestId)return;
@@ -93,7 +95,7 @@ export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,o
   const partialContext=result?.state==='insufficient_context';
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.svcV6cd501")}</span><AIAssistanceAction disabled={readOnly||busy} input={{feature:'svcv4',mode:'experimental',draftAssessment:svcExperimentalInput(draft),taskId,reference,variant:aiVariantContext(variant),calculator:{draft,schema}}} onResult={receiveAI} /></div>
-    {aiResult&&<div className="space-y-2"><AIResultCard result={aiResult} statusLabel={aiSaved?t('assistance.svcAIResultSaved'):undefined} onUseInterpretation={!readOnly&&onUseAIInterpretation?()=>onUseAIInterpretation(aiResult):undefined} />{!readOnly&&onSaveAI&&<ActionButton permission="interpretation_reports.manage" action="save" variant="primary" type="button" loading={busy} loadingLabel={t('tasks.processing1cac8a')} disabled={busy||aiSaved||!aiResult.requestId} onClick={()=>void saveAI()}>{t(aiSaved?'assistance.svcAIResultSaved':'assistance.saveSVCAIResult')}</ActionButton>}<p className="text-xs text-fg-muted">{t('assistance.svcAISaveNotice')}</p></div>}
+    {aiResult&&<div className="space-y-2"><AIResultCard result={aiResult} onReviewEvidence={!readOnly?reviewAI:undefined} reviewLabel={t('variantAssessment.review')} statusLabel={aiSaved?t('variantAssessment.saved'):undefined} onUseInterpretation={!readOnly&&onUseAIInterpretation?()=>onUseAIInterpretation(aiResult):undefined} />{!readOnly&&onSaveAI&&<ActionButton permission="interpretation_reports.manage" action="save" variant="ghost" type="button" loading={busy} loadingLabel={t('tasks.processing1cac8a')} disabled={busy||aiSaved||!aiResult.requestId} onClick={()=>void saveAI()}>{t(aiSaved?'variantAssessment.saved':'variantAssessment.archive')}</ActionButton>}<p className="text-xs text-fg-muted">{t('assistance.svcAISaveNotice')}</p></div>}
     {aiResult?.svcContext&&<section className="space-y-2 rounded border border-border-subtle p-3 text-xs" aria-label={t('assistance.svcAutoContext')}>
       <strong>{t('assistance.svcAutoContext')}</strong>
       {(['disease','moi','geneDiseaseValidity','workflow'] as const).map(key=>{const field=aiResult.svcContext![key];return <div key={key}><span className="font-medium">{t(({disease:'tasks.diseaseNameOrCurieManualConfirmation1c578d',moi:'tasks.inheritancePattern5de3fe',geneDiseaseValidity:'tasks.geneDiseaseValidity2a432a',workflow:'tasks.variantImpactWorkflow3b5e4e'})[key])}：{field.value||t('history.notProvided071fb2')}</span><p className="whitespace-pre-wrap">{field.reason}</p><div className="flex flex-wrap gap-2">{field.source_ids.map(id=>{const source=aiResult.svcContext?.sources?.find(item=>item.id===id);return source?.url&&/^https?:\/\//.test(source.url)?<a key={id} href={source.url} target="_blank" rel="noopener noreferrer" className="text-accent-fg">{source.title||id}</a>:<span key={id}>{id==='annotation'?t('assistance.svcAnnotationSource'):id}</span>;})}</div></div>;})}
@@ -124,7 +126,7 @@ export function SVCv4AssessmentPanel({taskId,reference,variant,readOnly,onSave,o
       <details open><summary>{t("tasks.applicabilityAssumptionsAndCalculationBasis8b88a4")}</summary><ul className="list-disc space-y-1 pl-4 text-xs">{result.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>
       {!partialContext&&<label className="flex items-start gap-2"><input type="checkbox" disabled={readOnly||busy} checked={draft.confirmed} onChange={e=>setDraft(old=>({...old,confirmed:e.target.checked}))} /><span>{t("tasks.iVerifiedDiseaseEvidenceApplicabilityAndDraft24409b")}</span></label>}
     </div>}
-    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label={t("tasks.reasonForNewEvidenceChange2775ba")} placeholder={t("tasks.reasonForNewEvidenceChangeOptional")} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><ActionButton action="save" variant="primary" type="button" disabled={busy||dirty||!result} onClick={()=>void save()}>{t("tasks.saveNewAssessment62fa07")}</ActionButton></div>}
+    {!readOnly&&onSave&&<div className="space-y-2"><textarea aria-label={t("tasks.reasonForNewEvidenceChange2775ba")} placeholder={t("tasks.reasonForNewEvidenceChangeOptional")} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} /><div className="flex flex-wrap gap-2"><ActionButton action="save" variant="primary" type="button" disabled={busy||dirty||!result||!draft.confirmed||result.state!=='classified'||!result.classification} onClick={()=>void save(true)}>{t('variantAssessment.saveAdopt')}</ActionButton><ActionButton action="save" variant="ghost" type="button" disabled={busy||dirty||!result} onClick={()=>void save(false)}>{t('variantAssessment.saveOnly')}</ActionButton></div></div>}
     {error&&<p role="alert" className="text-sm text-danger-fg">{error}</p>}
   </div>;
 }

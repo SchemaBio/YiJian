@@ -1,8 +1,8 @@
 import { LocalizedError } from '@/i18n/errors';
 // The worker queries one immutable dataset and its versioned server overlays.
 // Only registered fields/operators may become SQL; values are escaped literals.
-export const OVERLAY_FIELDS = ['priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'svcv4AIResult', 'acmgVusSubclass', 'acmgTrial'];
-const NUMERIC_FIELDS = new Set(['priorityScore', 'acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
+export const OVERLAY_FIELDS = ['adoptedACMG', 'priorityScore', 'pinned', 'reviewed', 'focused', 'interpretation', 'acmgClassification', 'acmgEvidence', 'acmgScore', 'acmgProfile', 'acmgState', 'acmgOverride', 'acmgOverrideReason', 'cnvAssessment', 'cnvClassification', 'cnvScore', 'activeAcmgVersion', 'svcv4Assessment', 'svcv4AIResult', 'acmgAIResult', 'acmgSavedAt', 'acmgSavedBy', 'svcv4SavedAt', 'svcv4SavedBy', 'acmgVusSubclass', 'acmgTrial'];
+const NUMERIC_FIELDS = new Set(['adoptedACMG', 'priorityScore', 'acmgScore', 'cnvScore', 'Position', 'Start', 'End', 'Quality', 'Depth', 'VAF', 'GnomAD_AF', 'GnomAD_AF_EAS', 'GnomAD_nhomalt_XX', 'GnomAD_nhomalt_XY', 'Pangolin_Gain', 'Pangolin_Loss', 'EVOScore', 'AlphaMissense_AM', 'copy_number', 'score', 'size', 'Repeat_Count', 'RepeatCount', 'Heteroplasmy', 'Heteroplasmy_Level', 'NbVariants', 'Percentage_Homozygosity', 'Average_Depth', 'Log2_Ratio', 'Copy_Ratio', 'Start_Position', 'End_Position']);
 export interface LocalFilter {
     column: string;
     operator: string;
@@ -29,10 +29,12 @@ export function fieldType(s: string): 'text' | 'number' | 'enum' | 'boolean' {
 }
 export function effectiveField(s: string, raw: string[]): string {
     const overlay = `json_extract_string(o.payload, ${literal('$.' + s)})`;
-    const active = `json_extract_string(o.payload,'$.activeAcmgVersion')='svcv4'`;
-    if(s==='activeAcmgVersion') return `COALESCE(${overlay},'legacy')`;
+    const activeVersion = `COALESCE(json_extract_string(o.payload,'$.adoptedACMG.version'),json_extract_string(o.payload,'$.activeAcmgVersion'),'legacy')`;
+    const active = `${activeVersion}='svcv4'`;
+    const snapshot = `json_exists(o.payload,'$.adoptedACMG')`;
+    if(s==='activeAcmgVersion') return activeVersion;
     if(s==='acmgTrial') return `CASE WHEN ${active} THEN 'true' ELSE 'false' END`;
-    if(s==='acmgVusSubclass') return `CASE WHEN ${active} THEN json_extract_string(o.payload,'$.svcv4Assessment.result.vusSubclass') END`;
+    if(s==='acmgVusSubclass') return `CASE WHEN ${snapshot} THEN json_extract_string(o.payload,'$.adoptedACMG.vusSubclass') WHEN ${active} THEN json_extract_string(o.payload,'$.svcv4Assessment.result.vusSubclass') END`;
     if (s === 'pinned')
         return `COALESCE(${overlay}, CASE WHEN ${active} OR json_exists(o.payload,'$.acmgEvidence') OR json_exists(o.payload,'$.acmgOverride') OR json_exists(o.payload,'$.cnvAssessment') THEN CASE WHEN (CASE WHEN json_exists(o.payload,'$.cnvAssessment') THEN ${effectiveField('cnvClassification',raw)} ELSE ${effectiveField('acmgClassification',raw)} END) IN ('Pathogenic','Likely_Pathogenic') THEN 'true' ELSE 'false' END ELSE COALESCE(json_extract_string(a.baseline,'$.pinned'),'false') END)`;
     if (s === 'reviewed' || s === 'focused')
@@ -48,7 +50,7 @@ export function effectiveField(s: string, raw: string[]): string {
         const legacy = s === 'acmgClassification' ? `COALESCE(NULLIF(json_extract_string(o.payload, '$.acmgOverride'), ''), CASE WHEN json_exists(o.payload, '$.acmgEvidence') THEN NULLIF(${overlay}, '') ELSE ${baseline} END)` : `CASE WHEN json_exists(o.payload, '$.acmgEvidence') THEN ${overlay} ELSE ${baseline} END`;
         if(s==='acmgEvidence') return legacy;
         const current = s==='acmgProfile' ? "'svcv4-draft-reference'" : `json_extract_string(o.payload, ${literal('$.svcv4Assessment.result.'+names[s])})`;
-        return `CASE WHEN ${active} THEN ${current} ELSE ${legacy} END`;
+        return `CASE WHEN ${snapshot} THEN CASE WHEN json_extract_string(o.payload,'$.adoptedACMG.automatic')='true' THEN ${baseline} ELSE json_extract_string(o.payload, ${literal('$.adoptedACMG.'+names[s])}) END WHEN ${active} THEN ${current} ELSE ${legacy} END`;
     }
     if (OVERLAY_FIELDS.includes(s))
         return overlay;

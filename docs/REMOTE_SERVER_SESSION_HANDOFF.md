@@ -1,5 +1,7 @@
 # SchemaBio SaaS 远端连接、认证与开发交接
 
+**2026-11-01 统一变异评估流程已上线：SepiLens / Octopus / YiJian 当前标签均为 `assessment-workflow-20261101t042816z`，详见第64节。部署源码现已本地提交，远端 Git 未移动；精确线上身份仍以第64节构建快照为准，Squid 保留第63节版本。**
+
 **2026-11-01 节点preflight状态协议修复已上线：Squid最新为 `schemabio/squid:node-preflight-20261101t015651z`，保留镜像即时应用及 `img-dv8zcpyc`。详见第63节；四文件补丁已本地提交 `54a4bdc`、未push，远端Git仍为旧基准，不要直接按HEAD重建。**
 
 **2026-11-01 镜像配置即时应用已上线：Squid/Cuttlefish 最新标签均为 `image-hot-reload-20261101t012249z`，新任务系统镜像 `img-dv8zcpyc`，配置版本4/生效4，无待重启配置。详见第62节；包含第61节节点镜像仓库兼容修复，相关补丁已本地提交、未push。**
@@ -857,3 +859,17 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 本地节点状态/监督器/引导回归通过；Linux隔离PostgreSQL真实NodeHTTP回调按全部初始化阶段返回204并保存心跳，延迟阶段不回退，未知阶段400；失败状态保留回调原因、镜像热应用/执行固定镜像、未知云请求重放等相关回归通过。临时数据库容器和匿名卷已清理。
 - 只替换Squid，healthy、重启0，其他服务身份与任务/托管配置摘要保持。公网认证后读取该任务200，系统镜像仍 `img-dv8zcpyc`、无待重启配置。未创建计算实例、未自动重试任务；本次验收不代表真实样本全流程已通过。
 - 后续按用户要求提交Squid `54a4bdc`：preflight合法阶段、失败回调原因保留及对应回归。未push、未重新部署；线上源码身份仍以本节构建上下文与补丁清单为准。
+
+
+## 64. 2026-11-01 统一变异评估、计算器和采用结果
+
+- 已依次部署 SepiLens → Octopus → YiJian，三者镜像分别为 `schemabio/sepilens:assessment-workflow-20261101t042816z`、`schemabio/octopus:assessment-workflow-20261101t042816z`、`schemabio/yijian:assessment-workflow-20261101t042816z`。三服务healthy、重启0；Squid、Cuttlefish、gateway容器身份保持，gateway仅reload。
+- 详情默认“评估总览”，并列显示数据库参考、本地快速初评、AI建议、采用结果及差异。两版遵循审核预填→复核证据→确认保存并采用；提供“仅保存本版”，人工解读降为后续操作。支持逐条理由/来源编辑，保留人工值与冲突，不自动确认SVC上下文。无可计分证据时仍可进入补充表单。
+- 修复两处输入问题：`missense variant`含空格被映射丢弃；合法HGVS `c.2015G>A`的`>`被Octopus过滤且被SepiLens拒绝。现在保留原字段并规范化后果，准确DNA/蛋白HGVS用于检索；不根据HGVS推断后果或借用其他转录本。ACMG导入上下文在首轮模型前主动检索准确位点，复用材料。公开MYH3回归不硬编码Pathogenic，也不修改分类阈值。
+- ACMG/SVC请求由Octopus从当前任务不可变Parquet重新读取注释，验证行ordinal/ID、执行、数据版本和对象摘要；样本VAF/AD与人群AF分开。数据库及预测字段保持原来源与适用性约束，缺少可核查版本时不升级为临床可信证据。材料服务不可用、空结果、对象不匹配与待复核适用性分别保留；找到记录不直接加分。
+- 新增ACMG与SVC对称的AI归档引用；客户端只传request ID，接口验证当前用户、租户、任务、功能、完成状态，服务端读取原结果。历史缺少绑定时只在核对原作业完整位点身份后以historicalBinding保存，不声称当前数据集版本已核实、不回写原作业。AI原记录、审核后的计算器证据及采用快照分开。
+- `adoptedACMG`为服务端只读快照。“仅保存”即使编辑的是当前采用版本，也不会替换采用结论；明确采用时与证据保存共用版本控制事务。浏览器覆盖层、Go/Python查询、导出、历史及报告使用快照。旧记录不回填、不重算；首次新保存才保留原采用状态。保存失败保留草稿，切换位点清空；SVC维持固定实验参考与原采用门槛，正式引擎仍关闭。
+- 本地与远端前端92项交互/预加载/语言回归、类型检查及生产构建通过。Octopus受影响四包完整回归、97组Python/Go查询导出对照通过；远端隔离PostgreSQL验证保存/采用分离、并发冲突、只读限制、AI请求用户/任务/功能归属，临时数据库容器及匿名卷已清理。SepiLens映射、来源策略、固定检索/模型、失败不计费及规则回归通过。未发起真实模型请求或分析。
+- 发布后公网login、原任务读取、已有结果覆盖层和AI设置均200；公网评估JS资源摘要与运行镜像一致。发布前后任务、人工调整、AI请求、计算设置摘要相同；正式引擎/计费门槛、余额和账务流水摘要保持。NCBI公开精确查询独立探测200、返回5条相关记录，仅证明网络可达，不代表材料临床适用性已验证。历史AI结果未重算，后续新请求使用修复链路。
+- 保护目录 `/home/ubuntu/schema/backups/assessment-workflow-20261101T042816Z` 包含Octopus库dump、SepiLens SQLite在线备份、原部署配置、回退镜像、三仓库基准归档/最终补丁/完整构建上下文、`source-manifest-final.json`、构建回归日志、`result.json`与`verification.json`。镜像以`org.schemabio.source.dirty=true`及补丁SHA256标记。构建使用固定基础镜像和腾讯依赖镜像源；测试构建显式包含被常规dockerignore排除的固定样例，实际配方保存在保护目录。早期构建工具修正日志保留，最终回归与验证均成功。
+- 远端Git未移动。基准SepiLens `9a4f42b203b23b54797b979870d282e3d7d467fa`、Octopus `25b41472f63cce34c6c51261267dc79a769a53ba`、YiJian `dd4c38d6e022b8aabe4c76539a578c83046b991d`；实际源码须使用本节最终构建上下文和补丁清单。此前未提交的总览预加载改动已保留，并在清单中单独标明；共享浏览器文件同时包含预加载和本轮覆盖层变更。后续已按用户要求本地提交：SepiLens `8e78cda`、Octopus `efc3350`；YiJian 总览预加载单独提交 `45ddbdd`，统一评估界面及本节交接记录另作功能提交。未push、未重新部署；线上镜像仍为本节已验证快照。工作流契约见 `docs/VARIANT_ASSESSMENT_WORKFLOW.md`。

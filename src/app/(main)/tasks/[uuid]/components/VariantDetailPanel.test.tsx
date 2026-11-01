@@ -20,6 +20,34 @@ const variant = (id: string) => ({ id, gene: id, chromosome: '1', position: 100,
 }) as SNVIndel;
 
 describe('same-screen interpretation', () => {
+  it.each([['确认保存并采用此版本', true], ['仅保存本版', false]] as const)('atomically saves reviewed AI evidence with %s', async (button, adopt) => {
+    const save=vi.fn().mockResolvedValue(undefined);
+    const row={...variant('A'), acmgEvidence:[{code:'PP3',strength:'supporting',source:'manual'}], acmgAIResult:{feature:'acmg',requestId:'request-fixed',summary:'Synthetic snapshot',resultKind:'evidence_only',evidence:[{code:'PM2',status:'met',strength:'Moderate',reason:'Synthetic verified source'}]}} as SNVIndel;
+    render(<VariantDetailPanel taskId="task" variant={row} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
+    fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
+    fireEvent.click(screen.getByRole('button',{name:'审核并填入本版计算器'}));
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('checkbox',{name:'我已逐条复核候选证据、强度及适用性'}));
+    fireEvent.click(screen.getByRole('button',{name:button}));
+    await waitFor(()=>expect(save).toHaveBeenCalledTimes(1));
+    const changes=save.mock.calls[0][1];
+    expect(changes.acmgAIResult).toBe('request-fixed');
+    expect(changes.acmgEvidence).toEqual(expect.arrayContaining([expect.objectContaining({code:'PP3',source:'manual'}),expect.objectContaining({code:'PM2',source:'sepilens_ai_reviewed'})]));
+    expect(changes.activeAcmgVersion).toBe(adopt?'legacy':undefined);
+  });
+  it('keeps the supplement action and draft after a concurrent save fails', async()=>{
+    const save=vi.fn().mockRejectedValue(new Error('Concurrent save conflict'));
+    const row={...variant('A'), acmgAIResult:{feature:'acmg',summary:'Missing evidence',resultKind:'evidence_only',classification:'insufficient_data',evidence:[]}} as SNVIndel;
+    render(<VariantDetailPanel taskId="task" variant={row} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
+    fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
+    fireEvent.click(screen.getByRole('button',{name:'查看并补充证据'}));
+    fireEvent.click(screen.getByRole('checkbox',{name:'选择 ACMG 证据 PP3'}));
+    fireEvent.click(screen.getByRole('checkbox',{name:'我已逐条复核候选证据、强度及适用性'}));
+    fireEvent.click(screen.getByRole('button',{name:'仅保存本版'}));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Concurrent save conflict');
+    expect(screen.getByRole('checkbox',{name:'选择 ACMG 证据 PP3'})).toBeChecked();
+  });
+
   it('scores structured AI candidates only after human review and save, replacing the quick assessment', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const client: AIAssistanceAdapter = {
@@ -34,7 +62,7 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'ACMG' }));
     const generate = screen.getByRole('button', { name: 'AI 生成ACMG 现版建议' });
     await waitFor(() => expect(generate).toBeEnabled()); fireEvent.click(generate);
-    const review = await screen.findByRole('button', { name: '复核并应用 ACMG 证据' });
+    const review = await screen.findByRole('button', { name: '审核并填入本版计算器' });
     expect(screen.getByText('已核实证据不足')).toBeVisible();
     expect(screen.getByText('规则校验未采纳该 AI 建议，仍需人工复核。')).toBeVisible();
     expect(save).not.toHaveBeenCalled();
@@ -46,15 +74,16 @@ describe('same-screen interpretation', () => {
     expect(save).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
     expect(save).not.toHaveBeenCalled();
-    expect(screen.getByText('旧快速初评说明')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: '复核并应用 ACMG 证据' }));
-    fireEvent.click(screen.getByRole('button', { name: '保存证据与分类' }));
+    expect(screen.getAllByText('旧快速初评说明').some(element=>!element.closest('[hidden]'))).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '审核并填入本版计算器' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: '我已逐条复核候选证据、强度及适用性' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认保存并采用此版本' }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PM2', strength: 'moderate', source: 'sepilens_ai_reviewed', note: expect.stringContaining('ai-request-review') })], '', '', expect.stringContaining('人工复核采纳'), false));
     await waitFor(() => expect(screen.queryByRole('checkbox', { name: '选择 ACMG 证据 PM2' })).not.toBeInTheDocument());
     expect(screen.getByText('证据积分').parentElement).toHaveTextContent('2 分');
     expect(screen.getByText('已保存证据积分')).toBeVisible();
     expect(screen.getByText(/^已保存人工复核证据；原 AI 建议与规则校验结果保留供追溯。/)).toBeVisible();
-    expect(screen.queryByText('旧快速初评说明')).not.toBeInTheDocument();
+    expect(screen.getAllByText('旧快速初评说明')[0]).not.toBeVisible();
     expect(client.generate).toHaveBeenCalledTimes(1);
   });
   it('requests SepiLens AI for the selected variant and leaves adoption to the reviewer', async () => {
@@ -74,7 +103,7 @@ describe('same-screen interpretation', () => {
     expect(screen.queryByRole('dialog', { name: '补充 AI 评估上下文' })).not.toBeInTheDocument();
     await waitFor(() => expect(client.generate).toHaveBeenCalledWith(expect.objectContaining({ feature: 'acmg', taskId: 'task', reference: 'hg38', variant: expect.objectContaining({ gene: 'A', position: 100 }) }), expect.anything()));
     expect(vi.mocked(client.generate).mock.calls[0][0].clinicalContext).toBeUndefined();
-    expect(await screen.findByText('覆盖度待核验')).toBeVisible();
+    expect((await screen.findAllByText('覆盖度待核验')).some(el=>!el.closest('[hidden]'))).toBe(true);
     expect(screen.getByText('Supporting')).toBeVisible();
     expect(screen.getByText(/AI 建议分类（待复核）/)).toBeVisible();
     expect(save).not.toHaveBeenCalled();
@@ -96,19 +125,22 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'ACMG' }));
     fireEvent.click(screen.getByRole('button', { name: '编辑' }));
     fireEvent.click(screen.getByRole('checkbox', { name: '选择 ACMG 证据 PP3' }));
+    fireEvent.change(screen.getByRole('textbox',{name:'PP3 理由与来源（可附文献链接）'}),{target:{value:'Manual evidence with a public source'}});
     const override = screen.getByRole('option', { name: '按证据积分显示' }).parentElement!;
     fireEvent.change(override, { target: { value: 'Pathogenic' } });
     expect(screen.getByPlaceholderText('人工覆写理由（选填）')).toHaveValue('');
     expect(screen.getByPlaceholderText('本次证据调整理由（选填）')).toHaveValue('');
-    fireEvent.click(screen.getByRole('button', { name: '保存证据与分类' }));
-    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PP3' })], 'Pathogenic', '', '', false));
+    fireEvent.click(screen.getByRole('button', { name: '确认保存并采用此版本' }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'A' }), [expect.objectContaining({ code: 'PP3',note:'Manual evidence with a public source' })], 'Pathogenic', '', '', false));
   });
   it('links each dbSNP identifier in the annotation tab and rejects non-rs values', () => {
     render(<VariantDetailPanel taskId="task" variant={{...variant('A'), rsId:'rs671;RS123', annotationValues:{dbSNP:'rs671&rs456&invalid'}}} isOpen onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '注释' }));
     const identifiers = screen.getByRole('heading', {name:'变异标识'}).parentElement!;
     for (const id of ['rs671', 'rs123', 'rs456']) {
       const link = within(identifiers).getByRole('link', {name:id});
-      expect(link).toHaveAttribute('href', `https://www.ncbi.nlm.nih.gov/snp/${id}`);
+      fireEvent.click(screen.getByRole('tab', { name: '注释' }));
+    expect(link).toHaveAttribute('href', `https://www.ncbi.nlm.nih.gov/snp/${id}`);
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     }
@@ -116,8 +148,10 @@ describe('same-screen interpretation', () => {
   });
   it('shows transcript location, totals and HGVS in annotation', async () => {
     render(<VariantDetailPanel taskId="task" variant={{ ...variant('A'), annotationValues: { Location: 'Exon 2/20' } }} isOpen onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '注释' }));
     const section = screen.getByRole('heading', { name: '转录本与 HGVS' }).closest('section')!;
     await waitFor(() => expect(within(section).getByText('NM_001000')).toBeVisible());
+    fireEvent.click(screen.getByRole('tab', { name: '注释' }));
     expect(within(section).getByText('20')).toBeVisible();
     expect(within(section).getByText('19（按外显子总数推算）')).toBeVisible();
     expect(within(section).getByText('c.1A>G')).toBeVisible();
@@ -144,7 +178,7 @@ describe('same-screen interpretation', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const assessed = {...variant('A'), activeAcmgVersion:'legacy' as const, svcv4Assessment:{revision:'fixed',source:'https://example.org',authoritative:false,disease:'疾病',moi:'AD',confirmed:true,inputs:{},result:{state:'classified',classification:'VUS',score:0,vusSubclass:'VUS-low',warnings:[],breakdown:{},details:{}}}} as SNVIndel;
     render(<VariantDetailPanel taskId="task" variant={assessed} isOpen onClose={vi.fn()} onSaveVersionedAssessment={save} />);
-    expect(within(screen.getByRole('tablist', {name:'详情内容'})).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['注释', '证据', 'ACMG', '人工解读', '变更记录']);
+    expect(within(screen.getByRole('tablist', {name:'详情内容'})).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['评估总览', '注释', '证据', 'ACMG', '人工解读', '变更记录']);
     expect(screen.queryByRole('tablist', {name:'ACMG 计算器版本'})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab',{name:'ACMG'}));
     const currentTab = screen.getByRole('tab',{name:'现版'});
@@ -155,7 +189,7 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('tab',{name:'现版'}));
     expect(save).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('tab',{name:'SVC v4.0版'}));
-    fireEvent.click(screen.getByRole('button',{name:'采用SVC v4.0试行结果'}));
+    fireEvent.click(screen.getByRole('button',{name:'采用已保存的本版结果'}));
     expect(screen.queryByLabelText('版本切换理由')).not.toBeInTheDocument();
     await waitFor(()=>expect(save).toHaveBeenCalledWith(assessed,{activeAcmgVersion:'svcv4'},''));
   });
@@ -187,9 +221,10 @@ describe('same-screen interpretation', () => {
     expect(editor).toHaveValue('待复核的解读');
   });
 
-  it('opens on annotation, puts GenCC before resource links and keeps only the header close control', async () => {
+  it('opens on assessment overview, keeps annotations and puts GenCC before resource links and keeps only the header close control', async () => {
     const annotated = { ...variant('BRCA1'), annotationValues: { GenCC_disease_title: '示例疾病关联', GenCC_moi_title: '常染色体显性', GenCC_disease_original_curie: 'OMIM:123456' } };
     render(<VariantDetailPanel taskId="task" variant={annotated} isOpen onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '注释' }));
     expect(screen.queryByRole('tab', { name: '概览' })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: '注释' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('示例疾病关联')).toBeVisible();

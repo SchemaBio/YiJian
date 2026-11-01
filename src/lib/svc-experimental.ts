@@ -35,3 +35,9 @@ export function applySVCAIContext(draft:SVCv4Assessment, context:import('./ai-as
  if(next.disease!==draft.disease||next.moi!==draft.moi||next.geneDiseaseValidity!==draft.geneDiseaseValidity||next.inputs.workflow!==draft.inputs.workflow){next.confirmed=false;next.result=undefined;}
  return next;
 }
+
+/** Review only fills blank fields; saved/manual evidence wins every conflict. */
+export function mergeSVCAIReview(draft:SVCv4Assessment, context:import('./ai-assistance').SVCAIContext|undefined):SVCv4Assessment {
+ const proposal=applySVCAIContext({disease:'',moi:'',inputs:{},confirmed:false},context);
+ return {...draft,disease:draft.disease||proposal.disease,moi:draft.moi||proposal.moi,geneDiseaseValidity:draft.geneDiseaseValidity||proposal.geneDiseaseValidity,inputs:{...proposal.inputs,...draft.inputs},confirmed:false,result:undefined};
+}

@@ -36,20 +36,20 @@ describe('SVCv4 guided assessment',()=>{
   await screen.findByText('意义未明 · VUS-low · 0 分');
   expect(evaluateSVCv4).toHaveBeenCalledWith('task',expect.objectContaining({disease:'OMIM:1',moi:'AD',confirmed:false}));
   fireEvent.click(screen.getByRole('checkbox'));
-  fireEvent.click(screen.getByRole('button',{name:'保存新版评定'}));
-  await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),''));
+  fireEvent.click(screen.getByRole('button',{name:'确认保存并采用此版本'}));
+  await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),'',true,undefined));
   fireEvent.change(screen.getByLabelText('新版证据调整理由'),{target:{value:'核验后保存'}});
-  fireEvent.click(screen.getByRole('button',{name:'保存新版评定'}));
-  await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),'核验后保存'));
+  fireEvent.click(screen.getByRole('button',{name:'确认保存并采用此版本'}));
+  await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:true}),'核验后保存',true,undefined));
   fireEvent.change(screen.getByLabelText('疾病（名称或 CURIE，人工确认）'),{target:{value:'OMIM:2'}});
   expect(screen.queryByText('意义未明 · VUS-low · 0 分')).not.toBeInTheDocument();
-  expect(screen.getByRole('button',{name:'保存新版评定'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'确认保存并采用此版本'})).toBeDisabled();
  });
  it('shows saved result in read-only mode with editing disabled',async()=>{
   render(<SVCv4AssessmentPanel taskId="task" variant={{...variant,svcv4Assessment:{disease:'D',moi:'AD',confirmed:true,inputs:{}}}} readOnly />);
   await screen.findByRole('button',{name:'计算新版评定'});
   expect(screen.getByLabelText('遗传模式')).toBeDisabled();
-  expect(screen.queryByRole('button',{name:'保存新版评定'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'确认保存并采用此版本'})).not.toBeInTheDocument();
  });
 });
 
@@ -61,9 +61,9 @@ describe('SVC AI result persistence',()=>{
   fireEvent.click(screen.getByRole('button',{name:'Generate synthetic SVC'}));
   expect(screen.getByText('Synthetic SVC summary')).toBeInTheDocument();
   const calculateCalls=vi.mocked(evaluateSVCv4).mock.calls.length;
-  fireEvent.click(screen.getByRole('button',{name:'保存 AI 评估结果'}));
+  fireEvent.click(screen.getByRole('button',{name:'保存 AI 分析记录'}));
   await waitFor(()=>expect(saveAI).toHaveBeenCalledWith(suggestion.requestId));
-  expect(screen.getByRole('button',{name:'AI 评估结果已保存'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'AI 分析记录已保存'})).toBeDisabled();
   expect(screen.getByLabelText('疾病（名称或 CURIE，人工确认）')).toHaveValue('');
   expect(screen.getByLabelText('遗传模式')).toHaveValue('');
   expect(evaluateSVCv4).toHaveBeenCalledTimes(calculateCalls);expect(saveManual).not.toHaveBeenCalled();
@@ -72,19 +72,19 @@ describe('SVC AI result persistence',()=>{
   render(<SVCv4AssessmentPanel taskId="task" variant={{...variant,svcv4AIResult:suggestion}} readOnly onSaveAI={vi.fn()}/>);
   await screen.findByRole('button',{name:'计算新版评定'});
   expect(screen.getByText('Synthetic SVC summary')).toBeInTheDocument();
-  expect(screen.getByText('AI 评估结果已保存')).toBeInTheDocument();
-  expect(screen.queryByRole('button',{name:'保存 AI 评估结果'})).not.toBeInTheDocument();
+  expect(screen.getByText('AI 分析记录已保存')).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'保存 AI 分析记录'})).not.toBeInTheDocument();
  });
  it('preserves the generated result and enables retry after a save failure',async()=>{
   const saveAI=vi.fn().mockRejectedValueOnce(new Error('Save unavailable')).mockResolvedValue(undefined);
   render(<SVCv4AssessmentPanel taskId="task" variant={variant} readOnly={false} onSaveAI={saveAI}/>);
   fireEvent.click(screen.getByRole('button',{name:'Generate synthetic SVC'}));
-  fireEvent.click(screen.getByRole('button',{name:'保存 AI 评估结果'}));
+  fireEvent.click(screen.getByRole('button',{name:'保存 AI 分析记录'}));
   await screen.findByRole('alert');
   expect(screen.getByText('Synthetic SVC summary')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'保存 AI 评估结果'}));
+  fireEvent.click(screen.getByRole('button',{name:'保存 AI 分析记录'}));
   await waitFor(()=>expect(saveAI).toHaveBeenCalledTimes(2));
-  await waitFor(()=>expect(screen.getByRole('button',{name:'AI 评估结果已保存'})).toBeDisabled());
+  await waitFor(()=>expect(screen.getByRole('button',{name:'AI 分析记录已保存'})).toBeDisabled());
  });
 });
 
@@ -95,13 +95,15 @@ it('fills all four SVC fields from researched context and restores them from the
  const {unmount}=render(<SVCv4AssessmentPanel taskId="task" variant={variant} readOnly={false} onSaveAI={saveAI}/>);
  await screen.findByRole('button',{name:'计算新版评定'});
  fireEvent.click(screen.getByRole('button',{name:'Generate synthetic SVC'}));
+ expect(screen.getByLabelText('疾病（名称或 CURIE，人工确认）')).toHaveValue('');
+ fireEvent.click(screen.getByRole('button',{name:'审核并填入本版计算器'}));
  expect(screen.getByLabelText('疾病（名称或 CURIE，人工确认）')).toHaveValue('MONDO:synthetic');
  expect(screen.getByLabelText('遗传模式')).toHaveValue('AD');
  expect(screen.getByLabelText('基因与疾病关联有效性')).toHaveValue('MODERATE');
  expect(screen.getByLabelText('变异影响工作流')).toHaveValue('missense');
  expect(screen.getAllByRole('link',{name:'Synthetic publication'})[0]).toHaveAttribute('href','https://pubmed.ncbi.nlm.nih.gov/1/');
- fireEvent.click(screen.getByRole('button',{name:'保存 AI 评估结果'}));await waitFor(()=>expect(saveAI).toHaveBeenCalledWith(suggestion.requestId));
- unmount();render(<SVCv4AssessmentPanel taskId="task" variant={{...variant,svcv4AIResult:{...suggestion}}} readOnly />);
+ fireEvent.click(screen.getByRole('button',{name:'保存 AI 分析记录'}));await waitFor(()=>expect(saveAI).toHaveBeenCalledWith(suggestion.requestId));
+ unmount();render(<SVCv4AssessmentPanel taskId="task" variant={{...variant,svcv4Assessment:{disease:'MONDO:synthetic',moi:'AD',geneDiseaseValidity:'MODERATE',inputs:{workflow:'missense'},confirmed:false},svcv4AIResult:{...suggestion}}} readOnly />);
  await screen.findByRole('button',{name:'计算新版评定'});
  expect(screen.getByLabelText('遗传模式')).toHaveValue('AD');
  expect(screen.getByLabelText('变异影响工作流')).toHaveValue('missense');
@@ -118,7 +120,7 @@ it('evaluates and saves a blank context as an unconfirmed partial result',async(
  expect(screen.getByText('疾病尚未明确')).toBeInTheDocument();expect(screen.getByText('遗传模式尚未明确')).toBeInTheDocument();
  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
- fireEvent.click(screen.getByRole('button',{name:'保存新版评定'}));await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:false,result:expect.objectContaining({state:'insufficient_context',score:null,classification:null})}),''));
+ fireEvent.click(screen.getByRole('button',{name:'仅保存本版'}));await waitFor(()=>expect(save).toHaveBeenCalledWith(expect.objectContaining({confirmed:false,result:expect.objectContaining({state:'insufficient_context',score:null,classification:null})}),'',false,undefined));
 });
 
 it('restores a saved partial assessment alongside an AI context with unknown fields',async()=>{
