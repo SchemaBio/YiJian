@@ -164,6 +164,7 @@ export function CNVDetailPanel({
     saveAssessment: commitAssessment,
     loadAssessment,
     initializeAssessment,
+    switchCalculatorMode,
   } = useCNVAssessment(variant);
   const [assessmentSaving, setAssessmentSaving] = React.useState(false);
   const [assessmentError, setAssessmentError] = React.useState<string | null>(null);
@@ -257,7 +258,11 @@ export function CNVDetailPanel({
     setLocalAdoptedCNV(adoptedData);
 
     if (onSaveVersionedAssessment) {
-      await saveVersioned({ adoptedCNV: adoptedData }, `采用${sourceLabelMap[source]}结果`);
+      try {
+        await saveVersioned({ adoptedCNV: adoptedData }, `采用${sourceLabelMap[source]}结果`);
+      } catch (e) {
+        console.error('Failed to save adopted CNV source:', e);
+      }
     }
   };
 
@@ -345,7 +350,7 @@ export function CNVDetailPanel({
             {/* 1. 评估总览 */}
             <section hidden={section !== 'overview'}>
               <CNVAssessmentOverview
-                variant={variant}
+                variant={{ ...variant, adoptedCNV: effectiveAdopted }}
                 assessment={effectiveAssessment}
                 ai={aiResult}
                 aiError={aiError}
@@ -625,6 +630,7 @@ export function CNVDetailPanel({
                   cnv={variant}
                   assessment={effectiveAssessment}
                   onCriteriaChange={updateCriteria}
+                  onSwitchMode={switchCalculatorMode}
                   onReset={resetAssessment}
                   onSave={handleSaveAssessment}
                   saving={assessmentSaving}

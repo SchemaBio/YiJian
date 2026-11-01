@@ -52,15 +52,34 @@ export function InspectorTabs({ value, onChange, id, sections = DEFAULT_SECTIONS
 }) {
   const t = useText();
   const ariaLabel = suppliedAriaLabel ?? t("common.detailContent61e553");
-  return <div className="yj-inspector-tabs" role="tablist" aria-label={translateUI(ariaLabel, t)}>
+  const tabsRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!tabsRef.current) return;
+    const activeTab = tabsRef.current.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+      activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [value]);
+
+  return <div ref={tabsRef} className="yj-inspector-tabs" role="tablist" aria-label={translateUI(ariaLabel, t)}>
     {sections.map((section, index) => <button key={section} type="button" role="tab"
       id={`${id}-${section}`} aria-controls={`${id}-content`} aria-selected={value === section}
-      tabIndex={value === section ? 0 : -1} onClick={() => onChange(section)}
+      tabIndex={value === section ? 0 : -1} onClick={event => {
+        onChange(section);
+        if (typeof event.currentTarget.scrollIntoView === 'function') {
+          event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+      }}
       onKeyDown={event => {
         const next = event.key === 'ArrowRight' ? (index + 1) % sections.length : event.key === 'ArrowLeft' ? (index + sections.length - 1) % sections.length : event.key === 'Home' ? 0 : event.key === 'End' ? sections.length - 1 : -1;
         if (next < 0) return;
         event.preventDefault(); onChange(sections[next]);
-        (event.currentTarget.parentElement?.children[next] as HTMLElement)?.focus();
+        const target = event.currentTarget.parentElement?.children[next] as HTMLElement | undefined;
+        target?.focus();
+        if (typeof target?.scrollIntoView === 'function') {
+          target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
       }}>{translateUI(labels?.[section] ?? LABELS[section], t)}</button>)}
   </div>;
 }

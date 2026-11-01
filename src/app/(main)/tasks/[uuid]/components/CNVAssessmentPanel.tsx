@@ -264,7 +264,7 @@ export function CNVAssessmentPanel({
         {/* 内容区域 */}
         <fieldset disabled={readOnly} className="yj-inspector-content min-w-0">
           <p className="mb-3 text-xs text-fg-muted">{t("tasks.basedOnAcmgClingenPreselectionUsesProvided16a1ce")}</p>
-          {!assessment.criteria.aiReview?.autoFilled && assessment.autoEvidenceNotes?.map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
+          {!assessment.criteria.aiReview?.autoFilled && assessment.autoEvidenceNotes?.filter(n => !n.startsWith('phenotype.') && !n.toLowerCase().includes('pending')).map(note => <p key={note} className="mb-2 rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>)}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold">{t("tasks.aiAssistedAssessment6b72ee")}</span><AIAssistanceAction key={`${taskId}/${cnv.id}`} disabled={readOnly||saving||!taskId} input={{feature:isLoss?'cnv_loss':'cnv_gain',taskId,reference:referenceId,variant:aiVariantContext(cnv),calculator:assessment}} onResult={setAIResult} /></div>
           {aiResult && <div className="mb-4"><AIResultCard result={aiResult} /></div>}
           {aiResult && onCriteriaChange && <CNVAIReview key={`${taskId}/${cnv.id}/${aiResult.requestId}`} result={aiResult} assessment={assessment} onApply={onCriteriaChange} disabled={readOnly||saving} />}

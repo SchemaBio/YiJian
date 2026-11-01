@@ -125,6 +125,7 @@ export interface CNVCalculatorProps {
   cnv: CNVSegment | CNVExon;
   assessment: CNVAssessment;
   onCriteriaChange?: (criteria: LossAssessmentCriteria | GainAssessmentCriteria) => void;
+  onSwitchMode?: (mode: 'Loss' | 'Gain') => void;
   onSave?: (assessment: CNVAssessment) => void;
   onReset?: () => void;
   saving?: boolean;
@@ -135,6 +136,7 @@ export function CNVCalculator({
   cnv,
   assessment,
   onCriteriaChange,
+  onSwitchMode,
   onSave,
   onReset,
   saving = false,
@@ -151,7 +153,9 @@ export function CNVCalculator({
     );
   }
 
-  const isLoss = cnv.type === 'Deletion';
+  const currentType = assessment.cnvType ?? cnv.type;
+  const isLoss = currentType === 'Deletion';
+  const activeCnvType: 'Deletion' | 'Amplification' = isLoss ? 'Deletion' : 'Amplification';
   const criteria = assessment.criteria;
 
   // 处理Section 1变更
@@ -211,9 +215,51 @@ export function CNVCalculator({
           {t("tasks.basedOnAcmgClingenPreselectionUsesProvided16a1ce")}
         </p>
 
-        {!assessment.criteria.aiReview?.autoFilled && assessment.autoEvidenceNotes?.map(note => (
-          <p key={note} className="rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>
-        ))}
+        {/* Gain / Loss 计算器类型手动切换 */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-default bg-canvas-subtle p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-fg-muted">计算器模式:</span>
+            <div className="inline-flex rounded-md border border-border-subtle bg-canvas-default p-0.5">
+              <button
+                type="button"
+                onClick={() => onSwitchMode?.('Loss')}
+                disabled={readOnly}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  isLoss
+                    ? 'bg-accent-emphasis text-fg-on-emphasis shadow-sm font-semibold'
+                    : 'text-fg-muted hover:text-fg-default'
+                }`}
+              >
+                缺失 (Loss) 计算器
+                {cnv.type === 'Deletion' && <span className="ml-1 text-[10px] opacity-80">(检出结果)</span>}
+              </button>
+              <button
+                type="button"
+                onClick={() => onSwitchMode?.('Gain')}
+                disabled={readOnly}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  !isLoss
+                    ? 'bg-accent-emphasis text-fg-on-emphasis shadow-sm font-semibold'
+                    : 'text-fg-muted hover:text-fg-default'
+                }`}
+              >
+                重复/扩增 (Gain) 计算器
+                {cnv.type === 'Amplification' && <span className="ml-1 text-[10px] opacity-80">(检出结果)</span>}
+              </button>
+            </div>
+          </div>
+          <span className="text-[11px] text-fg-subtle">
+            默认检出: {cnv.type === 'Deletion' ? '缺失 (Deletion)' : cnv.type === 'Amplification' ? '重复/扩增 (Amplification)' : cnv.type}
+          </span>
+        </div>
+
+        {!assessment.criteria.aiReview?.autoFilled && (
+          assessment.autoEvidenceNotes
+            ?.filter(note => !note.startsWith('phenotype.') && !note.toLowerCase().includes('pending'))
+            .map(note => (
+              <p key={note} className="rounded bg-canvas-subtle p-2 text-xs text-fg-muted">{note}</p>
+            ))
+        )}
 
         {/* 分数汇总 */}
         <ScoreSummaryCard
@@ -245,7 +291,7 @@ export function CNVCalculator({
             score={assessment.sectionScores.section1}
           >
             <Section1Panel
-              cnvType={cnv.type}
+              cnvType={activeCnvType}
               criteria={criteria.section1}
               onChange={handleSection1Change}
             />
@@ -256,7 +302,7 @@ export function CNVCalculator({
             score={assessment.sectionScores.section2}
           >
             <Section2Panel
-              cnvType={cnv.type}
+              cnvType={activeCnvType}
               criteria={criteria.section2}
               onChange={handleSection2Change}
             />
@@ -267,7 +313,7 @@ export function CNVCalculator({
             score={assessment.sectionScores.section3}
           >
             <Section3Panel
-              cnvType={cnv.type}
+              cnvType={activeCnvType}
               criteria={criteria.section3}
               onChange={handleSection3Change}
             />
@@ -278,7 +324,7 @@ export function CNVCalculator({
             score={assessment.sectionScores.section4}
           >
             <Section4Panel
-              cnvType={cnv.type}
+              cnvType={activeCnvType}
               criteria={criteria.section4}
               onChange={handleSection4Change}
             />
@@ -289,7 +335,7 @@ export function CNVCalculator({
             score={assessment.sectionScores.section5}
           >
             <Section5Panel
-              cnvType={cnv.type}
+              cnvType={activeCnvType}
               criteria={criteria.section5}
               onChange={handleSection5Change}
             />
