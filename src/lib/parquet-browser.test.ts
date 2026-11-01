@@ -3,7 +3,7 @@ import {api} from './api';
 import {DEFAULT_FILTER_STATE} from '@/app/(main)/tasks/[uuid]/types';
 import {getSNVIndels} from '@/app/(main)/tasks/[uuid]/result-api';
 import {assessmentStatus,cancelAssessment} from './assessment/client';
-import {clearBrowserResults,queryBrowserParquet} from './parquet-browser';
+import {clearBrowserResults,preloadBrowserParquet,queryBrowserParquet} from './parquet-browser';
 
 vi.mock('./api',()=>({api:{get:vi.fn(),post:vi.fn(),download:vi.fn()},ApiError:class extends Error{}}));
 vi.mock('./parquet-runtime',()=>({awaitWorkerStartup:vi.fn().mockResolvedValue(undefined),configureBrowserRuntime:vi.fn().mockResolvedValue(undefined)}));
@@ -53,6 +53,31 @@ beforeEach(()=>{
  });
 });
 afterEach(async()=>{await clearBrowserResults();vi.clearAllMocks();vi.unstubAllGlobals();window.__YIJIAN_CONFIG__=undefined;});
+it('shares an in-flight overview preload with the visible variant table and reuses the prepared dataset',async()=>{
+ const controller=new AbortController();
+ const preload=preloadBrowserParquet('preloaded-task','snv-indel',controller.signal);
+ const settledPreload=expect(preload).rejects.toMatchObject({name:'AbortError'});
+ await vi.waitFor(()=>expect(assessmentStatus('preloaded-task')?.state).toBe('checking'));
+ // Switching out of overview releases the preload caller, while the visible
+ // table still owns the same download/assessment initialization.
+ controller.abort();
+ const visible=queryBrowserParquet('preloaded-task','snv-indel',{offset:0,limit:20});
+ cancelAssessment('preloaded-task');
+ await settledPreload;
+ await expect(visible).resolves.toMatchObject({total:2});
+ await queryBrowserParquet('preloaded-task','snv-indel',{offset:0,limit:20});
+ expect(vi.mocked(api.get).mock.calls.filter(([url])=>url.endsWith('/snv-indel/browser'))).toHaveLength(1);
+ expect(fetch).toHaveBeenCalledTimes(1);
+});
+it('allows a failed preload download to be retried when the variant table is opened',async()=>{
+ vi.mocked(fetch).mockRejectedValueOnce(new Error('download failed'));
+ await expect(preloadBrowserParquet('preload-retry','snv-indel')).rejects.toThrow('download failed');
+ const visible=queryBrowserParquet('preload-retry','snv-indel',{offset:0,limit:20});
+ await vi.waitFor(()=>expect(assessmentStatus('preload-retry')?.state).toBe('checking'));
+ cancelAssessment('preload-retry');
+ await expect(visible).resolves.toMatchObject({total:2});
+ expect(vi.mocked(api.get).mock.calls.filter(([url])=>url.endsWith('/snv-indel/browser'))).toHaveLength(2);
+});
 it('downloads self-hosted descriptors with query parameters through the real authenticated API client',async()=>{
  const url='/v1/tasks/local-task/results/tables/snv-indel/browser/file?attemptId=attempt&datasetVersion=v1';
  vi.mocked(api.get).mockResolvedValueOnce({...dataset,transport:'api',url});

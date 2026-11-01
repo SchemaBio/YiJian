@@ -516,6 +516,9 @@ async function session(task: string, table: string) {
     return record.promise;
 }
 export async function queryBrowserParquet(task: string, table: string, q: LocalQuery, signal?: AbortSignal) { check(signal); const s = await session(task, table); check(signal); return s.query(q, signal); }
+// Share the same opening promise and dataset as the visible table. Cancelling
+// the caller must not cancel a session another tab is already using.
+export async function preloadBrowserParquet(task: string, table: string, signal?: AbortSignal) { check(signal); await session(task, table); check(signal); }
 export async function exportBrowserParquet(task: string, table: string, q: LocalQuery) { return (await session(task, table)).export(q); }
 export async function updateBrowserOverlay(task: string, table: string, row: Overlay) {
     const key = task + '/' + table, r = sessions.get(key);

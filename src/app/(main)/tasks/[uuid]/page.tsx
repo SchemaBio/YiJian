@@ -17,6 +17,7 @@ import { tasksApi } from '@/lib/tasks';
 import { TaskRuntimeTab } from './components/TaskRuntimeTab';
 import {AssessmentStatusBar} from './components/AssessmentStatusBar';
 import { useTabState } from './hooks/useTabState';
+import { useVariantPreload } from './hooks/useVariantPreload';
 import { getResultContext, clearTaskRowSnapshots } from './result-api';
 import { clearTaskBrowserResults } from '@/lib/parquet-browser';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
@@ -77,6 +78,8 @@ export default function AnalysisDetailPage() {
   useResearchExpiry(sample?.expiresAt,()=>setSample(null));
   // 使用标签页状态管理hook，默认从质控结果开始
 	const { activeTab, hasExplicitTab, setActiveTab, getFilterState, setFilterState } = useTabState(uuid);
+	useVariantPreload(uuid, resultContext, !loading && !!task && canInterpretTask(task)
+		&& ['completed', 'pending_interpretation'].includes(task.status) && activeTab === 'overview');
 	const manuallySelectedTabRef = React.useRef(false);
 	const automaticallySelectedTabRef = React.useRef<TabType | null>(null);
 	const handleTabChange = React.useCallback((tab: TabType) => {
