@@ -907,3 +907,17 @@ SepiLens 新增显式 `SEPILENS_AI_CANDIDATE_ENGINES`，按引擎放行 evidence
 - 现版证据不足/空证据草稿也可点击保存，服务端仍重算为insufficient_evidence、不制造分类或分值；这是显式保存当前版本，不改数据库参考分类。SVC既有实验版计算/适用性确认及采用门槛保持，仅共用主按钮短文案。新增直接保存空证据AI草稿回归；保留并发失败保留草稿、仅保存与采用分离、只读等测试。
 - 本地37项针对性交互/语言回归与类型检查通过；远端13个文件108项回归、类型检查、生产构建通过。仅切换YiJian为 `schemabio/yijian:assessment-save-20261101t064634z`，healthy、重启0，其他服务容器身份保持。公网login/原任务读取200，含新保存逻辑、无额外勾选逻辑的JS资源摘要与运行镜像一致。AI请求/人工覆盖层/余额/账务流水摘要保持，未触发模型或真实分析。
 - 保护目录 `/home/ubuntu/schema/backups/assessment-save-20261101T064634Z` 保存配置、回退标签、完整构建上下文、八文件增量哈希、构建回归日志、result和verification。父上下文为第65节YiJian修复，保留不可变行身份字段；Octopus仍为第66节镜像，未被回退。镜像以local HEAD `5f62233`加未提交补丁、dirty=true及SHA256标记。后续按用户要求本地提交：YiJian 行身份修复 `d73d096`、Octopus 坐标修复 `7737087`、SepiLens 跨服务契约回归 `541ed12`；YiJian 保存交互与本节交接记录单独提交。未push、未重新部署，远端Git未移动；线上精确身份仍以各节构建上下文、镜像及补丁清单为准。
+
+## 68. 2026-11-01 SaaS 示例模板选定并发布，发放门槛未满足
+
+- 用户选定样本 `495ac943-b777-41df-a397-9214184f7a61`，其自动配对 R1/R2 分别为 `dd45ac03-933c-4241-8210-ab4a1a808ba2`、`1a415949-4be0-4891-8454-fd2cf2cd4d41`；任务 `45a68d1f-feff-4dee-b8bb-8a2bb5e306f9` 属于该样本和同一组织，状态 completed、结果导入 success。
+- 在线上 Octopus 运行现有 `example-template` 命令，成功发布并激活不可覆盖版本 `demo-20261101-v1`。源文件内容、配对、BAM/BAI、结果及可移植引用经发布程序校验，上传后逐对象验证；数据库登记的模板有22个对象：R1/R2各1、BAM/BAI各1、结果18。独立平台副本不依赖源组织文件期限。临时文件清理后根分区可用约20GB；未更换镜像、修改业务任务或发起计算。
+- **当前仍不能向新审核用户实际发放**：线上 Octopus `RETENTION_CLEANUP_ENABLED=false`、`RETENTION_BACKUP_POLICY_VERIFIED=false`，`ExampleTemplate` 因安全门槛返回不可用；激活数据库版本不等同于可发放。不得仅改标志绕过：启用物理清理会扫描并销毁所有到期研究数据，须先按 `Octopus/docs/RESEARCH_RETENTION.md` 核查云数据库备份/PITR/快照、对象版本/复制/锁定和未来备份允许列表，做好只读影响清单并处理相关历史副本，完成后才能有依据地启用。尚未做真实隔离组织发放验收，也未改变现有开关。
+- 现有设计为审核时可选发放，每组织独立副本，以审核时间计算样本/任务720小时、FASTQ/BAM/BAI 168小时；不自动补发历史组织。本次仅完成模板选定、发布与登记，不宣称终端用户领取成功。
+
+## 69. 2026-11-01 示例发放门槛只读核验进展
+
+- 运行现网 `research-retention-preflight`：截至检查时到期样本/任务均为0，清理队列 pending/failed/leased 均为0，schema CREATE 权限正常，两个清理门槛仍为 false；该结果只对应检查时点，不保证未来无到期资源。
+- 对象清单预检 `--objects` 在 GetBucketVersioning 返回403而中止，不能当作版本清单为空。Octopus 和 Squid 当前对象存储凭据均无权读取桶的 versioning、lifecycle、replication、object-lock 配置；Octopus 账号可列举 organizations 前缀对象历史版本及未完成分片。尚未证明删除全部历史版本、终止分片的权限或不存在保留锁。
+- 两个服务现有腾讯云账号查询 PostgreSQL DescribeDBInstances 被 CAM 拒绝，CBS DescribeSnapshots / DescribeAutoSnapshotPolicies 被拒绝；云数据库自动/手动备份、PITR/WAL、云硬盘快照和异地复制均无法据此核验。本地受保护备份目录按名称识别到35个 Octopus dump 和44个 SQL 候选；对其中一个 PostgreSQL dump 只读列目录，确认包含 samples、tasks 表数据。该计数不是全量副本盘点，不能因当前没有到期资源断言备份策略已满足。保留现有备份，未删除或更改任何策略。
+- 没有获取可用云管理会话；尝试读取现有 Edge 窗口时 Computer Use 返回未获批准。需要云管理员提供相应只读核查权限或在控制台协助核实；完成云端与本机副本、备份未来允许列表、对象保留/清除权限核验并处理发现的问题后，才能重新评估清理。当前没有开启清理或将备份验证标志设为真；模板仍未向用户发放。

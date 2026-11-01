@@ -167,7 +167,7 @@ export function VariantAssessmentOverview({
             onClick={onCalculator}
           >
             <Calculator className="h-3.5 w-3.5" />
-            进入ACMG计算器 →
+            进入ACMG评估 →
           </button>
         </div>
       </section>
@@ -329,8 +329,8 @@ export function VariantAssessmentOverview({
                 {manualDetail}
               </p>
             </div>
-            {/* 卡片内部增加 ACMG 计算器按钮 */}
-            <div className="mt-3 pt-2 border-t border-border-subtle flex items-center justify-between">
+            {/* 卡片内部增加 ACMG 评估按钮 */}
+            <div className="mt-3 pt-2 border-t border-border-subtle flex items-center">
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-subtle hover:border-accent-emphasis/50 transition-colors shadow-2xs"
@@ -340,23 +340,12 @@ export function VariantAssessmentOverview({
                 }}
               >
                 <Calculator className="h-3.5 w-3.5" />
-                {t('variantAssessment.openCalculator')}
+                ACMG评估
               </button>
-              <span className="text-[10px] text-fg-subtle">调证据与分级</span>
             </div>
           </section>
         </div>
       </div>
-
-      {svcAI && (
-        <section className="rounded-lg border border-border-subtle bg-canvas-default p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-fg-muted">{t('variantAssessment.ai')} · SVC v4</span>
-            <span className="text-xs text-warning-fg">{t('variantAssessment.svcDraft')}</span>
-          </div>
-          <p className="mt-1 text-sm font-semibold">{label(svcAI.suggestedClassification || svcAI.classification)}</p>
-        </section>
-      )}
 
       {aiError && (
         <p role="alert" className="rounded border border-danger-emphasis/30 p-3 text-sm text-danger-fg">
