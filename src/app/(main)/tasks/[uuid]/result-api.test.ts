@@ -17,6 +17,32 @@ describe('versioned Parquet adjustments', () => {
     expect(page.data[0].acmgClassification).toBe('Likely_Benign');
   });
 
+  it('restores the saved CNV AI snapshot and adopted CNV', async () => {
+    const savedCNVAI = { requestId: 'cnv-req-1', feature: 'cnv_loss', summary: 'CNV Loss summary', resultKind: 'evidence_only', suggestedClassification: 'Pathogenic' };
+    const adopted = { source: 'ai' as const, classification: 'Pathogenic' as const, score: 100, savedAt: '2026-11-01T00:00:00Z' };
+    vi.mocked(queryBrowserParquet).mockResolvedValueOnce({
+      items: [{
+        id: 'cnv-row',
+        attemptId: 'attempt',
+        datasetVersion: 'hash',
+        adjustmentVersion: 1,
+        adjustments: { cnvAIResult: savedCNVAI, adoptedCNV: adopted },
+      }],
+      total: 1,
+      rowCount: 1,
+      columns: [],
+      columnTypes: {},
+      fieldProfileVersion: 'parquet-fields-v2',
+      offset: 0,
+      limit: 20,
+      version: 'hash',
+      attemptId: 'attempt',
+    });
+    const page = await getCNVSegments('cnv-saved-task', DEFAULT_FILTER_STATE);
+    expect(page.data[0].cnvAIResult).toEqual(savedCNVAI);
+    expect(page.data[0].adoptedCNV).toEqual(adopted);
+  });
+
   beforeEach(() => vi.clearAllMocks());
   it('normalizes translated exclusion filters in the actual browser query', async () => {
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[],total:0,rowCount:0,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});

@@ -440,6 +440,8 @@ function mapCNVSegment(row: BackendRow): CNVSegment {
     assessment: row.cnvAssessment && typeof row.cnvAssessment === "object"
       ? { ...(row.cnvAssessment as CNVAssessment), adjustmentVersion: n(row.adjustmentVersion) }
       : automaticCNVAssessment(row),
+    adoptedCNV: (adjustments.adoptedCNV ?? row.adoptedCNV) as CNVSegment['adoptedCNV'],
+    cnvAIResult: (adjustments.cnvAIResult ?? row.cnvAIResult) as CNVSegment['cnvAIResult'],
     ...normalizeReview(row),
   };
 }
