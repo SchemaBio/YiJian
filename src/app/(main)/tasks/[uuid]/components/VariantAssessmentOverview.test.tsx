@@ -11,6 +11,7 @@ it('keeps reference and screening Pathogenic visible when AI has insufficient ev
   expect(screen.getAllByText('Pathogenic')).toHaveLength(3);
   expect(screen.getByText('证据不足，待补充')).toBeVisible();
   expect(screen.getByText('Coverage not established')).toBeVisible();
+  expect(screen.queryByRole('button', { name: /人工解读/ })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'ACMG评估'}));
   expect(open).toHaveBeenCalledTimes(1);
 });

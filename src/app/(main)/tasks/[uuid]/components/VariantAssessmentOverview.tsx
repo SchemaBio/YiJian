@@ -23,7 +23,7 @@ export function VariantAssessmentOverview({
   svcAI?: AIAssistanceResult;
   aiError?: string;
   onCalculator: () => void;
-  onInterpretation: () => void;
+  onInterpretation?: () => void;
   onAdoptSource?: (source: AdoptedSource, classification?: string | null) => Promise<void> | void;
 }) {
   const t = useText();
@@ -392,16 +392,9 @@ export function VariantAssessmentOverview({
         </div>
       )}
 
-      {/* 底部工作流动作 */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-subtle">
+      {/* 底部工作流说明 */}
+      <div className="pt-2 border-t border-border-subtle">
         <p className="text-xs text-fg-muted">{t('variantAssessment.referenceNotice')}</p>
-        <button
-          type="button"
-          className="rounded-md border border-border px-3 py-1.5 text-xs text-fg-default hover:bg-canvas-subtle transition-colors"
-          onClick={onInterpretation}
-        >
-          {t('variantAssessment.next')} →
-        </button>
       </div>
     </div>
   );
