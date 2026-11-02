@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ flavor: 'squid', org: 'org-a', get: vi.fn() }));
 vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => mocks.flavor }));
@@ -6,30 +6,26 @@ vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: 
 vi.mock('@/lib/api', () => ({ api: { get: mocks.get } }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/samples' }));
 import { ExampleBadge, ExampleDataNotice } from './ExampleData';
+
 beforeEach(() => { mocks.flavor = 'squid'; mocks.org = 'org-a'; mocks.get.mockReset(); });
 afterEach(cleanup);
 
-it('does not render or request templates in self-hosted deployments', () => {
-  mocks.flavor = 'octopus';
-  render(<><ExampleBadge origin="example" /><ExampleDataNotice /></>);
+it('renders example badge only in SaaS for example origin', () => {
+  const { rerender } = render(<ExampleBadge origin="example" />);
+  expect(screen.getByText('示例')).toBeInTheDocument();
+
+  rerender(<ExampleBadge origin="scanner" />);
   expect(screen.queryByText('示例')).toBeNull();
-  expect(mocks.get).not.toHaveBeenCalled();
+
+  mocks.flavor = 'octopus';
+  rerender(<ExampleBadge origin="example" />);
+  expect(screen.queryByText('示例')).toBeNull();
 });
 
-it('shows seven-day expiry while keeping the remaining results accessible', async () => {
-  mocks.get.mockResolvedValue({ status: 'ready', sample_id: 'sample', task_id: 'task', data_expires_at: '2020-01-01T00:00:00Z', expires_at: '2099-01-01T00:00:00Z' });
+it('does not display top example data notice or query example-data endpoint', () => {
   render(<ExampleDataNotice />);
-  expect(await screen.findByText(/FASTQ\/BAM 已到期/)).toBeInTheDocument();
-  expect(mocks.get).toHaveBeenCalledWith('/v1/auth/example-data', expect.objectContaining({ coreApi: true }));
-  expect(screen.getByRole('link', { name: '查看分析结果' })).toHaveAttribute('href', '/tasks/task');
-});
-
-it('discards a late response from the previous organization', async () => {
-  let resolve!: (value: unknown) => void;
-  mocks.get.mockImplementationOnce(() => new Promise(value => { resolve = value; })).mockResolvedValue({ status: 'not_selected' });
-  const view = render(<ExampleDataNotice />);
-  mocks.org = 'org-b'; view.rerender(<ExampleDataNotice />);
-  resolve({ status: 'ready', sample_id: 'private-sample', task_id: 'private-task' });
-  await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(2));
-  expect(screen.queryByRole('link', { name: '查看分析结果' })).toBeNull();
+  expect(screen.queryByText(/示例|Example/)).toBeNull();
+  expect(screen.queryByText(/FASTQ\/BAM/)).toBeNull();
+  expect(screen.queryByRole('link', { name: /查看/ })).toBeNull();
+  expect(mocks.get).not.toHaveBeenCalled();
 });

@@ -19,7 +19,6 @@ import { ResearchUseBadge } from '@/components/shared/ResearchPolicy';
 import { BillingDisplay } from '@/components/BillingDisplay';
 import { mainNavItems, sidebarNavConfig } from '@/config/navigation';
 import { SupportDialog } from '@/components/support/SupportDialog';
-import { ExampleDataNotice } from '@/components/shared/ExampleData';
 import { AnnouncementsProvider, AnnouncementButton, AnnouncementBanners } from '@/components/announcements/Announcements';
 
 interface AppShellProps {
@@ -195,7 +194,7 @@ function AppShellContent({ children }: AppShellProps) {
             onClose={() => setMobileMenuOpen(false)}
           />
         )}
-        <main className={`min-h-0 flex-1 ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}><ExampleDataNotice />{children}</main>
+        <main className={`min-h-0 flex-1 ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>{children}</main>
       </div>
     );
   }
@@ -248,7 +247,7 @@ function AppShellContent({ children }: AppShellProps) {
         <AnnouncementBanners />
         {/* Main Content */}
         <main className={`min-h-0 flex-1 bg-[var(--yj-workspace-bg)] ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>
-          <ExampleDataNotice />
+          
           {children}
         </main>
       </div>
