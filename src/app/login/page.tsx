@@ -1,48 +1,68 @@
 'use client';
-﻿
-import { useText } from '@/i18n/useText';
-import { errorText } from '@/i18n/errors';
-
-
-import { ActionButton as Button } from '@/components/shared/ActionButton';
-
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Input } from '@schema/ui-kit';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { AuthLayout } from '@/components/auth/AuthLayout';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { RegisterForm } from '@/components/auth/RegisterForm';
+import { RegistrationVerification } from '@/components/auth/RegistrationVerification';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { ApiError } from '@/lib/api';
-import { DnaHelix } from '@/components/DnaHelix';
-import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
-import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
-import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 
-export default function LoginPage() {
-  const t = useText();
+export interface LoginPageProps {
+  initialMode?: 'login' | 'register';
+}
+
+function useOptionalAuth() {
+  try {
+    return useAuth();
+  } catch {
+    return null;
+  }
+}
+
+export default function LoginPage({ initialMode }: LoginPageProps) {
   const router = useRouter();
-  const { login, isLoading: authLoading, isAuthenticated } = useAuth();
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [agreePolicies, setAgreePolicies] = React.useState(false);
-  const [rememberMe, setRememberMe] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
+  const auth = useOptionalAuth();
+  const authLoading = auth?.isLoading ?? false;
+  const isAuthenticated = auth?.isAuthenticated ?? false;
 
-  const isSaaS = getRuntimeBackendFlavor() === 'squid';
-  const privacyConsentRequired = process.env.NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED !== 'false';
-  const consentRequired = isSaaS || privacyConsentRequired;
+  const [mode, setMode] = React.useState<'login' | 'register'>(() => {
+    if (typeof window !== 'undefined') {
+      const urlMode = new URLSearchParams(window.location.search).get('mode');
+      if (urlMode === 'register') return 'register';
+      if (urlMode === 'login') return 'login';
+    }
+    return initialMode || 'login';
+  });
+
+  const [submitted, setSubmitted] = React.useState(false);
+  const [submittedEmail, setSubmittedEmail] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [isBusy, setIsBusy] = React.useState(false);
+  const [switched, setSwitched] = React.useState(false);
+
+  const loginTitleRef = React.useRef<HTMLHeadingElement>(null);
+  const registerTitleRef = React.useRef<HTMLHeadingElement>(null);
+  const submittedTitleRef = React.useRef<HTMLHeadingElement>(null);
+
   const accountDeleted = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('accountDeleted') === '1';
   }, []);
-  const nextPath = React.useMemo(() => {
-    if (typeof window === 'undefined') return '/dashboard';
-    return safeNextPath(new URLSearchParams(window.location.search).get('next'));
+
+  const registeredPending = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('registered') === 'pending';
   }, []);
+
+  const nextParam = React.useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('next');
+  }, []);
+
+  const nextPath = React.useMemo(() => {
+    return safeNextPath(nextParam);
+  }, [nextParam]);
 
   React.useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -50,154 +70,120 @@ export default function LoginPage() {
     }
   }, [authLoading, isAuthenticated, nextPath, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const targetMode = params.get('mode') === 'register' ? 'register' : 'login';
+      setMode(targetMode);
+      setSubmitted(false);
+      setTimeout(() => {
+        if (targetMode === 'register') {
+          registerTitleRef.current?.focus();
+        } else {
+          loginTitleRef.current?.focus();
+        }
+      }, 0);
+    };
 
-    if (!email || !password) {
-      setError(t("auth.enterEmailAndPassword36ec7e"));
-      return;
-    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
-    if (consentRequired && !agreePolicies) {
-      setError(t(isSaaS ? "auth.acknowledgePrivacyAndAgreeToTerms" : "auth.readAndAcknowledgeThePrivacyPolicy36dcb7"));
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await login(email, password, rememberMe);
-      router.push(nextPath);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        const data = err.data as { error?: string } | null;
-        setError(data?.error ? errorText(err, t) : t("auth.signInFailedCheckEmailAndPassworda5a78d"));
+  const updateUrlMode = React.useCallback(
+    (newMode: 'login' | 'register') => {
+      if (typeof window === 'undefined') return;
+      const url = new URL(window.location.href);
+      if (newMode === 'register') {
+        url.searchParams.set('mode', 'register');
       } else {
-        setError(t("auth.networkErrorRetryLatereb9dcb"));
+        url.searchParams.delete('mode');
       }
-      setLoading(false);
-    }
-  };
+      const newPath = `${url.pathname}${url.search}${url.hash}`;
+      router.push(newPath);
+    },
+    [router]
+  );
+
+  const handleSwitchToRegister = React.useCallback(() => {
+    if (isBusy) return;
+    setSubmitted(false);
+    setMode('register');
+    setSwitched(true);
+    updateUrlMode('register');
+  }, [isBusy, updateUrlMode]);
+
+  const handleSwitchToLogin = React.useCallback(() => {
+    if (isBusy) return;
+    setSubmitted(false);
+    setMode('login');
+    setSwitched(true);
+    updateUrlMode('login');
+  }, [isBusy, updateUrlMode]);
+
+  const handleRegistrationSubmitted = React.useCallback((cleanEmail: string) => {
+    setSubmittedEmail(cleanEmail);
+    setSubmitted(true);
+    setTimeout(() => {
+      submittedTitleRef.current?.focus();
+    }, 0);
+  }, []);
+
+  const registerHref = React.useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('mode', 'register');
+    if (nextParam) params.set('next', nextParam);
+    return `/login?${params.toString()}`;
+  }, [nextParam]);
+
+  const loginHref = React.useMemo(() => {
+    const params = new URLSearchParams();
+    if (nextParam) params.set('next', nextParam);
+    const query = params.toString();
+    return query ? `/login?${query}` : '/login';
+  }, [nextParam]);
 
   return (
-    <div className="yj-modern yj-public-shell relative flex min-h-screen">
-      <LanguageSwitcher />
-      <div
-        className="relative hidden items-center justify-center overflow-hidden bg-[var(--yj-panel-subtle)] lg:flex lg:w-1/2 xl:w-3/5"
-        style={{ color: 'rgba(26, 127, 55, 0.28)' }}
-      >
-        <DnaHelix />
-      </div>
-
-      <div className="flex flex-1 items-center justify-center bg-[var(--yj-panel-bg)] px-5 py-20 sm:px-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8">
-            <div className="yj-brand-lockup mb-6">
-              <span className="yj-brand-mark"><Image src="/logo.svg" alt="" width={28} height={28} className="object-contain" /></span>
-              <span>YiJian</span>
-            </div>
-            <h1 className="text-2xl font-semibold text-[var(--yj-text-strong)]">{t("auth.signIn21f1e8")}</h1>
-            <p className="mt-2 text-sm text-[var(--yj-text-muted)]">{t(getRuntimeBackendFlavor() === 'squid' ? 'research.saasIntro' : 'research.selfHostedIntro')}</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="login-form space-y-5">
-            {accountDeleted && !error && (
-              <div className="rounded-md border border-success-muted bg-success-subtle p-3.5 text-sm text-success-fg">
-                {t("auth.accountDeletedThisSessionWasSignedOut0d0bfb")}</div>
-            )}
-            {error && (
-              <div role="alert" className="yj-public-alert rounded-xl p-3.5 text-sm">
-                {error}
-              </div>
-            )}
-
-            <Input
-              id="email"
-              aria-label={t("settings.email9ed627")}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("settings.email9ed627")}
-              autoComplete="email"
-              autoFocus
-              className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
-            />
-
-            <div className="relative">
-              <Input
-                id="password"
-                aria-label={t("auth.passwordc839a8")}
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("auth.passwordc839a8")}
-                autoComplete="current-password"
-                className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted transition-colors hover:text-fg-default"
-                aria-label={showPassword ? t("auth.hidePasswordc97042") : t("auth.showPasswordf60cb7")}
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
-                />
-                <span className="text-[var(--yj-text-muted)]">{t("auth.rememberMeb55c15")}</span>
-              </label>
-            </div>
-
-            {consentRequired && (
-              <label className="flex cursor-pointer items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={agreePolicies}
-                  onChange={(e) => setAgreePolicies(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
-                />
-                <span className="text-sm leading-relaxed text-[var(--yj-text-muted)]">
-                  {t("auth.iHaveReadAndUnderstood1d26a6")}{' '}
-                  <Link href={`/privacy?lang=${t.locale}`} target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">
-                    {t("auth.privacyPolicya09ce1")}</Link>
-                  {isSaaS && <>{' '}{t('auth.andAgreeToUserAgreement')}{' '}
-                    <Link href={`/agreement?lang=${t.locale}&version=${USER_AGREEMENT_VERSION}`} target="_blank" rel="noopener noreferrer" className="font-medium text-success-fg hover:underline">{t('auth.userAgreement')}</Link>
-                  </>}
-                </span>
-              </label>
-            )}
-
-            <Button loading={loading} loadingLabel={t("auth.signingInec507d")}
-              type="submit"
-              variant="primary"
-              className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
-              disabled={loading || (consentRequired && !agreePolicies)}
-              leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
-            >
-              {t("auth.signIn21f1e8")}</Button>
-          </form>
-
-
-          <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
-            {t("auth.noAccounte15c6e")}{' '}
-            <Link href="/register" className="font-medium text-success-fg hover:underline">
-              {t("auth.registerda0e5f")}</Link>
-          </p>
-
-          <p className="mt-8 text-center text-xs text-[var(--yj-text-muted)] lg:hidden">
-            © 2024–{new Date().getFullYear()}  {t("interface.schemabioAllRightsReservedfbafaf")} </p>
-        </div>
-      </div>
-    </div>
+    <AuthLayout>
+      {submitted ? (
+        <RegistrationVerification
+          initialEmail={submittedEmail || email}
+          submitted={true}
+          embedded={true}
+          actionVariant="button"
+          onBackToLogin={handleSwitchToLogin}
+          titleRef={submittedTitleRef}
+          loginHref={loginHref}
+        />
+      ) : mode === 'register' ? (
+        <RegisterForm
+          key="register"
+          email={email}
+          onEmailChange={setEmail}
+          onSwitchToLogin={handleSwitchToLogin}
+          loginHref={loginHref}
+          isSwitchDisabled={isBusy}
+          onLoadingChange={setIsBusy}
+          onRegistrationSubmitted={handleRegistrationSubmitted}
+          titleRef={registerTitleRef}
+          nextPath={nextPath}
+        />
+      ) : (
+        <LoginForm
+          key="login"
+          email={email}
+          onEmailChange={setEmail}
+          onSwitchToRegister={handleSwitchToRegister}
+          registerHref={registerHref}
+          isSwitchDisabled={isBusy}
+          onLoadingChange={setIsBusy}
+          titleRef={loginTitleRef}
+          nextPath={nextPath}
+          accountDeleted={accountDeleted}
+          registeredPending={registeredPending}
+          autoFocusTitle={switched}
+        />
+      )}
+    </AuthLayout>
   );
 }
 
@@ -216,6 +202,7 @@ function safeNextPath(value: string | null): string {
     if (
       parsed.origin !== 'http://yijian.local' ||
       parsed.pathname === '/login' ||
+      parsed.pathname === '/register' ||
       hasUnsafeRedirectPath(parsed.pathname)
     ) {
       return '/dashboard';

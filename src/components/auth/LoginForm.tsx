@@ -1,0 +1,249 @@
+'use client';
+
+import * as React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Input } from '@schema/ui-kit';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { ActionButton as Button } from '@/components/shared/ActionButton';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { ApiError } from '@/lib/api';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
+import { useText } from '@/i18n/useText';
+import { errorText } from '@/i18n/errors';
+
+export interface LoginFormProps {
+  email: string;
+  onEmailChange: (value: string) => void;
+  onSwitchToRegister?: () => void;
+  registerHref?: string;
+  isSwitchDisabled?: boolean;
+  onLoadingChange?: (loading: boolean) => void;
+  titleRef?: React.Ref<HTMLHeadingElement>;
+  nextPath?: string;
+  accountDeleted?: boolean;
+  registeredPending?: boolean;
+  autoFocusTitle?: boolean;
+}
+
+export function LoginForm({
+  email,
+  onEmailChange,
+  onSwitchToRegister,
+  registerHref = '/login?mode=register',
+  isSwitchDisabled = false,
+  onLoadingChange,
+  titleRef,
+  nextPath = '/dashboard',
+  accountDeleted = false,
+  registeredPending = false,
+  autoFocusTitle = false,
+}: LoginFormProps) {
+  const t = useText();
+  const router = useRouter();
+  const { login } = useAuth();
+
+  const internalTitleRef = React.useRef<HTMLHeadingElement>(null);
+  const resolvedTitleRef = (titleRef as React.RefObject<HTMLHeadingElement>) || internalTitleRef;
+
+  React.useEffect(() => {
+    if (autoFocusTitle) {
+      resolvedTitleRef.current?.focus();
+    }
+  }, [autoFocusTitle, resolvedTitleRef]);
+
+  const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [agreePolicies, setAgreePolicies] = React.useState(false);
+  const [rememberMe, setRememberMe] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const isSaaS = getRuntimeBackendFlavor() === 'squid';
+  const privacyConsentRequired = process.env.NEXT_PUBLIC_PRIVACY_CONSENT_REQUIRED !== 'false';
+  const consentRequired = isSaaS || privacyConsentRequired;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email || !password) {
+      setError(t("auth.enterEmailAndPassword36ec7e"));
+      return;
+    }
+
+    if (consentRequired && !agreePolicies) {
+      setError(t(isSaaS ? "auth.acknowledgePrivacyAndAgreeToTerms" : "auth.readAndAcknowledgeThePrivacyPolicy36dcb7"));
+      return;
+    }
+
+    setLoading(true);
+    onLoadingChange?.(true);
+
+    try {
+      await login(email, password, rememberMe);
+      router.push(nextPath);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const data = err.data as { error?: string } | null;
+        setError(data?.error ? errorText(err, t) : t("auth.signInFailedCheckEmailAndPassworda5a78d"));
+      } else {
+        setError(t("auth.networkErrorRetryLatereb9dcb"));
+      }
+      setLoading(false);
+      onLoadingChange?.(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1
+          ref={resolvedTitleRef}
+          tabIndex={-1}
+          className="text-2xl font-semibold text-[var(--yj-text-strong)] outline-none focus:outline-none"
+        >
+          {t("auth.signIn21f1e8")}
+        </h1>
+        <p className="mt-2 text-sm text-[var(--yj-text-muted)]">
+          {t(isSaaS ? 'research.saasIntro' : 'research.selfHostedIntro')}
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="login-form space-y-5">
+        {accountDeleted && !error && (
+          <div className="rounded-md border border-success-muted bg-success-subtle p-3.5 text-sm text-success-fg">
+            {t("auth.accountDeletedThisSessionWasSignedOut0d0bfb")}
+          </div>
+        )}
+        {registeredPending && !error && (
+          <div className="rounded-md border border-success-muted bg-success-subtle p-3.5 text-sm text-success-fg">
+            {t("registration.manualPending")}
+          </div>
+        )}
+        {error && (
+          <div role="alert" className="yj-public-alert rounded-xl p-3.5 text-sm">
+            {error}
+          </div>
+        )}
+
+        <Input
+          id="email"
+          aria-label={t("settings.email9ed627")}
+          type="email"
+          value={email}
+          onChange={(e) => onEmailChange(e.target.value)}
+          placeholder={t("settings.email9ed627")}
+          autoComplete="email"
+          autoFocus
+          className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
+        />
+
+        <div className="relative">
+          <Input
+            id="password"
+            aria-label={t("auth.passwordc839a8")}
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={t("auth.passwordc839a8")}
+            autoComplete="current-password"
+            className="!h-12 !rounded-[var(--yj-radius-control)] text-base"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-muted transition-colors hover:text-fg-default"
+            aria-label={showPassword ? t("auth.hidePasswordc97042") : t("auth.showPasswordf60cb7")}
+          >
+            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
+            />
+            <span className="text-[var(--yj-text-muted)]">{t("auth.rememberMeb55c15")}</span>
+          </label>
+        </div>
+
+        {consentRequired && (
+          <label className="flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              checked={agreePolicies}
+              onChange={(e) => setAgreePolicies(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded-md border-border-default text-success-emphasis focus:ring-success-emphasis"
+            />
+            <span className="text-sm leading-relaxed text-[var(--yj-text-muted)]">
+              {t("auth.iHaveReadAndUnderstood1d26a6")}{' '}
+              <Link
+                href={`/privacy?lang=${t.locale}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-success-fg hover:underline"
+              >
+                {t("auth.privacyPolicya09ce1")}
+              </Link>
+              {isSaaS && (
+                <>
+                  {' '}
+                  {t('auth.andAgreeToUserAgreement')}{' '}
+                  <Link
+                    href={`/agreement?lang=${t.locale}&version=${USER_AGREEMENT_VERSION}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-success-fg hover:underline"
+                  >
+                    {t('auth.userAgreement')}
+                  </Link>
+                </>
+              )}
+            </span>
+          </label>
+        )}
+
+        <Button
+          loading={loading}
+          loadingLabel={t("auth.signingInec507d")}
+          type="submit"
+          variant="primary"
+          className="yj-public-primary w-full !h-12 !rounded-[var(--yj-radius-control)] !text-base font-medium"
+          disabled={loading || (consentRequired && !agreePolicies)}
+          leftIcon={loading ? undefined : <LogIn className="h-4 w-4" />}
+        >
+          {t("auth.signIn21f1e8")}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
+        {t("auth.noAccounte15c6e")}{' '}
+        <Link
+          href={registerHref}
+          onClick={(e) => {
+            if (loading || isSwitchDisabled) {
+              e.preventDefault();
+              return;
+            }
+            if (onSwitchToRegister) {
+              e.preventDefault();
+              onSwitchToRegister();
+            }
+          }}
+          className={`font-medium text-success-fg hover:underline ${
+            loading || isSwitchDisabled ? 'pointer-events-none opacity-50' : ''
+          }`}
+          aria-disabled={loading || isSwitchDisabled || undefined}
+        >
+          {t("auth.registerda0e5f")}
+        </Link>
+      </p>
+    </div>
+  );
+}
