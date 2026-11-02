@@ -6,6 +6,7 @@ import type { AnalysisTask } from '@/types/task';
 
 export function TaskProgressCell({ task }: { task: AnalysisTask }) {
   const t = useText();
+  if (task.origin === 'example') return <span className="text-xs text-fg-muted">{t('exampleData.label')}</span>;
   const overall = taskOverallProgress({
     status: task.status, template: task.template, progress: task.progress,
     execution_phase: task.executionPhase, vm_status: task.vmStatus,

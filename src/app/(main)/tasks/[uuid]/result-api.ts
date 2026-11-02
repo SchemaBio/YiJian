@@ -2,7 +2,7 @@ import { readSNVSample } from '@/lib/snv-sample-metrics';
 import { LocalizedError } from '@/i18n/errors';
 import {listGeneLists} from '@/lib/gene-lists';
 import { api, ApiError } from '@/lib/api';
-import {igvAPIURL} from '@/lib/igv-api-url';
+import {igvAPIURL, igvReferenceURL} from '@/lib/igv-api-url';
 import {assessmentStatus} from '@/lib/assessment/client';
 import { queryBrowserParquet, updateBrowserOverlay, updateBrowserContext } from '@/lib/parquet-browser';
 import { clinvarReviewStars, optionalAnnotationNumber } from './utils/snv-annotations';
@@ -581,12 +581,10 @@ export async function getResultContext(taskId: string, signal?: AbortSignal): Pr
 
 export async function getIGVSession(taskId: string, signal?: AbortSignal): Promise<IGVSession> {
 	const session = await api.get<IGVSession>(`/v1/tasks/${encodeURIComponent(taskId)}/results/igv`, { signal });
-	if (session.transport === 'api') {
-		for (const key of ['fastaURL', 'indexURL'] as const) {
-			const value = session.reference[key];
-			if (value) session.reference[key] = igvAPIURL(taskId, value);
-		}
-	}
+	for (const key of ['fastaURL', 'indexURL'] as const) {
+        const value = session.reference[key];
+        if (value) session.reference[key] = session.transport === 'api' ? igvAPIURL(taskId, value) : igvReferenceURL(taskId, value);
+    }
 	return session;
 }
 

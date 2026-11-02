@@ -16,7 +16,7 @@ import { DataTable } from '@schema/ui-kit';
 import type { Column } from '@schema/ui-kit';
 import { Clock3, Coins, CreditCard, Gauge, Loader2, ShieldCheck } from 'lucide-react';
 import {
-  billingReferenceTaskId,
+  billingTransactionTaskId,
   BILLING_UPDATED_EVENT,
   getBillingBalance,
   getBillingConfig,
@@ -125,9 +125,9 @@ export default function BillingSettingsPage() {
     {
       id: 'reference_id',
       header: t("settings.associatedTask766b4b"),
-      accessor: (row) => (row.related_task_id || (row.reference_id && row.billing_basis !== 'ai_assistance')) ? (
-        <Link href={`/tasks/${encodeURIComponent(row.related_task_id || billingReferenceTaskId(row.reference_id!))}`} className="whitespace-nowrap font-mono text-xs text-accent-fg hover:underline">
-          {row.related_task_id || billingReferenceTaskId(row.reference_id!)}
+      accessor: (row) => billingTransactionTaskId(row) ? (
+        <Link href={`/tasks/${encodeURIComponent(billingTransactionTaskId(row)!)}`} className="whitespace-nowrap font-mono text-xs text-accent-fg hover:underline">
+          {billingTransactionTaskId(row)!}
         </Link>
       ) : '-',
       width: 300,

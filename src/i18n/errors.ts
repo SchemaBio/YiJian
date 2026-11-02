@@ -10,6 +10,7 @@ export class LocalizedError extends Error {
 
 // Translate only known API messages; arbitrary server/user text stays intact.
 const backendMessages: Record<string, string> = {
+  'account example data is preparing': 'registration.examplePreparing',
   'account is pending approval': 'registration.manualPending',
   'account is rejected': 'registration.notApproved',
   'account is not active': 'registration.accountInactive',

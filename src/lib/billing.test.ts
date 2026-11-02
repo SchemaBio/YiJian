@@ -1,5 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { summarizeTaskBilling, getBillingConfig, calculateEstimatedCredits, type BillingTransaction } from './billing';
+import { billingTransactionTaskId, summarizeTaskBilling, getBillingConfig, calculateEstimatedCredits, type BillingTransaction } from './billing';
+
+it('does not turn an approval credit grant user reference into a task link', () => {
+  const grant = { ...row(1, 'adjust', 500, 'approval'), reference_id: '7', billing_basis: 'registration_grant' };
+  expect(billingTransactionTaskId(grant)).toBeNull();
+  expect(grant.reference_id).toBe('7');
+  expect(billingTransactionTaskId({ ...grant, related_task_id: '7' })).toBeNull();
+});
+
+it('preserves computation and explicit AI task references', () => {
+  expect(billingTransactionTaskId(row(1, 'pre_deduction', -5, 'attempt', 'task_estimate'))).toBe('task');
+  const ai = { ...row(2, 'pre_deduction', -1, 'attempt'), reference_id: 'ai:request', billing_basis: 'ai_assistance' };
+  expect(billingTransactionTaskId(ai)).toBeNull();
+  expect(billingTransactionTaskId({ ...ai, related_task_id: 'task-uuid' })).toBe('task-uuid');
+});
 
 function row(id: number, type: string, amount: number, attempt: string, billing_basis?: string): BillingTransaction {
   return { id, type, amount, reference_id: `task:${attempt}`, org_id: 'org', balance_after: 0,

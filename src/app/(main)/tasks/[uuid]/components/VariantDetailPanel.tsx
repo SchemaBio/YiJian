@@ -88,8 +88,8 @@ function SectionTitle({ icon: Icon, title, action }: { icon: React.ElementType; 
 
 const POINTS: Record<string, number> = { supporting: 1, moderate: 2, strong: 4, very_strong: 8, standalone: 0 };
 const POINT_CRITERIA = [
-  { title: '致病性证据', items: ['PVS1', 'PS1', 'PS2', 'PS3', 'PS4', 'PM1', 'PM2', 'PM3', 'PM4', 'PM5', 'PM6', 'PP1', 'PP2', 'PP3', 'PP4', 'PP5'] },
-  { title: '良性证据', items: ['BA1', 'BS1', 'BS2', 'BS3', 'BS4', 'BP1', 'BP2', 'BP3', 'BP4', 'BP5', 'BP6', 'BP7'] },
+  { title: 'assessmentDisplay.pathogenicEvidence', items: ['PVS1', 'PS1', 'PS2', 'PS3', 'PS4', 'PM1', 'PM2', 'PM3', 'PM4', 'PM5', 'PM6', 'PP1', 'PP2', 'PP3', 'PP4', 'PP5'] },
+  { title: 'assessmentDisplay.benignEvidence', items: ['BA1', 'BS1', 'BS2', 'BS3', 'BS4', 'BP1', 'BP2', 'BP3', 'BP4', 'BP5', 'BP6', 'BP7'] },
 ];
 
 function classifyPoints(score: number, count: number): ACMGClassification | undefined {
@@ -144,7 +144,7 @@ function ACMGPointsEditor({
   const suggested = React.useMemo(() => {
     const list: Array<{ code: string; label: string; source: string }> = [];
     for (const item of auto?.criteria ?? []) {
-      if (!evidence[item.code]) list.push({ code: item.code, label: `${item.code} (算法推荐)`, source: 'auto' });
+      if (!evidence[item.code]) list.push({ code: item.code, label: t('assessmentDisplay.recommendation', {p0: item.code}), source: 'auto' });
     }
     return list;
   }, [auto, evidence]);
@@ -192,7 +192,7 @@ function ACMGPointsEditor({
 
       {suggested.length > 0 && (
         <div className="rounded-lg border border-accent-subtle bg-accent-subtle/15 p-2.5">
-          <span className="text-xs font-semibold text-accent-fg">💡 算法初评推荐（点击快速采纳）：</span>
+          <span className="text-xs font-semibold text-accent-fg">{t('assessmentDisplay.autoRecommendation')}</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {suggested.map(s => (
               <button
@@ -211,7 +211,7 @@ function ACMGPointsEditor({
 
       {Object.keys(evidence).length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-canvas-subtle p-2 text-xs">
-          <span className="text-fg-muted">已激活 <strong>{Object.keys(evidence).length}</strong> 项证据条款</span>
+          <span className="text-fg-muted">{t('assessmentDisplay.activeEvidence', {p0: Object.keys(evidence).length})}</span>
           <div className="flex flex-wrap gap-1">
             {Object.keys(evidence).map(c => (
               <span key={c} className={`rounded px-1.5 py-0.5 font-semibold text-xs ${c.startsWith('B') ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'}`}>
@@ -223,7 +223,7 @@ function ACMGPointsEditor({
       )}
 
       {POINT_CRITERIA.map(group => (
-        <section key={group.title} className="space-y-2">
+        <section key={t(group.title)} className="space-y-2">
           <h5 className="text-sm font-semibold text-fg-default">{translateUI(group.title, t)}</h5>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {group.items.map(code => {
@@ -554,7 +554,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           value={section}
           onChange={setSection}
           sections={['overview', 'annotation', 'evidence', 'ai', 'acmg', 'interpretation', 'history']}
-          labels={{ overview: t('variantAssessment.overview'), ai: 'AI评估' }}
+          labels={{ overview: t('variantAssessment.overview'), ai: t('assessmentDisplay.aiTab') }}
         />
 
         <div id="variant-inspector-content" role="tabpanel" aria-labelledby={`variant-inspector-${section}`} className="yj-inspector-content">
@@ -670,7 +670,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
               <div className="flex items-center gap-2 min-w-0">
                 <Sparkles className="w-4 h-4 text-accent-fg shrink-0" />
-                <h4 className="text-sm font-semibold text-fg-default truncate">ACMG 智能研判</h4>
+                <h4 className="text-sm font-semibold text-fg-default truncate">{t('assessmentDisplay.acmgAI')}</h4>
               </div>
               <div className="shrink-0 flex items-center justify-end ml-auto">
                 <AIAssistanceAction
@@ -695,7 +695,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             {versionBusy && (
               <div className="flex items-center gap-2 rounded-md bg-canvas-subtle p-3 text-xs text-fg-muted border border-border-subtle">
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent-emphasis border-t-transparent" />
-                <span>正在自动保存 AI 评估结果至版本记录...</span>
+                <span>{t('assessmentDisplay.autoSaving')}</span>
               </div>
             )}
 
@@ -711,7 +711,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                 <div className="rounded-lg border border-border-subtle bg-canvas-subtle p-3.5 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle/60 pb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-fg-default">AI评定证据与结论</span>
+                      <span className="text-sm font-semibold text-fg-default">{t('assessmentDisplay.aiEvidence')}</span>
                       {((aiResult.suggestedClassification || aiResult.classification) as ACMGClassification | undefined) && (
                         <ClinicalSignificanceBadge value={((aiResult.suggestedClassification || aiResult.classification) as ACMGClassification)}>
                           {ACMG_CONFIG[((aiResult.suggestedClassification || aiResult.classification) as ACMGClassification)]?.label ?? (aiResult.suggestedClassification || aiResult.classification)}
@@ -720,7 +720,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                     </div>
                     {aiResult.requestId && (
                       <span className="text-xs text-fg-muted font-mono">
-                        归档ID: {aiResult.requestId}
+                        {t('assessmentDisplay.archive')} {aiResult.requestId}
                       </span>
                     )}
                   </div>
@@ -750,7 +750,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-fg-muted py-1">未产生满足条件的证据项。</p>
+                      <p className="text-xs text-fg-muted py-1">{t('assessmentDisplay.noEligible')}</p>
                     );
                   })()}
                 </div>
@@ -764,8 +764,8 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
             ) : (
               <div className="rounded-lg border border-dashed border-border-subtle p-8 text-center text-fg-muted space-y-2">
                 <Sparkles className="w-8 h-8 mx-auto text-accent-fg/60" />
-                <p className="text-sm font-medium text-fg-default">暂无 AI 评估记录</p>
-                <p className="text-xs">点击右上角的“AI 评估”按钮，系统将根据位点注释和证据库生成智能判定建议。</p>
+                <p className="text-sm font-medium text-fg-default">{t('assessmentDisplay.noAIRecords')}</p>
+                <p className="text-xs">{t('assessmentDisplay.variantAIHelp')}</p>
               </div>
             )}
           </section>
@@ -773,7 +773,7 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
           {/* 5. ACMG 计算器 */}
           <section hidden={section !== 'acmg'}>
             <div className="space-y-4">
-              <SectionTitle icon={Calculator} title="ACMG 证据计算器" />
+              <SectionTitle icon={Calculator} title={t('assessmentDisplay.calculator')} />
               <ACMGPointsEditor
                 key={`${taskId}/${variant.id}/manual`}
                 variant={{ ...variant, acmgEvidence: localEvidence ?? variant.acmgEvidence }}

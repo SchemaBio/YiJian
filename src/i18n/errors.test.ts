@@ -2,6 +2,10 @@ import { expect, it } from 'vitest';
 import { errorText, LocalizedError } from './errors';
 import { createTextTranslator } from './text';
 import { ApiError } from '@/lib/api';
+it.each(['zh-CN', 'zh-Hant', 'en', 'es-419'] as const)('localizes approved accounts awaiting example data in %s', locale => {
+  const t = createTextTranslator(locale);
+  expect(errorText('account example data is preparing', t)).toBe(t('registration.examplePreparing'));
+});
 it.each([
   ['zh-CN', '密码过于常见，请设置更安全的密码。'],
   ['zh-Hant', '密碼過於常見，請設定更安全的密碼。'],

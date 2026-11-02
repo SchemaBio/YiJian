@@ -163,6 +163,13 @@
 .yj-task-nav-tools:empty { display: none; }
 .yj-task-nav-tools .yj-assessment-status { flex-direction: column; align-items: stretch; overflow-wrap: anywhere; }
 .yj-task-nav-tools .yj-tool-button { white-space: normal; text-align: left; justify-content: flex-start; }
+.yj-task-nav-tools .yj-tool-button { width: 100%; height: auto; min-height: 34px; padding: 8px; gap: 8px; align-items: flex-start; line-height: 1.4; }
+.yj-task-nav-tools .yj-tool-button svg { flex-shrink: 0; margin-top: 2px; }
+.yj-task-nav-tools .yj-tool-label { min-width: 0; white-space: normal; overflow-wrap: normal; word-break: normal; }
+.yj-assessment-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 10px; }
+.yj-assessment-cards > section { min-width: 0; }
+.yj-assessment-cards > section > div > .flex { flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+.yj-assessment-cards svg { flex-shrink: 0; }
 .yj-task-workspace-panel { flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
 .yj-variant-nav { margin: 0 0 4px 10px; border-left: 1px solid var(--yj-border-subtle); padding: 2px 0 2px 6px; }
 .yj-variant-nav > p { display: none; }

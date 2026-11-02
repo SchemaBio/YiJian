@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { screeningNoteText } from '@/lib/assessment-display';
 import { useText } from '@/i18n/useText';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import type { SNVIndel } from '../types';
@@ -27,7 +28,7 @@ export function VariantAssessmentOverview({
   onAdoptSource?: (source: AdoptedSource, classification?: string | null) => Promise<void> | void;
 }) {
   const t = useText();
-  const label = (value?: string | null) => (!value || ['.', '-'].includes(value.trim())) ? '缺失' : value === 'insufficient_data' ? t('variantAssessment.insufficient') : value.replaceAll('_', ' ');
+  const label = (value?: string | null) => (!value || ['.', '-'].includes(value.trim())) ? t('assessmentDisplay.missing') : value === 'insufficient_data' ? t('variantAssessment.insufficient') : value.replaceAll('_', ' ');
 
   // 人工评估是否已经正式保存确认
   const isHumanConfirmed = Boolean(
@@ -37,9 +38,9 @@ export function VariantAssessmentOverview({
 
   // 1. 数据库参考 (ClinVar)
   const rawClinvar = variant.clinvarSignificance?.trim();
-  const clinvarValue = !rawClinvar || ['.', '-'].includes(rawClinvar) ? '缺失' : rawClinvar;
+  const clinvarValue = !rawClinvar || ['.', '-'].includes(rawClinvar) ? t('assessmentDisplay.missing') : rawClinvar;
   const clinvarStars = clinvarReviewStars(variant.clinvarReviewStatus);
-  const clinvarDisease = variant.clinvarDisease && !['.', '-'].includes(variant.clinvarDisease.trim()) ? variant.clinvarDisease : '相关疾病: 缺失';
+  const clinvarDisease = variant.clinvarDisease && !['.', '-'].includes(variant.clinvarDisease.trim()) ? variant.clinvarDisease : t('assessmentDisplay.diseaseMissing');
   const clinvarId = variant.clinvarId && !['.', '-'].includes(variant.clinvarId.trim()) ? `ClinVar ID: ${variant.clinvarId}` : '';
   const dbDetail = [
     variant.clinvarReviewStatus && !['.', '-'].includes(variant.clinvarReviewStatus.trim()) ? variant.clinvarReviewStatus : '',
@@ -50,13 +51,13 @@ export function VariantAssessmentOverview({
 
   // 2. 本地快速初评
   const rawQuick = variant.automaticAcmg?.classification?.trim();
-  const quickValue = !rawQuick || ['.', '-'].includes(rawQuick) ? '缺失' : rawQuick;
-  const autoScore = variant.automaticAcmg?.score !== undefined ? `${variant.automaticAcmg.score > 0 ? `+${variant.automaticAcmg.score}` : variant.automaticAcmg.score} 分` : '';
+  const quickValue = !rawQuick || ['.', '-'].includes(rawQuick) ? t('assessmentDisplay.missing') : rawQuick;
+  const autoScore = variant.automaticAcmg?.score !== undefined ? t('assessmentDisplay.score', {p0: variant.automaticAcmg.score > 0 ? `+${variant.automaticAcmg.score}` : variant.automaticAcmg.score}) : '';
   const autoCriteria = variant.automaticAcmg?.criteria?.map(c => c.code).join(', ');
   const quickDetail = [
     autoScore,
-    autoCriteria ? `依据: ${autoCriteria}` : '',
-    variant.automaticAcmg?.screeningNotes?.filter(n => n && !['.', '-'].includes(n.trim())).join(' ') || variant.automaticAcmg?.profile,
+    autoCriteria ? t('assessmentDisplay.criteria', {p0: autoCriteria}) : '',
+    variant.automaticAcmg?.screeningNotes?.filter(n => n && !['.', '-'].includes(n.trim())).map(n => screeningNoteText(n, t)).join(' ') || variant.automaticAcmg?.profile,
   ].filter(Boolean).join(' · ');
 
   // 3. AI 证据建议
@@ -68,7 +69,7 @@ export function VariantAssessmentOverview({
 
   const rawAI = (effectiveAI?.suggestedClassification || effectiveAI?.classification)?.trim();
   const aiValue = !rawAI || ['.', '-'].includes(rawAI)
-    ? (effectiveAI ? '缺失' : '尚未进行 AI 评估')
+    ? (effectiveAI ? t('assessmentDisplay.missing') : t('assessmentDisplay.noAI'))
     : rawAI === 'insufficient_data'
       ? t('variantAssessment.insufficient')
       : rawAI;
@@ -77,19 +78,19 @@ export function VariantAssessmentOverview({
     item => item.status !== 'insufficient_data' && item.status !== 'not_applicable'
   );
   const aiCriteria = effectiveAiEvidence.map(e => e.code).join(', ');
-  const aiDetail = aiCriteria ? `依据: ${aiCriteria}` : (effectiveAI ? '无生效条目' : '');
+  const aiDetail = aiCriteria ? t('assessmentDisplay.criteria', {p0: aiCriteria}) : (effectiveAI ? t('assessmentDisplay.noEvidence') : '');
 
   // 4. 人工评估
   const rawManual = (variant.acmgOverride || variant.legacyAcmgClassification || (isHumanConfirmed ? variant.acmgClassification : null))?.trim();
-  const manualValue = !rawManual || ['.', '-'].includes(rawManual) ? '尚未评定' : rawManual;
+  const manualValue = !rawManual || ['.', '-'].includes(rawManual) ? t('assessmentDisplay.notAssessed') : rawManual;
   const manualCriteria = (variant.acmgEvidence ?? []).map(e => `${e.code}(${e.strength})`).join(', ');
   const manualDetail = isHumanConfirmed
     ? [
-        manualCriteria ? `核定条目: ${manualCriteria}` : '',
-        variant.acmgOverrideReason ? `覆写: ${variant.acmgOverrideReason}` : '',
-        variant.acmgSavedAt ? new Date(variant.acmgSavedAt).toLocaleString() : '',
+        manualCriteria ? t('assessmentDisplay.confirmedCriteria', {p0: manualCriteria}) : '',
+        variant.acmgOverrideReason ? t('assessmentDisplay.override', {p0: variant.acmgOverrideReason}) : '',
+        variant.acmgSavedAt ? new Date(variant.acmgSavedAt).toLocaleString(t.locale) : '',
       ].filter(Boolean).join(' · ')
-    : '尚未进行人工评定（进入下方计算器完成核定）';
+    : t('assessmentDisplay.manualPending');
 
   // 确定当前采用（四选一），初次评估默认指向“本地快速初评”
   const activeSource: AdoptedSource = React.useMemo(() => {
@@ -107,10 +108,10 @@ export function VariantAssessmentOverview({
 
   // 获取当前生效结论对应的分类与来源说明
   const sourceLabelMap: Record<AdoptedSource, string> = {
-    database: '数据库参考',
-    quick: '本地快速初评',
-    ai: 'AI证据建议',
-    manual: '人工评估',
+    database: t('assessmentDisplay.database'),
+    quick: t('assessmentDisplay.quick'),
+    ai: t('assessmentDisplay.ai'),
+    manual: t('assessmentDisplay.manual'),
   };
 
   const adoptedClassification = React.useMemo(() => {
@@ -123,10 +124,10 @@ export function VariantAssessmentOverview({
   const handleCardClick = (source: AdoptedSource) => {
     if (!onAdoptSource) return;
     let targetClass: string | undefined;
-    if (source === 'database' && clinvarValue !== '缺失') targetClass = clinvarValue;
-    else if (source === 'quick' && quickValue !== '缺失') targetClass = quickValue;
-    else if (source === 'ai' && aiValue !== '缺失' && aiValue !== '尚未进行 AI 评估') targetClass = aiValue;
-    else if (source === 'manual' && manualValue !== '尚未评定') targetClass = manualValue;
+    if (source === 'database' && clinvarValue !== t('assessmentDisplay.missing')) targetClass = clinvarValue;
+    else if (source === 'quick' && quickValue !== t('assessmentDisplay.missing')) targetClass = quickValue;
+    else if (source === 'ai' && aiValue !== t('assessmentDisplay.missing') && aiValue !== t('assessmentDisplay.noAI')) targetClass = aiValue;
+    else if (source === 'manual' && manualValue !== t('assessmentDisplay.notAssessed')) targetClass = manualValue;
     onAdoptSource(source, targetClass);
   };
 
@@ -143,22 +144,22 @@ export function VariantAssessmentOverview({
             <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{t('variantAssessment.current')}</h4>
           </div>
           <span className="text-xs text-fg-muted">
-            采用自: <strong className="text-fg-default">{sourceLabelMap[activeSource]}</strong>
-            <span className="ml-1 text-[11px] text-fg-subtle">（点击下方卡片可直接切换采用）</span>
+            {t('assessmentDisplay.adoptedFrom')} <strong className="text-fg-default">{sourceLabelMap[activeSource]}</strong>
+            <span className="ml-1 text-[11px] text-fg-subtle">{t('assessmentDisplay.switchHint')}</span>
           </span>
         </div>
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <ClinicalSignificanceBadge value={adoptedClassification !== '缺失' && adoptedClassification !== '尚未评定' && adoptedClassification !== '尚未进行 AI 评估' ? adoptedClassification : undefined} className="text-sm px-2.5 py-1 font-semibold">
+            <ClinicalSignificanceBadge value={adoptedClassification !== t('assessmentDisplay.missing') && adoptedClassification !== t('assessmentDisplay.notAssessed') && adoptedClassification !== t('assessmentDisplay.noAI') ? adoptedClassification : undefined} className="text-sm px-2.5 py-1 font-semibold">
               {label(adoptedClassification)}
             </ClinicalSignificanceBadge>
             {activeSource === 'manual' && isHumanConfirmed ? (
               <span className="inline-flex items-center gap-1 text-xs text-success-fg">
-                <UserCheck className="h-3.5 w-3.5" /> 人工已核定
+                <UserCheck className="h-3.5 w-3.5" /> {t('assessmentDisplay.confirmed')}
               </span>
             ) : activeSource === 'quick' ? (
               <span className="inline-flex items-center gap-1 text-xs text-accent-fg">
-                <Cpu className="h-3.5 w-3.5" /> 规则初评基线
+                <Cpu className="h-3.5 w-3.5" /> {t('assessmentDisplay.baseline')}
               </span>
             ) : null}
           </div>
@@ -168,7 +169,7 @@ export function VariantAssessmentOverview({
             onClick={onCalculator}
           >
             <Calculator className="h-3.5 w-3.5" />
-            进入ACMG评估 →
+            {t('assessmentDisplay.openACMG')}
           </button>
         </div>
       </section>
@@ -176,10 +177,10 @@ export function VariantAssessmentOverview({
       {/* 四轨评估对比卡片（支持点击单选四选一） */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">证据与评定对照（点击卡片选择最终采用）</h4>
-          <span className="text-[11px] text-fg-subtle">单选四选一</span>
+          <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{t('assessmentDisplay.comparison')}</h4>
+          <span className="text-[11px] text-fg-subtle">{t('assessmentDisplay.singleChoice')}</span>
         </div>
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="yj-assessment-cards">
           {/* 卡片 1: 数据库参考 */}
           <section
             role="button"
@@ -200,18 +201,18 @@ export function VariantAssessmentOverview({
                 </span>
                 {activeSource === 'database' ? (
                   <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-emphasis px-2 py-0.5 text-[10px] font-semibold text-fg-on-emphasis">
-                    ✓ 当前采用
+                    {t('assessmentDisplay.current')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">点击采用</span>
+                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
                 {label(clinvarValue)}
               </p>
             </div>
-            <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed">
-              {dbDetail || '缺失'}
+            <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed [overflow-wrap:anywhere]">
+              {dbDetail || t('assessmentDisplay.missing')}
             </p>
           </section>
 
@@ -235,18 +236,18 @@ export function VariantAssessmentOverview({
                 </span>
                 {activeSource === 'quick' ? (
                   <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-emphasis px-2 py-0.5 text-[10px] font-semibold text-fg-on-emphasis">
-                    ✓ 当前采用
+                    {t('assessmentDisplay.current')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">点击采用</span>
+                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
                 {label(quickValue)}
               </p>
             </div>
-            <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed">
-              {quickDetail || '缺失'}
+            <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed [overflow-wrap:anywhere]">
+              {quickDetail || t('assessmentDisplay.missing')}
             </p>
           </section>
 
@@ -272,26 +273,26 @@ export function VariantAssessmentOverview({
                 </span>
                 {activeSource === 'ai' ? (
                   <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-emphasis px-2 py-0.5 text-[10px] font-semibold text-fg-on-emphasis">
-                    ✓ 当前采用
+                    {t('assessmentDisplay.current')}
                   </span>
                 ) : isHumanConfirmed && effectiveAI ? (
                   <span className="rounded bg-success-emphasis/15 px-1.5 py-0.5 text-[10px] font-medium text-success-fg">
-                    已完成人工复核并转入正式评估
+                    {t('assessmentDisplay.reviewed')}
                   </span>
                 ) : showAiPendingReview ? (
                   <span className="rounded bg-accent-emphasis/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-fg">
-                    待复核提案
+                    {t('assessmentDisplay.proposal')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">点击采用</span>
+                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
                 {label(aiValue)}
               </p>
             </div>
-            <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed">
-              {aiDetail || (effectiveAI ? '无生效条目' : '尚未进行 AI 评估')}
+            <p className="mt-2 break-words text-xs text-fg-muted leading-relaxed [overflow-wrap:anywhere]">
+              {aiDetail || (effectiveAI ? t('assessmentDisplay.noEvidence') : t('assessmentDisplay.noAI'))}
             </p>
           </section>
 
@@ -313,24 +314,24 @@ export function VariantAssessmentOverview({
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-fg-muted">
                   <UserCheck className="h-3.5 w-3.5 text-success-fg" />
-                  人工评估
+                  {t('assessmentDisplay.manual')}
                 </span>
                 {activeSource === 'manual' ? (
                   <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-emphasis px-2 py-0.5 text-[10px] font-semibold text-fg-on-emphasis">
-                    ✓ 当前采用
+                    {t('assessmentDisplay.current')}
                   </span>
                 ) : isHumanConfirmed ? (
                   <span className="rounded bg-success-emphasis/15 px-1.5 py-0.5 text-[10px] font-medium text-success-fg">
-                    已核定
+                    {t('assessmentDisplay.validated')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">点击采用</span>
+                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
                 {label(manualValue)}
               </p>
-              <p className="mt-1 break-words text-xs text-fg-muted leading-relaxed">
+              <p className="mt-1 break-words text-xs text-fg-muted leading-relaxed [overflow-wrap:anywhere]">
                 {manualDetail}
               </p>
             </div>
@@ -345,7 +346,7 @@ export function VariantAssessmentOverview({
                 }}
               >
                 <Calculator className="h-3.5 w-3.5" />
-                ACMG评估
+                {t('assessmentDisplay.acmg')}
               </button>
             </div>
           </section>
@@ -363,7 +364,7 @@ export function VariantAssessmentOverview({
         <div className="space-y-3 rounded-lg border border-warning-emphasis/30 bg-warning-subtle/30 p-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-warning-fg">
             <AlertCircle className="h-4 w-4" />
-            <span>AI 提议待人工复核项</span>
+            <span>{t('assessmentDisplay.pendingReview')}</span>
           </div>
           {(effectiveAI.suggestedClassification === 'insufficient_data' || effectiveAI.classification === 'insufficient_data' || effectiveAI.suggestedClassification !== variant.automaticAcmg?.classification) && (
             <p role="note" className="text-xs text-fg-default">
@@ -391,7 +392,7 @@ export function VariantAssessmentOverview({
               className="rounded bg-accent-emphasis px-2.5 py-1 text-xs text-fg-on-emphasis font-medium"
               onClick={onCalculator}
             >
-              立即进入计算器复核 AI 条目 →
+              {t('assessmentDisplay.reviewNow')}
             </button>
           </div>
         </div>

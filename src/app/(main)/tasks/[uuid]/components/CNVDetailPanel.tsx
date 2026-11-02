@@ -334,7 +334,7 @@ export function CNVDetailPanel({
                     ? t("tasks.insufficientEvidence70568c")
                     : effectiveAssessment
                       ? getClassificationLabel(effectiveAssessment.classification)
-                      : t("tasks.notAssessed88f079"))} · {effectiveAdopted?.score !== undefined ? `${formatScore(effectiveAdopted.score)} 分` : effectiveAssessment ? t("tasks.pointsc91542", { p0: String(formatScore(effectiveAssessment.totalScore)) }) : '—'}
+                      : t("tasks.notAssessed88f079"))} · {effectiveAdopted?.score !== undefined ? t('assessmentDisplay.score', {p0: formatScore(effectiveAdopted.score)}) : effectiveAssessment ? t("tasks.pointsc91542", { p0: String(formatScore(effectiveAssessment.totalScore)) }) : '—'}
             </p>
           </div>
 
@@ -487,7 +487,7 @@ export function CNVDetailPanel({
               <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Sparkles className="w-4 h-4 text-accent-fg shrink-0" />
-                  <h4 className="text-sm font-semibold text-fg-default truncate">ClinGen 智能研判</h4>
+                  <h4 className="text-sm font-semibold text-fg-default truncate">{t('assessmentDisplay.clingenAI')}</h4>
                 </div>
                 <div className="shrink-0 flex items-center justify-end ml-auto">
                   {(variant.type === 'Deletion' || variant.type === 'Amplification') && (
@@ -511,7 +511,7 @@ export function CNVDetailPanel({
               {versionBusy && (
                 <div className="flex items-center gap-2 rounded-md bg-canvas-subtle p-3 text-xs text-fg-muted border border-border-subtle">
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent-emphasis border-t-transparent" />
-                  <span>正在自动保存 AI 评估结果至版本记录...</span>
+                  <span>{t('assessmentDisplay.autoSaving')}</span>
                 </div>
               )}
 
@@ -527,7 +527,7 @@ export function CNVDetailPanel({
                   <div className="rounded-lg border border-border-subtle bg-canvas-subtle p-3.5 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle/60 pb-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-fg-default">AI评定证据与结论</span>
+                        <span className="text-sm font-semibold text-fg-default">{t('assessmentDisplay.aiEvidence')}</span>
                         {((aiResult.suggestedClassification || aiResult.classification) as string | undefined) && (
                           <ClinicalSignificanceBadge value={aiResult.suggestedClassification || aiResult.classification}>
                             {getClassificationLabel((aiResult.suggestedClassification || aiResult.classification) as ClinGenClassification) ?? (aiResult.suggestedClassification || aiResult.classification)}
@@ -536,7 +536,7 @@ export function CNVDetailPanel({
                       </div>
                       {aiResult.requestId && (
                         <span className="text-xs text-fg-muted font-mono">
-                          归档ID: {aiResult.requestId}
+                          {t('assessmentDisplay.archive')} {aiResult.requestId}
                         </span>
                       )}
                     </div>
@@ -603,7 +603,7 @@ export function CNVDetailPanel({
                       }
 
                       return (
-                        <p className="text-xs text-fg-muted py-1">未产生满足条件的证据项。</p>
+                        <p className="text-xs text-fg-muted py-1">{t('assessmentDisplay.noEligible')}</p>
                       );
                     })()}
                   </div>
@@ -617,8 +617,8 @@ export function CNVDetailPanel({
               ) : (
                 <div className="rounded-lg border border-dashed border-border-subtle p-8 text-center text-fg-muted space-y-2">
                   <Sparkles className="w-8 h-8 mx-auto text-accent-fg/60" />
-                  <p className="text-sm font-medium text-fg-default">暂无 AI 评估记录</p>
-                  <p className="text-xs">点击右上角的“AI 评估”按钮，系统将根据位点特征和医学数据库生成智能判定建议。</p>
+                  <p className="text-sm font-medium text-fg-default">{t('assessmentDisplay.noAIRecords')}</p>
+                  <p className="text-xs">{t('assessmentDisplay.cnvAIHelp')}</p>
                 </div>
               )}
             </section>
@@ -638,7 +638,7 @@ export function CNVDetailPanel({
                 />
               ) : (
                 <div className="p-6 text-center text-sm text-fg-muted">
-                  正在加载 ClinGen 评估数据...
+                  {t('assessmentDisplay.loadingClinGen')}
                 </div>
               )}
             </section>
