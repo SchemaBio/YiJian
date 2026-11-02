@@ -1,4 +1,5 @@
 'use client';
+import { pipelineDisplayName } from '@/lib/builtin-resources';
 import { TaskProgressCell } from '@/components/shared/TaskProgressCell';
 import { useText } from '@/i18n/useText';
 import { chineseText, translateUI, type TextTranslator } from '@/i18n/text';
@@ -225,7 +226,7 @@ function DashboardPageContent() {
                 <Link key={task.id} href={`/tasks/${encodeURIComponent(task.id)}`} className="yj-status-row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_96px_150px] sm:gap-4">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg-default">{task.internalId || task.sampleId || task.id}</div>
-                    <div className="mt-0.5 truncate text-xs text-fg-muted">{task.pipeline || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt, t)}</div>
+                    <div className="mt-0.5 truncate text-xs text-fg-muted">{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t) || '-'} {task.pipelineVersion || ''} · {formatDateTime(task.createdAt, t)}</div>
                   </div>
                   <span className={`yj-task-state-label ${taskStatusClass(taskDisplayStatus(task))}`} data-status={taskDisplayStatus(task)} data-interpretation-completed={!!task.interpretationCompletedAt}>
                     <span aria-hidden="true" />{translateUI(taskStatusConfig[taskDisplayStatus(task)].label, t)}

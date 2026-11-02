@@ -18,6 +18,7 @@ export interface AnalysisTask {
   sampleId: string;
   internalId: string;
   pipeline: string;
+  pipelineId?: string;
   pipelineVersion: string;
   status: TaskStatus;
   vmStatus?: string;
@@ -53,6 +54,7 @@ export interface AnalysisTaskDetail {
   sampleId: string;
   internalId: string;
   pipeline: string;
+  pipelineId?: string;
   pipelineVersion: string;
   status: TaskStatus;
   vmStatus?: string;

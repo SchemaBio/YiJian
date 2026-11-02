@@ -1,4 +1,5 @@
 'use client';
+import { pipelineDisplayName } from '@/lib/builtin-resources';
 import { useBusinessPermissions } from '@/components/providers/BusinessPermissionProvider';
 import { RetentionNotice } from '@/components/shared/ResearchPolicy';
 import { errorText } from '@/i18n/errors';
@@ -236,7 +237,7 @@ export function BatchTaskModal({ isOpen, onClose, onCompleted }: BatchTaskModalP
                         {row.sample_id && <div className="mt-0.5 font-mono text-xs text-fg-muted">{row.sample_id}</div>}
                       </td>
                       <td className="px-3 py-2">
-                        <div className="text-fg-default">{row.pipeline_name || row.pipeline_id}</div>
+                        <div className="text-fg-default">{pipelineDisplayName(row.pipeline_id, row.pipeline_name || row.pipeline_id, t)}</div>
                         <div className="mt-0.5 font-mono text-xs text-fg-muted">{row.pipeline_id}</div>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">{row.valid ? t("settings.minutes121a50", {p0: String(row.estimated_minutes)}) : '--'}</td>

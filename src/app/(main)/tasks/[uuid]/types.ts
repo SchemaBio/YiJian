@@ -23,6 +23,7 @@ export interface AnalysisTaskDetail {
   sampleId: string;              // 样本ID (UUID)
   internalId: string;            // 内部编号
   pipeline: string;              // 分析流程名称
+  pipelineId?: string;
   pipelineVersion: string;       // 流程版本
   status: AnalysisStatus;        // 任务状态
   vmStatus?: string;

@@ -1,4 +1,5 @@
 'use client';
+import { pipelineDisplayName } from '@/lib/builtin-resources';
 import { TaskProgressCell } from '@/components/shared/TaskProgressCell';
 import { MobileRecordList } from '@/components/shared/MobileRecordList';
 import { ExampleBadge } from '@/components/shared/ExampleData';
@@ -61,6 +62,7 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.internalId === candidate.internalId
       && task.template === candidate.template
       && task.pipeline === candidate.pipeline
+      && task.pipelineId === candidate.pipelineId
       && task.pipelineVersion === candidate.pipelineVersion
       && task.status === candidate.status
       && task.interpretationCompletedAt === candidate.interpretationCompletedAt
@@ -349,11 +351,13 @@ export default function AnalysisPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (t) =>
-          (t.name ?? '').toLowerCase().includes(query) ||
-          t.id.toLowerCase().includes(query) ||
-          t.sampleId.toLowerCase().includes(query) ||
-          t.internalId.toLowerCase().includes(query)
+        (taskItem) =>
+          (taskItem.name ?? '').toLowerCase().includes(query) ||
+          pipelineDisplayName(taskItem.pipelineId ?? '', taskItem.name || taskItem.pipeline, t).toLowerCase().includes(query) ||
+          taskItem.pipeline.toLowerCase().includes(query) ||
+          taskItem.id.toLowerCase().includes(query) ||
+          taskItem.sampleId.toLowerCase().includes(query) ||
+          taskItem.internalId.toLowerCase().includes(query)
       );
     }
     return sortTasksByInterpretation(result);
@@ -364,18 +368,21 @@ export default function AnalysisPage() {
     {
       id: 'taskId',
       header: t("admin.task3172b3"),
-      accessor: (row) => (
-        <div className="min-w-0 text-left">
-          <IdCell id={row.id} full />
-          <div className="mt-1">
-            <HoverHint content={row.name || row.pipeline}>
-              <button type="button" onClick={() => handleOpenDetails(row)} className="block max-w-[220px] truncate text-xs text-fg-muted hover:text-accent-fg">
-                {row.name || row.pipeline || t("samples.analysisTasksf269c8")}
-              </button>
-            </HoverHint>
+      accessor: (row) => {
+        const title = pipelineDisplayName(row.pipelineId ?? '', row.name || row.pipeline, t) || t("samples.analysisTasksf269c8");
+        return (
+          <div className="min-w-0 text-left">
+            <IdCell id={row.id} full />
+            <div className="mt-1">
+              <HoverHint content={title}>
+                <button type="button" onClick={() => handleOpenDetails(row)} className="block max-w-[220px] truncate text-xs text-fg-muted hover:text-accent-fg">
+                  {title}
+                </button>
+              </HoverHint>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
       width: 300,
       align: 'left',
     },
@@ -396,7 +403,7 @@ export default function AnalysisPage() {
       header: t("tasks.analysisPipelinef22c14"),
       accessor: (row) => (
         <div className="text-center">
-          <div className="text-fg-default">{row.pipeline}</div>
+          <div className="text-fg-default">{pipelineDisplayName(row.pipelineId ?? '', row.pipeline, t)}</div>
           <div className="text-xs text-fg-muted">{row.pipelineVersion}</div>
         </div>
       ),

@@ -24,6 +24,8 @@ interface RawTask {
   internalId?: string;
   internal_id?: string;
   pipeline?: string;
+  pipelineId?: string;
+  pipeline_id?: string;
   pipelineVersion?: string;
   pipeline_version?: string;
   status?: string;
@@ -108,6 +110,7 @@ export function normalizeTask(rawValue: unknown): AnalysisTask {
     template: typeof raw.template === 'string' ? raw.template : undefined,
  resultCapabilities: raw.result_capabilities,
     pipeline: String(raw.pipeline ?? ''),
+    pipelineId: raw.pipelineId ?? raw.pipeline_id,
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
     vmStatus: raw.vmStatus ?? raw.vm_status,
@@ -146,6 +149,7 @@ export function normalizeTaskDetail(rawValue: unknown): AnalysisTaskDetail {
     template: typeof raw.template === 'string' ? raw.template : undefined,
  resultCapabilities: raw.result_capabilities,
     pipeline: String(raw.pipeline ?? ''),
+    pipelineId: raw.pipelineId ?? raw.pipeline_id,
     pipelineVersion: String(raw.pipelineVersion ?? raw.pipeline_version ?? ''),
     status: normalizeStatus(raw.status),
     vmStatus: raw.vmStatus ?? raw.vm_status,
