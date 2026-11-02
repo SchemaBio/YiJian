@@ -5,6 +5,7 @@ import { LocalizedError } from '@/i18n/errors';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
+import { igvDisplayText, localizeIGVNavigation } from '@/lib/igv-display';
 import { chineseText, type TextTranslator } from '@/i18n/text';
 
 import { ActionButton } from '@/components/shared/ActionButton';
@@ -114,12 +115,12 @@ export function formatChromosome(chromosome: string): string {
   return `chr${name}`;
 }
 
-function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackResolver, authenticated = false): IGVTrackConfig {
+function trackConfiguration(track: IGVTrackDescriptor, resolver: SignedTrackResolver, t: TextTranslator, authenticated = false): IGVTrackConfig {
   return {
     sync: true,
     type: track.type as IGVTrackConfig['type'],
     format: track.format as IGVTrackConfig['format'],
-    name: track.name,
+    name: igvDisplayText(track.name, t),
     url: resolver.url(track.id),
     ...(track.hasIndex ? { indexURL: resolver.indexURL(track.id) } : {}),
     ...(track.type === 'alignment' ? { height: 180 } : {}),
@@ -140,14 +141,14 @@ function referenceConfiguration(session: IGVSession) {
   };
 }
 
-function staticGeneTrack(session: IGVSession): IGVTrackConfig | null {
+function staticGeneTrack(session: IGVSession, t: TextTranslator): IGVTrackConfig | null {
   const reference = session.reference;
   if (!reference.geneTrackURL) return null;
   return {
     sync: true,
     type: 'annotation',
     format: 'gff3',
-    name: '基因注释',
+    name: t('display.geneAnnotatione14345'),
     url: reference.geneTrackURL,
     ...(reference.geneTrackIndexURL ? { indexURL: reference.geneTrackIndexURL } : {}),
   };
@@ -267,7 +268,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
     const reference = referenceConfiguration(session);
     if (!session.available || !reference) {
       setLoading(false);
-      setError(session.reason || t("tasks.thisExecutionHasNoInterpretableReferenceSequence8c1466"));
+      setError(session.reason ? igvDisplayText(session.reason, t) : t("tasks.thisExecutionHasNoInterpretableReferenceSequence8c1466"));
       return;
     }
 
@@ -310,13 +311,14 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
           await dispose();
           return;
         }
+        if (containerRef.current) localizeIGVNavigation(containerRef.current, t);
         browserRef.current = browser;
         const failures: string[] = [];
         const tracks = session.tracks.filter(track => track.available && track.format !== 'cnr');
-        const geneTrack = staticGeneTrack(session);
+        const geneTrack = staticGeneTrack(session, t);
         const configurations: IGVTrackConfig[] = [
           ...(geneTrack ? [geneTrack] : []),
-          ...tracks.map(track => trackConfiguration(track, resolver, session.transport === 'api')),
+          ...tracks.map(track => trackConfiguration(track, resolver, t, session.transport === 'api')),
         ];
         for (const configuration of configurations) {
           if (!active) {
@@ -349,7 +351,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       active = false;
       void dispose();
     };
-  }, [isOpen, reloadToken, session, taskId, liveBAM, containerNode]);
+  }, [isOpen, reloadToken, session, taskId, liveBAM, containerNode, t]);
 
   React.useEffect(() => {
     const browser = browserRef.current;
@@ -419,7 +421,7 @@ export function IGVViewer({ taskId, chromosome, position, endPosition, isOpen, o
       {!showSnapshot && (trackErrors.length > 0 || unavailableTracks.length > 0) && (
         <div className="mb-3 rounded-lg border border-warning-emphasis bg-warning-subtle p-3 text-sm text-warning-fg">
           {trackErrors.length > 0 && <p>{t("tasks.unloadedTracks6bea53")}{trackErrors.join('、')}。</p>}
-          {unavailableTracks.map(track => <p key={track.id}>{track.name}：{track.reason || t("tasks.unavailablebeff4a")}。</p>)}
+          {unavailableTracks.map(track => <p key={track.id}>{igvDisplayText(track.name, t)}: {track.reason ? igvDisplayText(track.reason, t) : t("tasks.unavailablebeff4a")}</p>)}
         </div>
       )}
 

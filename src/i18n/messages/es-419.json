@@ -3441,5 +3441,30 @@
     "calculator": "Calculadora de evidencia ACMG",
     "recommendation": "{p0} (sugerencia)",
     "activeEvidence": "{p0} criterios activos"
+  },
+  "igvDisplay": {
+    "proband": "BAM del caso índice",
+    "father": "BAM del padre",
+    "mother": "BAM de la madre",
+    "vcf": "VCF de variantes conjuntas",
+    "bed": "BED de regiones objetivo",
+    "cnr": "CNR original de CNVkit",
+    "noArchive": "La evidencia de secuenciación archivada no está disponible.",
+    "noTracks": "El archivo no tiene pistas BAM, VCF o BED de destino legibles.",
+    "bamExpired": "La retención de BAM venció 7 días después de finalizar; las lecturas ya no están disponibles.",
+    "bamMissing": "El BAM no está archivado, su nombre es ambiguo o fue eliminado.",
+    "bamIndex": "Falta el índice BAM.",
+    "vcfIndex": "Falta el índice tabix del VCF.",
+    "referenceConfig": "La configuración de referencia de IGV no está disponible.",
+    "referenceIdentity": "La instantánea de entrada no identifica el genoma de referencia.",
+    "referenceUnsupported": "Este genoma de referencia no está configurado para IGV.",
+    "referenceMissing": "No se han configurado FASTA y FAI de referencia para esta ejecución.",
+    "referenceLocal": "El FASTA y FAI locales no están configurados o no se pueden leer.",
+    "cursorGuide": "Guía del cursor",
+    "centerLine": "Línea central",
+    "trackLabels": "Etiquetas de pistas",
+    "sampleNames": "Nombres de muestras",
+    "saveSVG": "Guardar SVG",
+    "circularView": "Vista circular"
   }
 }

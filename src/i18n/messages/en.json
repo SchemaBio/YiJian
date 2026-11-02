@@ -3441,5 +3441,30 @@
     "calculator": "ACMG evidence calculator",
     "recommendation": "{p0} (screening suggestion)",
     "activeEvidence": "{p0} evidence criteria active"
+  },
+  "igvDisplay": {
+    "proband": "Proband BAM",
+    "father": "Father BAM",
+    "mother": "Mother BAM",
+    "vcf": "Joint variant VCF",
+    "bed": "Target regions BED",
+    "cnr": "Raw CNVkit CNR",
+    "noArchive": "Archived sequencing evidence is currently unavailable.",
+    "noTracks": "The archive has no readable BAM, VCF or target BED tracks.",
+    "bamExpired": "BAM retention expired 7 days after completion; reads are no longer available for review.",
+    "bamMissing": "BAM is not archived, its name is ambiguous, or it has been deleted.",
+    "bamIndex": "BAM index is missing.",
+    "vcfIndex": "VCF tabix index is missing.",
+    "referenceConfig": "IGV reference configuration is unavailable.",
+    "referenceIdentity": "The execution input snapshot does not identify a reference genome.",
+    "referenceUnsupported": "This reference genome is not configured for IGV review.",
+    "referenceMissing": "Reference FASTA and FAI are not configured for this execution.",
+    "referenceLocal": "Local reference FASTA and FAI are not configured or readable.",
+    "cursorGuide": "Cursor guide",
+    "centerLine": "Center line",
+    "trackLabels": "Track labels",
+    "sampleNames": "Sample names",
+    "saveSVG": "Save SVG",
+    "circularView": "Circular view"
   }
 }

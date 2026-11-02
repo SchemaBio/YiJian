@@ -3441,5 +3441,30 @@
     "calculator": "ACMG 证据计算器",
     "recommendation": "{p0} (算法推荐)",
     "activeEvidence": "已激活 {p0} 项证据条款"
+  },
+  "igvDisplay": {
+    "proband": "先证者 BAM",
+    "father": "父亲 BAM",
+    "mother": "母亲 BAM",
+    "vcf": "联合变异 VCF",
+    "bed": "目标区域 BED",
+    "cnr": "原始 CNVkit CNR",
+    "noArchive": "该执行的归档测序证据当前不可用",
+    "noTracks": "归档未提供可读取的 BAM、VCF 或目标 BED 轨迹",
+    "bamExpired": "BAM 已超过任务完成后 7 天保留期限，无法复核 reads",
+    "bamMissing": "BAM 未归档、名称不唯一或已删除",
+    "bamIndex": "BAM 索引缺失",
+    "vcfIndex": "VCF tabix 索引缺失",
+    "referenceConfig": "IGV 参考资源配置不可用",
+    "referenceIdentity": "该执行的输入快照未提供参考序列身份",
+    "referenceUnsupported": "该参考序列未配置为可判读的 IGV 参考资源",
+    "referenceMissing": "该执行的参考 FASTA 与 FAI 尚未配置",
+    "referenceLocal": "该执行的本地参考 FASTA 与 FAI 尚未配置或不可读",
+    "cursorGuide": "光标引导线",
+    "centerLine": "中心线",
+    "trackLabels": "轨道标签",
+    "sampleNames": "样本名称",
+    "saveSVG": "保存 SVG",
+    "circularView": "环形视图"
   }
 }
