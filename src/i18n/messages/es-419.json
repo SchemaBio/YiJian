@@ -3011,6 +3011,7 @@
     "adminPasswordTooShort": "La contraseña de administrador debe tener al menos 12 caracteres.",
     "passwordComplexity": "Incluya al menos tres categorías: minúsculas, mayúsculas, números y símbolos.",
     "invalidCredentials": "El correo o la contraseña son incorrectos.",
+    "authenticationFailed": "No se pudo iniciar sesión. Inténtalo más tarde.",
     "invalidOldPassword": "La contraseña actual es incorrecta.",
     "emailExists": "Este correo ya está registrado. Use otro.",
     "invalidRole": "Rol del sistema inválido. Recargue la página e inténtelo de nuevo.",

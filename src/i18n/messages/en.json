@@ -3011,6 +3011,7 @@
     "adminPasswordTooShort": "The administrator password must contain at least 12 characters.",
     "passwordComplexity": "Include at least three of: lowercase letters, uppercase letters, numbers and symbols.",
     "invalidCredentials": "The email address or password is incorrect.",
+    "authenticationFailed": "Sign-in failed. Please try again later.",
     "invalidOldPassword": "The current password is incorrect.",
     "emailExists": "This email address is already registered. Use another address.",
     "invalidRole": "Invalid system role. Refresh the page and try again.",

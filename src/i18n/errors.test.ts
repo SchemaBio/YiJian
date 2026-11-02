@@ -26,3 +26,21 @@ it.each(['zh-CN','zh-Hant','en','es-419'] as const)('localizes pending manual re
  const t=createTextTranslator(locale);
  expect(errorText('account is pending approval',t)).toBe(t('registration.manualPending'));
 });
+
+it.each([
+  ['zh-CN', '邮箱或密码不正确。'],
+  ['zh-Hant', '電子郵件或密碼不正確。'],
+  ['en', 'The email address or password is incorrect.'],
+  ['es-419', 'El correo o la contraseña son incorrectos.'],
+] as const)('renders invalid credentials error in %s', (locale, message) => {
+  expect(errorText(new ApiError(401, 'Unauthorized', { error: 'invalid email or password' }), createTextTranslator(locale))).toBe(message);
+});
+
+it.each([
+  ['zh-CN', '登录失败，请稍后重试。'],
+  ['zh-Hant', '登入失敗，請稍後重試。'],
+  ['en', 'Sign-in failed. Please try again later.'],
+  ['es-419', 'No se pudo iniciar sesión. Inténtalo más tarde.'],
+] as const)('renders generic authentication failure in %s', (locale, message) => {
+  expect(errorText(new ApiError(401, 'Unauthorized', { error: 'authentication failed' }), createTextTranslator(locale))).toBe(message);
+});

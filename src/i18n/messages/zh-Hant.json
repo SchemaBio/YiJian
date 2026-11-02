@@ -3011,6 +3011,7 @@
     "adminPasswordTooShort": "管理員密碼至少需要 12 個字元。",
     "passwordComplexity": "密碼須包含小寫字母、大寫字母、數字和符號中的至少三類。",
     "invalidCredentials": "電子郵件或密碼不正確。",
+    "authenticationFailed": "登入失敗，請稍後重試。",
     "invalidOldPassword": "目前密碼不正確。",
     "emailExists": "此電子郵件已被註冊，請使用其他電子郵件。",
     "invalidRole": "無效的系統角色，請重新整理頁面後再試。",

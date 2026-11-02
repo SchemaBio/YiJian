@@ -40,6 +40,7 @@ const backendMessages: Record<string, string> = {
   'password must be at least 12 characters': 'backendErrors.adminPasswordTooShort',
   'password must include at least 3 of: lowercase, uppercase, digit, symbol': 'backendErrors.passwordComplexity',
   'invalid email or password': 'backendErrors.invalidCredentials',
+  'authentication failed': 'backendErrors.authenticationFailed',
   'invalid old password': 'backendErrors.invalidOldPassword',
   'email already exists': 'backendErrors.emailExists',
   'invalid system role': 'backendErrors.invalidRole',
