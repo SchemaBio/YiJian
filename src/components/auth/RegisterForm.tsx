@@ -127,13 +127,9 @@ export function RegisterForm({
       if (!response?.access_token && response?.message) {
         if (isSaaS) {
           onRegistrationSubmitted?.(cleanEmail);
-          setLoading(false);
-          onLoadingChange?.(false);
           return;
         }
         router.push('/login?registered=pending');
-        setLoading(false);
-        onLoadingChange?.(false);
         return;
       }
       router.push(nextPath);
@@ -146,6 +142,7 @@ export function RegisterForm({
       }
       setChallenge('');
       setGeneration((v) => v + 1);
+    } finally {
       setLoading(false);
       onLoadingChange?.(false);
     }

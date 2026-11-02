@@ -1,4 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
+import { hydrateRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
@@ -40,6 +42,78 @@ vi.mock('@/components/auth/RegistrationChallenge', () => ({
 import LoginPage from './page';
 import { ApiError } from '@/lib/api';
 import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
+
+it('hydrates a direct register URL without mismatching the server markup', async () => {
+  window.history.replaceState({}, '', '/login?mode=register&next=%2Fsamples');
+  const container = document.createElement('div');
+  container.innerHTML = renderToString(<LoginPage />);
+  expect(container.textContent).not.toContain('创建账号');
+  document.body.appendChild(container);
+  const onRecoverableError = vi.fn();
+  let root: ReturnType<typeof hydrateRoot>;
+  try {
+    await act(async () => {
+      root = hydrateRoot(container, <LoginPage />, { onRecoverableError });
+    });
+    expect(screen.getByRole('heading', { name: '创建账号' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '登录' })).toHaveAttribute('href', '/login?next=%2Fsamples');
+    expect(onRecoverableError).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root!.unmount());
+    container.remove();
+  }
+});
+
+it('defers browser navigation until a login request settles and releases the switch lock', async () => {
+  let rejectLogin!: (error: Error) => void;
+  state.login.mockImplementationOnce(() => new Promise<void>((_, reject) => { rejectLogin = reject; }));
+  render(<LoginPage />);
+  fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'busy@example.com' } });
+  fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'password123' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /我已阅读并了解/ }));
+  fireEvent.click(screen.getByRole('button', { name: '登录' }));
+  window.history.replaceState({}, '', '/login?mode=register');
+  fireEvent(window, new PopStateEvent('popstate'));
+  expect(screen.getByRole('heading', { name: '登录' })).toBeInTheDocument();
+  await act(async () => rejectLogin(new Error('Network failure')));
+  expect(screen.getByRole('heading', { name: '创建账号' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('link', { name: '登录' }));
+  expect(screen.getByRole('heading', { name: '登录' })).toBeInTheDocument();
+});
+
+it('releases the switch lock after a successful request when navigation has not unmounted the page', async () => {
+  state.login.mockResolvedValueOnce(undefined);
+  render(<LoginPage />);
+  fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'user@example.com' } });
+  fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'password123' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /我已阅读并了解/ }));
+  fireEvent.click(screen.getByRole('button', { name: '登录' }));
+  await waitFor(() => expect(state.push).toHaveBeenCalledWith('/dashboard'));
+  fireEvent.click(screen.getByRole('link', { name: '注册' }));
+  expect(screen.getByRole('heading', { name: '创建账号' })).toBeInTheDocument();
+});
+
+it('keeps registration mounted during browser Back and applies navigation after submission', async () => {
+  let resolveRegistration!: (value: { message: string }) => void;
+  state.post.mockImplementationOnce(() => new Promise((resolve) => { resolveRegistration = resolve; }));
+  window.history.replaceState({}, '', '/login?mode=register');
+  render(<LoginPage />);
+  fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'pending@example.com' } });
+  fireEvent.change(screen.getByLabelText(/^密码/), { target: { value: 'Test-password-42' } });
+  fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'Test-password-42' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Complete verification' }));
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button', { name: '注册' }));
+  await waitFor(() => expect(state.post).toHaveBeenCalled());
+  window.history.replaceState({}, '', '/login');
+  fireEvent(window, new PopStateEvent('popstate'));
+  expect(screen.getByRole('heading', { name: '创建账号' })).toBeInTheDocument();
+  await act(async () => resolveRegistration({ message: 'Pending' }));
+  expect(screen.getByRole('heading', { name: '登录' })).toBeInTheDocument();
+  expect(screen.getByLabelText('邮箱')).toHaveValue('pending@example.com');
+  fireEvent.click(screen.getByRole('link', { name: '注册' }));
+  expect(screen.getByRole('heading', { name: '创建账号' })).toBeInTheDocument();
+});
 
 afterEach(() => {
   cleanup();
@@ -206,7 +280,7 @@ it('disables mode switching while request is in flight', async () => {
   expect(screen.getByRole('heading', { name: '登录' })).toBeInTheDocument();
   expect(state.push).not.toHaveBeenCalled();
 
-  resolveLogin();
+  await act(async () => resolveLogin());
 });
 
 it('directly renders register mode when accessed via /login?mode=register and preserves next param', async () => {

@@ -91,6 +91,7 @@ export function LoginForm({
       } else {
         setError(t("auth.networkErrorRetryLatereb9dcb"));
       }
+    } finally {
       setLoading(false);
       onLoadingChange?.(false);
     }

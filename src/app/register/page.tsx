@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import LoginPage from '@/app/login/page';
+import { AuthPage } from '@/components/auth/AuthPage';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,5 +17,5 @@ export default function RegisterPage() {
     }
   }, [router]);
 
-  return <LoginPage initialMode="register" />;
+  return <AuthPage initialMode="register" />;
 }
