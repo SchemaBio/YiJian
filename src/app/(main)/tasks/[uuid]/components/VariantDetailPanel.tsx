@@ -181,10 +181,10 @@ function ACMGPointsEditor({
       <div className="rounded-lg border border-accent-subtle bg-accent-subtle/30 p-3 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold">{t("tasks.automaticAssessmentc4ff36")}{auto?.profile ?? 'acmg-snv-points-v2'}</span>
-          <span>{t("tasks.automaticClassification8daa4b")}{auto?.classification ? ACMG_CONFIG[auto.classification]?.label : t("tasks.insufficientEvidence70568c")} · {auto?.score ?? 0} {t("tasks.pointsdecb3b")}</span>
+          <span>{t(auto?.classificationBasis === 'acmg_evidence' ? "tasks.automaticClassification8daa4b" : "assessmentDisplay.quick")}{' · '}{auto?.classification ? t(ACMG_CONFIG[auto.classification]?.label ?? auto.classification) : t("tasks.insufficientEvidence70568c")}{auto?.classificationBasis === 'acmg_evidence' && <> · {auto.score ?? 0} {t("tasks.pointsdecb3b")}</>}</span>
         </div>
         {auto?.pending?.length ? (
-          <p className="mt-1 text-xs text-fg-muted">{t("tasks.unconfirmed7c7684")}{auto.pending.join('；')}</p>
+          <p className="mt-1 text-xs text-fg-muted">{t("tasks.unconfirmed7c7684")}{auto.pending.map(item => t(item)).join(' · ')}</p>
         ) : (
           <p className="mt-1 text-xs text-fg-muted">{t("tasks.populationDiseaseMechanismFamilyAndLaboratoryEvidencebc757f")}</p>
         )}

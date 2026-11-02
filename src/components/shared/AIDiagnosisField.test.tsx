@@ -91,7 +91,8 @@ it('requires the one-credit confirmation for SaaS clinical extraction while loca
   await waitFor(() => expect(ai).toBeEnabled());
   fireEvent.click(ai);
   expect(screen.getByRole('dialog')).toHaveTextContent('1 积分');
-  expect(screen.getByLabelText('本次浏览器会话不再提示')).not.toBeChecked();
+  // Production HPO extraction requires confirmation on each generation.
+  expect(screen.queryByLabelText('本次浏览器会话不再提示')).not.toBeInTheDocument();
   expect(generate).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: '确认生成 · 1 积分' }));
   await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));

@@ -355,7 +355,7 @@ export function CNVSegmentTab({
         const isUserModified = adopted?.source === 'clingen' || (cachedAssessment?.isUserModified ?? false);
 
         if (!classification && !cachedAssessment) return <button type="button" onClick={event => { event.stopPropagation(); handleOpenClingen(row); }} className="text-xs text-accent-fg hover:underline">{t("tasks.awaitingAssessmentCalculator7816f6")}</button>;
-        if (!adopted && cachedAssessment?.assessmentState==='insufficient_evidence') return <HoverHint content={cachedAssessment.autoEvidenceNotes?.filter(n => !n.startsWith('phenotype.') && !n.toLowerCase().includes('pending')).join('；')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenClingen(row);}} className="text-xs text-fg-muted hover:underline" >{t("tasks.insufficientEvidenceCalculatorc6de1e")}</button></HoverHint>;
+        if (!adopted && cachedAssessment?.assessmentState==='insufficient_evidence') return <HoverHint content={cachedAssessment.autoEvidenceNotes?.map(n => t(n)).join(' · ')}><button type="button" onClick={event=>{event.stopPropagation();handleOpenClingen(row);}} className="text-xs text-fg-muted hover:underline" >{t("tasks.insufficientEvidenceCalculatorc6de1e")}</button></HoverHint>;
 
         return (
           <CNVPathogenicityTag

@@ -19,6 +19,7 @@ export interface AIAssistanceSettings {
 export interface AISettingsDraft { enabled: boolean; baseUrl: string; apiKey: string; model: string; clearKey: boolean; protocol?: 'openai_responses' | 'openai_chat' }
 export interface AIClinicalContext { diseaseId: string; inheritance: string; sampleType: string; variantOrigin: 'unknown' | 'germline_confirmed'; hpoTerms?: string[] }
 export interface AIAssistanceInput {
+  locale?: 'zh-CN' | 'zh-Hant' | 'en' | 'es-419';
   feature: AIFeature;
   mode?: 'experimental';
   draftAssessment?: Record<string, unknown>;
@@ -55,7 +56,7 @@ export interface AIAssistanceResult {
   experimentalResult?: Record<string, unknown>;
 }
 export interface AIAssistanceAdapter {
-  getSavedHPO?(diagnosis: string, signal: AbortSignal): Promise<AIAssistanceResult | null>;
+  getSavedHPO?(diagnosis: string, signal: AbortSignal, locale?: AIAssistanceInput["locale"]): Promise<AIAssistanceResult | null>;
   getClinicalContext?(taskId: string, signal: AbortSignal): Promise<Partial<AIClinicalContext>>;
   getSettings(deployment: AIDeployment, signal?: AbortSignal): Promise<AIAssistanceSettings>;
   saveSettings(draft: AISettingsDraft): Promise<AIAssistanceSettings>;

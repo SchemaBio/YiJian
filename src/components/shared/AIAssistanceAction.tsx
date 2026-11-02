@@ -64,7 +64,7 @@ export function AIAssistanceAction({ input, disabled = false, onResult, onBusyCh
     try {
       let prepared: AIAssistanceInput;
       try {
-        prepared = prepareAIRequestInput(contextRequired ? { ...input, reference, clinicalContext: context } : input);
+        prepared = prepareAIRequestInput({ ...(contextRequired ? { ...input, reference, clinicalContext: context } : input), locale: t.locale });
         const fingerprint = JSON.stringify(prepared);
         if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
       } catch {

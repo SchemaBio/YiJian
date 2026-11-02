@@ -33,12 +33,12 @@ export function AIDiagnosisField({ value, onChange, onTerms, disabled = false }:
     const controller = new AbortController();
     const revision = generationRevision.current;
     const timer = setTimeout(() => {
-      void adapter.getSavedHPO!(value, controller.signal).then(result => {
+      void adapter.getSavedHPO!(value, controller.signal, t.locale).then(result => {
         if (result && !controller.signal.aborted && generationRevision.current === revision && currentText.current === value) restoreAI(result, value);
       }).catch(() => { /* A cache read never starts a model request. */ });
     }, 200);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [value, adapter, restoreAI]);
+  }, [value, adapter, restoreAI, t.locale]);
   const [local, setLocal] = React.useState<{ text: string; matches: LocalHpoMatch[] }>({ text: '', matches: [] });
   React.useEffect(() => {
     const timer = setTimeout(() => setLocal({ text: value, matches: extractLocalHpo(value, terms) }), 250);
