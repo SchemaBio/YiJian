@@ -3289,7 +3289,7 @@
     "matched": "Fenotipo relacionado",
     "weakMatch": "Coincidencia débil",
     "referenceUnavailable": "Las referencias locales de dosis de ClinGen no están disponibles; la evaluación CNV está incompleta.",
-    "note": "Las regiones CNV se evalúan localmente con referencias de dosis de ClinGen. P / LP se priorizan por puntaje CNV descendente y luego por coincidencia HPO. HPO no suma puntos de patogenicidad; la evidencia faltante queda pendiente. Se conservan las selecciones manuales."
+    "note": "Los resultados CNV usan la línea de base integrada; las diferencias entre fuentes de datos y protocolos de laboratorio pueden afectarlos. Solo como referencia para investigación."
   },
   "stripePayments": {
     "title": "Pago de créditos con Stripe",

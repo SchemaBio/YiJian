@@ -3289,7 +3289,7 @@
     "matched": "表型相關",
     "weakMatch": "匹配較弱",
     "referenceUnavailable": "本地 ClinGen 劑量敏感性參考不可用，CNV 區段初評未完成。",
-    "note": "CNV 區段使用本地 ClinGen 劑量敏感性資料初評；P / LP 按 CNV 得分降序置頂，同分時優先 HPO 匹配度。HPO 不直接計入致病分數，缺失證據保留待核驗，人工關注與置頂選擇保留。"
+    "note": "CNV 結果基於內建基線計算；資料來源和濕實驗方案的差異可能影響結果，僅供研究參考。"
   },
   "stripePayments": {
     "title": "Stripe 點數付款",

@@ -3289,7 +3289,7 @@
     "matched": "Phenotype related",
     "weakMatch": "Weak match",
     "referenceUnavailable": "Local ClinGen dosage references are unavailable; CNV region assessment is incomplete.",
-    "note": "CNV regions are assessed locally using ClinGen dosage references. P / LP rows are pinned by descending CNV score, then HPO relevance. HPO adds no pathogenicity points; missing evidence remains pending. Manual focus and pin choices are preserved."
+    "note": "CNV results use the built-in baseline; differences in data sources and wet-lab protocols may affect them. For research reference only."
   },
   "stripePayments": {
     "title": "Stripe credit payment",
