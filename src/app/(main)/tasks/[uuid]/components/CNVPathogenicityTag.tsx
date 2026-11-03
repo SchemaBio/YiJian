@@ -1,6 +1,5 @@
 'use client';
 import { useText } from '@/i18n/useText';
-import { translateUI } from '@/i18n/text';
 
 
 import * as React from 'react';
@@ -45,7 +44,7 @@ export function CNVPathogenicityTag({
 }: CNVPathogenicityTagProps) {
   const t = useText();
   const variant = getClassificationVariant(classification);
-  const label = getClassificationLabel(classification);
+  const label = t(getClassificationLabel(classification) || classification);
   const scoreRange = getClassificationScoreRange(classification);
   const formattedScore = formatScore(score);
   const frameworkType = cnvType === 'Deletion' ? 'Loss' : 'Gain';
@@ -69,7 +68,7 @@ export function CNVPathogenicityTag({
   };
 
   return (
-    <Tooltip content={translateUI(tooltipContent, t)} placement="top" variant="nav">
+    <Tooltip content={tooltipContent} placement="top" variant="nav">
       <button
         type="button"
         onClick={handleClick}
@@ -99,8 +98,9 @@ export function CNVPathogenicityBadge({
 }: {
   classification: ClinGenClassification;
 }) {
+  const t = useText();
   const variant = getClassificationVariant(classification);
-  const label = getClassificationLabel(classification);
+  const label = t(getClassificationLabel(classification) || classification);
 
   return (
     <Tag variant={variant}>

@@ -329,11 +329,11 @@ export function CNVDetailPanel({
             <strong className="text-fg-default">{variant.chromosome}:{variant.startPosition}–{variant.endPosition}</strong>
             <p className="mt-1">
               {effectiveAdopted?.classification
-                ? (getClassificationLabel(effectiveAdopted.classification as ClinGenClassification) ?? effectiveAdopted.classification)
+                ? t(getClassificationLabel(effectiveAdopted.classification as ClinGenClassification) ?? effectiveAdopted.classification)
                 : (effectiveAssessment?.assessmentState === 'insufficient_evidence'
                     ? t("tasks.insufficientEvidence70568c")
                     : effectiveAssessment
-                      ? getClassificationLabel(effectiveAssessment.classification)
+                      ? t(getClassificationLabel(effectiveAssessment.classification))
                       : t("tasks.notAssessed88f079"))} · {effectiveAdopted?.score !== undefined ? t('assessmentDisplay.score', {p0: formatScore(effectiveAdopted.score)}) : effectiveAssessment ? t("tasks.pointsc91542", { p0: String(formatScore(effectiveAssessment.totalScore)) }) : '—'}
             </p>
           </div>
@@ -530,7 +530,7 @@ export function CNVDetailPanel({
                         <span className="text-sm font-semibold text-fg-default">{t('assessmentDisplay.aiEvidence')}</span>
                         {((aiResult.suggestedClassification || aiResult.classification) as string | undefined) && (
                           <ClinicalSignificanceBadge value={aiResult.suggestedClassification || aiResult.classification}>
-                            {getClassificationLabel((aiResult.suggestedClassification || aiResult.classification) as ClinGenClassification) ?? (aiResult.suggestedClassification || aiResult.classification)}
+                            {t(getClassificationLabel((aiResult.suggestedClassification || aiResult.classification) as ClinGenClassification) ?? (aiResult.suggestedClassification || aiResult.classification))}
                           </ClinicalSignificanceBadge>
                         )}
                       </div>

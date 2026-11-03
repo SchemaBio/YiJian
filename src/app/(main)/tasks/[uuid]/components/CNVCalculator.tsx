@@ -45,7 +45,7 @@ export function ScoreSummaryCard({
 }) {
   const t = useText();
   const variant = insufficient ? 'neutral' : getClassificationVariant(classification);
-  const label = insufficient ? t("tasks.insufficientEvidence70568c") : getClassificationLabel(classification);
+  const label = insufficient ? t("tasks.insufficientEvidence70568c") : t(getClassificationLabel(classification) || classification);
 
   return (
     <div className="bg-canvas-subtle rounded-lg p-4 mb-4">

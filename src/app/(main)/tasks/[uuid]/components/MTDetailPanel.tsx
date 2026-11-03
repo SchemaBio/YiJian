@@ -163,25 +163,23 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
 
           </>}
           {section === 'annotation' && <>
-          {/* 外部资源 */}
-          <SectionTitle icon={ExternalLink} title={t("tasks.externalResources227d9d")} />
-          <div className="border border-border-subtle rounded-lg px-3 py-1">
-            <InfoItem
-              label="MITOMAP"
-              value="查看"
-              link={mitomapAlleleURL(variant.position)}
-            />
-            <InfoItem
-              label="HmtVar"
-              value="查看"
-              link={hmtVarURL(variant.position, variant.ref, variant.alt)}
-            />
-            <InfoItem
-              label="MitoTIP"
-              value="查看"
-              link={mitoTipURL(variant.position)}
-            />
-          </div>
+          <section aria-labelledby="mt-links-heading">
+            <h4 id="mt-links-heading" className="yj-annotation-heading">{t("tasks.externalResources227d9d")}</h4>
+            <div className="yj-resource-groups">
+              <div className="yj-resource-link-grid">
+                {[
+                  { label: 'MITOMAP', href: mitomapAlleleURL(variant.position) },
+                  { label: 'HmtVar', href: hmtVarURL(variant.position, variant.ref, variant.alt) },
+                  { label: 'MitoTIP', href: mitoTipURL(variant.position) },
+                ].map(link => (
+                  <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="yj-resource-link">
+                    <span>{link.label}</span><ExternalLink className="h-3 w-3 shrink-0" />
+                  </a>
+                ))}
+              </div>
+              <p className="text-xs leading-relaxed text-fg-muted">{t("tasks.externalDatabasesAreReferenceResourcesAnnotationsAree1f593")}</p>
+            </div>
+          </section>
 
           </>}
           {section === 'assessment' && <>

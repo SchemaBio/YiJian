@@ -31,7 +31,7 @@ export function CNVAssessmentOverview({
     if (value === 'insufficient_data') return t('tasks.insufficientEvidence70568c');
     try {
       const clingenLabel = getClassificationLabel(value as ClinGenClassification);
-      if (clingenLabel) return clingenLabel;
+      if (clingenLabel) return t(clingenLabel);
     } catch {
       // fallback
     }
