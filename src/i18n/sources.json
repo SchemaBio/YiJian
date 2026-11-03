@@ -1,5 +1,7 @@
 {
   "全部染色体": "tasks.allChromosomes",
+  "模型建议、规则结果与人工判定分别保存；本结果尚未由人工采纳。": "assistance.aiResultNotAdoptedWarning",
+  "AI评估自动保存": "assistance.aiAssessmentAutosavedHistory",
   "自定义染色体筛选": "tasks.customChromosomeFilter",
   "贻鉴": "about.yijian17bdf7",
   "专业的全外显子遗传病基因组分析系统": "common.appDescription",

@@ -1,6 +1,7 @@
 'use client';
 import { prepareAIRequestInput } from '@/lib/ai-request-input';
 import { errorText } from '@/i18n/errors';
+import { aiWarningsForDisplay } from '@/i18n/ai-warnings';
 
 import { useText } from '@/i18n/useText';
 
@@ -130,6 +131,7 @@ export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, hu
   const ruleCriteria = Array.isArray(rule?.criteria) ? rule.criteria as Array<Record<string, unknown>> : [];
   const proposal = result.agentProposal && typeof result.agentProposal === 'object' ? result.agentProposal as Record<string, unknown> : undefined;
   const reconciled = Array.isArray(proposal?.reconciliation) ? proposal.reconciliation as Array<Record<string, unknown>> : [];
+  const warnings = aiWarningsForDisplay(result.warnings, t);
   return <section aria-label={t("assistance.aiSuggestions89d49e")} className="space-y-3 rounded-lg border border-accent-subtle bg-accent-subtle/20 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="flex items-center gap-1.5 text-sm font-semibold"><Sparkles className="h-4 w-4 text-accent-fg" />{t("assistance.aiSuggestions89d49e")}</h4>{result.classification && result.feature !== 'acmg' && <span className="text-sm font-medium">{t(classificationLabel(result.classification))}</span>}</div>
     {onReviewEvidence && <div className="flex flex-wrap items-center gap-2"><ActionButton variant="primary" type="button" onClick={onReviewEvidence}>{reviewLabel ?? t(result.feature === 'acmg' || result.feature === 'svcv4' ? 'variantAssessment.review' : 'assistance.cnvReviewAction')}</ActionButton><span className="text-xs text-fg-muted">{t('variantAssessment.reviewFirst')}</span></div>}
@@ -148,7 +150,7 @@ export function AIResultCard({ result, onUseInterpretation, onReviewEvidence, hu
     })}</dl>}
     {result.feature === 'acmg' && <p className="text-xs text-fg-muted">{t('assistance.acmgHumanReviewNotice')}</p>}
     {Array.isArray(proposal?.sources) && <div className="flex flex-wrap gap-2 text-xs">{(proposal.sources as Array<Record<string,unknown>>).map((source,index)=>typeof source.url==='string'&&/^https:\/\//.test(source.url)?<a key={index} href={source.url} target="_blank" rel="noopener noreferrer" className="text-accent-fg underline">{String(source.title||source.id)}</a>:null)}</div>}
-    {!!result.warnings?.length && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{result.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
+    {warnings.length > 0 && <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-fg-muted">{warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2"><span className="text-xs text-fg-muted">{statusLabel ?? t(humanReviewSaved ? "assistance.acmgHumanReviewSaved" : "assistance.awaitingManualReview32c3fb")}{result.model ? ` · ${result.model}` : ''}</span><div className="flex flex-wrap gap-2">{onUseInterpretation && result.resultKind !== 'experimental' && !result.experimentalResult && <ActionButton variant="ghost" type="button" className="yj-tool-button" onClick={onUseInterpretation}>{t("assistance.insertIntoInterpretationb2b77e")}</ActionButton>}</div></div>
   </section>;
 }

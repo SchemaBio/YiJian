@@ -24,6 +24,13 @@ describe('AI credit ledger presentation', () => {
   expect(billingTransactionLabel(refunded)).toBe('预扣已退回');
   expect(billingDisplayType(reservation)).toBe('pre_deduction');
  });
+ it.each(locales)('labels AI refunds without claiming the generation failed in %s', locale => {
+  const t = createTextTranslator(locale);
+  const refunded = {...reservation, type: 'failure_refund' as const, amount: 1, description: 'AI acmg · refund', billing_state: 'refunded' as const};
+  expect(billingDisplayType(refunded)).toBe('ai_refund');
+  expect(billingTransactionLabel(refunded, t)).toBe(t('settings.aiCreditReturned'));
+  expect(billingTransactionDescription(refunded, t)).toBe(t('settings.aiRefundDescription', {p0: 'ACMG'}));
+ });
  it('labels the zero-value settlement as confirmation without a second charge', () => {
   const row = {...reservation, type: 'settlement', amount: 0, description: 'AI hpo · settle', billing_state: 'settled' as const};
   expect(billingTransactionLabel(row)).toBe('结算确认');

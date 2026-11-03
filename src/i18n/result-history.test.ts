@@ -11,6 +11,7 @@ it.each(locales)('localizes missing frequencies and fixed historical reasons in 
   expect(resultHistoryReason('手动置顶', t)).toBe(t('display.pinManually095c04'));
   expect(resultHistoryReason('取消置顶', t)).toBe(t('tasks.unpincfb5cd'));
   expect(resultHistoryReason('更新复核状态', t)).toBe(t('display.updateReviewStatus0720c7'));
+  expect(resultHistoryReason('AI评估自动保存', t)).toBe(t('assistance.aiAssessmentAutosavedHistory'));
   expect(resultHistoryReason(undefined, t)).toBe(t('tasks.noReasonProvidedcb9c56'));
   expect(resultHistoryReason('手动置顶，因为该位点与患者表型相关', t)).toBe('手动置顶，因为该位点与患者表型相关');
 });

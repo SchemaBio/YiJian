@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { screeningNoteText } from '@/lib/assessment-display';
 import { useText } from '@/i18n/useText';
+import { aiWarningsForDisplay } from '@/i18n/ai-warnings';
 import type { AIAssistanceResult } from '@/lib/ai-assistance';
 import type { SNVIndel } from '../types';
 import { ClinicalSignificanceBadge } from './ClinicalSignificanceBadge';
@@ -380,7 +381,7 @@ export function VariantAssessmentOverview({
                     <strong>{e.code}</strong> · <span>{e.reason}</span>
                   </li>
                 ))}
-                {effectiveAI.warnings?.map((warning, i) => (
+                {aiWarningsForDisplay(effectiveAI.warnings, t).map((warning, i) => (
                   <li key={i}>{warning}</li>
                 ))}
               </ul>

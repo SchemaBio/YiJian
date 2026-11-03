@@ -2,6 +2,7 @@ import { chineseText, type TextTranslator } from '@/i18n/text';
 import type { BillingTransaction } from './billing';
 
 export function billingDisplayType(row: BillingTransaction): string {
+  if (row.billing_basis === 'ai_assistance' && row.type === 'failure_refund') return 'ai_refund';
   if (row.billing_basis === 'ai_assistance' && row.type === 'pre_deduction') {
     if (row.billing_state === 'settled') return 'deduction';
     if (row.billing_state === 'refunded') return 'reservation_refunded';
@@ -15,6 +16,7 @@ export function billingTransactionLabel(row: BillingTransaction, t: TextTranslat
     recharge: 'billing.addCreditsfa03c4', pre_deduction: 'settings.reservedCharge813760',
     deduction: 'settings.chargeb04d6f', refund: 'settings.refundb82ef8',
     failure_refund: 'settings.failureRefund390d28', adjust: 'settings.adjustment0a4d26',
+    ai_refund: 'settings.aiCreditReturned',
     download: 'settings.downloadChargef8580c', settlement: 'settings.settlementConfirmation',
     reservation_refunded: 'settings.reservationRefunded',
     payment_refund: 'stripePayments.refundLedger', payment_dispute: 'stripePayments.disputeLedger', payment_restore: 'stripePayments.restoreLedger',
@@ -29,7 +31,7 @@ export function billingTransactionDescription(row: BillingTransaction, t: TextTr
   const type = billingDisplayType(row);
   const keys: Record<string, string> = {
     deduction: 'settings.aiChargeDescription', pre_deduction: 'settings.aiReservationDescription',
-    settlement: 'settings.aiSettlementDescription', failure_refund: 'settings.aiRefundDescription',
+    settlement: 'settings.aiSettlementDescription', ai_refund: 'settings.aiRefundDescription',
     reservation_refunded: 'settings.aiRefundedReservationDescription',
   };
   return keys[type] ? t(keys[type], {p0: feature}) : row.description || '-';
