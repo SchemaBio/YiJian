@@ -53,7 +53,7 @@ export interface PaymentOrder {
   state: string; simulated: boolean; refunded_amount: number; recovered_credits: number;
   refund_status?: string; dispute_status?: string; created_at: string;
 }
-export function getPaymentOrders(page = 1) { return api.get<{ items: PaymentOrder[]; total: number }>('/v1/billing/orders?page=' + page, { coreApi: false }); }
+export function getPaymentOrders(page = 1) { return api.get<{ items: PaymentOrder[]; total: number }>('/v1/billing/orders', { coreApi: false, params: { page: String(page) } }); }
 export function getPaymentOrder(id: string) { return api.get<PaymentOrder>('/v1/billing/orders/' + encodeURIComponent(id), { coreApi: false }); }
 
 // Stripe's charge minor units (ISK/UGX are represented using two decimals).
