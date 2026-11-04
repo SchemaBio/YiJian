@@ -3292,6 +3292,7 @@
     "note": "Los resultados CNV usan la línea de base integrada; las diferencias entre fuentes de datos y protocolos de laboratorio pueden afectarlos. Solo como referencia para investigación."
   },
   "stripePayments": {
+    "rechargeDisabled": "Las recargas están deshabilitadas. Contacta al administrador de la plataforma. Puedes consultar tu saldo e historial de órdenes.",
     "title": "Pago de créditos con Stripe",
     "loadFailed": "La información de pago no está disponible. Actualiza más tarde o usa la solicitud manual.",
     "checkoutFailed": "La solicitud no se completó. Reintenta la solicitud original sin crear otra orden.",

@@ -3292,6 +3292,7 @@
     "note": "CNV results use the built-in baseline; differences in data sources and wet-lab protocols may affect them. For research reference only."
   },
   "stripePayments": {
+    "rechargeDisabled": "Recharging is currently disabled. Contact the platform administrator. Your balance and order history remain available.",
     "title": "Stripe credit payment",
     "loadFailed": "Payment information is unavailable. Refresh later or use the manual request.",
     "checkoutFailed": "Payment request not completed. Retry the original request without creating a duplicate order.",

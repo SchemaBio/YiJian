@@ -4,6 +4,8 @@ export const MIN_CREDIT_QUANTITY = 1;
 export const MAX_CREDIT_QUANTITY = 5000;
 
 export interface PaymentOptions {
+  recharge_allowed?: boolean;
+  recharge_global_disabled?: boolean;
   provider: 'stripe';
   product: 'credit';
   credits_per_unit: 1;

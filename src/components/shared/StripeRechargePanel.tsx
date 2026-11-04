@@ -66,6 +66,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
       if (scope.current !== owner) return;
       const code = err instanceof ApiError ? (err.data as {code?: string})?.code : '';
       if (code === 'purchase_policy_outdated') { setAccepted(false); setPolicy(null); setError(c.changed); void getServicePolicy().then(setPolicy).catch(() => undefined); }
+      else if (code === 'recharge_disabled') { setOptions(o => o ? { ...o, recharge_allowed: false, status: 'disabled' } : o); setError(t('stripePayments.rechargeDisabled')); }
       else setError(code && ['payment_readiness_required', 'payment_rate_limited', 'organization_payment_paused', 'too_many_pending_orders', 'payment_amount_limit', 'payment_daily_limit'].includes(code) ? c.limited : t('stripePayments.checkoutFailed'));
     }
     finally { lock.current = false; setBusy(false); }
@@ -80,13 +81,16 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
     if (['creating', 'creation_pending', 'pending', 'processing'].includes(state)) return 'border-warning-muted bg-warning-subtle text-warning-fg';
     return 'border-border-default bg-canvas-subtle text-fg-muted';
   }
-  const available = options?.status === 'available' && !!options.price;
+  const rechargeAllowed = options?.recharge_allowed === true;
+  const available = rechargeAllowed && options?.status === 'available' && !!options.price;
   const loading = !options && !error;
   const pages = Math.max(1, Math.ceil(total / 20));
   return <div className="space-y-6">
+    {!rechargeAllowed && error && <p role="alert">{error}</p>}
+    {options?.recharge_allowed === false && <p role="status" className="yj-panel p-5">{t('stripePayments.rechargeDisabled')}</p>}
     <div className={selection ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,1fr)]' : ''}>
-      {selection && <div className="min-w-0 space-y-5">{selection}{manualRequest}</div>}
-      <aside className="yj-panel min-w-0 overflow-hidden lg:sticky lg:top-5" aria-label={t('stripePayments.title')}>
+      {rechargeAllowed && selection && <div className="min-w-0 space-y-5">{selection}{manualRequest}</div>}
+      {rechargeAllowed && <aside className="yj-panel min-w-0 overflow-hidden lg:sticky lg:top-5" aria-label={t('stripePayments.title')}>
         <div className="border-b border-border-default px-5 py-5 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -121,9 +125,9 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
             <p className="flex items-center justify-center gap-1.5 text-xs text-fg-muted"><ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('stripePayments.checkoutHint')}</p>
             <Button type="button" variant="ghost" size="small" className="w-full justify-center text-fg-muted" disabled={busy} onClick={() => { sessionStorage.removeItem('stripe-checkout:' + orgId); setSelected(null); }}>{t('stripePayments.newOrder')}</Button>
           </div> : !error ? <div className="flex items-start gap-2.5 rounded-lg border border-border-default bg-canvas-subtle p-3"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" /><p className="text-xs leading-5 text-fg-muted">{t('stripePayments.disabled')}</p></div> : null}
-          {!selection && manualRequest}
+          {rechargeAllowed && !selection && manualRequest}
         </div>
-      </aside>
+      </aside>}
     </div>
     {selected && <div role="status" className={`flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border px-5 py-4 ${statusStyle(selected.state)}`}>
       <div className="flex min-w-0 items-start gap-3">{['paid', 'simulated'].includes(selected.state) ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /> : <ReceiptText className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />}<div className="min-w-0"><p className="break-all text-sm font-medium">{selected.id}: {status(selected.state)}</p>{selected.simulated && <p className="mt-1 text-xs leading-5">{t('stripePayments.testNotice')}</p>}</div></div>

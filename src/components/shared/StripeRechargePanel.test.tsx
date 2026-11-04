@@ -9,14 +9,23 @@ vi.mock('@/lib/service-policy', async original => ({ ...await original<typeof im
 vi.mock('@/lib/payments', async original => ({ ...await original<typeof import('@/lib/payments')>(), createCheckoutSession: vi.fn(), getPaymentOptions: vi.fn(), getPaymentOrders: vi.fn(), getPaymentOrder: vi.fn() }));
 beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear(); window.history.replaceState({}, '', '/billing/recharge'); vi.mocked(getPaymentOrders).mockResolvedValue({ items: [], total: 0 }); vi.mocked(getServicePolicy).mockResolvedValue({version:SERVICE_POLICY_VERSION,configured:true,operator:'Operator',contact:'support@fixture.invalid',address:'Address',service_url:'/service',terms_url:'/terms',refund_url:'/refund'}); });
 afterEach(cleanup);
+it('hides both recharge actions while preserving history when recharge is blocked', async () => {
+ vi.mocked(getPaymentOptions).mockResolvedValue({ recharge_allowed: false, provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
+ render(<StripeRechargePanel quantity={10} orgId="org" selection={<button>choose-credit</button>} manualRequest={<button>manual-request</button>} />);
+ await screen.findByText('当前充值已暂停，请联系平台管理员。你仍可查看余额和历史订单。');
+ expect(screen.queryByText('choose-credit')).toBeNull();
+ expect(screen.queryByText('manual-request')).toBeNull();
+ expect(screen.getByText('充值记录')).toBeInTheDocument();
+ expect(createCheckoutSession).not.toHaveBeenCalled();
+});
 it('keeps manual fallback and creates no Checkout when collection is disabled', async () => {
- vi.mocked(getPaymentOptions).mockResolvedValue({ provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
+ vi.mocked(getPaymentOptions).mockResolvedValue({ recharge_allowed: true, provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
  render(<StripeRechargePanel quantity={10} orgId="org" />);
  await screen.findByText('在线收款暂未启用，可使用下方人工申请。');
  expect(createCheckoutSession).not.toHaveBeenCalled();
 });
 it('preserves an idempotency key after a timeout and marks test payments as simulated', async () => {
- vi.mocked(getPaymentOptions).mockResolvedValue({ provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'available', mode: 'test', simulated: true, price: { currency: 'usd', unit_amount: 100 } });
+ vi.mocked(getPaymentOptions).mockResolvedValue({ recharge_allowed: true, provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'available', mode: 'test', simulated: true, price: { currency: 'usd', unit_amount: 100 } });
  vi.mocked(createCheckoutSession).mockRejectedValue(new Error('timeout'));
  render(<StripeRechargePanel quantity={10} orgId="org" />);
  const pay = await screen.findByRole('button', { name: '测试支付' });
@@ -32,13 +41,13 @@ it('preserves an idempotency key after a timeout and marks test payments as simu
 });
 it('a return URL only reads the authenticated order and never creates a payment', async () => {
  const id='00000000-0000-0000-0000-000000000001'; window.history.replaceState({}, '', '/billing/recharge?order='+id);
- vi.mocked(getPaymentOptions).mockResolvedValue({ provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
+ vi.mocked(getPaymentOptions).mockResolvedValue({ recharge_allowed: true, provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
  vi.mocked(getPaymentOrder).mockResolvedValue({ id, mode: 'live', quantity: 10, currency: 'usd', amount: 1000, state: 'paid', simulated: false, refunded_amount: 0, recovered_credits: 0, created_at: '' });
  render(<StripeRechargePanel quantity={10} orgId="org" />);
  await screen.findByText(id+': 积分已到账'); expect(createCheckoutSession).not.toHaveBeenCalled();
 });
 it('clears purchase acceptance when switching organizations', async () => {
- vi.mocked(getPaymentOptions).mockResolvedValue({provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'live',price:{currency:'usd',unit_amount:100}});
+ vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'live',price:{currency:'usd',unit_amount:100}});
  const view=render(<StripeRechargePanel quantity={10} orgId="first-org" />);
  await waitFor(()=>expect(screen.getByRole('checkbox')).not.toBeDisabled());
  fireEvent.click(screen.getByRole('checkbox'));
@@ -48,7 +57,7 @@ it('clears purchase acceptance when switching organizations', async () => {
  expect(createCheckoutSession).not.toHaveBeenCalled();
 });
 it('requires fresh confirmation after a server policy-version rejection', async () => {
- vi.mocked(getPaymentOptions).mockResolvedValue({provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'usd',unit_amount:100}});
+ vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'usd',unit_amount:100}});
  vi.mocked(createCheckoutSession).mockRejectedValue(new ApiError(400,'Bad Request',{code:'purchase_policy_outdated'}));
  render(<StripeRechargePanel quantity={10} orgId="org" />);
  await waitFor(()=>expect(screen.getByRole('checkbox')).not.toBeDisabled());
@@ -61,9 +70,9 @@ it('requires fresh confirmation after a server policy-version rejection', async 
 });
 
 it('links consent to the privacy policy and unified agreement without separate service or refund links', async()=>{
- vi.mocked(getPaymentOptions).mockResolvedValue({provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'usd',unit_amount:100}});
+ vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'usd',unit_amount:100}});
  render(<StripeRechargePanel quantity={500} orgId="org"/>);
- const privacy=screen.getByRole('link',{name:'《隐私政策》'});
+ const privacy=await screen.findByRole('link',{name:'《隐私政策》'});
  const agreement=screen.getByRole('link',{name:'《使用协议》'});
  expect(privacy).toHaveAttribute('href','/privacy?lang=zh-CN');
  expect(agreement).toHaveAttribute('href',`/agreement?lang=zh-CN&version=${USER_AGREEMENT_VERSION}&purchase_version=${SERVICE_POLICY_VERSION}`);
