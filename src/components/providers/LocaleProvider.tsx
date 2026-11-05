@@ -19,6 +19,9 @@ export function persistLocale(locale: Locale): void {
 
 export function LocaleProvider({ initialLocale, children }: { initialLocale: Locale; children: React.ReactNode }) {
   const [locale, setLocale] = useState(initialLocale);
+  // A stable SSR fallback prevents hydration differences. Detect the device's
+  // time zone after mounting, independently from the chosen UI language.
+  const [timeZone, setTimeZone] = useState('UTC');
   const router = useRouter();
   const kitText = useMemo(() => {
     const t = createTextTranslator(locale);
@@ -26,6 +29,14 @@ export function LocaleProvider({ initialLocale, children }: { initialLocale: Loc
   }, [locale]);
   useEffect(() => { setLocale(initialLocale); }, [initialLocale]);
   useEffect(() => { document.documentElement.lang = locale; }, [locale]);
+  useEffect(() => {
+    const refreshTimeZone = () => {
+      setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+    };
+    refreshTimeZone();
+    window.addEventListener('focus', refreshTimeZone);
+    return () => window.removeEventListener('focus', refreshTimeZone);
+  }, []);
   function saveLocale(next: Locale) {
     persistLocale(next);
     setLocale(next);
@@ -33,7 +44,7 @@ export function LocaleProvider({ initialLocale, children }: { initialLocale: Loc
     router.refresh();
   }
   return <LocaleContext.Provider value={{ locale, saveLocale }}>
-    <NextIntlClientProvider locale={locale} messages={getMessages(locale)} timeZone="Asia/Shanghai">
+    <NextIntlClientProvider locale={locale} messages={getMessages(locale)} timeZone={timeZone}>
       <UiKitLocaleProvider translate={kitText}>{children}</UiKitLocaleProvider>
     </NextIntlClientProvider>
   </LocaleContext.Provider>;
