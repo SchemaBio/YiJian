@@ -158,7 +158,10 @@ it('does not bypass SaaS agreement when the legacy privacy flag is disabled', ()
 
 it('preserves the self-hosted privacy acknowledgment without hosted terms', () => {
   state.backend = 'octopus';
+  window.history.replaceState({}, '', '/login?mode=register');
   render(<LoginPage />);
+  expect(screen.getByRole('heading', { name: '登录' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '注册' })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: '《隐私政策》' })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: '《使用协议》' })).not.toBeInTheDocument();
 });

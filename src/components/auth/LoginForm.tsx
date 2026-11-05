@@ -223,28 +223,30 @@ export function LoginForm({
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
-        {t("auth.noAccounte15c6e")}{' '}
-        <Link
-          href={registerHref}
-          onClick={(e) => {
-            if (loading || isSwitchDisabled) {
-              e.preventDefault();
-              return;
-            }
-            if (onSwitchToRegister) {
-              e.preventDefault();
-              onSwitchToRegister();
-            }
-          }}
-          className={`font-medium text-success-fg hover:underline ${
-            loading || isSwitchDisabled ? 'pointer-events-none opacity-50' : ''
-          }`}
-          aria-disabled={loading || isSwitchDisabled || undefined}
-        >
-          {t("auth.registerda0e5f")}
-        </Link>
-      </p>
+      {isSaaS && (
+        <p className="mt-6 text-center text-sm text-[var(--yj-text-muted)]">
+          {t("auth.noAccounte15c6e")}{' '}
+          <Link
+            href={registerHref}
+            onClick={(e) => {
+              if (loading || isSwitchDisabled) {
+                e.preventDefault();
+                return;
+              }
+              if (onSwitchToRegister) {
+                e.preventDefault();
+                onSwitchToRegister();
+              }
+            }}
+            className={`font-medium text-success-fg hover:underline ${
+              loading || isSwitchDisabled ? 'pointer-events-none opacity-50' : ''
+            }`}
+            aria-disabled={loading || isSwitchDisabled || undefined}
+          >
+            {t("auth.registerda0e5f")}
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

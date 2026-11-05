@@ -6,6 +6,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { RegistrationVerification } from '@/components/auth/RegistrationVerification';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 export interface AuthPageProps {
@@ -22,6 +23,7 @@ function useOptionalAuth() {
 
 export function AuthPage({ initialMode }: AuthPageProps) {
   const router = useRouter();
+  const canRegister = getRuntimeBackendFlavor() === 'squid';
   const auth = useOptionalAuth();
   const authLoading = auth?.isLoading ?? false;
   const isAuthenticated = auth?.isAuthenticated ?? false;
@@ -140,7 +142,7 @@ export function AuthPage({ initialMode }: AuthPageProps) {
 
   return (
     <AuthLayout>
-      {submitted ? (
+      {canRegister && submitted ? (
         <RegistrationVerification
           initialEmail={submittedEmail || email}
           submitted={true}
@@ -150,7 +152,7 @@ export function AuthPage({ initialMode }: AuthPageProps) {
           titleRef={submittedTitleRef}
           loginHref={loginHref}
         />
-      ) : mode === 'register' ? (
+      ) : canRegister && mode === 'register' ? (
         <RegisterForm
           key="register"
           email={email}

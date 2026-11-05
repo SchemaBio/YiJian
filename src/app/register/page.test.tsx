@@ -71,10 +71,13 @@ it('keeps unavailable SaaS registration blocked', () => {
   expect(screen.getByRole('button', { name: '注册' })).toBeDisabled(); expect(state.post).not.toHaveBeenCalled();
 });
 
-it('supports optional names and password confirmation in self-hosted mode without a challenge', async () => {
-  state.backend = 'octopus'; state.post.mockResolvedValue({ access_token: 'test' }); render(<RegisterPage />); fill(); submit();
-  await waitFor(() => expect(state.push).toHaveBeenCalledWith('/dashboard'));
-  expect(state.post).toHaveBeenCalledWith('/v1/auth/register', { email: 'user@example.org', password: 'hashed-password' }, { coreApi: false });
+it('redirects self-hosted registration to login without showing a registration form', () => {
+  state.backend = 'octopus';
+  window.history.replaceState({}, '', '/register?mode=register&next=%2Fdashboard');
+  render(<RegisterPage />);
+  expect(state.push).toHaveBeenCalledWith('/login?next=%2Fdashboard');
+  expect(screen.queryByRole('heading', { name: '创建账号' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '注册' })).not.toBeInTheDocument();
 });
 
 it('blocks mixed-version SaaS signup until the server advertises manual review',()=>{
