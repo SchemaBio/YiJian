@@ -4,6 +4,7 @@ export const MIN_CREDIT_QUANTITY = 1;
 export const MAX_CREDIT_QUANTITY = 5000;
 
 export interface PaymentOptions {
+  test_credits_enabled?: boolean;
   recharge_allowed?: boolean;
   recharge_global_disabled?: boolean;
   provider: 'stripe';
@@ -49,6 +50,7 @@ export function createCheckoutSession(input: CreditCheckoutRequest, idempotencyK
 }
 
 export interface PaymentOrder {
+  test_credits_applied?: boolean;
   id: string; mode: 'test' | 'live'; quantity: number; currency: string; amount: number;
   state: string; simulated: boolean; refunded_amount: number; recovered_credits: number;
   refund_status?: string; dispute_status?: string; created_at: string;

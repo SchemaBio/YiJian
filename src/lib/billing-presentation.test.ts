@@ -48,3 +48,11 @@ describe('AI credit ledger presentation', () => {
   expect(billingTransactionDescription({...reservation, billing_state:'settled'}, t)).not.toContain('reserve');
  });
 });
+
+it.each(locales)('labels development Stripe entries explicitly in %s', locale => {
+ const t = createTextTranslator(locale);
+ const row = {...reservation, type: 'recharge' as const, amount: 10, billing_basis: 'stripe_test_payment'};
+ expect(billingTransactionLabel(row, t)).toBe(t('stripePayments.testRechargeLedger'));
+ expect(billingTransactionLabel({...row, type: 'payment_refund', amount: -10}, t)).toBe(t('stripePayments.testRefundLedger'));
+ expect(billingTransactionDescription(row, t)).toBe(t('stripePayments.testLedgerDescription'));
+});

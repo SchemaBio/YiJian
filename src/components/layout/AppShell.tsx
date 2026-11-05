@@ -168,7 +168,7 @@ function AppShellContent({ children }: AppShellProps) {
 
   if (isMobile) {
     return (
-      <div className={`${fixedTaskWorkspace ? 'h-dvh' : 'min-h-screen'} flex flex-col yj-modern yj-workspace`}>
+      <div className={`h-dvh overflow-hidden flex flex-col yj-modern yj-workspace`}>
         {/* Mobile Header */}
         <header className="h-14 shrink-0 flex items-center justify-between px-3 sm:px-4 border-b border-[var(--yj-border-subtle)] bg-[var(--yj-panel-bg)]">
           <div className="flex shrink-0 items-center gap-2">
@@ -194,13 +194,13 @@ function AppShellContent({ children }: AppShellProps) {
             onClose={() => setMobileMenuOpen(false)}
           />
         )}
-        <main className={`min-h-0 flex-1 ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>{children}</main>
+        <main className={`flex min-h-0 flex-1 flex-col ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>{children}</main>
       </div>
     );
   }
 
   return (
-    <div className="yj-modern h-screen flex yj-workspace text-fg-default">
+    <div className="yj-modern h-dvh overflow-hidden flex yj-workspace text-fg-default">
       {/* Sidebar */}
       <SidebarNav
         collapsed={collapsed}
@@ -246,7 +246,7 @@ function AppShellContent({ children }: AppShellProps) {
 
         <AnnouncementBanners />
         {/* Main Content */}
-        <main className={`min-h-0 flex-1 bg-[var(--yj-workspace-bg)] ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>
+        <main className={`flex min-h-0 flex-1 flex-col bg-[var(--yj-workspace-bg)] ${fixedTaskWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}>
           
           {children}
         </main>

@@ -3292,6 +3292,12 @@
     "note": "CNV results use the built-in baseline; differences in data sources and wet-lab protocols may affect them. For research reference only."
   },
   "stripePayments": {
+    "developmentTestNotice": "Development test payment: successful payments add test credits. No real money is charged.",
+    "testCredited": "Test credits added",
+    "testRechargeLedger": "Test recharge",
+    "testRefundLedger": "Test credit reversal",
+    "testLedgerDescription": "Stripe sandbox payment for development test credits only.",
+    "popupBlocked": "Allow this site to open a new tab, then retry payment.",
     "rechargeDisabled": "Recharging is currently disabled. Contact the platform administrator. Your balance and order history remain available.",
     "title": "Stripe credit payment",
     "loadFailed": "Payment information is unavailable. Refresh later or use the manual request.",

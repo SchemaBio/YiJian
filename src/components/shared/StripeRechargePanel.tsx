@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowUpRight, CheckCircle2, Clock3, CreditCard, FileText, ReceiptText, ShieldCheck } from 'lucide-react';
 import { ApiError } from '@/lib/api';
+import { notifyBillingUpdated } from '@/lib/billing';
 import { getServicePolicy, SERVICE_POLICY_VERSION, type ServicePolicy } from '@/lib/service-policy';
 import policyCopy from '@/i18n/service-policy-v1.json';
 import Link from 'next/link';
@@ -43,8 +44,13 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
     }, 5000);
     return () => { active = false; window.clearInterval(timer); };
   }, [selected?.id, selected?.state]);
+  useEffect(() => { if (selected?.test_credits_applied) notifyBillingUpdated(); }, [selected?.id, selected?.state, selected?.test_credits_applied]);
   async function buy() {
     if (lock.current || quantity === null || options?.status !== 'available' || !accepted || !policy || policy.version !== SERVICE_POLICY_VERSION) return;
+    const checkoutTab = window.open('about:blank', '_blank');
+    if (!checkoutTab) { setError(t('stripePayments.popupBlocked')); return; }
+    checkoutTab.opener = null;
+    let opened = false;
     const owner = orgId;
     lock.current = true; setBusy(true); setError('');
     try {
@@ -60,7 +66,8 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
       if (result.checkout_url) {
         const url = new URL(result.checkout_url);
         if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') throw new Error('invalid checkout');
-        window.location.assign(url.href);
+        checkoutTab.location.replace(url.href); opened = true;
+        setSelected(await getPaymentOrder(result.order_id));
       } else { setSelected(await getPaymentOrder(result.order_id)); }
     } catch (err) {
       if (scope.current !== owner) return;
@@ -69,7 +76,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
       else if (code === 'recharge_disabled') { setOptions(o => o ? { ...o, recharge_allowed: false, status: 'disabled' } : o); setError(t('stripePayments.rechargeDisabled')); }
       else setError(code && ['payment_readiness_required', 'payment_rate_limited', 'organization_payment_paused', 'too_many_pending_orders', 'payment_amount_limit', 'payment_daily_limit'].includes(code) ? c.limited : t('stripePayments.checkoutFailed'));
     }
-    finally { lock.current = false; setBusy(false); }
+    finally { if (!opened) checkoutTab.close(); lock.current = false; setBusy(false); }
   }
   function status(state: string) {
     const known = ['creating', 'creation_pending', 'pending', 'processing', 'paid', 'simulated', 'expired', 'failed', 'manual_review', 'partially_refunded', 'refunded', 'disputed'];
@@ -102,7 +109,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
         </div>
         <div className="space-y-5 p-5 sm:p-6">
           {error && <p role="alert" className="rounded-lg border border-danger-muted bg-danger-subtle p-3 text-sm leading-5 text-danger-fg">{error}</p>}
-          {options?.simulated && available && <p role="status" className="rounded-lg border border-warning-muted bg-warning-subtle p-3 text-xs leading-5 text-warning-fg">{t('stripePayments.testNotice')}</p>}
+          {options?.simulated && available && <p role="status" className="rounded-lg border border-warning-muted bg-warning-subtle p-3 text-xs leading-5 text-warning-fg">{t(options?.test_credits_enabled ? 'stripePayments.developmentTestNotice' : 'stripePayments.testNotice')}</p>}
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-3"><dt className="text-fg-muted">{t('stripePayments.credits')}</dt><dd className="font-medium tabular-nums text-fg-default">{quantity?.toLocaleString() ?? '—'}</dd></div>
             <div className="flex items-center justify-between gap-3"><dt className="text-fg-muted">{t('stripePayments.unitPrice')}</dt><dd className="font-medium tabular-nums text-fg-default">{available && options?.price ? formatPaymentMoney(options.price.unit_amount, options.price.currency) : '—'}</dd></div>
@@ -130,7 +137,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
       </aside>}
     </div>
     {selected && <div role="status" className={`flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border px-5 py-4 ${statusStyle(selected.state)}`}>
-      <div className="flex min-w-0 items-start gap-3">{['paid', 'simulated'].includes(selected.state) ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /> : <ReceiptText className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />}<div className="min-w-0"><p className="break-all text-sm font-medium">{selected.id}: {status(selected.state)}</p>{selected.simulated && <p className="mt-1 text-xs leading-5">{t('stripePayments.testNotice')}</p>}</div></div>
+      <div className="flex min-w-0 items-start gap-3">{['paid', 'simulated'].includes(selected.state) ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /> : <ReceiptText className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />}<div className="min-w-0"><p className="break-all text-sm font-medium">{selected.id}: {selected.test_credits_applied && selected.state === 'simulated' ? t('stripePayments.testCredited') : status(selected.state)}</p>{selected.simulated && <p className="mt-1 text-xs leading-5">{t(selected.test_credits_applied ? 'stripePayments.developmentTestNotice' : 'stripePayments.testNotice')}</p>}</div></div>
     </div>}
     <section className="yj-panel min-w-0 overflow-hidden" aria-labelledby="recharge-history-title">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default px-5 py-4 sm:px-6">
@@ -139,7 +146,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
       </div>
       {!options && !error ? <div className="space-y-4 p-6" aria-label={t('stripePayments.loading')} aria-busy="true">{[0, 1, 2].map(i => <div key={i} className="h-5 animate-pulse rounded bg-canvas-subtle" />)}</div> : orders.length === 0 ? <div className="flex flex-col items-center px-6 py-8 text-center"><span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-canvas-subtle text-fg-muted"><FileText className="h-5 w-5" aria-hidden="true" /></span><p className="text-sm font-medium text-fg-default">{t('stripePayments.emptyTitle')}</p><p className="mt-1.5 max-w-sm text-xs leading-5 text-fg-muted">{t('stripePayments.emptyHint')}</p></div> : <>
         <div className="divide-y divide-border-default sm:hidden">{orders.map(o => <div key={o.id} className={`px-5 py-4 ${selected?.id === o.id ? 'bg-accent-subtle' : ''}`}>
-          <div className="flex items-center justify-between gap-3"><button type="button" onClick={() => setSelected(o)} aria-label={o.id} className="rounded font-mono text-xs font-medium text-accent-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis">{o.id.slice(0, 8)}…{o.id.slice(-4)}</button><span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusStyle(o.state)}`}>{status(o.state)}</span></div>
+          <div className="flex items-center justify-between gap-3"><button type="button" onClick={() => setSelected(o)} aria-label={o.id} className="rounded font-mono text-xs font-medium text-accent-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis">{o.id.slice(0, 8)}…{o.id.slice(-4)}</button><span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusStyle(o.state)}`}>{o.test_credits_applied && o.state === 'simulated' ? t('stripePayments.testCredited') : status(o.state)}</span></div>
           <div className="mt-3 flex items-end justify-between gap-3"><div><p className="text-sm text-fg-default">{o.quantity.toLocaleString()} <span className="text-xs text-fg-muted">{t('billing.creditse6d317')}</span>{o.simulated && <span className="ml-2 text-xs text-warning-fg">{t('stripePayments.testPay')}</span>}</p><p className="mt-1 text-xs tabular-nums text-fg-muted">{o.created_at && !Number.isNaN(Date.parse(o.created_at)) ? new Date(o.created_at).toLocaleString() : '—'}</p></div><p className="text-base font-semibold tabular-nums text-fg-default">{formatPaymentMoney(o.amount, o.currency)}</p></div>
         </div>)}</div>
         <div className="hidden overflow-x-auto sm:block">
@@ -148,7 +155,7 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
           <tbody className="divide-y divide-border-default">{orders.map(o => <tr key={o.id} className={selected?.id === o.id ? 'bg-accent-subtle' : 'transition-colors hover:bg-canvas-subtle'}>
             <td className="px-5 py-4 sm:px-6"><button type="button" onClick={() => setSelected(o)} title={o.id} aria-label={o.id} className="rounded text-left font-mono text-xs font-medium text-accent-fg underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-emphasis">{o.id.slice(0, 8)}…{o.id.slice(-4)}</button>{o.simulated && <span className="ml-2 rounded bg-warning-subtle px-1.5 py-0.5 text-[11px] text-warning-fg">{t('stripePayments.testPay')}</span>}</td>
             <td className="whitespace-nowrap px-4 py-4 text-xs tabular-nums text-fg-muted">{o.created_at && !Number.isNaN(Date.parse(o.created_at)) ? new Date(o.created_at).toLocaleString() : '—'}</td>
-            <td className="px-4 py-4 text-right font-medium tabular-nums text-fg-default">{o.quantity.toLocaleString()}</td><td className="whitespace-nowrap px-4 py-4 text-right tabular-nums text-fg-default">{formatPaymentMoney(o.amount, o.currency)}</td><td className="px-5 py-4 sm:px-6"><span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyle(o.state)}`}>{status(o.state)}</span></td>
+            <td className="px-4 py-4 text-right font-medium tabular-nums text-fg-default">{o.quantity.toLocaleString()}</td><td className="whitespace-nowrap px-4 py-4 text-right tabular-nums text-fg-default">{formatPaymentMoney(o.amount, o.currency)}</td><td className="px-5 py-4 sm:px-6"><span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyle(o.state)}`}>{o.test_credits_applied && o.state === 'simulated' ? t('stripePayments.testCredited') : status(o.state)}</span></td>
           </tr>)}</tbody>
         </table>
         </div>

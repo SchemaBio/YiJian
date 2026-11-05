@@ -3292,6 +3292,12 @@
     "note": "Los resultados CNV usan la línea de base integrada; las diferencias entre fuentes de datos y protocolos de laboratorio pueden afectarlos. Solo como referencia para investigación."
   },
   "stripePayments": {
+    "developmentTestNotice": "Pago de prueba de desarrollo: los pagos exitosos agregan créditos de prueba. No se cobra dinero real.",
+    "testCredited": "Créditos de prueba agregados",
+    "testRechargeLedger": "Recarga de prueba",
+    "testRefundLedger": "Reversión de créditos de prueba",
+    "testLedgerDescription": "Pago de Stripe Sandbox solo para créditos de prueba de desarrollo.",
+    "popupBlocked": "Permite que este sitio abra una pestaña nueva y vuelve a intentar el pago.",
     "rechargeDisabled": "Las recargas están deshabilitadas. Contacta al administrador de la plataforma. Puedes consultar tu saldo e historial de órdenes.",
     "title": "Pago de créditos con Stripe",
     "loadFailed": "La información de pago no está disponible. Actualiza más tarde o usa la solicitud manual.",

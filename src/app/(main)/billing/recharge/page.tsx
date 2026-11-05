@@ -14,7 +14,7 @@ import { Input } from '@schema/ui-kit';
 import { ArrowLeft, Clock3, Coins, Check, FileText } from 'lucide-react';
 import { PageContent } from '@/components/layout';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
+import { BILLING_UPDATED_EVENT, calculateEstimatedCredits, getBillingBalance, getBillingConfig, type BillingBalance, type BillingConfig } from '@/lib/billing';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { parseCreditQuantity } from '@/lib/payments';
 import rechargeContent from '@/i18n/recharge-content.json';
@@ -55,6 +55,16 @@ export default function RechargePage() {
       .catch((err) => { if (active) setLoadError(err instanceof Error ? errorText(err, t) : t("billing.unableToLoadCreditAdditionInformation21a1a2")); });
     return () => { active = false; };
   }, [isSaaS, router, retry]);
+
+  React.useEffect(() => {
+    const refresh = () => setRetry(v => v + 1);
+    window.addEventListener(BILLING_UPDATED_EVENT, refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener(BILLING_UPDATED_EVENT, refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
 
   const minuteRate = config ? config.credits_per_minute * config.credit_rate_multiplier : null;
   const estimatedMinutes = minuteRate !== null && Number.isFinite(minuteRate) && minuteRate > 0

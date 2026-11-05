@@ -3292,6 +3292,12 @@
     "note": "CNV 结果基于内置基线计算；数据来源和湿实验方案的差异可能影响结果，仅供研究参考。"
   },
   "stripePayments": {
+    "developmentTestNotice": "开发环境测试支付：付款成功后增加测试积分，不产生真实扣款。",
+    "testCredited": "测试积分已到账",
+    "testRechargeLedger": "测试充值",
+    "testRefundLedger": "测试积分退回",
+    "testLedgerDescription": "Stripe 沙箱支付，仅用于开发环境测试积分。",
+    "popupBlocked": "请允许此网站打开新标签页，然后重试支付。",
     "rechargeDisabled": "当前充值已暂停，请联系平台管理员。你仍可查看余额和历史订单。",
     "title": "Stripe 积分支付",
     "loadFailed": "支付信息暂不可用，可稍后刷新或使用人工申请。",

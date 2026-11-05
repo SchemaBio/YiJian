@@ -33,7 +33,7 @@ export interface BillingTransaction {
 
 export function billingTransactionTaskId(row: BillingTransaction): string | null {
   // Registration grants reference the approved user, not a computation task.
-  if (row.billing_basis === 'registration_grant') return null;
+  if (['registration_grant', 'stripe_payment', 'stripe_test_payment'].includes(row.billing_basis || '')) return null;
   if (row.related_task_id) return row.related_task_id;
   if (!row.reference_id || row.billing_basis === 'ai_assistance') return null;
   return billingReferenceTaskId(row.reference_id);

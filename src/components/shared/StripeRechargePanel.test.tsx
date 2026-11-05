@@ -7,8 +7,9 @@ import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
 import { getServicePolicy, SERVICE_POLICY_VERSION } from '@/lib/service-policy';
 vi.mock('@/lib/service-policy', async original => ({ ...await original<typeof import('@/lib/service-policy')>(), getServicePolicy: vi.fn().mockResolvedValue({version:'research-service-2026-10-29-v1',configured:true}) }));
 vi.mock('@/lib/payments', async original => ({ ...await original<typeof import('@/lib/payments')>(), createCheckoutSession: vi.fn(), getPaymentOptions: vi.fn(), getPaymentOrders: vi.fn(), getPaymentOrder: vi.fn() }));
-beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear(); window.history.replaceState({}, '', '/billing/recharge'); vi.mocked(getPaymentOrders).mockResolvedValue({ items: [], total: 0 }); vi.mocked(getServicePolicy).mockResolvedValue({version:SERVICE_POLICY_VERSION,configured:true,operator:'Operator',contact:'support@fixture.invalid',address:'Address',service_url:'/service',terms_url:'/terms',refund_url:'/refund'}); });
-afterEach(cleanup);
+let checkoutTab: { opener: unknown; location: { replace: ReturnType<typeof vi.fn> }; close: ReturnType<typeof vi.fn> };
+beforeEach(() => { checkoutTab = { opener: window, location: { replace: vi.fn() }, close: vi.fn() }; vi.spyOn(window, 'open').mockReturnValue(checkoutTab as unknown as Window); vi.clearAllMocks(); sessionStorage.clear(); window.history.replaceState({}, '', '/billing/recharge'); vi.mocked(getPaymentOrders).mockResolvedValue({ items: [], total: 0 }); vi.mocked(getServicePolicy).mockResolvedValue({version:SERVICE_POLICY_VERSION,configured:true,operator:'Operator',contact:'support@fixture.invalid',address:'Address',service_url:'/service',terms_url:'/terms',refund_url:'/refund'}); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 it('hides both recharge actions while preserving history when recharge is blocked', async () => {
  vi.mocked(getPaymentOptions).mockResolvedValue({ recharge_allowed: false, provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
  render(<StripeRechargePanel quantity={10} orgId="org" selection={<button>choose-credit</button>} manualRequest={<button>manual-request</button>} />);
@@ -82,4 +83,26 @@ it('links consent to the privacy policy and unified agreement without separate s
  expect(screen.getByRole('button',{name:'测试支付'})).toBeDisabled();
  expect(screen.getByText('确认仅用于科研，不用于个人医疗决策。')).toBeInTheDocument();
  expect(createCheckoutSession).not.toHaveBeenCalled();
+});
+
+it('opens Checkout in a new tab and updates credits in the original page', async () => {
+ const id='00000000-0000-0000-0000-000000000099';
+ vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,test_credits_enabled:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'hkd',unit_amount:120}});
+ vi.mocked(createCheckoutSession).mockResolvedValue({order_id:id,state:'pending',simulated:true,checkout_url:'https://checkout.stripe.com/c/pay/fixture'});
+ vi.mocked(getPaymentOrder).mockResolvedValue({id,mode:'test',quantity:10,currency:'hkd',amount:1200,state:'simulated',simulated:true,test_credits_applied:true,refunded_amount:0,recovered_credits:0,created_at:''});
+ render(<StripeRechargePanel quantity={10} orgId="org" />);
+ await screen.findByRole('checkbox');fireEvent.click(screen.getByRole('checkbox'));
+ fireEvent.click(await screen.findByRole('button',{name:'测试支付'}));
+ await waitFor(()=>expect(checkoutTab.location.replace).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/fixture'));
+ expect(window.open).toHaveBeenCalledWith('about:blank','_blank');expect(checkoutTab.opener).toBeNull();
+ expect(window.location.pathname).toBe('/billing/recharge');
+ await screen.findByText(id+': 测试积分已到账');
+ expect(checkoutTab.close).not.toHaveBeenCalled();
+});
+it('does not create an order when the payment tab is blocked', async () => {
+ vi.mocked(window.open).mockReturnValue(null);
+ vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'hkd',unit_amount:120}});
+ render(<StripeRechargePanel quantity={10} orgId="org" />);
+ await screen.findByRole('checkbox');fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(await screen.findByRole('button',{name:'测试支付'}));
+ await screen.findByText('请允许此网站打开新标签页，然后重试支付。');expect(createCheckoutSession).not.toHaveBeenCalled();
 });

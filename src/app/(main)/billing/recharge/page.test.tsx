@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => router }));
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: { email: 'preview@example.invalid' }, currentOrg: { id: 'org', name: 'preview' } }) }));
 vi.mock('@/lib/payments', async original => ({ ...await original<typeof import('@/lib/payments')>(), getPaymentOptions: vi.fn().mockResolvedValue({ recharge_allowed: true, status: 'disabled', price: null }), getPaymentOrders: vi.fn().mockResolvedValue({ items: [], total: 0 }) }));
 vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => 'squid' }));
-vi.mock('@/lib/billing', () => ({ getBillingBalance: vi.fn(), getBillingConfig: vi.fn(), calculateEstimatedCredits: vi.fn(() => null) }));
+vi.mock('@/lib/billing', () => ({ BILLING_UPDATED_EVENT: 'billing-updated', getBillingBalance: vi.fn(), getBillingConfig: vi.fn(), calculateEstimatedCredits: vi.fn(() => null) }));
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getBillingBalance).mockResolvedValue({ balance: 100, org_id: 'org' });
