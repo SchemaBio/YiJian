@@ -49,10 +49,13 @@ describe('AI credit ledger presentation', () => {
  });
 });
 
-it.each(locales)('labels development Stripe entries explicitly in %s', locale => {
+it.each(locales)('presents isolated development Stripe entries like live entries in %s', locale => {
  const t = createTextTranslator(locale);
- const row = {...reservation, type: 'recharge' as const, amount: 10, billing_basis: 'stripe_test_payment'};
- expect(billingTransactionLabel(row, t)).toBe(t('stripePayments.testRechargeLedger'));
- expect(billingTransactionLabel({...row, type: 'payment_refund', amount: -10}, t)).toBe(t('stripePayments.testRefundLedger'));
- expect(billingTransactionDescription(row, t)).toBe(t('stripePayments.testLedgerDescription'));
+ for (const type of ['recharge', 'payment_refund', 'payment_dispute', 'payment_restore']) {
+  const row = {...reservation, type, amount: type === 'recharge' || type === 'payment_restore' ? 10 : -10, billing_basis: 'stripe_test_payment'};
+  const live = {...row, billing_basis: 'stripe_payment'};
+  expect(billingTransactionLabel(row, t)).toBe(billingTransactionLabel(live, t));
+  expect(billingTransactionDescription(row, t)).toBe(t('stripePayments.paymentLedgerDescription'));
+  expect(billingTransactionDescription(row, t)).toBe(billingTransactionDescription(live, t));
+ }
 });

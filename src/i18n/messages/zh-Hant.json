@@ -108,6 +108,7 @@
     "individualFiles": "單獨下載封存檔案"
   },
   "common": {
+    "technicalSupport": "技術支援",
     "appName": "貽鑑",
     "appDescription": "從 FASTQ 到分析結果的生物資訊分析與變異註釋工具",
     "overview630ee6": "統計概覽",
@@ -3292,11 +3293,7 @@
     "note": "CNV 結果基於內建基線計算；資料來源和濕實驗方案的差異可能影響結果，僅供研究參考。"
   },
   "stripePayments": {
-    "developmentTestNotice": "開發環境測試付款：付款成功後增加測試積分，不產生真實扣款。",
-    "testCredited": "測試積分已到帳",
-    "testRechargeLedger": "測試充值",
-    "testRefundLedger": "測試積分退回",
-    "testLedgerDescription": "Stripe 沙箱付款，僅用於開發環境測試積分。",
+    "paymentLedgerDescription": "Stripe 積分充值",
     "popupBlocked": "請允許此網站開啟新分頁，然後重試付款。",
     "rechargeDisabled": "目前充值已暫停，請聯絡平台管理員。你仍可查看餘額和歷史訂單。",
     "title": "Stripe 點數付款",

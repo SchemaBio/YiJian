@@ -11,7 +11,6 @@ export function billingDisplayType(row: BillingTransaction): string {
 }
 
 export function billingTransactionLabel(row: BillingTransaction, t: TextTranslator = chineseText): string {
-  if (row.billing_basis === 'stripe_test_payment') return t(row.amount > 0 ? 'stripePayments.testRechargeLedger' : 'stripePayments.testRefundLedger');
   const type = billingDisplayType(row);
   const keys: Record<string, string> = {
     recharge: 'billing.addCreditsfa03c4', pre_deduction: 'settings.reservedCharge813760',
@@ -26,7 +25,7 @@ export function billingTransactionLabel(row: BillingTransaction, t: TextTranslat
 }
 
 export function billingTransactionDescription(row: BillingTransaction, t: TextTranslator = chineseText): string {
-  if (row.billing_basis === 'stripe_test_payment') return t('stripePayments.testLedgerDescription');
+  if (['stripe_payment', 'stripe_test_payment'].includes(row.billing_basis || '')) return t('stripePayments.paymentLedgerDescription');
   const generated = /^AI (hpo|acmg|svcv4|cnv_gain|cnv_loss) \u00b7 (reserve|settle|refund)$/.exec(row.description ?? '');
   if (row.billing_basis !== 'ai_assistance' || !generated) return row.description || '-';
   const feature = generated[1].toUpperCase().replace('_', ' ');

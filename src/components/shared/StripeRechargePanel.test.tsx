@@ -90,13 +90,16 @@ it('opens Checkout in a new tab and updates credits in the original page', async
  vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,test_credits_enabled:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'hkd',unit_amount:120}});
  vi.mocked(createCheckoutSession).mockResolvedValue({order_id:id,state:'pending',simulated:true,checkout_url:'https://checkout.stripe.com/c/pay/fixture'});
  vi.mocked(getPaymentOrder).mockResolvedValue({id,mode:'test',quantity:10,currency:'hkd',amount:1200,state:'simulated',simulated:true,test_credits_applied:true,refunded_amount:0,recovered_credits:0,created_at:''});
+ vi.mocked(getPaymentOrders).mockResolvedValue({items:[await getPaymentOrder(id)],total:1});
  render(<StripeRechargePanel quantity={10} orgId="org" />);
  await screen.findByRole('checkbox');fireEvent.click(screen.getByRole('checkbox'));
- fireEvent.click(await screen.findByRole('button',{name:'测试支付'}));
+ fireEvent.click(await screen.findByRole('button',{name:'前往 Stripe 支付'}));
  await waitFor(()=>expect(checkoutTab.location.replace).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/fixture'));
  expect(window.open).toHaveBeenCalledWith('about:blank','_blank');expect(checkoutTab.opener).toBeNull();
  expect(window.location.pathname).toBe('/billing/recharge');
- await screen.findByText(id+': 测试积分已到账');
+ await screen.findByText(id+': 积分已到账');
+ expect(screen.queryByText('测试支付')).not.toBeInTheDocument();
+ expect(screen.queryByText(/测试积分|测试充值|开发环境测试支付/)).not.toBeInTheDocument();
  expect(checkoutTab.close).not.toHaveBeenCalled();
 });
 it('does not create an order when the payment tab is blocked', async () => {

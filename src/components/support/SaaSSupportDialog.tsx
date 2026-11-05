@@ -61,7 +61,7 @@ export function SaaSSupportDialog({ trigger = 'icon', context = 'general' }: Sup
         leftIcon={context === 'account' ? <UserRoundX className="h-4 w-4" /> : <LifeBuoy className="h-4 w-4" />}
         onClick={openDialog}
       >
-        {context === 'account' ? t("common.contactSupportToDeleteAccount7cb0dc") : t("common.viewContactInformation40c878")}
+        {context === 'account' ? t("common.contactSupportToDeleteAccount7cb0dc") : t(context === 'billing' ? "common.technicalSupport" : "common.viewContactInformation40c878")}
       </Button>
     )}
 
