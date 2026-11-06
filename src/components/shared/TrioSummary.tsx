@@ -22,7 +22,8 @@ export function TrioSummary({state}:{state:ReturnType<typeof useTrioContext>}) {
   <p className="text-xs text-fg-muted">{t('sampleParents.probandAffected')}</p>
   {loading&&<p role="status">{t('sampleParents.checking')}</p>}
   {error!=null&&<p role="alert" className="text-sm text-danger-fg">{errorText(error,t)}</p>}
-  {context?.members.map(member=><div key={member.role} className="text-sm">{t(`sampleParents.${member.role}`)}: {member.internal_id} · {t(`sampleParents.${member.gender||'unknown'}`)} · {t(`sampleParents.${member.affected_status||'unknown'}`)} · {t('sampleParents.dataReady')}</div>)}
+  {context?.members.map(member=><div key={member.role} className="text-sm">{t(`sampleParents.${member.role}`)}: {member.internal_id} · {t(`sampleParents.${member.gender||'unknown'}`)} · {t(`sampleParents.${member.affected_status||'unknown'}`)}{context.ready && <> · {t('sampleParents.dataReady')}</>}</div>)}
+  {context?.waiting_for_data && <p role="status" className="text-sm text-warning-fg">{t('sampleParents.trioWaitingForData')}</p>}
   {context?.errors.map(message=><p role="alert" key={message} className="text-sm text-danger-fg">{errorText(new Error(message),t)}</p>)}
   {!!context?.warnings.length&&<p className="text-sm text-warning-fg">{t('sampleParents.genderWarning')}</p>}
  </section>;

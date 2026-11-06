@@ -64,6 +64,7 @@ export default function NewAnalysisPage() {
  const isVCF=selectedPipelineInfo?.baseType==='vcf_annotation' || selectedPipelineInfo?.template==='vcf2anno';
  const isTrio = isFamilyAnalysis(selectedPipelineInfo);
  const trioState=useTrioContext(selectedSampleInfo?.id,isTrio);
+ const trioCanCreate = trioState.context?.ready || (!isSaaS && trioState.context?.waiting_for_data);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -155,7 +156,7 @@ export default function NewAnalysisPage() {
 
   const handleSubmit = async () => {
 	if (isFamilyAnalysisUnavailable(selectedPipelineInfo)) return;
-    if ((isTrio && !trioState.context?.ready) || (isVCF && !vcfAssetId) || submitting || (isSaaS && !retentionAcknowledged)) return;
+    if ((isTrio && !trioCanCreate) || (isVCF && !vcfAssetId) || submitting || (isSaaS && !retentionAcknowledged)) return;
     setFormError('');
     if (!selectedPipelineInfo || !selectedSampleInfo) {
       setFormError(t("tasks.selectASampleAndAnalysisPipeline53d997"));
@@ -308,7 +309,7 @@ export default function NewAnalysisPage() {
 
             onClick={handleSubmit}
             loading={submitting}
-            disabled={(isTrio&&!trioState.context?.ready) || isFamilyAnalysisUnavailable(selectedPipelineInfo) || (isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || !selectedSampleInfo || (isSaaS && !retentionAcknowledged)}
+            disabled={(isTrio&&!trioCanCreate) || isFamilyAnalysisUnavailable(selectedPipelineInfo) || (isVCF && !vcfAssetId) || submitting || !selectedPipelineInfo || !selectedSampleInfo || (isSaaS && !retentionAcknowledged)}
           >
             {submitting ? t("tasks.submitting3a1624") : t("tasks.submitTask09de9e")}
           </Button>

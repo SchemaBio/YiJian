@@ -80,13 +80,23 @@ it('preserves VCF inputs in the existing task modal and hides FASTQ readiness',a
  await waitFor(()=>expect(submit).toHaveBeenCalledWith(expect.objectContaining({vcf_asset_id:'vcf-asset',vcf_sample_name:'S2',inputs:{}})));
 });
 
-it.each(['page','modal'])('submits a proband sample through the %s entrypoint',async entry=>{
+it.each([
+ ['page',true], ['modal',true], ['page',false], ['modal',false],
+] as const)('submits a proband through the %s entrypoint (data ready: %s)',async (entry,ready)=>{
+ if(!ready)vi.mocked(getTrioContext).mockResolvedValueOnce({
+  ready:false,waiting_for_data:true,
+  members:[{role:'father',sample_id:'father',internal_id:'DAD',gender:'male',affected_status:'carrier',read1_asset_id:'',read2_asset_id:''}],
+  errors:[],warnings:[],estimated_minutes:60,
+ });
+ vi.mocked(tasksApi.create).mockClear();
+ vi.mocked(tasksApi.estimate).mockClear();
  const submit=vi.fn(async()=>{});
  if(entry==='page')render(<NewAnalysisPage/>);else render(<NewTaskModal isOpen onClose={vi.fn()} onSubmit={submit}/>);
  const pipeline=await screen.findByRole('combobox');await waitFor(()=>expect(pipeline).toHaveValue('single'));
  fireEvent.change(pipeline,{target:{value:'trio'}});
  fireEvent.click(await screen.findByRole('radio',{name:/BIZ-1/}));
  await screen.findByText(/DAD/);
+ if(!ready)expect(screen.getByText(/可以先创建 Trio 任务/)).toBeInTheDocument();
  expect(screen.getByText(/携带者/)).toBeInTheDocument();
  expect(getTrioContext).toHaveBeenCalledWith('business',expect.any(AbortSignal));
  await waitFor(()=>expect(tasksApi.estimate).toHaveBeenCalledWith(expect.objectContaining({sampleId:'business',pipelineId:'trio'})));

@@ -55,7 +55,17 @@ const statusMeta = {
   deleted: { label: '已删除', className: 'bg-canvas-subtle text-fg-muted', icon: Trash2 },
 } as const;
 
+function isPendingLocalRegistration(asset: DataAsset) {
+  return asset.source === 'local_import' && asset.status === 'pending';
+}
+
 function assetStatus(asset: DataAsset, progress?: number, liveStatus?: 'uploading' | 'canceling' | 'cancelled' | 'completed' | 'failed' | 'deleted', t: TextTranslator = chineseText) {
+  if (isPendingLocalRegistration(asset)) {
+    const reason = asset.validation_code?.replace(/^local_import_/, '');
+    return <span className="text-warning-fg" title={reason ? t('localDataImport.errors.' + reason) : undefined}>
+      {t(asset.validation_status === 'invalid' ? 'localDataImport.waitingReplacement' : 'localDataImport.waitingFiles')}
+    </span>;
+  }
   const effectiveStatus = liveStatus === 'uploading' || liveStatus === 'completed' || liveStatus === 'failed' ? liveStatus : asset.status;
   const meta = statusMeta[effectiveStatus] ?? statusMeta.failed;
   const Icon = meta.icon;
@@ -128,11 +138,13 @@ export default function DataCenterPage() {
     [activeUpload?.files],
   );
 
-  const load = React.useCallback(async (query = '') => {
+  const load = React.useCallback(async (query = '', background = false) => {
     const requestId = ++loadRequestRef.current;
-    setLoading(true);
-    setLoadFailed(false);
-    setError('');
+    if (!background) {
+      setLoading(true);
+      setLoadFailed(false);
+      setError('');
+    }
     try {
       const [assetResult, configResult, statsResult] = await Promise.all([
         listDataAssets(query, typeFilter==='vcf'?{readType:'vcf'}:undefined),
@@ -147,7 +159,7 @@ export default function DataCenterPage() {
       setStorageStats(statsResult);
       setHasLoaded(true);
     } catch (err) {
-      if (requestId !== loadRequestRef.current) return;
+      if (requestId !== loadRequestRef.current || background) return;
       setLoadFailed(true);
       setError(err instanceof Error ? errorText(err, t) : t("data.unableToLoadDataAssets555043"));
     } finally {
@@ -156,6 +168,12 @@ export default function DataCenterPage() {
   }, [t,typeFilter,refreshCapacity]);
 
   React.useEffect(() => { void load(''); }, [load]);
+  const hasPendingLocalRegistrations = assets.some(isPendingLocalRegistration);
+  React.useEffect(() => {
+    if (!hasPendingLocalRegistrations || loading) return;
+    const timer = window.setInterval(() => void load(search, true), 30000);
+    return () => window.clearInterval(timer);
+  }, [hasPendingLocalRegistrations, loading, load, search]);
   React.useEffect(() => {
     const refresh = () => { void refreshCapacity().catch(() => undefined); };
     const timer = window.setInterval(refresh, 10000);
@@ -299,7 +317,8 @@ export default function DataCenterPage() {
     }
     setError('');
     try {
-      await deleteDataAsset(deleting.id);
+      if (isPendingLocalRegistration(deleting)) await deleteDataAsset(deleting.id, true);
+      else await deleteDataAsset(deleting.id);
       forgetFile(deleting.id);
       setDeleting(null);
       await load(search);
@@ -447,9 +466,9 @@ export default function DataCenterPage() {
         <TableActions>
           {config?.download_allowed && <TableAction action="download" label={t("data.download2b9d01")} disabled={asset.status !== 'completed'}
             hint={asset.status === 'completed' ? t("data.downloadFile2922ce") : t("data.downloadAvailableAfterUploadCompletes289170")} onClick={() => void handleDownload(asset)} />}
-          {(asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label={t("data.reuploadbd40ef")} hint={t("data.uploadAgain53e50e")} aria-label={t("data.uploadAgain53e50e")}
+          {!isPendingLocalRegistration(asset) && (asset.status === 'pending' || asset.status === 'uploading' || asset.status === 'failed') && <TableAction action="upload" label={t("data.reuploadbd40ef")} hint={t("data.uploadAgain53e50e")} aria-label={t("data.uploadAgain53e50e")}
             disabled={retries[asset.id]?.status === 'uploading' || fileLiveStatus[asset.id] === 'uploading'} onClick={() => { retryAssetIdRef.current = asset.id; if (retryInputRef.current) { retryInputRef.current.value = ''; retryInputRef.current.click(); } }} />}
-          <TableAction permission={['data.manage', 'samples.write']} action="edit" label={t("admin.edita7f814")} hint={t("data.editInternalId05f8a1")} aria-label={t("data.editInternalId05f8a1")} onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />
+          {!isPendingLocalRegistration(asset) && <TableAction permission={['data.manage', 'samples.write']} action="edit" label={t("admin.edita7f814")} hint={t("data.editInternalId05f8a1")} aria-label={t("data.editInternalId05f8a1")} onClick={() => { setEditing(asset); setEditingInternalId(asset.internal_id ?? ''); }} />}
           <TableAction action="delete" label={t("data.delete3755f5")} tone="danger" onClick={() => setDeleting(asset)} />
         </TableActions>
       ),
@@ -617,7 +636,9 @@ export default function DataCenterPage() {
         onOpenChange={(open) => { if (!open) setDeleting(null); }}
         footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>{t("admin.cancel4d0b46")}</Button><Button action="delete" variant="danger"  onClick={() => void handleDelete()}>{t("data.confirmDeletion3c06ab")}</Button></>}
       >
-        <p className="text-sm leading-6 text-fg-muted">{t("data.permanentlyDeletef2b694")}<span className="font-medium text-fg-default">{deleting?.file_name}</span> {t("data.andItsStoredObjectThisCannotBe97aee3")}</p>
+        <p className="text-sm leading-6 text-fg-muted">{deleting && isPendingLocalRegistration(deleting)
+          ? t('localDataImport.cancelPair')
+          : <>{t("data.permanentlyDeletef2b694")}<span className="font-medium text-fg-default">{deleting?.file_name}</span> {t("data.andItsStoredObjectThisCannotBe97aee3")}</>}</p>
       </AppModal>
     </div>
   );
