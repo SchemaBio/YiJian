@@ -420,7 +420,7 @@ export interface MitochondrialVariant extends VariantReviewStatus {
   altReadCounts: (number | null)[];
   hgvs?: string;
   annotationValues?: Record<string, unknown>;
-  mtAssessment?: { profile: string; classification: ACMGClassification; evidence: { code: string; strength: string; note?: string }[] };
+  mtAssessment?: { profile: string; classification: ACMGClassification; basis?: 'combination' | 'insufficient' | 'conflicting'; evidence: { code: string; strength: string; note?: string }[] };
   pathogenicity: MitochondrialPathogenicity;
   associatedDisease: string;     // 关联疾病
   haplogroup?: string;           // 单倍群

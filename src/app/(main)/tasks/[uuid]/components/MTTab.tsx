@@ -411,6 +411,7 @@ export function MTTab({
 
       {/* 线粒体变异详情面板 */}
       <MTDetailPanel
+        taskId={taskId}
         variant={selectedVariant}
         isOpen={detailPanelOpen}
         onClose={handleCloseDetailPanel}

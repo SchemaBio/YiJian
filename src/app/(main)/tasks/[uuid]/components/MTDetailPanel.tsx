@@ -26,6 +26,7 @@ const PATHOGENICITY_CONFIG: Record<MitochondrialPathogenicity, { label: string; 
 };
 
 interface MTDetailPanelProps {
+  taskId: string;
   variant: MitochondrialVariant | null;
   isOpen: boolean;
   onClose: () => void;
@@ -102,7 +103,7 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
   );
 }
 
-export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV, initialSection = 'annotation', onSaveAssessment }: MTDetailPanelProps) {
+export function MTDetailPanel({ taskId, variant, isOpen, onClose, onOpenIGV, initialSection = 'annotation', onSaveAssessment }: MTDetailPanelProps) {
   const t = useText();
   const [section, setSection] = React.useState<InspectorSection>('annotation');
   React.useEffect(() => { setSection(initialSection); }, [variant?.id, isOpen, initialSection]);
@@ -231,7 +232,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV, initialSect
             )}
           </div>
           </>}
-          {section === 'acmg' && <MTACMGEditor key={variant.id} variant={variant} onSave={evidence => onSaveAssessment(variant, evidence)} />}
+          {section === 'acmg' && <MTACMGEditor key={variant.id} taskId={taskId} variant={variant} onSave={evidence => onSaveAssessment(variant, evidence)} />}
         </div>
     </WorkspaceInspector>
   );
