@@ -34,7 +34,7 @@ export function VariantAssessmentOverview({
   // 人工评估是否已经正式保存确认
   const isHumanConfirmed = Boolean(
     (variant.acmgAssessmentSource === 'manual_evidence' || variant.acmgAssessmentSource === 'manual_override') ||
-    (variant.acmgEvidence && variant.acmgEvidence.length > 0)
+    variant.acmgSavedAt || variant.acmgOverride
   );
 
   // 1. 数据库参考 (ClinVar)
@@ -82,7 +82,9 @@ export function VariantAssessmentOverview({
   const aiDetail = aiCriteria ? t('assessmentDisplay.criteria', {p0: aiCriteria}) : (effectiveAI ? t('assessmentDisplay.noEvidence') : '');
 
   // 4. 人工评估
-  const rawManual = (variant.acmgOverride || variant.legacyAcmgClassification || (isHumanConfirmed ? variant.acmgClassification : null))?.trim();
+  const rawManual = isHumanConfirmed
+    ? (variant.acmgOverride || variant.legacyAcmgClassification || (!variant.adoptedACMG ? variant.acmgClassification : undefined))?.trim()
+    : undefined;
   const manualValue = !rawManual || ['.', '-'].includes(rawManual) ? t('assessmentDisplay.notAssessed') : rawManual;
   const manualCriteria = (variant.acmgEvidence ?? []).map(e => `${e.code}(${e.strength})`).join(', ');
   const manualDetail = isHumanConfirmed

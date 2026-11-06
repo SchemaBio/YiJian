@@ -612,6 +612,8 @@
     "andItsStoredObjectThisCannotBe97aee3": " and its stored object. This cannot be undone."
   },
   "history": {
+    "exportExcel": "Export Excel",
+    "exportTooLarge": "A tab exceeds the row limit for a single Excel worksheet.",
     "duplication1aeb54": "Duplication",
     "deletion2fe9b7": "Deletion",
     "normalf78d03": "Normal",
@@ -1248,7 +1250,20 @@
     "sampleDetailTabs1215f2": "Sample detail tabs",
     "turnaroundDays": "{p0, plural, one {# day} other {# days}}"
   },
+  "mtDetail": {
+    "molecularAnnotation": "Molecular annotation",
+    "referenceAnnotation": "Database and population annotations",
+    "callEvidence": "Variant calling and quality evidence",
+    "reportClassification": "Report classification",
+    "manualClassification": "Manual ACMG assessment",
+    "calculator": "Mitochondrial ACMG calculator",
+    "criteriaHelp": "Review ClinGen mtDNA v1.0 and select the applicable criteria and strengths. Use report annotations as references while confirming the evidence.",
+    "standAlone": "Stand-alone",
+    "evidenceNote": "Evidence rationale (optional)",
+    "calculateAndSave": "Calculate and save"
+  },
   "tasks": {
+    "mtAltReadCount": "ALT-supporting reads",
     "probandZygosity": "Proband zygosity",
     "fatherZygosity": "Father zygosity",
     "motherZygosity": "Mother zygosity",

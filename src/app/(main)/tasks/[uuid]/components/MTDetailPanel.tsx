@@ -13,6 +13,7 @@ import { WorkspaceInspector, InspectorTabs, type InspectorSection } from '@/comp
 import { ExternalLink, FileText, Database, Dna } from 'lucide-react';
 import { Tag } from '@/components/shared/Tag';
 import type { MitochondrialVariant, MitochondrialPathogenicity } from '../types';
+import { MTACMGEditor, type MTEvidence } from './MTACMGEditor';
 
 // 致病性配置
 const PATHOGENICITY_CONFIG: Record<MitochondrialPathogenicity, { label: string; variant: 'danger' | 'warning' | 'neutral' | 'info' | 'success' }> = {
@@ -29,8 +30,24 @@ interface MTDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenIGV?: (chromosome: string, position: number) => void;
+  initialSection?: InspectorSection;
+  onSaveAssessment: (variant: MitochondrialVariant, evidence: MTEvidence) => Promise<void>;
 }
 
+const mtSections: InspectorSection[] = ['annotation', 'evidence', 'assessment', 'acmg'];
+const molecularFields = ['MT_Gene_Type', 'Type', 'Feature', 'Consequence', 'Impact', 'HGVS_c', 'HGVS_p', 'Amino_Acids', 'Protein_Position'];
+const referenceFields = ['Mitophen_Variant', 'Mitophen_Phenotypes', 'ClinVar_Sig', 'ClinVar_DN', 'ClinVar_Star', 'dbSNP', 'GnomAD_AF', 'GnomAD_AF_EAS', 'MAX_AF'];
+const callFields = ['Filter', 'Genotype', 'Heteroplasmy_Class', 'AD', 'AF', 'TLOD', 'POPAF', 'GERMQ', 'STRANDQ', 'CONTQ', 'SEQQ', 'MBQ', 'MMQ', 'MFRL'];
+
+function ReportFields({ fields, values }: { fields: string[]; values?: Record<string, unknown> }) {
+  return <div className="rounded-lg border border-border-subtle px-3 py-1">
+    {fields.map(field => {
+      const value = values?.[field];
+      const display = value == null || value === '.' ? undefined : String(value);
+      return <InfoItem key={field} label={field.replaceAll('_', ' ')} value={display} />;
+    })}
+  </div>;
+}
 function mitomapAlleleURL(position: number): string {
   return `https://www.mitomap.org/MITOMAP/SearchAllele?position=${encodeURIComponent(String(position))}`;
 }
@@ -85,13 +102,13 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
   );
 }
 
-export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailPanelProps) {
+export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV, initialSection = 'annotation', onSaveAssessment }: MTDetailPanelProps) {
   const t = useText();
   const [section, setSection] = React.useState<InspectorSection>('annotation');
-  React.useEffect(() => { setSection('annotation'); }, [variant?.id, isOpen]);
+  React.useEffect(() => { setSection(initialSection); }, [variant?.id, isOpen, initialSection]);
   if (!isOpen || !variant) return null;
 
-  const pathogenicityConfig = PATHOGENICITY_CONFIG[variant.pathogenicity];
+  const pathogenicityConfig = PATHOGENICITY_CONFIG[variant.mtAssessment?.classification ?? variant.pathogenicity];
 
   return (
     <WorkspaceInspector label={t("tasks.mitochondrialVariantDetails7315db")} onClose={onClose}>
@@ -108,13 +125,14 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
            />
         </div>
 
-        <InspectorTabs value={section} onChange={setSection} id="mt-inspector" />
+        <InspectorTabs value={section} onChange={setSection} id="mt-inspector" sections={mtSections} />
         <div id="mt-inspector-content" role="tabpanel" aria-labelledby={`mt-inspector-${section}`} className="yj-inspector-content">
           {section === 'annotation' && <>
           {/* 基本信息 */}
           <SectionTitle icon={Dna} title={t("samples.basicInformationb122f8")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem label={t("history.gene9ef2ed")} value={variant.gene} />
+            <InfoItem label="HGVS" value={variant.hgvs} />
             <InfoItem
               label={t("history.position88c344")}
               value={
@@ -131,6 +149,10 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
               <InfoItem label={t("history.haplogroupd4fd42")} value={variant.haplogroup} />
             )}
           </div>
+          <SectionTitle icon={Dna} title={t('mtDetail.molecularAnnotation')} />
+          <ReportFields fields={molecularFields} values={variant.annotationValues} />
+          <SectionTitle icon={Database} title={t('mtDetail.referenceAnnotation')} />
+          <ReportFields fields={referenceFields} values={variant.annotationValues} />
 
           </>}
           {section === 'evidence' && <>
@@ -138,15 +160,11 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <SectionTitle icon={FileText} title={t("tasks.heteroplasmyAnalysisb874d7")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem label={t("tasks.heteroplasmyFractionba19ec")} value={`${formatNumericString((variant.heteroplasmy * 100).toFixed(1), t.locale)}%`} />
-            <InfoItem
-              label={t("tasks.heteroplasmyLevel613cf4")}
-              value={
-                variant.heteroplasmy >= 0.8 ? t("tasks.highHeteroplasmya2ae59") :
-                variant.heteroplasmy >= 0.4 ? t("tasks.moderateHeteroplasmydfccc0") :
-                t("tasks.lowHeteroplasmyd36825")
-              }
-            />
+            <InfoItem label={t("tasks.dpReadDepth438651")} value={variant.depth?.toLocaleString(t.locale)} />
+            <InfoItem label={t("tasks.mtAltReadCount")} value={variant.altReadCounts.map(count => count?.toLocaleString(t.locale) ?? '-').join(' / ')} />
           </div>
+          <SectionTitle icon={FileText} title={t('mtDetail.callEvidence')} />
+          <ReportFields fields={callFields} values={variant.annotationValues} />
 
           </>}
           {section === 'assessment' && <>
@@ -155,11 +173,13 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
           <SectionTitle icon={Database} title={t("tasks.pathogenicityAssessment0df423")} />
           <div className="border border-border-subtle rounded-lg px-3 py-1">
             <InfoItem
-              label={t("history.pathogenicityfa6024")}
-              value={<Tag variant={pathogenicityConfig.variant}>{translateUI(pathogenicityConfig.label, t)}</Tag>}
+              label={t('mtDetail.reportClassification')}
+              value={translateUI(PATHOGENICITY_CONFIG[variant.pathogenicity].label, t)}
             />
+            <InfoItem label={t('mtDetail.manualClassification')} value={variant.mtAssessment ? translateUI(pathogenicityConfig.label, t) : undefined} />
             <InfoItem label={t("history.associatedDiseasea79330")} value={variant.associatedDisease} />
           </div>
+          <button type="button" className="mt-3 text-sm text-accent-fg underline" onClick={() => setSection('acmg')}>{t('mtDetail.calculator')}</button>
 
           </>}
           {section === 'annotation' && <>
@@ -211,6 +231,7 @@ export function MTDetailPanel({ variant, isOpen, onClose, onOpenIGV }: MTDetailP
             )}
           </div>
           </>}
+          {section === 'acmg' && <MTACMGEditor key={variant.id} variant={variant} onSave={evidence => onSaveAssessment(variant, evidence)} />}
         </div>
     </WorkspaceInspector>
   );

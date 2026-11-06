@@ -416,6 +416,11 @@ export interface MitochondrialVariant extends VariantReviewStatus {
   alt: string;
   gene: string;
   heteroplasmy: number;          // 异质性比例 (0-1)
+  depth: number | null;
+  altReadCounts: (number | null)[];
+  hgvs?: string;
+  annotationValues?: Record<string, unknown>;
+  mtAssessment?: { profile: string; classification: ACMGClassification; evidence: { code: string; strength: string; note?: string }[] };
   pathogenicity: MitochondrialPathogenicity;
   associatedDisease: string;     // 关联疾病
   haplogroup?: string;           // 单倍群

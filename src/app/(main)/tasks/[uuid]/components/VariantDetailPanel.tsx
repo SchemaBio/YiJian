@@ -466,21 +466,12 @@ export function VariantDetailPanel({ taskId, referenceGenome, variant, isOpen, o
         acmgOverride: override,
         acmgOverrideReason: overrideReason,
         resetAcmg: reset,
-        acmgSavedAt: new Date().toISOString(),
       };
       if (adopt) {
         changes.activeAcmgVersion = 'legacy';
-        const adoptedData: NonNullable<SNVIndel['adoptedACMG']> = {
-          version: 'legacy',
-          source: 'manual',
-          classification: calculated ?? undefined,
-          score,
-          savedAt: new Date().toISOString(),
-        };
-        changes.adoptedACMG = adoptedData;
-        setLocalAdoptedACMG(adoptedData);
       }
       await saveVersioned(changes, reason);
+      if (adopt && selectedRef.current === variant.id) setLocalAdoptedACMG(null);
     } else if (onUpdateClassification) await onUpdateClassification(variant, evidence, override, overrideReason, reason, reset);
     else return;
     if (selectedRef.current !== variant.id) return;

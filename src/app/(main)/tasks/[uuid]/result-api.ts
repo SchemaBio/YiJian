@@ -357,6 +357,7 @@ function mapSNV(row: BackendRow): SNVIndel {
     ? row.automaticAcmg as SNVIndel['automaticAcmg']
     : undefined;
   const adjustments = row.adjustments && typeof row.adjustments === 'object' ? row.adjustments as BackendRow : {};
+  const adoptedACMG = adjustments.adoptedACMG as SNVIndel['adoptedACMG'];
   return {
     id: s(row.id),
     gene: s(row.gene, '-'),
@@ -371,15 +372,17 @@ function mapSNV(row: BackendRow): SNVIndel {
     father: hasRole('father') ? readSNVSample(source, 'father') : undefined,
     mother: hasRole('mother') ? readSNVSample(source, 'mother') : undefined,
     depth: n(row.depth),
-    acmgClassification: acmg(row.acmgClassification ?? row.acmgClassificationComputed),
+    acmgClassification: adoptedACMG && !adoptedACMG.automatic
+      ? acmg(adoptedACMG.classification)
+      : acmg(row.acmgClassification ?? row.acmgClassificationComputed),
     automaticAcmg,
     acmgEvidence: Array.isArray(adjustments.acmgEvidence) ? adjustments.acmgEvidence as ACMGEvidenceEntry[] : automaticAcmg?.criteria,
     acmgOverride: acmg(adjustments.acmgOverride),
     acmgOverrideReason: s(adjustments.acmgOverrideReason),
-    activeAcmgVersion: adjustments.activeAcmgVersion === 'svcv4' ? 'svcv4' : 'legacy',
+    activeAcmgVersion: adoptedACMG?.version ?? (adjustments.activeAcmgVersion === 'svcv4' ? 'svcv4' : 'legacy'),
     svcv4Assessment: adjustments.svcv4Assessment as SNVIndel['svcv4Assessment'],
     acmgSavedAt: adjustments.acmgSavedAt as string | undefined, acmgSavedBy: adjustments.acmgSavedBy as string | undefined, svcv4SavedAt: adjustments.svcv4SavedAt as string | undefined, svcv4SavedBy: adjustments.svcv4SavedBy as string | undefined,
-    adoptedACMG: adjustments.adoptedACMG as SNVIndel['adoptedACMG'],
+    adoptedACMG,
     acmgAIResult: adjustments.acmgAIResult as SNVIndel['acmgAIResult'],
     svcv4AIResult: adjustments.svcv4AIResult as SNVIndel['svcv4AIResult'],
     legacyAcmgClassification: acmg(adjustments.acmgOverride) ?? ('acmgEvidence' in adjustments ? acmg(adjustments.acmgClassification) : automaticAcmg?.classification),
@@ -505,13 +508,31 @@ function mapMEI(row: BackendRow): MEIVariant {
 }
 
 function mapMT(row: BackendRow): MitochondrialVariant {
+  const readCount = (value: unknown) => {
+    const count = typeof value === 'bigint' ? Number(value) : nullableNumber(value);
+    return count !== null && Number.isSafeInteger(count) && count >= 0 ? count : null;
+  };
+  // AD is ordered REF, ALT1, ALT2, ... in the mitochondrial report.
+  const alleleDepth = row.ad ?? row.aD;
+  const alleleCounts = Array.isArray(alleleDepth) ? alleleDepth : s(alleleDepth).split(',');
+  const annotationValues = row.annotationValues as MitochondrialVariant['annotationValues'];
+  const position = n(row.position);
+  const ref = s(row.ref, '-');
+  const alt = s(row.alt, '-');
+  const hgvs = s(row.mtHgvs ?? annotationValues?.MT_HGVS).trim();
+  const isSubstitution = position > 0 && /^[ACGT]$/i.test(ref) && /^[ACGT]$/i.test(alt) && ref !== alt;
   return {
     id: s(row.id),
-    position: n(row.position),
-    ref: s(row.ref, '-'),
-    alt: s(row.alt, '-'),
+    position,
+    ref,
+    alt,
     gene: s(row.mtGene ?? row.gene, '-'),
     heteroplasmy: n(row.heteroplasmy),
+    depth: readCount(row.depth),
+    altReadCounts: alleleCounts.slice(1).map(readCount),
+    hgvs: hgvs && !['.', '-'].includes(hgvs) ? hgvs : isSubstitution ? `m.${position}${ref}>${alt}` : undefined,
+    annotationValues,
+    mtAssessment: row.mtAssessment as MitochondrialVariant['mtAssessment'],
     pathogenicity: pathogenicity(row),
     associatedDisease: s(row.associatedDisease ?? row.mitophenPhenotypes ?? row.clinvarDn ?? row.clinvarDN, '-'),
     haplogroup: s(row.haplogroup),

@@ -18,7 +18,9 @@ import type { Column } from '@schema/ui-kit';
 import { Search } from 'lucide-react';
 import type { MitochondrialVariant, MitochondrialPathogenicity, TableFilterState, PaginatedResult } from '../types';
 import { DEFAULT_FILTER_STATE } from '../types';
-import { getMitochondrialVariants, focusVariant, pinVariant } from '../result-api';
+import { getMitochondrialVariants, focusVariant, pinVariant, saveResultRowAdjustment } from '../result-api';
+import type { InspectorSection } from '@/components/shared/WorkspaceInspector';
+import type { MTEvidence } from './MTACMGEditor';
 import { filterableColumns, resultColumnLabels } from './ResultColumnFilter';
 import { ParquetColumnFilterBar } from './ParquetColumnFilterBar';
 import { IGVViewer, PositionLink } from './IGVViewer';
@@ -71,15 +73,31 @@ export function MTTab({
   // 详情面板状态
   const [selectedVariant, setSelectedVariant] = React.useState<MitochondrialVariant | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = React.useState(false);
+  const [initialSection, setInitialSection] = React.useState<InspectorSection>('annotation');
+  const taskRef = React.useRef(taskId);
+  taskRef.current = taskId;
 
   const filterState = externalFilterState ?? internalFilterState;
   const setFilterState = onFilterChange ?? setInternalFilterState;
 
   // 点击行打开详情面板
-  const handleRowClick = React.useCallback((variant: MitochondrialVariant) => {
+  const openDetails = (variant: MitochondrialVariant, section: InspectorSection) => {
     setSelectedVariant(variant);
+    setInitialSection(section);
     setDetailPanelOpen(true);
-  }, []);
+  };
+
+  const handleSaveAssessment = async (variant: MitochondrialVariant, evidence: MTEvidence) => {
+    const saved = await saveResultRowAdjustment(taskId, 'mt', variant.id, variant.adjustmentVersion ?? 0, { mtAssessment: evidence });
+    if (taskRef.current !== taskId) return;
+    const update = (row: MitochondrialVariant) => row.id === variant.id ? {
+      ...row,
+      mtAssessment: saved.adjustment.adjustments.mtAssessment as MitochondrialVariant['mtAssessment'],
+      adjustmentVersion: saved.adjustment.version,
+    } : row;
+    setSelectedVariant(current => current && update(current));
+    setResult(current => current && { ...current, data: current.data.map(update) });
+  };
 
   // 关闭详情面板
   const handleCloseDetailPanel = React.useCallback(() => {
@@ -232,6 +250,12 @@ export function MTTab({
       sortable: true,
     },
     {
+      id: 'hgvs',
+      header: 'HGVS',
+      accessor: row => row.hgvs ?? '-',
+      width: 140,
+    },
+    {
       id: 'change',
       header: t("tasks.referenceAlternateabcf6a"),
       accessor: (row) => `${row.ref}>${row.alt}`,
@@ -252,14 +276,29 @@ export function MTTab({
       sortable: true,
     },
     {
+      id: 'depth',
+      header: t("tasks.dpReadDepth438651"),
+      accessor: (row) => row.depth === null ? '-' : row.depth.toLocaleString(t.locale),
+      width: 110,
+    },
+    {
+      id: 'altReadCounts',
+      header: t("tasks.mtAltReadCount"),
+      accessor: (row) => row.altReadCounts.map(count => count?.toLocaleString(t.locale) ?? '-').join(' / ') || '-',
+      width: 120,
+    },
+    {
       id: 'pathogenicity',
-      header: t("history.pathogenicityfa6024"),
+      header: t('tasks.acmgAssessment6a7cd5'),
       accessor: (row) => {
-        const config = PATHOGENICITY_CONFIG[row.pathogenicity];
-        return <Tag variant={config.variant}>{translateUI(config.label, t)}</Tag>;
+        const config = PATHOGENICITY_CONFIG[row.mtAssessment?.classification ?? row.pathogenicity];
+        return <button type="button" className="inline-flex flex-col items-center gap-1 rounded text-sm hover:underline"
+          onClick={event => { event.stopPropagation(); openDetails(row, 'assessment'); }}>
+          <Tag variant={config.variant}>{translateUI(config.label, t)}</Tag>
+          <span className="text-xs text-fg-muted">{t(row.mtAssessment ? 'mtDetail.manualClassification' : 'mtDetail.reportClassification')}</span>
+        </button>;
       },
-      width: 100,
-      sortable: true,
+      width: 130,
     },
     {
       id: 'associatedDisease',
@@ -329,7 +368,7 @@ export function MTTab({
             sortColumn={filterState.sortColumn}
             sortDirection={filterState.sortDirection}
             onSortChange={handleSortChange}
-            onRowClick={handleRowClick}
+            onRowClick={row => openDetails(row, 'annotation')}
           />
 
           {totalPages > 1 && (
@@ -376,6 +415,8 @@ export function MTTab({
         isOpen={detailPanelOpen}
         onClose={handleCloseDetailPanel}
         onOpenIGV={handleOpenIGV}
+        initialSection={initialSection}
+        onSaveAssessment={handleSaveAssessment}
       />
     </div>
   );

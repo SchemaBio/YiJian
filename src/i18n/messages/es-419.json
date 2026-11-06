@@ -612,6 +612,8 @@
     "andItsStoredObjectThisCannotBe97aee3": " y su objeto almacenado. Esta acción es irreversible."
   },
   "history": {
+    "exportExcel": "Exportar a Excel",
+    "exportTooLarge": "Una pestaña supera el límite de filas de una hoja de Excel.",
     "duplication1aeb54": "Duplicación",
     "deletion2fe9b7": "Deleción",
     "normalf78d03": "Normal",
@@ -1248,7 +1250,20 @@
     "sampleDetailTabs1215f2": "Pestañas de detalles de muestra",
     "turnaroundDays": "{p0, plural, one {# día} other {# días}}"
   },
+  "mtDetail": {
+    "molecularAnnotation": "Anotación molecular",
+    "referenceAnnotation": "Anotaciones de bases de datos y población",
+    "callEvidence": "Evidencia de detección y calidad",
+    "reportClassification": "Clasificación del informe",
+    "manualClassification": "Evaluación ACMG manual",
+    "calculator": "Calculadora ACMG mitocondrial",
+    "criteriaHelp": "Revise ClinGen mtDNA v1.0 y seleccione los criterios aplicables y su fuerza. Consulte las anotaciones del informe al confirmar la evidencia.",
+    "standAlone": "Independiente",
+    "evidenceNote": "Justificación de la evidencia (opcional)",
+    "calculateAndSave": "Calcular y guardar"
+  },
   "tasks": {
+    "mtAltReadCount": "Lecturas que respaldan ALT",
     "probandZygosity": "Cigosidad del probando",
     "fatherZygosity": "Cigosidad del padre",
     "motherZygosity": "Cigosidad de la madre",

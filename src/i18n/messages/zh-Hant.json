@@ -612,6 +612,8 @@
     "andItsStoredObjectThisCannotBe97aee3": " 及其存儲對象。此操作無法撤銷。"
   },
   "history": {
+    "exportExcel": "匯出 Excel",
+    "exportTooLarge": "某個標籤的記錄數超過單一 Excel 工作表的上限。",
     "duplication1aeb54": "擴增",
     "deletion2fe9b7": "缺失",
     "normalf78d03": "正常",
@@ -1248,7 +1250,20 @@
     "sampleDetailTabs1215f2": "樣本詳情標籤頁",
     "turnaroundDays": "{p0, plural, other {#天}}"
   },
+  "mtDetail": {
+    "molecularAnnotation": "分子註釋",
+    "referenceAnnotation": "資料庫與族群註釋",
+    "callEvidence": "變異檢出與品質證據",
+    "reportClassification": "報告參考分類",
+    "manualClassification": "人工 ACMG 評定",
+    "calculator": "粒線體 ACMG 計算器",
+    "criteriaHelp": "依 ClinGen mtDNA v1.0 核對後選擇條款及強度。上游報告註釋供查證，由評估人員確認適用的證據。",
+    "standAlone": "獨立",
+    "evidenceNote": "證據依據（選填）",
+    "calculateAndSave": "計算並儲存"
+  },
   "tasks": {
+    "mtAltReadCount": "變異支持 reads",
     "probandZygosity": "先證者雜合性",
     "fatherZygosity": "父親雜合性",
     "motherZygosity": "母親雜合性",

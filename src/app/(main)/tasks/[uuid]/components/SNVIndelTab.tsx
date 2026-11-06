@@ -362,9 +362,29 @@ export function SNVIndelTab({
       header: t("tasks.acmgAssessment6a7cd5"),
       accessor: (row) => {
         const config = row.acmgClassification ? ACMG_CONFIG[row.acmgClassification] : undefined;
-          return config
-          ? <HoverHint content={row.activeAcmgVersion==='svcv4'?t("tasks.svcVDraftNonauthoritativeReferenceAssessment3fe575"):row.acmgAssessmentSource === 'manual_override' ? t("tasks.manualClassificationOverride467829") : row.acmgAssessmentSource === 'manual_evidence' ? t("tasks.calculatedFromSavedAcmgEvidence1b9d08") : `${row.automaticAcmg?.classificationBasis && row.automaticAcmg.classificationBasis !== 'acmg_evidence' ? t("tasks.quickAssessmentManualReview10d3bd") : t("tasks.automaticInitialAssessmentecbbfb")}${row.automaticAcmg?.profile ? ` · ${row.automaticAcmg.profile}` : ''}`}><span className="inline-flex flex-col items-center gap-1"><ClinicalSignificanceBadge value={row.acmgClassification}>{row.activeAcmgVersion==='svcv4'&&row.acmgVusSubclass?row.acmgVusSubclass:config.label}</ClinicalSignificanceBadge><span className="text-xs text-fg-muted">{row.activeAcmgVersion==='svcv4'?t("tasks.vExperimental7c90f7"):row.acmgAssessmentSource==='automatic'&&row.automaticAcmg?.classificationBasis&&row.automaticAcmg.classificationBasis!=='acmg_evidence'?t("tasks.quickAssessment6445dc"):t("tasks.currentEdition7b034e")}</span></span></HoverHint>
-          : <HoverHint content={row.automaticAcmg?.pending?.map(item => t(item)).join(' · ') || t("tasks.insufficientEvidenceForAutomaticAssessmentef8b34")}><span ><Tag variant="neutral" className="w-20 justify-center">{t("tasks.insufficientEvidence70568c")}</Tag></span></HoverHint>;
+        const adopted = row.adoptedACMG?.source;
+        const experimental = row.activeAcmgVersion === 'svcv4';
+        const manual = adopted === 'manual' || adopted === 'manual_override' || adopted === 'manual_evidence' ||
+          (!adopted && (row.acmgAssessmentSource === 'manual_override' || row.acmgAssessmentSource === 'manual_evidence'));
+        const quick = adopted === 'quick' || ((!adopted || adopted === 'automatic') && row.acmgAssessmentSource === 'automatic' &&
+          row.automaticAcmg?.classificationBasis && row.automaticAcmg.classificationBasis !== 'acmg_evidence');
+        const source = experimental ? t("tasks.vExperimental7c90f7")
+          : manual ? t('assessmentDisplay.manual')
+          : adopted === 'database' ? t('assessmentDisplay.database')
+          : adopted === 'ai' ? t('assessmentDisplay.ai')
+          : quick ? t("tasks.quickAssessment6445dc") : t("tasks.currentEdition7b034e");
+        const hint = experimental ? t("tasks.svcVDraftNonauthoritativeReferenceAssessment3fe575")
+          : manual && row.acmgAssessmentSource === 'manual_override' ? t("tasks.manualClassificationOverride467829")
+          : manual && row.acmgAssessmentSource === 'manual_evidence' ? t("tasks.calculatedFromSavedAcmgEvidence1b9d08")
+          : (adopted && adopted !== 'automatic') || manual ? source
+          : !config ? row.automaticAcmg?.pending?.map(item => t(item)).join(' · ') || t("tasks.insufficientEvidenceForAutomaticAssessmentef8b34")
+          : quick ? t("tasks.quickAssessmentManualReview10d3bd") : t("tasks.automaticInitialAssessmentecbbfb");
+        return <HoverHint content={hint}><span className="inline-flex flex-col items-center gap-1">
+          {config
+            ? <ClinicalSignificanceBadge value={row.acmgClassification}>{experimental && row.acmgVusSubclass ? row.acmgVusSubclass : config.label}</ClinicalSignificanceBadge>
+            : <Tag variant="neutral" className="w-20 justify-center">{manual ? t('assessmentDisplay.notAssessed') : t("tasks.insufficientEvidence70568c")}</Tag>}
+          {(config || adopted || manual) && <span className="text-xs text-fg-muted">{source}</span>}
+        </span></HoverHint>;
       },
       width: 100,
       align: 'center',

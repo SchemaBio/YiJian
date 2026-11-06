@@ -17,6 +17,7 @@ import { HistoryColumnFilter } from './HistoryColumnFilter';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 import { HistoryWorkerClient, focusDetail, syncFocuses, type HistoryAudit } from './history-client';
+import { downloadHistoryWorkbook } from './history-export';
 import { CLASS_LABELS, HISTORY_TYPES, locus, historyPosition, type HistoryQuery, type HistoryQueryResult, type HistoryTask, type HistoryType, type FocusRow } from './history-engine';
 
 const initialQuery: Omit<HistoryQuery, 'table'> = { search: '', includeWithdrawn: false, filters: {}, sort: 'detectionCount', direction: 'desc', page: 1, pageSize: 25 };
@@ -49,6 +50,30 @@ export default function HistoryWorkspace() {
   const [sourceError, setSourceError] = React.useState(''), [auditID, setAuditID] = React.useState('');
   const sourcePanel = React.useRef<HTMLElement>(null);
   const [audit, setAudit] = React.useState<HistoryAudit[] | null>(null), [auditError, setAuditError] = React.useState('');
+  const exportRequest = React.useRef<AbortController | null>(null);
+  const [exporting, setExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState('');
+
+  React.useEffect(() => {
+    setExportError('');
+    return () => exportRequest.current?.abort();
+  }, [scope]);
+
+  const exportWorkbook = async () => {
+    if (!scope || exportRequest.current) return;
+    const controller = new AbortController();
+    exportRequest.current = controller;
+    setExporting(true);
+    setExportError('');
+    try {
+      await downloadHistoryWorkbook(query.includeWithdrawn, t, controller.signal);
+    } catch (failure) {
+      if (!controller.signal.aborted) setExportError(errorText(failure, t));
+    } finally {
+      exportRequest.current = null;
+      setExporting(false);
+    }
+  };
 
   React.useEffect(() => {
     cursors.current.clear(); setResult(null); setSelected(null); setReady(false);
@@ -162,8 +187,12 @@ export default function HistoryWorkspace() {
         <div><dt>{t("history.activeFocusLocie681ab")}</dt><dd>{visibleReady && result ? result.totalVariants.toLocaleString(t.locale) : '—'}</dd></div>
         <div><dt>{t("history.associatedTasks346a3e")}</dt><dd>{visibleReady && result ? result.totalTasks.toLocaleString(t.locale) : '—'}</dd></div>
       </dl>
-      <ActionButton action="refresh" variant="secondary" type="button" onClick={() => setRefresh(value => value + 1)} disabled={syncing}>{t("admin.refresh38108e")}</ActionButton>
+      <div className="flex flex-wrap gap-2">
+        <ActionButton action="download" variant="secondary" type="button" onClick={() => void exportWorkbook()} loading={exporting} disabled={!scope}>{t('history.exportExcel')}</ActionButton>
+        <ActionButton action="refresh" variant="secondary" type="button" onClick={() => setRefresh(value => value + 1)} disabled={syncing}>{t("admin.refresh38108e")}</ActionButton>
+      </div>
     </header>
+    {exportError && <p role="alert" className="pb-2 text-sm text-danger-fg">{exportError}</p>}
     {(syncing || !visibleReady) && <p className="yj-history-sync" role="status">{syncing ? t("history.synchronizingRecordsReceivede70010", {p0: String(received.toLocaleString(t.locale))}) : t("history.awaitingSynchronization250249")}</p>}
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border-default bg-[var(--yj-panel-bg)]">
       <nav aria-label={t("history.variantType6c1aef")} className="yj-history-type-tabs">{HISTORY_TYPES.map(([key, label]) => <button type="button" key={key} aria-current={table === key ? 'page' : undefined} onClick={() => chooseType(key)}>{t(label)}</button>)}</nav>

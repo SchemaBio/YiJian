@@ -34,7 +34,6 @@ describe('same-screen interpretation', () => {
       expect.objectContaining({
         acmgEvidence: [expect.objectContaining({ code: 'PP3' })],
         activeAcmgVersion: 'legacy',
-        adoptedACMG: expect.objectContaining({ source: 'manual' }),
       }),
       expect.any(String)
     ));
@@ -49,6 +48,8 @@ describe('same-screen interpretation', () => {
     fireEvent.click(screen.getByRole('button', { name: button }));
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     const changes = save.mock.calls[0][1];
+    expect(changes).not.toHaveProperty('acmgSavedAt');
+    expect(changes).not.toHaveProperty('adoptedACMG');
     expect(changes.acmgEvidence).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: 'PP3' }),
       expect.objectContaining({ code: 'PM2' }),

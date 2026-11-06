@@ -441,6 +441,9 @@ class BrowserTable {
             row.confidenceLabel = source.Col18;
             row.coordinateSystem = cnvBEDCoordinateSystem(this.table, this.raw);
         }
+        if (this.table === 'mt') {
+            row.annotationValues = Object.fromEntries(this.raw.map(field => [field, source[field]]));
+        }
         Object.assign(row, overlay);
         if(overlay.activeAcmgVersion==='svcv4') {
             const svc=object(object(overlay.svcv4Assessment).result);

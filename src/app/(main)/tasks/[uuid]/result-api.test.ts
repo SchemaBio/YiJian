@@ -2,12 +2,47 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '@/lib/api';
 import { queryBrowserParquet } from '@/lib/parquet-browser';
 import { DEFAULT_FILTER_STATE } from './types';
-import { getCNVSegments, getSNVIndels, focusVariant, reviewVariant, saveResultRowAdjustment } from './result-api';
+import { getCNVSegments, getMitochondrialVariants, getSNVIndels, focusVariant, reviewVariant, saveResultRowAdjustment } from './result-api';
 
 vi.mock('@/lib/api', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), download: vi.fn() }, ApiError: class extends Error {} }));
 vi.mock('@/lib/parquet-browser',()=>({queryBrowserParquet:vi.fn(),exportBrowserParquet:vi.fn(),updateBrowserOverlay:vi.fn().mockResolvedValue(undefined)}));
 
+it('reads mitochondrial depth and ALT support from the archived report', async () => {
+  vi.mocked(queryBrowserParquet).mockResolvedValueOnce({
+    items: [
+      { depth: 101, aD: '1,100', position: 16304, ref: 'T', alt: 'C' },
+      { depth: '50', ad: '30,20,0', mtHgvs: 'm.309dup' },
+      { depth: '.', aD: '.', position: 309, ref: 'C', alt: 'CC' },
+    ],
+    total: 3, rowCount: 3, columns: [], columnTypes: {}, fieldProfileVersion: 'parquet-fields-v2',
+    offset: 0, limit: 20, version: 'hash', attemptId: 'attempt',
+  });
+  const page = await getMitochondrialVariants('mt-read-support', DEFAULT_FILTER_STATE);
+  expect(page.data.map(row => row.hgvs)).toEqual(['m.16304T>C', 'm.309dup', undefined]);
+  expect(page.data.map(({ depth, altReadCounts }) => ({ depth, altReadCounts }))).toEqual([
+    { depth: 101, altReadCounts: [100] },
+    { depth: 50, altReadCounts: [20, 0] },
+    { depth: null, altReadCounts: [] },
+  ]);
+});
+
 describe('versioned Parquet adjustments', () => {
+  it('keeps the adopted manual classification separate from quick screening', async () => {
+    const automaticAcmg = { classification: 'Pathogenic', criteria: [] };
+    vi.mocked(queryBrowserParquet).mockResolvedValueOnce({
+      items: [
+        { automaticAcmg, acmgClassificationComputed: 'Pathogenic', adjustments: { adoptedACMG: { source: 'manual', version: 'legacy' } } },
+        { automaticAcmg, acmgClassificationComputed: 'Pathogenic', adjustments: { adoptedACMG: { source: 'manual_evidence', version: 'legacy', classification: 'Benign' } } },
+      ],
+      total: 2, rowCount: 2, columns: [], columnTypes: {}, fieldProfileVersion: 'parquet-fields-v2',
+      offset: 0, limit: 20, version: 'hash', attemptId: 'attempt',
+    });
+    const { data } = await getSNVIndels('manual-source', DEFAULT_FILTER_STATE);
+    expect(data[0].adoptedACMG?.source).toBe('manual');
+    expect(data[0].acmgClassification).toBeUndefined();
+    expect(data[1].acmgClassification).toBe('Benign');
+  });
+
   it('restores the saved SVC AI snapshot without changing the active classification',async()=>{
     const savedAI={requestId:'saved-request',feature:'svcv4',summary:'Saved SVC summary',resultKind:'experimental',suggestedClassification:'VUS'};
     vi.mocked(queryBrowserParquet).mockResolvedValueOnce({items:[{id:'row',attemptId:'attempt',datasetVersion:'hash',adjustmentVersion:2,acmgClassification:'Likely_Benign',adjustments:{svcv4AIResult:savedAI,activeAcmgVersion:'legacy'}}],total:1,rowCount:1,columns:[],columnTypes:{},fieldProfileVersion:'parquet-fields-v2',offset:0,limit:20,version:'hash',attemptId:'attempt'});

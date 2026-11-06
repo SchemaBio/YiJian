@@ -612,6 +612,8 @@
     "andItsStoredObjectThisCannotBe97aee3": " 及其存储对象。此操作无法撤销。"
   },
   "history": {
+    "exportExcel": "导出 Excel",
+    "exportTooLarge": "某个标签的记录数超过单个 Excel 工作表的上限。",
     "duplication1aeb54": "扩增",
     "deletion2fe9b7": "缺失",
     "normalf78d03": "正常",
@@ -1248,7 +1250,20 @@
     "sampleDetailTabs1215f2": "样本详情标签页",
     "turnaroundDays": "{p0, plural, other {#天}}"
   },
+  "mtDetail": {
+    "molecularAnnotation": "分子注释",
+    "referenceAnnotation": "数据库与人群注释",
+    "callEvidence": "变异检出与质量证据",
+    "reportClassification": "报告参考分类",
+    "manualClassification": "人工 ACMG 评定",
+    "calculator": "线粒体 ACMG 计算器",
+    "criteriaHelp": "按 ClinGen mtDNA v1.0 核验后选择条款及强度。上游报告注释仅供查证，由评估人员确认适用的证据。",
+    "standAlone": "独立",
+    "evidenceNote": "证据依据（可选）",
+    "calculateAndSave": "计算并保存"
+  },
   "tasks": {
+    "mtAltReadCount": "突变支持 reads",
     "probandZygosity": "先证者杂合性",
     "fatherZygosity": "父亲杂合性",
     "motherZygosity": "母亲杂合性",
