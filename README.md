@@ -38,7 +38,7 @@ pnpm install
 pnpm dev
 ```
 
-The default development configuration connects directly to `http://localhost:8080/api`.
+The default development configuration connects directly to `http://localhost:8080/api`. For a complete deployment, see the [Octopus self-hosted guide](https://github.com/SchemaBio/Octopus/blob/main/deploy/README.md).
 
 ## Configuration
 
@@ -110,8 +110,8 @@ Reverse proxy, TLS, and public access control are the deployer’s responsibilit
 
 The platform administrator can assign nine independent business permissions in Platform Management. Administrators always have every permission. All ordinary accounts, including existing accounts and self-registered users, start read-only. Users can browse, query and download local business data shared across the instance; granted permissions allow managing resources created by other local users. Personal preferences and credentials remain private.
 
-This applies only to the Octopus open-source edition. SaaS via Squid keeps its existing single-user and tenant isolation behavior. Deploy the Octopus database/backend update before YiJian. Permission changes take effect on subsequent API requests without signing in again; the interface refreshes permissions on window focus and permission errors. Running tasks continue after revocation.
+Deploy the Octopus database/backend update before YiJian. Permission changes take effect on subsequent API requests without signing in again; the interface refreshes permissions on window focus and permission errors. Running tasks continue after revocation.
 
 ## VCF2Anno
 
-支持 VCF 起始的 SNP/InDel 注释，hg19/hg38 共用工作流；SaaS 沿用 WES 计算时间计费，自部署不扣积分。输入、部署、配置及验证见 [VCF2Anno 接入说明](docs/VCF2ANNO.md)。
+VCF2Anno annotates SNPs and indels from a VCF using the same workflow for hg19 and hg38. See the [integration guide](docs/VCF2ANNO.md) for inputs, deployment, configuration, and verification.
