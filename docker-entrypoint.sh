@@ -31,6 +31,24 @@ case "$BACKEND" in
 esac
 export API_URL BACKEND SUPPORT_EMAIL PASSWORD_RESET_ENABLED
 
+if [ "$BACKEND" = "squid" ] && [ "${YIJIAN_MANAGED_STORAGE:-}" = "true" ]; then
+  YIJIAN_UPLOAD_ORIGINS="$(node <<'NODE'
+(async () => {
+  const base = process.env.YIJIAN_SERVER_API_URL.replace(/\/$/, '');
+  const response = await fetch(base + '/v1/config/upload-origin', { signal: AbortSignal.timeout(5000), redirect: 'error' });
+  if (!response.ok) throw new Error();
+  const { origin } = await response.json();
+  if (origin && !/^https:\/\/[a-z0-9-]+\.cos\.[a-z0-9-]+\.myqcloud\.com$/.test(origin)) throw new Error();
+  process.stdout.write(origin || '');
+})().catch(() => {
+  process.stderr.write('Unable to load the managed upload origin from Squid\n');
+  process.exitCode = 1;
+});
+NODE
+)"
+  export YIJIAN_UPLOAD_ORIGINS
+fi
+
 node <<'NODE' > /app/public/runtime-config.js
 const clean = (value) => String(value || '').replace(/[\r\n]/g, '');
 const config = {
