@@ -6,12 +6,15 @@ import NewAnalysisPage from './page';
 import {getTrioContext} from '@/lib/sample-parents';
 import { tasksApi } from '@/lib/tasks';
 import {readResourcePage} from '@/lib/resource-pages';
+import { LocaleProvider } from '@/components/providers/LocaleProvider';
+import { pipelinesApi } from '@/lib/task-resources';
+import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 
 import { listPedigrees, getPedigree } from '@/lib/pedigrees';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({}) }));
-vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => 'octopus' }));
+vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: vi.fn(() => 'octopus') }));
 vi.mock('@/lib/task-resources', async importOriginal => ({...await importOriginal<typeof import('@/lib/task-resources')>(),
   samplesApi: { list: vi.fn(async () => []) },
   templatesApi:{list:vi.fn(async()=>[])},
@@ -45,6 +48,38 @@ it('offers trio workflows without requesting pedigree data', async () => {
   expect(screen.getByRole('option', {name:'家系'})).toBeEnabled();
   expect(listPedigrees).not.toHaveBeenCalled();
   expect(getPedigree).not.toHaveBeenCalled();
+});
+
+it('translates generated notes while keeping edited notes on language changes', async () => {
+  vi.mocked(pipelinesApi.list).mockResolvedValueOnce([
+    { id: 'builtin-wes-single-hg38', name: '单样本', baseType: 'wes_single', version: '' },
+  ]);
+  const { rerender } = render(<LocaleProvider initialLocale="zh-CN"><NewAnalysisPage /></LocaleProvider>);
+  fireEvent.click(await screen.findByRole('radio', { name: /BIZ-1/ }));
+  expect(screen.queryByText('高级选项')).not.toBeInTheDocument();
+  rerender(<LocaleProvider initialLocale="en"><NewAnalysisPage /></LocaleProvider>);
+  const notes = await screen.findByRole('textbox', { name: 'Task notes' });
+  expect(notes).toHaveValue('BIZ-1 WES single-sample analysis_hg38 analysis');
+  fireEvent.change(notes, { target: { value: 'Custom notes' } });
+  rerender(<LocaleProvider initialLocale="zh-CN"><NewAnalysisPage /></LocaleProvider>);
+  expect(await screen.findByRole('textbox', { name: '任务备注' })).toHaveValue('Custom notes');
+});
+
+it('shows the SaaS retention checkbox as checked and unlocks submission', async () => {
+  vi.mocked(getRuntimeBackendFlavor).mockReturnValue('squid');
+  const view = render(<NewAnalysisPage />);
+  try {
+    fireEvent.click(await screen.findByRole('radio', { name: /BIZ-1/ }));
+    const checkbox = screen.getByRole('checkbox', { name: /我已阅读并了解上述保留期限/ });
+    const submit = screen.getByRole('button', { name: '提交任务' });
+    expect(submit).toBeDisabled();
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(submit).toBeEnabled();
+  } finally {
+    view.unmount();
+    vi.mocked(getRuntimeBackendFlavor).mockReturnValue('octopus');
+  }
 });
 
 it('provides a retry after task resources fail to load', async () => {

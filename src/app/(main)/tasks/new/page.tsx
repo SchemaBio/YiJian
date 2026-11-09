@@ -18,7 +18,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContent } from '@/components/layout';
-import { Input, Select, FormItem, Checkbox } from '@schema/ui-kit';
+import { Input, Select, FormItem } from '@schema/ui-kit';
 import { Coins } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
 import {
@@ -45,9 +45,7 @@ export default function NewAnalysisPage() {
   const [selectedSample, setSelectedSample] = React.useState<TaskSampleListItem|null>(null);
   const [selectedPipeline, setSelectedPipeline] = React.useState('');
 
-  const [taskName, setTaskName] = React.useState('');
-  const [enableCNV, setEnableCNV] = React.useState(true);
-  const [enableSV, setEnableSV] = React.useState(false);
+  const [customNotes, setCustomNotes] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [retentionAcknowledged, setRetentionAcknowledged] = React.useState(false);
   const [formError, setFormError] = React.useState('');
@@ -140,19 +138,21 @@ export default function NewAnalysisPage() {
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
-    : calculateEstimatedCredits(estimatedMinutes, billingConfig, isVCF ? 'vcf2anno' : undefined);
+    : calculateEstimatedCredits(estimatedMinutes, billingConfig, isVCF ? 'vcf2anno' : selectedPipelineInfo?.template);
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
     : null;
   const insufficientCredits = projectedBalance !== null && billingConfig !== null
     && projectedBalance < billingConfig.min_balance;
 
-  React.useEffect(() => {
-    const subject = selectedSampleInfo?.internalId || selectedSampleInfo?.id;
-    if (subject && selectedPipelineInfo) {
-      setTaskName(t("tasks.analysis8a0847", {p0: String(subject), p1: String(selectedPipelineInfo.name)}));
-    }
-  }, [isTrio, selectedSampleInfo, selectedPipelineInfo]);
+  const subject = selectedSampleInfo?.internalId || selectedSampleInfo?.id;
+  const defaultNotes = subject && selectedPipelineInfo
+    ? t("tasks.analysis8a0847", {
+        p0: subject,
+        p1: pipelineDisplayName(selectedPipelineInfo.id, selectedPipelineInfo.name, t),
+      })
+    : '';
+  const notes = customNotes ?? defaultNotes;
 
   const handleSubmit = async () => {
 	if (isFamilyAnalysisUnavailable(selectedPipelineInfo)) return;
@@ -171,11 +171,8 @@ export default function NewAnalysisPage() {
  ...(isVCF?{vcf_asset_id:vcfAssetId,vcf_sample_name:vcfSampleName}:{}),
         pipelineName: selectedPipelineInfo.name,
         pipelineVersion: selectedPipelineInfo.version,
-        remark: taskName,
-        inputs: isVCF ? {} : {
-          enable_cnv: enableCNV,
-          enable_sv: enableSV,
-        },
+        remark: notes,
+        inputs: isVCF ? {} : { enable_cnv: true, enable_sv: false },
       });
       router.push(`/tasks/${encodeURIComponent(task.id)}`);
     } catch (err) {
@@ -216,41 +213,31 @@ export default function NewAnalysisPage() {
               disabled: isFamilyAnalysisUnavailable(pipeline),
             }))}
             value={selectedPipeline}
-            onChange={(value) => setSelectedPipeline(Array.isArray(value) ? value[0] : value)}
+            onChange={(value) => {
+              setSelectedPipeline(Array.isArray(value) ? value[0] : value);
+              setCustomNotes(null);
+            }}
             placeholder={t("tasks.selectAnalysisPipeline196adf")}
             searchable
           />
         </FormItem>
 
         {<div className={`grid grid-cols-1 items-start gap-4 ${isVCF?'lg:grid-cols-2':''}`}>
-          <TaskSamplePicker selected={selectedSample} onSelect={setSelectedSample} trioOnly={isTrio} showSequencingStatus={!isVCF} disabled={submitting}/>
+          <TaskSamplePicker selected={selectedSample} onSelect={(sample) => {
+            setSelectedSample(sample);
+            setCustomNotes(null);
+          }} trioOnly={isTrio} showSequencingStatus={!isVCF} disabled={submitting}/>
           {isVCF && <VCFTaskFields assetId={vcfAssetId} sampleName={vcfSampleName} onAssetChange={setVcfAssetId} onSampleChange={setVcfSampleName} disabled={submitting}/>}
         </div>}
         {isTrio&&<TrioSummary state={trioState}/>}
         <FormItem label={t("tasks.taskNotesd34f05")}>
           <Input
             aria-label={t("tasks.taskNotesd34f05")}
-            value={taskName}
-            onChange={(e) => setTaskName(e.target.value)}
+            value={notes}
+            onChange={(e) => setCustomNotes(e.target.value)}
             placeholder={t("tasks.taskNotesOptional477837")}
           />
         </FormItem>
-
-        {!isVCF && <div>
-          <h3 className="text-sm font-medium text-fg-default mb-3">{t("tasks.advancedOptions378a54")}</h3>
-          <div className="flex flex-wrap gap-x-5 gap-y-3">
-            <Checkbox
-              checked={enableCNV}
-              onCheckedChange={(checked) => setEnableCNV(checked === true)}
-              label={t("tasks.enableCnvAnalysisf42731")}
-            />
-            <Checkbox
-              checked={enableSV}
-              onCheckedChange={(checked) => setEnableSV(checked === true)}
-              label={t("tasks.enableSvAnalysisc73efc")}
-            />
-          </div>
-        </div>}
 
       </section>
       <aside className="yj-panel min-w-0 space-y-5 p-5" aria-label={t("tasks.taskEstimateAndSubmission7f6c48")}>

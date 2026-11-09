@@ -74,6 +74,15 @@ it('reserves exactly 50 credits for VCF annotation regardless of estimate and ra
   expect(calculateEstimatedCredits(60, { credits_per_minute: 1, credit_rate_multiplier: 2 } as never, 'single')).toBe(120);
 });
 
+it.each([['single', 50], ['trio', 100]] as const)(
+  'applies the %s minimum after calculating estimated credits',
+  (template, minimum) => {
+    const config = { credits_per_minute: 1, credit_rate_multiplier: 2 } as never;
+    expect(calculateEstimatedCredits(10, config, template)).toBe(minimum);
+    expect(calculateEstimatedCredits(60, config, template)).toBe(120);
+  },
+);
+
 it('does not turn Stripe payment order references into task links', () => {
  for (const billing_basis of ['stripe_payment', 'stripe_test_payment']) {
   expect(billingTransactionTaskId({ ...row(9, 'recharge', 10, 'order-uuid', billing_basis), reference_id: 'order-uuid' })).toBeNull();

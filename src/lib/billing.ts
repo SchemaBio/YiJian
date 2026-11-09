@@ -74,13 +74,17 @@ export function notifyBillingUpdated() {
 }
 
 export function calculateEstimatedCredits(minutes: number, config: BillingConfig | null, template?: string): number | null {
-  if (template === 'vcf2anno') return 50;
+  const taskTemplate = template?.trim().toLowerCase();
+  if (taskTemplate === 'vcf2anno') return 50;
   if (!config) return null;
   const normalizedMinutes = Math.max(1, Math.trunc(minutes) || 1);
   const calculated = Math.round(
     normalizedMinutes * config.credits_per_minute * config.credit_rate_multiplier
   );
-  return calculated > 0 ? calculated : config.credits_per_minute;
+  const credits = calculated > 0 ? calculated : config.credits_per_minute;
+  if (taskTemplate === 'single' || taskTemplate === 'germline_single') return Math.max(credits, 50);
+  if (taskTemplate === 'trio' || taskTemplate === 'germline_trio') return Math.max(credits, 100);
+  return credits;
 }
 
 export function summarizeTaskBilling(

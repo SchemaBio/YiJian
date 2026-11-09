@@ -177,7 +177,11 @@ export function NewTaskModal({ isOpen, onClose, onSubmit }: NewTaskModalProps) {
 
   const estimatedCredits = estimateStatus === 'idle' || estimateStatus === 'loading'
     ? null
-    : calculateEstimatedCredits(estimatedMinutes, billingConfig, isVCF ? 'vcf2anno' : undefined);
+    : calculateEstimatedCredits(
+        estimatedMinutes,
+        billingConfig,
+        isVCF ? 'vcf2anno' : resolveTemplate(pipelines.find(p => p.id === selectedPipeline)),
+      );
   const projectedBalance = billingBalance && estimatedCredits !== null
     ? billingBalance.balance - estimatedCredits
     : null;
