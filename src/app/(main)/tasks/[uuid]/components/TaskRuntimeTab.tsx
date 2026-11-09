@@ -14,7 +14,7 @@ import * as React from 'react';
 import { Tag } from '@/components/shared/Tag';
 import { AlertCircle, Clock3, FileText, Loader2, RefreshCw, Server } from 'lucide-react';
 import { tasksApi } from '@/lib/tasks';
-import { taskOverallProgress } from '@/lib/task-overall-progress';
+import { computeLaunchReasonKey, taskOverallProgress } from '@/lib/task-overall-progress';
 import { TaskOverallProgress } from './TaskOverallProgress';
 import type { TaskProgressResponse, TaskStatus } from '@/types/task';
 
@@ -347,7 +347,7 @@ export function TaskRuntimeTab({ taskId, initialStatus, onResultImportChange }: 
               {progress?.phase_updated_at && <span>{t("tasks.updatedAt4668a1")}{formatTime(progress.phase_updated_at, t)}</span>}
 	            {progress?.bootstrap_last_heartbeat_at && <span>{t("tasks.lastHeartbeat3b4213")}{formatTime(progress.bootstrap_last_heartbeat_at, t)}</span>}
 	            {progress?.diagnostic_hold_until && <span className="text-warning-fg">{t("tasks.logsRetainedUntil4692f6")}{formatTime(progress.diagnostic_hold_until, t)}</span>}
-              {progress?.execution_reason_code && <span className="text-danger-fg">{translateUI(executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code, t)}</span>}
+              {progress?.execution_reason_code && !computeLaunchReasonKey(progress.execution_reason_code) && <span className="text-danger-fg">{translateUI(executionReasonLabels[progress.execution_reason_code] ?? progress.execution_reason_code, t)}</span>}
             </div>
 	          {progress?.diagnostic_summary && <p className="mt-2 rounded-md bg-danger-subtle px-3 py-2 text-xs text-danger-fg">{progress.diagnostic_summary}</p>}
           </div>

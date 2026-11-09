@@ -14,6 +14,8 @@ import { Tag } from '@/components/shared/Tag';
 import { ArrowLeft, Clock, Clock3, Server, User } from 'lucide-react';
 import type { AnalysisTaskDetail } from '../types';
 import { TaskCostDetail } from '@/components/billing';
+import { ExpiryCell } from '@/components/shared/ResearchPolicy';
+import { computeLaunchReasonKey } from '@/lib/task-overall-progress';
 
 interface TaskHeaderProps {
   task: AnalysisTaskDetail;
@@ -69,6 +71,12 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
   const t = useText();
   const statusInfo = taskStatusConfig[taskDisplayStatus(task)];
   const taskVMStatus = task.vmStatus?.toUpperCase();
+  const launchReason = computeLaunchReasonKey(task.executionReasonCode, taskVMStatus);
+  const expiry = task.expiresAt && (
+    <span className="inline-flex items-center gap-1 text-xs text-fg-muted">
+      {t('research.expiresAt')} <ExpiryCell value={task.expiresAt} />
+    </span>
+  );
   const executionPhaseLabel = task.executionPhase === 'terminal'
     ? taskVMStatus === 'LAUNCH_FAILED'
       ? t("tasks.noComputeNodeCreatedacf8b0")
@@ -86,6 +94,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
     <span className="hidden text-xs text-fg-muted md:inline">{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t)} · {task.pipelineVersion}</span>
     <HoverHint content={translateUI(task.id, t)}><span className="shrink-0 text-xs text-fg-muted sm:ml-auto" >{t("tasks.task6fda8e")}{task.id.substring(0,8)}</span></HoverHint>
     <TaskCostDetail taskId={task.id} status={task.status} compact/>
+    {expiry}
     {completionControl}
   </div>;
 
@@ -137,6 +146,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
                 <span>{task.completedAt}</span>
               </div>
             )}
+            {expiry}
           </div>
 
           {task.executionPhase && (
@@ -150,7 +160,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
               {task.bootstrapLastHeartbeatAt && <span className="text-fg-muted">{t("tasks.lastHeartbeat3b4213")}{new Date(task.bootstrapLastHeartbeatAt).toLocaleString(t.locale, { hour12: false })}</span>}
               {task.dispatchNextRetryAt && <span className="text-fg-muted">{t("tasks.nextRetry23d0ee")}{new Date(task.dispatchNextRetryAt).toLocaleString(t.locale, { hour12: false })}</span>}
               {task.diagnosticHoldUntil && <span className="text-warning-fg">{t("tasks.logsRetainedUntil058b69")}{new Date(task.diagnosticHoldUntil).toLocaleString(t.locale, { hour12: false })}</span>}
-              {task.executionReasonCode && <span className="text-danger-fg">{translateUI(executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode, t)}</span>}
+              {launchReason ? <span className="text-danger-fg">{t(launchReason)}</span> : task.executionReasonCode && <span className="text-danger-fg">{translateUI(executionReasonLabels[task.executionReasonCode] ?? task.executionReasonCode, t)}</span>}
               {task.diagnosticSummary && <p className="mt-2 max-w-2xl text-xs text-danger-fg">{task.diagnosticSummary}</p>}
             </div>
           )}

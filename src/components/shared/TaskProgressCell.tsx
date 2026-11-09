@@ -1,7 +1,7 @@
 'use client';
 
 import { useText } from '@/i18n/useText';
-import { taskOverallProgress } from '@/lib/task-overall-progress';
+import { computeLaunchReasonKey, taskOverallProgress } from '@/lib/task-overall-progress';
 import type { AnalysisTask } from '@/types/task';
 
 export function TaskProgressCell({ task }: { task: AnalysisTask }) {
@@ -12,6 +12,7 @@ export function TaskProgressCell({ task }: { task: AnalysisTask }) {
     execution_phase: task.executionPhase, vm_status: task.vmStatus,
     bootstrap_phase: task.bootstrapPhase, result_import_status: task.resultImportStatus,
   });
+  const stoppedKey = computeLaunchReasonKey(task.executionReasonCode, task.vmStatus) ?? 'taskLifecycle.stopped';
   return <div className="min-w-0 space-y-1" title={t('taskLifecycle.explanation')}>
     <div className="flex items-center gap-2">
       <div role="progressbar" aria-label={t('taskLifecycle.title')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={overall.percent}
@@ -21,6 +22,6 @@ export function TaskProgressCell({ task }: { task: AnalysisTask }) {
       </div>
       <span className="text-xs tabular-nums text-fg-muted">{overall.percent}%</span>
     </div>
-    <p className={`text-xs ${overall.stopped ? 'text-danger-fg' : 'text-fg-muted'}`}>{t(overall.stopped ? 'taskLifecycle.stopped' : `taskLifecycle.${overall.detail}`)}</p>
+    <p className={`text-xs ${overall.stopped ? 'text-danger-fg' : 'text-fg-muted'}`}>{t(overall.stopped ? stoppedKey : `taskLifecycle.${overall.detail}`)}</p>
   </div>;
 }

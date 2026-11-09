@@ -3404,6 +3404,8 @@
     "dismiss": "关闭公告：{p0}"
   },
   "taskLifecycle": {
+    "launchFailed": "计算节点申请失败",
+    "zoneMismatch": "云服务商拒绝了当前地域与可用区的组合，请联系平台管理员。",
     "noProgress": "尚未收到节点或分析进度",
     "title": "任务总进度",
     "step_queue": "排队",

@@ -81,6 +81,7 @@ function areTaskListsEqual(previous: AnalysisTask[], next: AnalysisTask[]): bool
       && task.resultImportStatus === candidate.resultImportStatus
       && task.progress === candidate.progress
       && task.createdAt === candidate.createdAt
+      && task.expiresAt === candidate.expiresAt
       && task.retryStartedAt === candidate.retryStartedAt
       && task.createdBy === candidate.createdBy
       && task.completedAt === candidate.completedAt

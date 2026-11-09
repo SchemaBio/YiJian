@@ -3404,6 +3404,8 @@
     "dismiss": "Cerrar anuncio: {p0}"
   },
   "taskLifecycle": {
+    "launchFailed": "Falló la solicitud del nodo de cómputo",
+    "zoneMismatch": "El proveedor rechazó la combinación de región y zona de disponibilidad configurada. Contacta al administrador de la plataforma.",
     "noProgress": "No se ha recibido progreso del nodo ni del análisis",
     "title": "Progreso total de la tarea",
     "step_queue": "En cola",

@@ -1,12 +1,13 @@
 'use client';
 
 import { useText } from '@/i18n/useText';
-import { taskLifecycleSteps, taskOverallProgress } from '@/lib/task-overall-progress';
+import { computeLaunchReasonKey, taskLifecycleSteps, taskOverallProgress } from '@/lib/task-overall-progress';
 import type { TaskProgressResponse } from '@/types/task';
 
 export function TaskOverallProgress({ task }: { task: Partial<TaskProgressResponse> }) {
   const t = useText();
   const overall = taskOverallProgress(task);
+  const stoppedMessage = t(computeLaunchReasonKey(task.execution_reason_code, task.vm_status) ?? 'taskLifecycle.stopped');
   return <section aria-label={t('taskLifecycle.title')}>
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
       <h3 className="font-semibold text-fg-default">{t('taskLifecycle.title')}</h3>
@@ -24,7 +25,7 @@ export function TaskOverallProgress({ task }: { task: Partial<TaskProgressRespon
       </li>)}
     </ol>
     <p className={`mt-3 text-sm ${overall.stopped ? 'text-danger-fg' : 'text-fg-default'}`}>
-      {overall.stopped && <span>{t('taskLifecycle.stopped')} · </span>}{t(`taskLifecycle.${overall.detail}`)}
+      {overall.stopped && <span>{stoppedMessage} · </span>}{t(`taskLifecycle.${overall.detail}`)}
     </p>
     <p className="mt-1 text-xs text-fg-muted">{t('taskLifecycle.explanation')}</p>
   </section>;

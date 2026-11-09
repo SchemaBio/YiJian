@@ -2,6 +2,11 @@ import type { TaskProgressResponse } from '@/types/task';
 
 export const taskLifecycleSteps = ['queue', 'node', 'initialize', 'analysis', 'results'] as const;
 
+export function computeLaunchReasonKey(reason?: string, vmStatus?: string) {
+  if (reason === 'CVM_ZONE_MISMATCH') return 'taskLifecycle.zoneMismatch';
+  if (reason === 'CVM_LAUNCH_FAILED' || vmStatus?.toUpperCase() === 'LAUNCH_FAILED') return 'taskLifecycle.launchFailed';
+}
+
 // Display weights describe milestones, not elapsed time. Never advance on a timer.
 const bootstrapMilestones: Record<string, { percent: number; key: string }> = {
   starting: { percent: 10, key: 'starting' },

@@ -3404,6 +3404,8 @@
     "dismiss": "Dismiss announcement: {p0}"
   },
   "taskLifecycle": {
+    "launchFailed": "Compute node request failed",
+    "zoneMismatch": "The cloud provider rejected the configured region and availability zone combination. Contact the platform administrator.",
     "noProgress": "No node or analysis progress has been reported",
     "title": "Overall task progress",
     "step_queue": "Queued",
