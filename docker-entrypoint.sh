@@ -39,6 +39,11 @@ const config = {
   SUPPORT_EMAIL: clean(process.env.SUPPORT_EMAIL || ''),
   UPLOAD_ORIGINS: clean(process.env.YIJIAN_UPLOAD_ORIGINS || ''),
   PASSWORD_RESET_ENABLED: clean(process.env.PASSWORD_RESET_ENABLED || 'false'),
+  RECHARGE_ANALYSIS_MINUTES: {
+    singleExome: clean(process.env.YIJIAN_RECHARGE_SINGLE_EXOME_MINUTES),
+    familyExome: clean(process.env.YIJIAN_RECHARGE_FAMILY_EXOME_MINUTES),
+    baseline: clean(process.env.YIJIAN_RECHARGE_BASELINE_MINUTES),
+  },
   DEFAULT_LOCALE: process.env.DEFAULT_LOCALE,
 };
 process.stdout.write(`window.__YIJIAN_CONFIG__ = ${JSON.stringify(config, null, 2)};\n`);

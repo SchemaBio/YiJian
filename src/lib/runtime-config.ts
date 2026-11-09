@@ -1,5 +1,11 @@
 import { resolveLocale, type Locale } from '@/i18n/locales';
 
+export const DEFAULT_RECHARGE_ANALYSIS_MINUTES = {
+  singleExome: 50,
+  familyExome: 100,
+  baseline: 15,
+};
+
 declare global {
   interface Window {
     __YIJIAN_CONFIG__?: {
@@ -9,6 +15,7 @@ declare global {
       UPLOAD_ORIGINS?: string;
       PASSWORD_RESET_ENABLED?: string;
       DEFAULT_LOCALE?: Locale;
+      RECHARGE_ANALYSIS_MINUTES?: Partial<Record<keyof typeof DEFAULT_RECHARGE_ANALYSIS_MINUTES, string>>;
     };
   }
 }
@@ -148,4 +155,19 @@ export function getRuntimeDefaultLocale(): Locale {
     ? window.__YIJIAN_CONFIG__?.DEFAULT_LOCALE ?? process.env.NEXT_PUBLIC_DEFAULT_LOCALE
     : process.env.YIJIAN_DEFAULT_LOCALE ?? process.env.NEXT_PUBLIC_DEFAULT_LOCALE;
   return resolveLocale(undefined, value);
+}
+
+export function getRuntimeRechargeAnalysisMinutes() {
+  const configured = typeof window !== 'undefined'
+    ? window.__YIJIAN_CONFIG__?.RECHARGE_ANALYSIS_MINUTES
+    : undefined;
+  const estimates = { ...DEFAULT_RECHARGE_ANALYSIS_MINUTES };
+  for (const key of Object.keys(estimates) as Array<keyof typeof estimates>) {
+    const value = configured?.[key]?.trim();
+    const minutes = Number(value);
+    if (value && /^\d+$/.test(value) && Number.isSafeInteger(minutes) && minutes > 0) {
+      estimates[key] = minutes;
+    }
+  }
+  return estimates;
 }

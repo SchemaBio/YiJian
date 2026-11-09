@@ -7,12 +7,35 @@ const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ user: { email: 'preview@example.invalid' }, currentOrg: { id: 'org', name: 'preview' } }) }));
 vi.mock('@/lib/payments', async original => ({ ...await original<typeof import('@/lib/payments')>(), getPaymentOptions: vi.fn().mockResolvedValue({ recharge_allowed: true, status: 'disabled', price: null }), getPaymentOrders: vi.fn().mockResolvedValue({ items: [], total: 0 }) }));
-vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => 'squid' }));
+vi.mock('@/lib/service-policy', async original => ({
+  ...await original<typeof import('@/lib/service-policy')>(),
+  getServicePolicy: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('@/lib/runtime-config', async original => ({
+  ...await original<typeof import('@/lib/runtime-config')>(),
+  getRuntimeBackendFlavor: () => 'squid',
+}));
 vi.mock('@/lib/billing', () => ({ BILLING_UPDATED_EVENT: 'billing-updated', getBillingBalance: vi.fn(), getBillingConfig: vi.fn(), calculateEstimatedCredits: vi.fn(() => null) }));
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getBillingBalance).mockResolvedValue({ balance: 100, org_id: 'org' });
   vi.mocked(getBillingConfig).mockResolvedValue({ credits_per_minute: 1, credit_rate_multiplier: 2 } as Awaited<ReturnType<typeof getBillingConfig>>);
+});
+it('uses runtime analysis durations and falls back per invalid value', async () => {
+  const previous = window.__YIJIAN_CONFIG__;
+  window.__YIJIAN_CONFIG__ = {
+    ...previous,
+    RECHARGE_ANALYSIS_MINUTES: { singleExome: '65', familyExome: '120', baseline: '0' },
+  };
+  try {
+    render(<RechargePage />);
+    await waitFor(() => expect(screen.getByText('当前余额').nextElementSibling).toHaveTextContent('100'));
+    expect(screen.getByText('单个外显子分析').nextElementSibling).toHaveTextContent('约 65 分钟');
+    expect(screen.getByText('父母子家系分析').nextElementSibling).toHaveTextContent('约 120 分钟');
+    expect(screen.getByText('单样本基线校对').nextElementSibling).toHaveTextContent('约 15 分钟');
+  } finally {
+    window.__YIJIAN_CONFIG__ = previous;
+  }
 });
 it('recovers failed recharge information without displaying infinite runtime', async () => {
   vi.mocked(getBillingBalance).mockRejectedValueOnce(new Error('余额读取失败')).mockResolvedValueOnce({ balance: 100, org_id: "org" });
