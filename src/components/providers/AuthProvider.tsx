@@ -5,7 +5,7 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { LocalizedError } from '@/i18n/errors';
 
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { User, UserOrganizationInfo, OrgRole } from '@/types/user';
 import type { LoginResponse } from '@/types/auth';
 import { authApi } from '@/lib/auth';
@@ -110,8 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [organizations, setOrganizations] = useState<UserOrganizationInfo[]>([]);
   const [currentOrg, setCurrentOrg] = useState<UserOrganizationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const sessionRevision = useRef(0);
 
   const applySession = useCallback((nextUser: User, nextOrg: UserOrganizationInfo | null) => {
+    sessionRevision.current += 1;
     const nextOrgs = nextOrg ? [nextOrg] : [];
     setUser(nextUser);
     setOrganizations(nextOrgs);
@@ -120,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetSession = useCallback(() => {
+    sessionRevision.current += 1;
     clearStoredAuth();
     setUser(null);
     setOrganizations([]);
@@ -267,11 +270,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isSuperAdmin = isPlatformAdmin;
   const hasPermission = useCallback((permission: BusinessPermission) => userHasPermission(user, permission, getRuntimeBackendFlavor()), [user]);
+  const userId = user?.id;
   const refreshSession = useCallback(async () => {
-    if (!user || DEV_MOCK_AUTH) return;
-    try { setUser(await authApi.getCurrentUser()); }
-    catch { setUser(previous => previous ? { ...previous, permissions: [] } : previous); }
-  }, [user]);
+    if (!userId || DEV_MOCK_AUTH) return;
+    const revision = ++sessionRevision.current;
+    try {
+      const nextUser = await authApi.getCurrentUser();
+      if (revision !== sessionRevision.current) return;
+      const nextOrg = getRuntimeBackendFlavor() === 'squid'
+        ? await authApi.getCurrentOrganization().catch(() => null)
+        : null;
+      if (revision !== sessionRevision.current) return;
+      if (nextOrg) {
+        applySession(nextUser, { ...nextOrg, orgRole: nextUser.systemRole });
+      } else {
+        setUser(nextUser);
+      }
+    } catch {
+      if (revision === sessionRevision.current) {
+        setUser(previous => previous ? { ...previous, permissions: [] } : previous);
+      }
+    }
+  }, [applySession, userId]);
   useEffect(() => {
     const refresh = () => { void refreshSession(); };
     window.addEventListener('focus', refresh);

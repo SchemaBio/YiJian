@@ -151,7 +151,7 @@ export const authApi = {
   },
 
   getCurrentOrganization: async (): Promise<Organization> => {
-    const backendData = await api.get<BackendOrganization>('/v1/orgs/me', { coreApi: false });
+    const backendData = await api.get<BackendOrganization>('/v1/orgs/me', { coreApi: false, cache: 'no-store' });
     return {
       id: backendData.id,
       name: backendData.name,
