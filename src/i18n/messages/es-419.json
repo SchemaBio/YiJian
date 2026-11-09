@@ -2578,6 +2578,7 @@
     "organizationDisableddf6860": "Institución deshabilitada",
     "insufficientBalanceOrRequestRejectede5bcea": "Saldo insuficiente o solicitud rechazada",
     "executionRequestUnconfirmedReconcilingc48465": "Solicitud de ejecución sin confirmar; conciliación en curso",
+    "cvmQueuePaused": "Las solicitudes de nodos de cómputo están en pausa y se reintentarán automáticamente al reanudarse",
     "nodeInitializationFailedfedf26": "Falló la inicialización del nodo",
     "nodeAgentExitedUnexpectedly1ac62d": "El agente del nodo se cerró inesperadamente",
     "runtimeLimitExceeded925850": "Se superó el límite de ejecución",

@@ -87,6 +87,7 @@ const executionReasonLabels: Record<string, string> = {
   ORGANIZATION_INACTIVE: '组织已停用',
   ADMISSION_REJECTED: '余额不足或申请未通过',
   DISPATCH_FAILED: '执行申请未确认，系统正在对账',
+  CVM_QUEUE_PAUSED: '计算节点申请已暂停，恢复后将自动重试',
   BOOTSTRAP_FAILED: '节点初始化失败',
   AGENT_EXITED: '节点 Agent 意外退出',
   MAX_RUNTIME: '超过运行时限',

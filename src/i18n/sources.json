@@ -2270,6 +2270,7 @@
   "组织已停用": "display.organizationDisableddf6860",
   "余额不足或申请未通过": "display.insufficientBalanceOrRequestRejectede5bcea",
   "执行申请未确认，系统正在对账": "display.executionRequestUnconfirmedReconcilingc48465",
+  "计算节点申请已暂停，恢复后将自动重试": "display.cvmQueuePaused",
   "节点初始化失败": "display.nodeInitializationFailedfedf26",
   "节点 Agent 意外退出": "display.nodeAgentExitedUnexpectedly1ac62d",
   "超过运行时限": "display.runtimeLimitExceeded925850",

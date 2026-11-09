@@ -2578,6 +2578,7 @@
     "organizationDisableddf6860": "组织已停用",
     "insufficientBalanceOrRequestRejectede5bcea": "余额不足或申请未通过",
     "executionRequestUnconfirmedReconcilingc48465": "执行申请未确认，系统正在对账",
+    "cvmQueuePaused": "计算节点申请已暂停，恢复后将自动重试",
     "nodeInitializationFailedfedf26": "节点初始化失败",
     "nodeAgentExitedUnexpectedly1ac62d": "节点 Agent 意外退出",
     "runtimeLimitExceeded925850": "超过运行时限",

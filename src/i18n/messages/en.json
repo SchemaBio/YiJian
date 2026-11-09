@@ -2578,6 +2578,7 @@
     "organizationDisableddf6860": "Organization disabled",
     "insufficientBalanceOrRequestRejectede5bcea": "Insufficient balance or request rejected",
     "executionRequestUnconfirmedReconcilingc48465": "Execution request unconfirmed; reconciling",
+    "cvmQueuePaused": "Compute node requests are paused and will retry automatically when submissions resume",
     "nodeInitializationFailedfedf26": "Node initialization failed",
     "nodeAgentExitedUnexpectedly1ac62d": "Node agent exited unexpectedly",
     "runtimeLimitExceeded925850": "Runtime limit exceeded",
