@@ -3405,6 +3405,7 @@
   },
   "taskLifecycle": {
     "launchFailed": "Falló la solicitud del nodo de cómputo",
+    "diskKmsDisabled": "Falló la solicitud del nodo de cómputo: habilita KMS para cifrar discos en la región de cómputo.",
     "zoneMismatch": "El proveedor rechazó la combinación de región y zona de disponibilidad configurada. Contacta al administrador de la plataforma.",
     "noProgress": "No se ha recibido progreso del nodo ni del análisis",
     "title": "Progreso total de la tarea",

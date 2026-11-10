@@ -3405,6 +3405,7 @@
   },
   "taskLifecycle": {
     "launchFailed": "運算節點申請失敗",
+    "diskKmsDisabled": "運算節點申請失敗：請在運算地區開通雲端硬碟加密所需的 KMS。",
     "zoneMismatch": "雲端服務供應商拒絕了目前地區與可用區域的組合，請聯絡平台管理員。",
     "noProgress": "尚未收到節點或分析進度",
     "title": "任務總進度",

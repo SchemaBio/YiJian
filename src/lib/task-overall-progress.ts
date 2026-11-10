@@ -4,6 +4,7 @@ export const taskLifecycleSteps = ['queue', 'node', 'initialize', 'analysis', 'r
 
 export function computeLaunchReasonKey(reason?: string, vmStatus?: string) {
   if (reason === 'CVM_ZONE_MISMATCH') return 'taskLifecycle.zoneMismatch';
+  if (reason === 'CVM_DISK_KMS_DISABLED') return 'taskLifecycle.diskKmsDisabled';
   if (reason === 'CVM_LAUNCH_FAILED' || vmStatus?.toUpperCase() === 'LAUNCH_FAILED') return 'taskLifecycle.launchFailed';
 }
 

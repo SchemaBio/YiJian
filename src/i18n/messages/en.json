@@ -3405,6 +3405,7 @@
   },
   "taskLifecycle": {
     "launchFailed": "Compute node request failed",
+    "diskKmsDisabled": "Compute node request failed: enable KMS for disk encryption in the compute region.",
     "zoneMismatch": "The cloud provider rejected the configured region and availability zone combination. Contact the platform administrator.",
     "noProgress": "No node or analysis progress has been reported",
     "title": "Overall task progress",
