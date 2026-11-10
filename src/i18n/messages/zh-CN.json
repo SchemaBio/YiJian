@@ -2388,6 +2388,7 @@
     "hpoProductionPricing": "HPO 候选提取每次消耗 1 积分；恢复已保存结果不收费。其他 AI 功能的收费规则以操作前提示为准。",
     "modelOutputInvalid": "模型输出未通过结构化校验，本次未采纳；可重新生成，管理员可按请求编号查看失败原因。",
     "modelProviderUnavailable": "模型调用失败或超时，请检查模型服务连接后重试。",
+    "modelProviderTimeout": "模型请求超时，请重试。",
     "modelToolBudgetExceeded": "本次联网检索或工具调用达到限额，未交付有效评估；请稍后重新生成。",
     "acmgHumanReviewSaved": "已保存人工复核证据；原 AI 建议与规则校验结果保留供追溯。",
     "acmgReviewDraftNotice": "已载入 AI 判为满足的结构化候选。请复核或取消证据；确认保存后重新计分并替代当前评估。AI 建议分类不会自动覆写人工分类。",

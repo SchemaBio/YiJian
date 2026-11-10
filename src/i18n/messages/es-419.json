@@ -2388,6 +2388,7 @@
     "hpoProductionPricing": "Cada extracción de candidatos HPO cuesta 1 crédito. Restaurar resultados guardados es gratis. Los cargos de otras funciones de IA se indican antes de usarlas.",
     "modelOutputInvalid": "La salida del modelo no superó la validación estructurada y no se adoptó. Regenere o solicite a un administrador que revise la auditoría de la solicitud.",
     "modelProviderUnavailable": "La solicitud al modelo falló o agotó el tiempo. Revise la conexión del modelo y reintente.",
+    "modelProviderTimeout": "La solicitud al modelo agotó el tiempo. Inténtalo de nuevo.",
     "modelToolBudgetExceeded": "Se superó el límite de consultas o llamadas a herramientas. No se entregó una evaluación válida; regenere más tarde.",
     "acmgHumanReviewSaved": "Se guardó la evidencia revisada por una persona; se conservan las sugerencias originales de IA y las validaciones de reglas para auditoría.",
     "acmgReviewDraftNotice": "Se cargaron los candidatos estructurados que la IA marcó como cumplidos. Revise o deseleccione la evidencia. Al guardar, se recalcula la puntuación y se reemplaza la evaluación actual; la clasificación de IA no reemplaza la clasificación humana.",

@@ -2388,6 +2388,7 @@
     "hpoProductionPricing": "Each HPO candidate extraction costs 1 credit. Restoring saved results is free. Charges for other AI features are shown before use.",
     "modelOutputInvalid": "The model output failed structured validation and was not adopted. Regenerate or ask an administrator to inspect the request audit.",
     "modelProviderUnavailable": "The model request failed or timed out. Check the model connection and retry.",
+    "modelProviderTimeout": "The model request timed out. Please try again.",
     "modelToolBudgetExceeded": "The retrieval or tool-call budget was exceeded. No valid assessment was delivered; regenerate later.",
     "acmgHumanReviewSaved": "Human-reviewed evidence saved; original AI suggestions and rule checks remain available for audit.",
     "acmgReviewDraftNotice": "Structured AI candidates marked as met have been loaded. Review or deselect the evidence. Saving recalculates the score and replaces the current assessment; the AI classification does not override the human classification.",

@@ -20,6 +20,7 @@ async function observeResponse<T>(parent: AbortSignal, duration: number, message
 const ERRORS: Record<string, string> = {
   AI_OUTPUT_INVALID: 'assistance.modelOutputInvalid',
   AI_PROVIDER_UNAVAILABLE: 'assistance.modelProviderUnavailable',
+  AI_PROVIDER_TIMEOUT: 'assistance.modelProviderTimeout',
   AI_TOOL_BUDGET_EXCEEDED: 'assistance.modelToolBudgetExceeded',
   upstream_outcome_unknown: '无法确认上游是否已执行，请保留此请求记录，勿重复发起模型调用。',
   hpo_input_not_retained: '服务重启后 HPO 原文未保留，原请求状态不确定；不会自动重新调用模型。',
