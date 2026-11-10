@@ -4,6 +4,7 @@ import { Checkbox, Tooltip } from '@schema/ui-kit';
 import { AlertTriangle } from 'lucide-react';
 import { useText } from '@/i18n/useText';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { formatLocalTimestamp } from '@/lib/date-time';
 
 export function ResearchUseBadge() {
   const t = useText();
@@ -65,9 +66,10 @@ export function SampleIdentityNotice({checked,onChange}: {checked:boolean;onChan
     </aside>
   );
 }
-export function ExpiryCell({value}: {value?:string}) {
+export function ExpiryCell({value, format = 'localized'}: {value?:string; format?:'localized'|'timestamp'}) {
   const t = useText();
-  return <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{value ? new Date(value).toLocaleString(t.locale,{hour12:false}) : '—'}</span>;
+  const label = format === 'timestamp' ? formatLocalTimestamp(value) : value && new Date(value).toLocaleString(t.locale, { hour12: false });
+  return <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{label || '—'}</span>;
 }
 export function SelfHostedOnly({children}: {children:React.ReactNode}) {
   const t = useText();

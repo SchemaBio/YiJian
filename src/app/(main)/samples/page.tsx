@@ -9,7 +9,8 @@ import { useLiveRetention } from '@/lib/research-retention';
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
-import { chineseText, translateUI, localizeDisplay, type TextTranslator } from '@/i18n/text';
+import { translateUI, localizeDisplay } from '@/i18n/text';
+import { formatLocalTimestamp } from '@/lib/date-time';
 
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button } from '@/components/shared/ActionButton';
@@ -31,13 +32,6 @@ import { listSamples, normalizeSample, samplePayload } from '@/lib/samples';
 import type { Sample } from './types';
 import { GENDER_CONFIG } from './types';
 import { downloadSampleList } from '@/lib/sample-export';
-
-function formatDateTime(value: string, t: TextTranslator = chineseText): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value || '-'
-    : date.toLocaleString(t.locale, { hour12: false });
-}
 
 function areSamplesEqual(previous: Sample[], next: Sample[]): boolean {
   return previous.length === next.length && previous.every((sample, index) => {
@@ -322,7 +316,7 @@ export default function SamplesPage() {
 
   const columns: Column<Sample>[] = [
 
-    ...(getRuntimeBackendFlavor() === 'squid' ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:Sample)=><ExpiryCell value={row.expiresAt} />,width:170}] : []),
+    ...(getRuntimeBackendFlavor() === 'squid' ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:Sample)=><ExpiryCell value={row.expiresAt} format="timestamp" />,width:170}] : []),
     {
       id: 'internalId',
       header: t("data.internalIdabcc9d"),
@@ -342,7 +336,7 @@ export default function SamplesPage() {
     {
       id: 'createdAt',
       header: t("admin.createdAt84e380"),
-      accessor: (row) => <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatDateTime(row.createdAt, t)}</span>,
+      accessor: (row) => <span className="whitespace-nowrap text-xs tabular-nums text-fg-muted">{formatLocalTimestamp(row.createdAt) ?? (row.createdAt || '-')}</span>,
       width: 156,
       minWidth: 150,
       maxWidth: 190,

@@ -365,7 +365,7 @@ export default function AnalysisPage() {
   }, [searchQuery, statusFilter, tasks, t]);
 
   const columns: Column<AnalysisTask>[] = [
-    ...(isSaaS ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:AnalysisTask)=><ExpiryCell value={row.expiresAt} />,width:170}] : []),
+    ...(isSaaS ? [{id:'expiresAt',header:t('research.expiresAt'),accessor:(row:AnalysisTask)=><ExpiryCell value={row.expiresAt} format="timestamp" />,width:170}] : []),
     {
       id: 'taskId',
       header: t("admin.task3172b3"),

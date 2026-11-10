@@ -31,18 +31,13 @@ import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
 import { useUpload } from '@/components/providers/UploadProvider';
 import { ApiError } from '@/lib/api';
 import { sortPairedAssets } from '@/lib/data-asset-order';
+import { formatLocalTimestamp } from '@/lib/date-time';
 
 function formatBytes(value: number, t: TextTranslator = chineseText): string {
   if (!Number.isFinite(value) || value <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
   return `${formatNumericString((value / 1024 ** index).toFixed(index > 1 ? 1 : 0), t.locale)} ${units[index]}`;
-}
-
-function formatTime(value?: string, t: TextTranslator = chineseText): string {
-  if (!value) return '-';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(t.locale, { hour12: false });
 }
 
 const statusMeta = {
@@ -448,14 +443,14 @@ export default function DataCenterPage() {
     {
       id: 'createdAt',
       header: t("data.uploadedAt109db2"),
-      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{formatTime(asset.created_at, t)}</span>,
+      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{formatLocalTimestamp(asset.created_at) ?? '-'}</span>,
       width: 170,
       minWidth: 170,
     },
     {
       id: 'expiresAt',
       header: t("data.expiresAt3144a9"),
-      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{asset.expires_at ? formatTime(asset.expires_at, t) : t("data.permanent409752")}</span>,
+      accessor: (asset) => <span className="whitespace-nowrap text-fg-muted">{asset.expires_at ? formatLocalTimestamp(asset.expires_at) ?? '-' : t("data.permanent409752")}</span>,
       width: 170,
       minWidth: 170,
     },
