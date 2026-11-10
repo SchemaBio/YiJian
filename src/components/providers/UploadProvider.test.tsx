@@ -47,6 +47,7 @@ function Harness() {
       <button type="button" onClick={() => upload.cancelFile('file-r1')}>cancel-r1</button>
       <button type="button" onClick={() => void upload.cancelUpload()}>cancel-job</button>
       <output data-testid="state">{state ? `${state.status}:${state.files.map((file) => `${file.fileId}-${file.status}`).join(',')}` : 'null'}</output>
+      <ul>{upload.queuedUploads.map(item => <li key={item.id}>{item.fileNames.join(' · ')}</li>)}</ul>
     </>
   );
 }
@@ -171,8 +172,10 @@ it('queues successive pairs without replacing an active transfer', async () => {
   await waitFor(() => expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(1));
   fireEvent.click(screen.getByRole('button', {name:'start'}));
   expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('listitem')).toHaveTextContent('sample_R1.fastq · sample_R2.fastq');
   finish({cancelledFileIds:[]});
   await waitFor(() => expect(mocks.uploadDataFiles).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
 });
 
 it('keeps paired retries independent across route content unmounts', async () => {

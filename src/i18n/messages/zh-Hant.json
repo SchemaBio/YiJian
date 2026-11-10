@@ -3220,7 +3220,8 @@
   },
   "uploadExperience": {
     "addToQueue": "加入上傳佇列",
-    "queueHint": "可連續新增多組 FASTQ；同組雙端並行上傳，組間排隊。等待中：{p0} 組。",
+    "queueHint": "上傳佇列 · {p0} 組等待中",
+    "queueSessionHint": "排隊的上傳會依序開始，請保持此分頁開啟直至上傳完成。",
     "dismissRecovery": "關閉恢復提示",
     "resultsPreparing": "結果準備中",
     "resultsPreparingDetail": "分析已結束，結果正在封存或匯入。準備完成後即可解讀，請稍後返回任務清單。",

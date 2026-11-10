@@ -3220,7 +3220,8 @@
   },
   "uploadExperience": {
     "addToQueue": "Add to upload queue",
-    "queueHint": "Add multiple FASTQ pairs. Both reads upload together; pairs are queued. Waiting: {p0}.",
+    "queueHint": "Upload queue · {p0} waiting",
+    "queueSessionHint": "Queued uploads start in order. Keep this tab open until they finish.",
     "dismissRecovery": "Dismiss recovery notice",
     "resultsPreparing": "Preparing results",
     "resultsPreparingDetail": "Analysis has ended. Results are being archived or imported. Return to the task list once preparation finishes to interpret them.",

@@ -93,7 +93,7 @@ export default function DataCenterPage() {
    try { await downloadImportWorkbook(localDataTemplate(t.locale,config?.local_import_directory||'/data'), 'local-data-import.xlsx'); }
    catch (cause) { setError(errorText(cause, t)); }
   };
-  const { capacity, refreshCapacity, activeUpload, queuedCount = 0, retries = {}, retryFile, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
+  const { capacity, refreshCapacity, activeUpload, queuedUploads, retries = {}, retryFile, startUpload: runUpload, cancelFile, forgetFile, pruneFiles, markFileFailed, cancelUpload, clearUpload } = useUpload();
   const [assets, setAssets] = React.useState<DataAsset[]>([]);
   const [config, setConfig] = React.useState<DataCenterConfig | null>(null);
   const [storageStats, setStorageStats] = React.useState<UploadStorageStats | null>(null);
@@ -479,6 +479,20 @@ export default function DataCenterPage() {
     },
   ];
 
+  const uploadQueue = (
+    <div role="status" className="rounded-md border border-border-default bg-canvas-subtle px-4 py-3 text-sm">
+      <p className="font-medium text-fg-default">{t("uploadExperience.queueHint", { p0: queuedUploads.length })}</p>
+      {queuedUploads.length > 0 && <>
+        <ol className="mt-2 list-decimal space-y-1 break-all pl-5 text-fg-default">
+          {queuedUploads.map(upload => (
+            <li key={upload.id}>{upload.fileNames.join(' · ')}</li>
+          ))}
+        </ol>
+        <p className="mt-2 text-xs text-fg-muted">{t("uploadExperience.queueSessionHint")}</p>
+      </>}
+    </div>
+  );
+
   return (
     <div className="yj-record-page h-full min-w-0 overflow-y-auto overflow-x-hidden p-6 xl:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
@@ -529,7 +543,7 @@ export default function DataCenterPage() {
           {t("data.storageIsFullDeleteUnusedDataOr56d3c8")}</div>
       )}
 
-      <p role="status" className="mb-3 text-sm text-fg-muted">{t("uploadExperience.queueHint", { p0: queuedCount })}</p>
+      {!uploadOpen && <div className="mb-3">{uploadQueue}</div>}
       <div className="yj-panel min-w-0 overflow-hidden">
         <div className="yj-panel-header flex-wrap gap-3 px-5 py-4">
           <div className="flex min-w-0 w-full sm:w-auto sm:min-w-[280px] flex-none sm:flex-1 items-center gap-2">
@@ -600,7 +614,13 @@ export default function DataCenterPage() {
               {!vcfMode && <div className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-fg-muted">Read2（R2 FASTQ）</span><FilePicker label={t("data.readFiles88c0f2")} accept=".fastq,.fq,.fastq.gz,.fq.gz" file={read2} disabled={canceling} onChange={setRead2} /></div>}
             </div>
           </section>
-          {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5"><ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? t("data.cancelingUpload5eb505") : t("data.uploadProgress211354")} description={canceling ? t("data.stoppingTransferAndCleaningObjectStoragePlease8085f0") : t("data.keepThisPageOpenCompletedFilesArecc7e43")} /><div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? t("data.canceling733d8c") : t("data.uploadingf8d6e4")}</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div></section>}
+          {uploadBusy && <section className="border-t border-[var(--yj-border-subtle)] pt-5">
+            <ModalSectionHeading icon={<Cloud className="h-4 w-4" />} title={canceling ? t("data.cancelingUpload5eb505") : t("data.uploadProgress211354")} description={canceling ? t("data.stoppingTransferAndCleaningObjectStoragePlease8085f0") : t("data.keepThisPageOpenCompletedFilesArecc7e43")} />
+            <p className="mb-2 break-all text-sm text-fg-default">{[activeUpload?.read1Name, activeUpload?.read2Name].filter(Boolean).join(' · ')}</p>
+            <div className="mb-1.5 flex justify-between text-xs text-fg-muted"><span>{canceling ? t("data.canceling733d8c") : t("data.uploadingf8d6e4")}</span><span>{progress}%</span></div>
+            <div className="h-2 overflow-hidden rounded bg-canvas-subtle"><div className="h-full bg-accent-emphasis transition-[width]" style={{ width: `${progress}%` }} /></div>
+          </section>}
+          {uploadQueue}
         </div>
       </AppModal>
 

@@ -3220,7 +3220,8 @@
   },
   "uploadExperience": {
     "addToQueue": "加入上传队列",
-    "queueHint": "可连续添加多组 FASTQ；同组双端并行上传，组间排队。等待中：{p0} 组。",
+    "queueHint": "上传队列 · {p0} 组等待中",
+    "queueSessionHint": "排队的上传会依次开始，请保持此标签页打开直至上传完成。",
     "dismissRecovery": "关闭恢复提示",
     "resultsPreparing": "结果准备中",
     "resultsPreparingDetail": "分析已结束，结果正在归档或导入。准备完成后即可解读，请稍后返回任务列表。",

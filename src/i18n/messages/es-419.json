@@ -3220,7 +3220,8 @@
   },
   "uploadExperience": {
     "addToQueue": "Agregar a la cola de carga",
-    "queueHint": "Agrega varios pares FASTQ. Ambas lecturas se cargan juntas; los pares esperan en cola. Pendientes: {p0}.",
+    "queueHint": "Cola de carga · {p0} pendientes",
+    "queueSessionHint": "Las cargas en cola se inician en orden. Mantén abierta esta pestaña hasta que finalicen.",
     "dismissRecovery": "Cerrar aviso de recuperación",
     "resultsPreparing": "Preparando resultados",
     "resultsPreparingDetail": "El análisis terminó. Los resultados se están archivando o importando. Vuelve a la lista de tareas cuando estén listos para interpretarlos.",

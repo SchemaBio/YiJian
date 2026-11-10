@@ -4,13 +4,13 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import DataCenterPage from './page';
 import type {GlobalUploadState} from '@/components/providers/UploadProvider';
 import { LocalizedError } from '@/i18n/errors';
-const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,cancelUpload:vi.fn(),pruneFiles:vi.fn(),clearUpload:vi.fn(),refreshCapacity:vi.fn().mockResolvedValue({total:0,total_bytes:0,reserved_bytes:0,tracked_bytes:0}),startUpload:vi.fn()}));
+const uploads=vi.hoisted(()=>({activeUpload:null as GlobalUploadState|null,queuedUploads:[] as {id:number;fileNames:string[]}[],cancelUpload:vi.fn(),pruneFiles:vi.fn(),clearUpload:vi.fn(),refreshCapacity:vi.fn().mockResolvedValue({total:0,total_bytes:0,reserved_bytes:0,tracked_bytes:0}),startUpload:vi.fn()}));
 const mode=vi.hoisted(()=>({backend:'octopus',quota:0}));
 vi.mock('@/lib/runtime-config',()=>({getRuntimeBackendFlavor:()=>mode.backend}));
-beforeEach(()=>{mode.backend='octopus';mode.quota=0;uploads.activeUpload=null;uploads.cancelUpload.mockClear();uploads.refreshCapacity.mockResolvedValue({total:0,total_bytes:0,reserved_bytes:0,tracked_bytes:0});uploads.startUpload.mockReset();});
+beforeEach(()=>{mode.backend='octopus';mode.quota=0;uploads.activeUpload=null;uploads.queuedUploads=[];uploads.cancelUpload.mockClear();uploads.refreshCapacity.mockResolvedValue({total:0,total_bytes:0,reserved_bytes:0,tracked_bytes:0});uploads.startUpload.mockReset();});
 import { listDataAssets, getDataAssetUploadStatus } from '@/lib/data-assets';
 vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ currentOrg: mode.quota ? {id:'org',storageQuotaBytes:mode.quota} : null, hasPermission: () => true }) }));
-vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, cancelUpload: uploads.cancelUpload, pruneFiles: uploads.pruneFiles, clearUpload: uploads.clearUpload, refreshCapacity:uploads.refreshCapacity,startUpload:uploads.startUpload }) }));
+vi.mock('@/components/providers/UploadProvider', () => ({ useUpload: () => ({ activeUpload: uploads.activeUpload, queuedUploads: uploads.queuedUploads, cancelUpload: uploads.cancelUpload, pruneFiles: uploads.pruneFiles, clearUpload: uploads.clearUpload, refreshCapacity:uploads.refreshCapacity,startUpload:uploads.startUpload }) }));
 vi.mock('@/lib/data-assets', () => ({
   listDataAssets: vi.fn(), getDataAssetUploadStatus: vi.fn(),
   getDataCenterConfig: vi.fn().mockResolvedValue({ temporary: false, download_allowed: true,provider:"local",local_import_directory:"/data" }),
@@ -77,6 +77,32 @@ it('preserves the existing SaaS upload window behavior', async () => {
  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'隐藏到数据中心'}));
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
  expect(uploads.cancelUpload).not.toHaveBeenCalled();
+});
+
+it('shows an accepted upload batch by filename on the page and in the upload window', async () => {
+  mode.backend = 'squid';
+  uploads.activeUpload = {status:'uploading', progress:27, files:[], read1Name:'active_R1.fastq'};
+  uploads.startUpload.mockImplementation(async ({read1, read2, onAccepted}) => {
+    uploads.queuedUploads = [{id:1, fileNames:[read1.name, read2.name]}];
+    onAccepted();
+  });
+  vi.mocked(listDataAssets).mockResolvedValue({items:[], total:0, page:1, page_size:20, total_pages:0});
+  render(<DataCenterPage />);
+  fireEvent.click(await screen.findByRole('button', {name:/查看上传/}));
+  const dialog = screen.getByRole('dialog');
+  const [read1, read2] = dialog.querySelectorAll('input[type=file]');
+  fireEvent.change(read1, {target:{files:[new File(['r1'], 'queued_R1.fastq')]}});
+  fireEvent.change(read2, {target:{files:[new File(['r2'], 'queued_R2.fastq')]}});
+  fireEvent.click(within(dialog).getByRole('button', {name:'加入上传队列'}));
+
+  const queuedFiles = 'queued_R1.fastq · queued_R2.fastq';
+  expect(await screen.findByText(queuedFiles)).toBeVisible();
+  expect(screen.getByText('上传队列 · 1 组等待中')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', {name:/查看上传/}));
+  const reopened = within(screen.getByRole('dialog'));
+  expect(reopened.getByText(queuedFiles)).toBeVisible();
+  expect(reopened.getByText('active_R1.fastq')).toBeVisible();
+  expect(reopened.getByText('27%')).toBeVisible();
 });
 
 it('dismisses the recovery notice without discarding resumable metadata', async () => {
