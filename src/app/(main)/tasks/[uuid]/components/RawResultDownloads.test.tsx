@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RawResultDownloads } from './RawResultDownloads';
 import { api } from '@/lib/api';
 
@@ -12,7 +12,11 @@ vi.mock('@/components/shared', () => ({ AppModal: ({ open, children, footer }: {
 const quote = (kind: string) => ({ id: 'paid-grant', kind, filename: `sample.${kind}`, size_bytes: 100, credits: 1, charged_at: new Date().toISOString(), expires_at: new Date(Date.now() + 3 * 3600_000).toISOString() });
 const issued = (filename: string, expired = false) => ({ id: 'paid-grant', filename, url: `https://bucket.cos.ap-guangzhou.myqcloud.com/${filename}?signed=true`, credits_charged: 1, expires_at: new Date(Date.now() + (expired ? -60_000 : 1800_000)).toISOString(), grant_expires_at: new Date(Date.now() + 3 * 3600_000).toISOString(), refresh_after: new Date(Date.now() - 60_000).toISOString(), remaining_issues: 11, traffic_limit_bps: 83886080, ip_bound: false });
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+});
+afterEach(() => { vi.restoreAllMocks(); });
 
 for (const kind of ['bam', 'zip']) {
   it(`recovers a paid ${kind} grant as a direct COS link without proxying file data`, async () => {
@@ -62,15 +66,50 @@ it('shows VCF workflow outputs and hides BAM and WES content even while loading'
 });
 
 it('opens the latest ZIP link immediately and reopens it without another quote or charge', async () => {
- vi.mocked(api.get).mockImplementation(async path => path.endsWith('/active') ? [] : {attempt_id:'attempt',zip_status:'ready',zip:{id:'zip',filename:'sample.zip',credits:1,size_bytes:100},bams:[],missing:[]});
- vi.mocked(api.post).mockImplementation(async path => path.endsWith('/quote') ? {...quote('zip'),charged_at:undefined} : issued('sample.zip'));
+ const catalog = {attempt_id:'attempt',zip_status:'ready',zip:{id:'zip',filename:'sample.zip',credits:1,size_bytes:100},bams:[],missing:[]};
+ vi.mocked(api.get).mockImplementation(async path => path.endsWith('/active') ? [] : catalog);
+ vi.mocked(api.post).mockImplementation(async path => path.endsWith('/prepare') ? catalog : path.endsWith('/quote') ? {...quote('zip'),charged_at:undefined} : issued('sample.zip'));
  render(<RawResultDownloads taskId="task"/>);
  fireEvent.click(await screen.findByRole('button',{name:'下载原始 ZIP · 1 积分'}));
  const pay=await screen.findByRole('button',{name:/支付.*ZIP/});
  fireEvent.click(pay);fireEvent.click(pay);
  await screen.findByRole('link',{name:'开始下载 / 续传'});
  expect(screen.getByRole('status')).toHaveTextContent('sample.zip');
- expect(api.post).toHaveBeenCalledTimes(2);
+ expect(api.post).toHaveBeenCalledTimes(3);
+ expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
  fireEvent.click(screen.getByRole('button',{name:'下载原始 ZIP · 1 积分'}));
- expect(api.post).toHaveBeenCalledTimes(2);
+ expect(api.post).toHaveBeenCalledTimes(3);
+});
+
+it('prepares a missing ZIP after confirmation and issues the link once it is ready', async () => {
+ const catalog = {attempt_id:'attempt',bams:[],missing:[]};
+ let preparing = false;
+ vi.mocked(api.get).mockImplementation(async path => path.endsWith('/active') ? [] : {...catalog,zip_status:preparing?'ready':'missing'});
+ vi.mocked(api.post).mockImplementation(async path => {
+   if (path.endsWith('/prepare')) { preparing = true; return {...catalog,zip_status:'building'}; }
+   if (path.endsWith('/quote')) return {...quote('zip'),charged_at:undefined};
+   return issued('sample.zip');
+ });
+ render(<RawResultDownloads taskId="task"/>);
+ fireEvent.click(await screen.findByRole('button',{name:'下载原始 ZIP · 1 积分'}));
+ expect(api.post).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:/支付.*ZIP/}));
+ await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+ expect(api.post).toHaveBeenCalledWith('/v1/tasks/task/downloads/prepare',{});
+ await screen.findByRole('link',{name:'开始下载 / 续传'},{timeout:6500});
+ expect(api.post).toHaveBeenNthCalledWith(2,'/v1/tasks/task/downloads/quote',{kind:'zip'});
+ expect(api.post).toHaveBeenNthCalledWith(3,'/v1/tasks/task/downloads/issue',{quote_id:'paid-grant'});
+ expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+},10000);
+
+it('does not quote or charge for a ZIP that fails to build', async () => {
+ const catalog = {attempt_id:'attempt',zip_status:'missing',bams:[],missing:[]};
+ vi.mocked(api.get).mockImplementation(async path => path.endsWith('/active') ? [] : catalog);
+ vi.mocked(api.post).mockResolvedValue({...catalog,zip_status:'failed',zip_error:'ZIP build failed'});
+ render(<RawResultDownloads taskId="task"/>);
+ fireEvent.click(await screen.findByRole('button',{name:'下载原始 ZIP · 1 积分'}));
+ fireEvent.click(screen.getByRole('button',{name:/支付.*ZIP/}));
+ await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent('ZIP build failed'));
+ expect(api.post).toHaveBeenCalledTimes(1);
+ expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
 });

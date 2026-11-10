@@ -35,6 +35,8 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [quote, setQuote] = React.useState<Quote | null>(null);
+  const [confirmZip, setConfirmZip] = React.useState(false);
+  const [preparingZip, setPreparingZip] = React.useState(false);
   const [issued, setIssued] = React.useState<Issued | null>(null);
   const [linkOpen, setLinkOpen] = React.useState(false);
   const busyRef = React.useRef(false);
@@ -68,7 +70,7 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
     const current = ++generation.current;
     let disposed = false;
     let pending = false;
-    busyRef.current = false; setLinkOpen(false); setCatalog(null); setQuote(null); setIssued(null); setActive([]); setError(''); setBusy(false); polling.current = false; catalogExpiry.current = null;
+    busyRef.current = false; setLinkOpen(false); setCatalog(null); setQuote(null); setConfirmZip(false); setPreparingZip(false); setIssued(null); setActive([]); setError(''); setBusy(false); polling.current = false; catalogExpiry.current = null;
     const load = async () => {
       if (pending) return; pending = true;
       try {
@@ -89,35 +91,65 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
     const current = generation.current;
     busyRef.current = true; setBusy(true); setError(''); setCopied(false);
     try {
-      if (kind === 'zip' && catalog?.zip_status !== 'ready') {
-        const next = await api.post<Catalog>(`${base}/prepare`, {});
-        if (current === generation.current) { setCatalog(next); polling.current = next.zip_status === 'building'; }
-      } else {
-        if (!issuanceBlocked && issued && issued.kind === kind && (kind === 'zip' || issued.filename === file?.filename) && Date.parse(issued.grant_expires_at) > Date.now()) { setLinkOpen(true); return; }
-        const next = await api.post<Quote>(`${base}/quote`, { kind, file_id: file?.id });
-        if (current === generation.current) setQuote(next);
+      if (!issuanceBlocked && issued && issued.kind === kind && (kind === 'zip' || issued.filename === file?.filename) && Date.parse(issued.grant_expires_at) > Date.now()) { setLinkOpen(true); return; }
+      if (kind === 'zip') {
+        setConfirmZip(true);
+        return;
       }
+      const next = await api.post<Quote>(`${base}/quote`, { kind, file_id: file?.id });
+      if (current === generation.current) setQuote(next);
     } catch (cause) {
       if (current === generation.current) setError(cause instanceof Error ? errorText(cause, t) : t("tasks.downloadRequestFailed4cec7b"));
     } finally { if (current === generation.current) { busyRef.current = false; setBusy(false); } }
   };
   const confirm = async () => {
-    if (!quote || busyRef.current) return;
+    if ((!quote && !confirmZip) || busyRef.current) return;
     const current = generation.current;
+    let confirmedQuote = quote;
     busyRef.current = true; setBusy(true); setError('');
     try {
-      const next = await api.post<Issued>(`${base}/issue`, { quote_id: quote.id });
+      if (!confirmedQuote) {
+        // Preparation checks the current archive and reuses a ZIP if it exists.
+        // Billing remains on the existing quote/issue path after the ZIP is ready.
+        setPreparingZip(true);
+        const deadline = Date.now() + 16 * 60_000;
+        let next = await api.post<Catalog>(`${base}/prepare`, {});
+        while (current === generation.current && next.zip_status === 'building' && Date.now() < deadline) {
+          setCatalog(next);
+          await new Promise<void>(resolve => window.setTimeout(resolve, 5000));
+          if (current !== generation.current) return;
+          next = await api.get<Catalog>(base);
+        }
+        if (current !== generation.current) return;
+        setCatalog(next);
+        polling.current = next.zip_status === 'building' || ['expired', 'cleanup_pending'].includes(next.bam_status || '');
+        if (next.zip_status !== 'ready') throw new Error(next.zip_error || t("tasks.downloadRequestFailed4cec7b"));
+        confirmedQuote = await api.post<Quote>(`${base}/quote`, { kind: 'zip' });
+        if (current !== generation.current) return;
+        setQuote(confirmedQuote);
+        setPreparingZip(false);
+      }
+      const next = await api.post<Issued>(`${base}/issue`, { quote_id: confirmedQuote.id });
       if (current !== generation.current) return;
-      setIssued({...next, kind: quote.kind}); setQuote(null); setLinkOpen(true);
+      setIssued({...next, kind: confirmedQuote.kind}); setQuote(null); setConfirmZip(false); setLinkOpen(true);
+      if (confirmZip) {
+        const link = document.createElement('a');
+        link.href = next.url;
+        link.download = next.filename;
+        link.rel = 'noreferrer noopener';
+        link.click();
+      }
       void api.get<Quote[]>(`${base}/active`).then(rows => {if(current === generation.current)setActive(rows);}).catch(() => {});
     } catch (cause) {
       // Retain the quote: retrying this exact ID is billing-idempotent.
-      if (current === generation.current) setError(t("tasks.retryTheSameRequestWithoutPayingAgain7889a5", {p0: String(cause instanceof Error ? errorText(cause, t) : t("display.requestOutcomeNotYetConfirmedf12ffd"))}));
-    } finally { if (current === generation.current) { busyRef.current = false; setBusy(false); } }
+      if (current === generation.current) {
+        const message = cause instanceof Error ? errorText(cause, t) : t("display.requestOutcomeNotYetConfirmedf12ffd");
+        setError(confirmedQuote ? t("tasks.retryTheSameRequestWithoutPayingAgain7889a5", {p0: message}) : message);
+      }
+    } finally { if (current === generation.current) { busyRef.current = false; setBusy(false); setPreparingZip(false); } }
   };
 
-  const preparing = catalog?.zip_status === 'building';
-  const zipReady = catalog?.zip_status === 'ready';
+  const closeConfirmation = () => { setQuote(null); setConfirmZip(false); };
   const linkExpired = !!issued && Date.parse(issued.expires_at) <= now;
   const grantExpired = !!issued && Date.parse(issued.grant_expires_at) <= now;
   const refreshSeconds = issued ? Math.max(0, Math.ceil((Date.parse(issued.refresh_after) - now) / 1000)) : 0;
@@ -136,10 +168,10 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
         {!!catalog?.missing.length && <details className="mt-3 rounded-md bg-canvas-subtle p-2.5 text-xs text-fg-muted"><summary className="cursor-pointer font-medium">{t("tasks.viewOmittedOutputs8b837d")}{catalog.missing.length} {t("tasks.items00cb6d")}</summary><ul className="mt-2 space-y-1 leading-5">{catalog.missing.map(item=><li key={item}>{item.replace(/^[a-z_]+/,key=>labels[key]||key)}</li>)}</ul></details>}
         {catalog?.zip_error&&<p role="alert" className="mt-3 text-xs text-danger-fg">{catalog.zip_error}</p>}
         <div className="mt-5 border-t border-border-subtle pt-4">
-          <Button action="download" variant="primary" className="w-full shrink-0 whitespace-nowrap"  disabled={busy||!catalog||preparing} onClick={()=>void request('zip')}>
-            {!catalog?t("tasks.readingDownloadInformationb590b7"):preparing?t("tasks.preparingZipeca113"):zipReady?t("tasks.downloadOriginalZipCredit11f74e"):t("tasks.prepareOriginalZipFreea89213")}
+          <Button action="download" variant="primary" className="w-full shrink-0 whitespace-nowrap" disabled={busy||!catalog} onClick={()=>void request('zip')}>
+            {!catalog?t("tasks.readingDownloadInformationb590b7"):preparingZip?t("tasks.preparingZipeca113"):t("tasks.downloadOriginalZipCredit11f74e")}
           </Button>
-          <p className="mt-2 text-center text-xs text-fg-muted">{zipReady?t("tasks.confirmTheCostNextCreditIsCharged03a0cd"):t("tasks.confirmDownloadAfterPackagingFinishesPreparationIsd4568e")}</p>
+          <p className="mt-2 text-center text-xs text-fg-muted">{t("tasks.confirmTheCostNextCreditIsCharged03a0cd")}</p>
         </div>
       </article>
       {!isVCF && catalog && catalog.bam_status !== 'not_provided' && <article className="flex flex-col rounded-xl border border-border-default bg-canvas-default p-5">
@@ -175,10 +207,10 @@ function ChargedResultDownloads({ taskId, template }: { taskId: string; template
       </div>
     </div></AppModal>}
     {!!active.length&&<details open className="rounded-lg border border-border-default p-3 text-sm"><summary className="cursor-pointer font-medium">{t("tasks.existingRequestRetrievingAPaidLinkIncurs83fe7c")}</summary><div className="mt-3 space-y-2">{active.map(item=><div className="flex flex-wrap items-center justify-between gap-2 rounded bg-canvas-subtle p-2.5" key={item.id}><span className="min-w-0 break-all text-xs">{item.filename}</span><Button size="small" variant="secondary" className="shrink-0 whitespace-nowrap" disabled={busy || (!!item.protection_version && !['active','rebind_wait'].includes(item.issuance_state || ''))} onClick={()=>{setError('');setCopied(false);setQuote(item);}}>{item.charged_at?t("tasks.retrievePaidLink2b6fc5"):t("tasks.continueOriginalRequest6993b2")}</Button><div className="w-full"><DownloadProtectionStatus taskId={taskId} grant={item} onUpdated={()=>void reloadActive()} onRepurchase={()=>void request(item.kind as 'bam' | 'zip', catalog?.bams.find(file=>file.id===item.file_id))} /></div></div>)}</div></details>}
-    <AppModal open={!!quote} onOpenChange={open=>{if(!open&&!busy)setQuote(null);}} title={quote?.charged_at?t("tasks.retrieveExistingDownloadLink7e9525"):t("tasks.confirmDownloadCost458ee4")} size="small" closeOnEscape={!busy} closeOnOverlayClick={!busy}
-      footer={<><Button variant="secondary" disabled={busy} onClick={()=>setQuote(null)}>{t("admin.cancel4d0b46")}</Button><Button permission={null} variant="primary" className="whitespace-nowrap" loading={busy} onClick={()=>void confirm()}>{quote?.charged_at?t("tasks.retrieveDownloadLinked0404"):quote?.kind==='bam'?t("tasks.payCreditsAndGetLink7efa0c", {p0: String(quote?.credits)}):t("tasks.payCreditAndGetZipLink07d19b")}</Button></>}
+    <AppModal open={!!quote || confirmZip} onOpenChange={open=>{if(!open&&!busy)closeConfirmation();}} title={quote?.charged_at?t("tasks.retrieveExistingDownloadLink7e9525"):t("tasks.confirmDownloadCost458ee4")} size="small" closeOnEscape={!busy} closeOnOverlayClick={!busy}
+      footer={<><Button variant="secondary" disabled={busy} onClick={closeConfirmation}>{t("admin.cancel4d0b46")}</Button><Button permission={null} variant="primary" className="whitespace-nowrap" loading={busy} onClick={()=>void confirm()}>{preparingZip?t("tasks.preparingZipeca113"):quote?.charged_at?t("tasks.retrieveDownloadLinked0404"):quote?.kind==='bam'?t("tasks.payCreditsAndGetLink7efa0c", {p0: String(quote?.credits)}):t("tasks.payCreditAndGetZipLink07d19b")}</Button></>}
     >
-      <div className="space-y-4 text-sm"><p className="break-all font-medium">{quote?.filename}</p><div className="flex items-center justify-between rounded-lg bg-canvas-subtle p-4"><span>{quote&&gb(quote.size_bytes, t)}</span><strong className="text-xl text-accent-fg">{quote?.charged_at?t("tasks.noDuplicateCharge10d341"):t("pipeline.credits0193ac", {p0: String(quote?.credits)})}</strong></div>{quote?.kind==='bam'&&<p className="text-xs text-fg-muted">{t("tasks.actualSize937f87")}{quote.size_bytes.toLocaleString(t.locale)} {t("tasks.bytesCreditPerGbRoundedUpb20477")}</p>}<p className="text-xs leading-5 text-fg-muted">{quote?.charged_at?t("tasks.originalRequestAlreadyPaidRetrievalKeepsIts88513c"):t("tasks.chargeAndLinkIssuanceFollowConfirmationCanceling5ac9ae")}{quote?.protection_planned || quote?.protection_version ? t('downloadProtection.policy') : t("tasks.noIpBindingLinksCanBeRefreshedc75142")}</p>{error&&<p role="alert" className="text-danger-fg">{error}{t("tasks.retryingThisRequestIncursNoDuplicateChargee75379")}</p>}</div>
+      <div className="space-y-4 text-sm"><p className="break-all font-medium">{quote?.filename ?? catalog?.zip?.filename ?? (isVCF ? t('vcfDownloads.title') : t("tasks.rawResultsZip7e2a74"))}</p><div className="flex items-center justify-between rounded-lg bg-canvas-subtle p-4"><span>{quote ? gb(quote.size_bytes, t) : catalog?.zip && gb(catalog.zip.size_bytes, t)}</span><strong className="text-xl text-accent-fg">{quote?.charged_at?t("tasks.noDuplicateCharge10d341"):t("pipeline.credits0193ac", {p0: String(quote?.credits ?? 1)})}</strong></div>{quote?.kind==='bam'&&<p className="text-xs text-fg-muted">{t("tasks.actualSize937f87")}{quote.size_bytes.toLocaleString(t.locale)} {t("tasks.bytesCreditPerGbRoundedUpb20477")}</p>}<p className="text-xs leading-5 text-fg-muted">{quote?.charged_at?t("tasks.originalRequestAlreadyPaidRetrievalKeepsIts88513c"):t("tasks.chargeAndLinkIssuanceFollowConfirmationCanceling5ac9ae")}{quote?.protection_planned || quote?.protection_version || (!quote && catalog?.download_protection_enabled) ? t('downloadProtection.policy') : t("tasks.noIpBindingLinksCanBeRefreshedc75142")}</p>{error&&<p role="alert" className="text-danger-fg">{error}</p>}</div>
     </AppModal>
   </section>;
 }
