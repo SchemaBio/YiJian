@@ -3,6 +3,7 @@
 import { useText } from '@/i18n/useText';
 import { computeLaunchReasonKey, taskOverallProgress } from '@/lib/task-overall-progress';
 import type { AnalysisTask } from '@/types/task';
+import { HoverHint } from './HoverHint';
 
 export function TaskProgressCell({ task }: { task: AnalysisTask }) {
   const t = useText();
@@ -13,7 +14,7 @@ export function TaskProgressCell({ task }: { task: AnalysisTask }) {
     bootstrap_phase: task.bootstrapPhase, result_import_status: task.resultImportStatus,
   });
   const stoppedKey = computeLaunchReasonKey(task.executionReasonCode, task.vmStatus) ?? 'taskLifecycle.stopped';
-  return <div className="min-w-0 space-y-1" title={t('taskLifecycle.explanation')}>
+  return <HoverHint content={t('taskLifecycle.explanation')}><div className="min-w-0 space-y-1" tabIndex={0}>
     <div className="flex items-center gap-2">
       <div role="progressbar" aria-label={t('taskLifecycle.title')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={overall.percent}
         aria-valuetext={`${overall.percent}% · ${t(`taskLifecycle.${overall.detail}`)}`}
@@ -23,5 +24,5 @@ export function TaskProgressCell({ task }: { task: AnalysisTask }) {
       <span className="text-xs tabular-nums text-fg-muted">{overall.percent}%</span>
     </div>
     <p className={`text-xs ${overall.stopped ? 'text-danger-fg' : 'text-fg-muted'}`}>{t(overall.stopped ? stoppedKey : `taskLifecycle.${overall.detail}`)}</p>
-  </div>;
+  </div></HoverHint>;
 }
