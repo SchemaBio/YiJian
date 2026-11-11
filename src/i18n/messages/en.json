@@ -760,6 +760,7 @@
     "historyIsReadOnlyOpenTheSourcecd2f54": "History is read-only. Open the source workspace to change focus selections or interpretations."
   },
   "pipeline": {
+    "cnvBaselineCalibrationWorkflow": "CNV baseline calibration workflow",
     "files621862": " files",
     "select9dd365": "Select {p0}",
     "selected7142ae": "Selected {p0} {p1} · {p2}",
@@ -811,7 +812,7 @@
     "estimatedCostCredits1e7fdd": "Estimated cost: {p0} credits",
     "billedOnTotalRRSizeRoundede291a1": "Billed on total R1/R2 size, rounded up.",
     "finalCostFollowsServerBillingSettingsc816c1": "Final cost follows server billing settings.",
-    "creditsPerGibLessThanGibIs700984": "{p0} credits per GiB; less than 1 GiB is billed as 1 GiB.",
+    "creditsPerGibLessThanGibIs700984": "{p0} credits per GiB; less than 1 GiB is billed as 1 GiB. Minimum charge: 30 credits.",
     "deleteCnvBaseline87ea69": "Delete CNV baseline",
     "deleteCustomBaselineTaskRecordsAndArchived2baf2e": "Delete custom baseline “{p0}”? Task records and archived files remain. Baselines used by pipelines or unfinished tasks cannot be deleted.",
     "unableToLoadBedFilesf96f3f": "Unable to load BED files",

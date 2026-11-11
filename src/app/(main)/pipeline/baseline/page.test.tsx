@@ -21,7 +21,7 @@ it('keeps the loaded credit rate when baseline reading is retried', async () => 
   const create = await screen.findByRole('button', { name: '校正内置 CNV 基线' });
   expect(create).toBeEnabled();
   fireEvent.click(create);
-  expect(await screen.findByText('预计消耗 0 积分')).toBeInTheDocument();
+  expect(await screen.findByText('预计消耗 30 积分')).toBeInTheDocument();
   expect(screen.getByText(/每 GiB 2 积分/)).toBeInTheDocument();
   expect(getBillingConfig).toHaveBeenCalledTimes(1);
 });
@@ -42,7 +42,7 @@ it('confirms deletion and refreshes the baseline list', async () => {
  fireEvent.click(await screen.findByRole('button', {name: '删除 自定义基线'}));
  expect(deleteCNVBaseline).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button', {name: '确认删除'}));
- await screen.findByText('内置 WES CNV 基线（hg19）');
+ await waitFor(() => expect(screen.queryByRole('button', {name: '删除 自定义基线'})).not.toBeInTheDocument());
  expect(deleteCNVBaseline).toHaveBeenCalledWith('baseline');
  expect(await screen.findAllByText('只读')).toHaveLength(2);
 });
@@ -57,7 +57,8 @@ it('keeps the confirmation open when deletion is rejected', async () => {
  expect(screen.getByRole('button', {name: '取消'})).toBeEnabled();
 });
 
-it('selects whole samples and submits both reads in the same selection order', async () => {
+it.each([[2, 30], [10, 40]])('quotes selected samples at %i credits per GiB and submits both reads', async (rate, expectedCredits) => {
+ vi.mocked(getBillingConfig).mockResolvedValueOnce({credits_per_minute:1, credit_rate_multiplier:1, download_credits:1, min_balance:0, cnv_baseline_credits_per_gib:rate});
  Element.prototype.scrollIntoView = vi.fn();
  const file = (id: string, name: string, read_type: DataAsset['read_type'], extra: Partial<DataAsset> = {}): DataAsset => ({ id, file_name: name, read_type, file_size: 1024 ** 3, provider: 's3', status: 'completed', source: 'upload', created_at: '', updated_at: '', ...extra });
  vi.mocked(listDataAssets).mockResolvedValue({ items: [file('a1', 'A_R1.fastq.gz', 'read1'), file('b2', 'B_R2.fastq.gz', 'read2'), file('a2', 'A_R2.fastq.gz', 'read2'), file('b1', 'B_R1.fastq.gz', 'read1'), file('incomplete', 'C_R1.fastq.gz', 'read1'), file('bed', 'normal.bed', 'bed', { reference_genome: 'GRCh38', validation_status: 'valid' })], total: 6, page: 1, page_size: 20, total_pages: 1 });
@@ -72,7 +73,7 @@ it('selects whole samples and submits both reads in the same selection order', a
  expect(screen.queryByRole('checkbox', { name: /C_R1/ })).not.toBeInTheDocument();
  fireEvent.click(screen.getByRole('checkbox', { name: /B.*Read1/ }));
  fireEvent.click(screen.getByRole('checkbox', { name: /A.*Read1/ }));
- expect(screen.getByText('预计消耗 8 积分')).toBeInTheDocument();
+ expect(screen.getByText(`预计消耗 ${expectedCredits} 积分`)).toBeInTheDocument();
  const preview = screen.getByRole('table', { name: '已选样本组 · Read1/Read2 同组提交' });
  expect(within(preview).getAllByRole('row')[1]).toHaveTextContent('B_R1.fastq.gzB_R2.fastq.gz');
  fireEvent.click(screen.getByRole('button', { name: '选择样本组' }));

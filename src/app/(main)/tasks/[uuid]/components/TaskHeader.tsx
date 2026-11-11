@@ -88,10 +88,10 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
   if (compact) return <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
     <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
     <HoverHint content={t("tasks.backToTaskListcd3b22")}><button onClick={onBack} aria-label={t("tasks.backToTaskListcd3b22")}  className="shrink-0 rounded p-1.5 text-fg-muted hover:bg-canvas-subtle"><ArrowLeft className="h-4 w-4"/></button></HoverHint>
-    <HoverHint content={translateUI(pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t), t)}><h1  className="min-w-0 flex-1 truncate text-base font-semibold text-fg-default">{pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t)}</h1></HoverHint>
+    <HoverHint content={translateUI(pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t, task.template), t)}><h1  className="min-w-0 flex-1 truncate text-base font-semibold text-fg-default">{pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t, task.template)}</h1></HoverHint>
     <Tag variant={statusInfo.variant} className={`yj-task-status-tag ${taskStatusClass(taskDisplayStatus(task))}`}>{translateUI(statusInfo.label, t)}</Tag>
     </div>
-    <span className="hidden text-xs text-fg-muted md:inline">{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t)} · {task.pipelineVersion}</span>
+    <span className="hidden text-xs text-fg-muted md:inline">{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t, task.template)} · {task.pipelineVersion}</span>
     <HoverHint content={translateUI(task.id, t)}><span className="shrink-0 text-xs text-fg-muted sm:ml-auto" >{t("tasks.task6fda8e")}{task.id.substring(0,8)}</span></HoverHint>
     <TaskCostDetail taskId={task.id} status={task.status} compact/>
     {expiry}
@@ -112,7 +112,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-xl font-semibold text-fg-default">{pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t)}</h1>
+            <h1 className="text-xl font-semibold text-fg-default">{pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t, task.template)}</h1>
             <Tag variant={statusInfo.variant} className={`yj-task-status-tag ${taskStatusClass(taskDisplayStatus(task))}`}>{translateUI(statusInfo.label, t)}</Tag>
           </div>
 
@@ -126,7 +126,7 @@ export function TaskHeader({ task, onBack, compact = false, completionControl }:
 
             <div className="flex items-center gap-1">
               <span className="font-medium text-fg-default">{t("tasks.analysisPipeline072d06")}</span>
-              <span>{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t)}</span>
+              <span>{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t, task.template)}</span>
               <span className="text-fg-subtle">{task.pipelineVersion}</span>
             </div>
 

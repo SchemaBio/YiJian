@@ -1,11 +1,12 @@
 'use client';
 import {GenomeTag} from '@/components/shared/GenomeTag';
 import { formatNumericString } from '@/i18n/format';
+import { formatLocalTimestamp } from '@/lib/date-time';
 
 import { errorText } from '@/i18n/errors';
 
 import { useText } from '@/i18n/useText';
-import { chineseText, translateUI, localizeDisplay, type TextTranslator } from '@/i18n/text';
+import { translateUI, localizeDisplay } from '@/i18n/text';
 
 import { TableActions, TableAction } from '@/components/shared/TableActions';
 import { ActionButton as Button, ActionButton } from '@/components/shared/ActionButton';
@@ -44,11 +45,6 @@ function statusVariant(status: CNVBaselineStatus): 'success' | 'danger' | 'warni
   if (status === 'failed') return 'danger';
   if (status === 'running' || status === 'queued' || status === 'waiting_for_data') return 'warning';
   return 'neutral';
-}
-
-function formatTime(value: string, t: TextTranslator = chineseText): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(t.locale, { hour12: false });
 }
 
 function assetOptions(assets: DataAsset[]) {
@@ -131,7 +127,7 @@ export default function BaselinePage() {
   const selectedInputBytes = React.useMemo(() => {
     return selectedPairs.reduce((total, pair) => total + pair.read1.file_size + pair.read2.file_size, 0);
   }, [selectedPairs]);
-  const estimatedCredits = creditRate === null ? null : Math.ceil(selectedInputBytes / (1024 ** 3)) * creditRate;
+  const estimatedCredits = creditRate === null ? null : Math.max(30, Math.ceil(selectedInputBytes / (1024 ** 3)) * creditRate);
 
   const filteredItems = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -172,7 +168,7 @@ export default function BaselinePage() {
     ...(isSaaS ? [{ id: 'credits', header: t("pipeline.creditsb3e265"), accessor: (row: CNVBaseline) => row.is_builtin ? '-' : t("pipeline.credits0193ac", {p0: String(row.credits_charged || row.credit_cost)}), width: 90, align: 'center' as const }] : []),
     { id: 'bed', header: t("pipeline.bedFiles8ee058"), accessor: (row) => <HoverHint content={resourceDisplayName(row.bed.id, row.bed.file_name, t)}><span className="block truncate" >{resourceDisplayName(row.bed.id, row.bed.file_name, t)}</span></HoverHint>, width: 220, align: 'left' },
     { id: 'status', header: t("admin.status62e951"), accessor: (row) => row.is_builtin ? <Tag variant="success">{t("pipeline.builtInAvailablece8d4a")}</Tag> : row.start_error ? <Tag variant="danger">{t("pipeline.submissionError00b115")}</Tag> : <Tag variant={statusVariant(row.status)}>{translateUI(statusLabels[row.status], t)}{row.status === 'running' ? ` ${row.progress}%` : ''}</Tag>, width: 130, align: 'center' },
-    { id: 'created', header: t("admin.createdAt84e380"), accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at, t), width: 170, align: 'center' },
+    { id: 'created', header: t("admin.createdAt84e380"), accessor: (row) => row.is_builtin ? '-' : formatLocalTimestamp(row.created_at) ?? '-', width: 170, align: 'center' },
     { id: 'actions', header: t("admin.actionsf3ea6d"), accessor: (row) => row.is_builtin
       ? <span className="text-xs text-fg-muted">{t("pipeline.readOnlyffc1d0")}</span>
       : <TableActions><TableAction action="delete" label={t("data.delete3755f5")} tone="danger" aria-label={t("pipeline.delete05cefd", {p0: String(row.name)})} disabled={['queued', 'waiting_for_data', 'running'].includes(row.status)} hint={['queued', 'waiting_for_data', 'running'].includes(row.status) ? t("pipeline.canBeDeletedAfterCalibrationFinishes14d5f8") : t("pipeline.deleteCustomBaseline25cb0b")} onClick={() => setDeleting(row)} /></TableActions>, width: 128, minWidth: 128, pinned: 'right', align: 'center' },

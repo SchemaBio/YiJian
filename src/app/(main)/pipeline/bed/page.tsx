@@ -1,6 +1,7 @@
 'use client';
 import {GenomeTag} from '@/components/shared/GenomeTag';
 import { formatNumericString } from '@/i18n/format';
+import { formatLocalTimestamp } from '@/lib/date-time';
 
 import { errorText } from '@/i18n/errors';
 
@@ -31,11 +32,6 @@ const genomeOptions = [
   { value: 'GRCh37', label: 'GRCh37 (hg19)' },
   { value: 'GRCh38', label: 'GRCh38 (hg38)' },
 ];
-
-function formatTime(value: string, t: TextTranslator = chineseText): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(t.locale, { hour12: false });
-}
 
 function formatBytes(value: number, t: TextTranslator = chineseText): string {
   if (value < 1024) return `${value} B`;
@@ -195,7 +191,7 @@ function BedFilesPageContent() {
       id: 'status', header: t("admin.status62e951"), width: 100, align: 'center',
       accessor: (row) => row.is_builtin ? <Tag variant="success">{t("data.availablee91365")}</Tag> : <Tag variant={row.status === 'completed' && row.validation_status==='valid' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'}>{row.status === 'completed' ? ({valid:t("data.availablee91365"),invalid:t("pipeline.invalidContent76f2ac"),unavailable:t("pipeline.validationUnavailable6771d1"),validating:t("pipeline.validatingf64375"),pending:t("pipeline.awaitingValidation88a87f")}[row.validation_status??'pending']) : row.status === 'failed' ? t("admin.failed3e3c80") : t("data.uploading6818eb")}</Tag>,
     },
-    { id: 'createdAt', header: t("data.uploadedAt109db2"), width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatTime(row.created_at, t) },
+    { id: 'createdAt', header: t("data.uploadedAt109db2"), width: 180, align: 'center', accessor: (row) => row.is_builtin ? '-' : formatLocalTimestamp(row.created_at) ?? '-' },
     { id: 'actions', header: t("admin.actionsf3ea6d"), width: 152, minWidth: 152, maxWidth: 152, pinned: 'right', align: 'center', accessor: (row) => row.is_builtin
       ? <span className="text-xs text-fg-muted">{t("pipeline.readOnlyffc1d0")}</span>
       : <TableActions>

@@ -234,7 +234,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
       {/* 任务信息头部 */}
       <div className="mb-4 pb-3 border-b border-border-default">
         <div className="flex items-center gap-3 mb-2">
-          <h3 className="text-base font-medium text-fg-default">{pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t)}</h3>
+          <h3 className="text-base font-medium text-fg-default">{pipelineDisplayName(task.pipelineId ?? '', task.name || task.pipeline, t, task.template)}</h3>
           <Tag variant={statusInfo.variant} className="text-xs">{translateUI(statusInfo.label, t)}</Tag>
         </div>
 
@@ -247,7 +247,7 @@ export function AnalysisDetailPanel({ taskId }: AnalysisDetailPanelProps) {
               {sample.age !== undefined && <span>{t("tasks.age1dcc35")}{sample.age}{t("tasks.years86f133")}</span>}
             </>
           )}
-          <span>{t("tasks.pipelinecc9f77")}{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t)} {task.pipelineVersion}</span>
+          <span>{t("tasks.pipelinecc9f77")}{pipelineDisplayName(task.pipelineId ?? '', task.pipeline, t, task.template)} {task.pipelineVersion}</span>
           <span>{t("tasks.createdcbd8a8")}{task.createdAt}</span>
         </div>
 

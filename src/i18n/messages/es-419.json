@@ -760,6 +760,7 @@
     "historyIsReadOnlyOpenTheSourcecd2f54": "El historial es de solo lectura. Abre el área de trabajo de la fuente para cambiar selecciones o interpretaciones."
   },
   "pipeline": {
+    "cnvBaselineCalibrationWorkflow": "Flujo de calibración de la referencia CNV",
     "files621862": " archivos",
     "select9dd365": "Seleccionar {p0}",
     "selected7142ae": "Seleccionados {p0} {p1} · {p2}",
@@ -811,7 +812,7 @@
     "estimatedCostCredits1e7fdd": "Costo estimado: {p0} créditos",
     "billedOnTotalRRSizeRoundede291a1": "Facturación por tamaño total de R1/R2, redondeado hacia arriba.",
     "finalCostFollowsServerBillingSettingsc816c1": "El costo final sigue la configuración de facturación del servidor.",
-    "creditsPerGibLessThanGibIs700984": "{p0} créditos por GiB; menos de 1 GiB se factura como 1 GiB.",
+    "creditsPerGibLessThanGibIs700984": "{p0} créditos por GiB; menos de 1 GiB se factura como 1 GiB. Cargo mínimo: 30 créditos.",
     "deleteCnvBaseline87ea69": "Eliminar referencia de CNV",
     "deleteCustomBaselineTaskRecordsAndArchived2baf2e": "¿Eliminar la referencia personalizada “{p0}”? Se conservan las tareas y los archivos archivados. No se pueden eliminar referencias usadas por flujos o tareas pendientes.",
     "unableToLoadBedFilesf96f3f": "No se pudieron cargar los archivos BED",

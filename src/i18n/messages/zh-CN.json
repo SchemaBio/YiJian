@@ -760,6 +760,7 @@
     "historyIsReadOnlyOpenTheSourcecd2f54": "历史页仅供查看，关注与判读修改请进入来源工作台。"
   },
   "pipeline": {
+    "cnvBaselineCalibrationWorkflow": "CNV 基线校正流程",
     "files621862": "个文件",
     "select9dd365": "选择{p0}",
     "selected7142ae": "已选择 {p0} {p1} · {p2}",
@@ -811,7 +812,7 @@
     "estimatedCostCredits1e7fdd": "预计消耗 {p0} 积分",
     "billedOnTotalRRSizeRoundede291a1": "按 R1/R2 总大小向上取整计费。",
     "finalCostFollowsServerBillingSettingsc816c1": "最终金额以服务端计费配置为准。",
-    "creditsPerGibLessThanGibIs700984": "每 GiB {p0} 积分，不足 1 GiB 按 1 GiB 计。",
+    "creditsPerGibLessThanGibIs700984": "每 GiB {p0} 积分，不足 1 GiB 按 1 GiB 计，最低消耗 30 积分。",
     "deleteCnvBaseline87ea69": "删除 CNV 基线",
     "deleteCustomBaselineTaskRecordsAndArchived2baf2e": "确定删除自定义基线「{p0}」吗？关联任务记录和归档文件将保留。被流程或未结束任务使用的基线无法删除。",
     "unableToLoadBedFilesf96f3f": "加载 BED 文件失败",

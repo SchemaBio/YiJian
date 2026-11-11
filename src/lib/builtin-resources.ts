@@ -5,7 +5,8 @@ import { chineseText, type TextTranslator } from '@/i18n/text';
 export type BuiltinGenome = 'hg19' | 'hg38';
 
 /** Translate reserved built-in IDs at display time; never rename custom pipelines. */
-export function pipelineDisplayName(id: string, original: string, t: TextTranslator): string {
+export function pipelineDisplayName(id: string, original: string, t: TextTranslator, template?: string): string {
+  if (template === 'baseline_fix' && original === 'CNV 基线校正流程') return t('pipeline.cnvBaselineCalibrationWorkflow');
   const canonical=canonicalPipelineId(id);
   const match=/^builtin-wes-(single|family)-(hg19|hg38)$/.exec(canonical);
   if(match)return `${t(match[1]==='single'?'pipeline.wesSingleSampleAnalysis400a61':'pipeline.wesFamilyAnalysise07024')}_${match[2]}`;

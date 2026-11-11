@@ -35,3 +35,15 @@ it('uses saved pipeline identities for existing tasks while preserving custom na
 it('leaves custom pipeline names verbatim even when they match a built-in label', () => {
   expect(pipelineDisplayName('custom', 'WES单样本分析', createTextTranslator('en'))).toBe('WES单样本分析');
 });
+
+it('localizes the CNV calibration workflow in task lists and preserves user task names', () => {
+  const t = createTextTranslator('en');
+  const raw = {template:'baseline_fix', pipeline:'CNV 基线校正流程', name:'CNV 基线校正流程'};
+  const task = normalizeTask(raw);
+  expect(pipelineDisplayName('', task.pipeline, t, task.template)).toBe('CNV baseline calibration workflow');
+  expect(pipelineDisplayName('', task.name || task.pipeline, t, task.template)).toBe('CNV baseline calibration workflow');
+  const detail = normalizeTaskDetail(raw);
+  expect(pipelineDisplayName('', detail.name || detail.pipeline, t, detail.template)).toBe('CNV baseline calibration workflow');
+  expect(pipelineDisplayName('', 'My baseline', t, task.template)).toBe('My baseline');
+  expect(pipelineDisplayName('custom', task.pipeline, t)).toBe(task.pipeline);
+});

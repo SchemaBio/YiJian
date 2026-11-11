@@ -354,7 +354,7 @@ export default function AnalysisPage() {
       result = result.filter(
         (taskItem) =>
           (taskItem.name ?? '').toLowerCase().includes(query) ||
-          pipelineDisplayName(taskItem.pipelineId ?? '', taskItem.name || taskItem.pipeline, t).toLowerCase().includes(query) ||
+          pipelineDisplayName(taskItem.pipelineId ?? '', taskItem.name || taskItem.pipeline, t, taskItem.template).toLowerCase().includes(query) ||
           taskItem.pipeline.toLowerCase().includes(query) ||
           taskItem.id.toLowerCase().includes(query) ||
           taskItem.sampleId.toLowerCase().includes(query) ||
@@ -370,7 +370,7 @@ export default function AnalysisPage() {
       id: 'taskId',
       header: t("admin.task3172b3"),
       accessor: (row) => {
-        const title = pipelineDisplayName(row.pipelineId ?? '', row.name || row.pipeline, t) || t("samples.analysisTasksf269c8");
+        const title = pipelineDisplayName(row.pipelineId ?? '', row.name || row.pipeline, t, row.template) || t("samples.analysisTasksf269c8");
         return (
           <div className="min-w-0 text-left">
             <IdCell id={row.id} full />
@@ -404,7 +404,7 @@ export default function AnalysisPage() {
       header: t("tasks.analysisPipelinef22c14"),
       accessor: (row) => (
         <div className="text-center">
-          <div className="text-fg-default">{pipelineDisplayName(row.pipelineId ?? '', row.pipeline, t)}</div>
+          <div className="text-fg-default">{pipelineDisplayName(row.pipelineId ?? '', row.pipeline, t, row.template)}</div>
           <div className="text-xs text-fg-muted">{row.pipelineVersion}</div>
         </div>
       ),
