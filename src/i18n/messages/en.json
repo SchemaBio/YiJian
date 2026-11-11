@@ -1,4 +1,11 @@
 {
+  "assessmentAvailability": {
+    "evidencePackUnavailable": "The local evidence package is unavailable; disease, phenotype and family rules will not infer missing evidence.",
+    "familyProofsUnavailable": "The archive does not yet provide verified GQ, relatedness or phasing evidence; the corresponding family criteria remain unselected.",
+    "probandGQUnavailable": "The current archive has no proband GQ; candidates requiring family quality checks and ACMG family evidence remain unselected.",
+    "strThresholdsUnavailable": "The STR disease threshold package is not configured; unverified thresholds in the report will not trigger automatic pinning.",
+    "imprintingEvidenceUnavailable": "The imprinting region evidence package is not configured; evidence for UPD rules remains insufficient."
+  },
   "variantAssessment": {
     "evidenceReason": "Rationale and sources (links allowed)",
     "added": "New suggestion",
@@ -1297,6 +1304,7 @@
     "calculateAndSave": "Calculate and save"
   },
   "tasks": {
+    "parentCallUnavailable": "No genotype is available for this family member at this site; this does not establish a reference call or confirm a de novo variant.",
     "mtAltReadCount": "ALT-supporting reads",
     "probandZygosity": "Proband zygosity",
     "fatherZygosity": "Father zygosity",

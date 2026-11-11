@@ -1,4 +1,11 @@
 {
+  "assessmentAvailability": {
+    "evidencePackUnavailable": "El paquete de evidencia local no está disponible; las reglas de enfermedad, fenotipo y familia no inferirán evidencia faltante.",
+    "familyProofsUnavailable": "El archivo aún no proporciona evidencia verificada de GQ, parentesco o fase; los criterios familiares correspondientes permanecen sin seleccionar.",
+    "probandGQUnavailable": "El archivo actual no contiene GQ del caso índice; los candidatos que requieren controles de calidad familiar y la evidencia familiar ACMG permanecen sin seleccionar.",
+    "strThresholdsUnavailable": "El paquete de umbrales de enfermedad STR no está configurado; los umbrales no verificados del informe no activarán la fijación automática.",
+    "imprintingEvidenceUnavailable": "El paquete de evidencia de regiones de impronta no está configurado; la evidencia para las reglas de UPD sigue siendo insuficiente."
+  },
   "variantAssessment": {
     "evidenceReason": "Justificación y fuentes (se permiten enlaces)",
     "added": "Nueva sugerencia",
@@ -1297,6 +1304,7 @@
     "calculateAndSave": "Calcular y guardar"
   },
   "tasks": {
+    "parentCallUnavailable": "No hay genotipo disponible para este familiar en este sitio; esto no demuestra un genotipo de referencia ni confirma una variante de novo.",
     "mtAltReadCount": "Lecturas que respaldan ALT",
     "probandZygosity": "Cigosidad del probando",
     "fatherZygosity": "Cigosidad del padre",

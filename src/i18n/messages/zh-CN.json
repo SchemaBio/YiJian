@@ -1,4 +1,11 @@
 {
+  "assessmentAvailability": {
+    "evidencePackUnavailable": "本地证据包未发布；疾病、表型及家系规则不会推断缺失证据",
+    "familyProofsUnavailable": "归档尚未提供经核验的 GQ、亲缘及相位证据；相关家系条款保持未选",
+    "probandGQUnavailable": "当前归档没有先证者 GQ；依赖家系质量的候选及 ACMG 家系证据保持未选",
+    "strThresholdsUnavailable": "STR 疾病阈值包未配置；不会根据报告中的未核验阈值自动置顶",
+    "imprintingEvidenceUnavailable": "印记区域证据包未配置；UPD 规则保持证据不足"
+  },
   "variantAssessment": {
     "evidenceReason": "理由与来源（可附文献链接）",
     "added": "新增建议",
@@ -1297,6 +1304,7 @@
     "calculateAndSave": "计算并保存"
   },
   "tasks": {
+    "parentCallUnavailable": "该位点缺少此成员的分型信息，不能据此判断为野生型或确认新生变异。",
     "mtAltReadCount": "突变支持 reads",
     "probandZygosity": "先证者杂合性",
     "fatherZygosity": "父亲杂合性",

@@ -21,7 +21,7 @@ describe('family sample columns',()=>{
  it('uses a missing placeholder instead of a fake zero',()=>{
   render(<Table value={{...row,mother:readSNVSample({VAF:'.',AD:'.',Genotype:'./.'})}}/>);
   expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
-  expect(screen.getAllByText('未提供')).toHaveLength(2);
+  expect(screen.getAllByText('NA')).toHaveLength(2);
  });
  it('does not add parent columns to a singleton table',()=>{
   render(<Table family={false}/>);

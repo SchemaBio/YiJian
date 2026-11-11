@@ -1,4 +1,9 @@
 {
+  "本地证据包未发布；疾病、表型及家系规则不会推断缺失证据": "assessmentAvailability.evidencePackUnavailable",
+  "归档尚未提供经核验的 GQ、亲缘及相位证据；相关家系条款保持未选": "assessmentAvailability.familyProofsUnavailable",
+  "当前归档没有先证者 GQ；依赖家系质量的候选及 ACMG 家系证据保持未选": "assessmentAvailability.probandGQUnavailable",
+  "STR 疾病阈值包未配置；不会根据报告中的未核验阈值自动置顶": "assessmentAvailability.strThresholdsUnavailable",
+  "印记区域证据包未配置；UPD 规则保持证据不足": "assessmentAvailability.imprintingEvidenceUnavailable",
   "全部染色体": "tasks.allChromosomes",
   "模型建议、规则结果与人工判定分别保存；本结果尚未由人工采纳。": "assistance.aiResultNotAdoptedWarning",
   "AI评估自动保存": "assistance.aiAssessmentAutosavedHistory",

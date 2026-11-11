@@ -18,7 +18,7 @@ describe('language catalogs', () => {
       const current = flatten(getMessages(locale));
       expect(Object.keys(current).sort()).toEqual(Object.keys(base).sort());
       for (const key of Object.keys(base)) {
-        const parameters = (text: string) => [...new Set(text.match(/\{p\d+(?=[},])/g) ?? [])].sort();
+        const parameters = (text: string) => [...new Set(text.match(/\{[A-Za-z]\w*(?=[},])/g) ?? [])].sort();
         expect(parameters(current[key])).toEqual(parameters(base[key]));
         expect(current[key].match(/p\d+, plural/g)?.sort() ?? []).toEqual(base[key].match(/p\d+, plural/g)?.sort() ?? []);
       }
@@ -30,7 +30,7 @@ describe('language catalogs', () => {
       const t = createTextTranslator(locale);
       const current = flatten(getMessages(locale));
       for (const [key, value] of Object.entries(current)) {
-        const values = Object.fromEntries((value.match(/\{p\d+(?=[},])/g) ?? []).map(p => [p.slice(1), 10]));
+        const values = Object.fromEntries((value.match(/\{[A-Za-z]\w*(?=[},])/g) ?? []).map(p => [p.slice(1), 10]));
         expect(t(key, values)).toBeTruthy();
       }
       expect(errors).not.toHaveBeenCalled();

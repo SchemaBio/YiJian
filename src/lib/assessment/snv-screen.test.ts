@@ -7,6 +7,14 @@ const ctx: AssessmentContext = { taskId:'task',attemptId:'attempt',version:'fixe
 const evaluate = (values: Record<string, unknown>) => evaluateRow({ id:'row',table:'snv-indel',values },ctx);
 
 describe('fast SNV triage', () => {
+  it.each([undefined, {gt:'./.',dp:0}, {gt:'.',dp:0}])('keeps proband pathogenic candidates when parents have no call (%j)', parent => {
+    const values = {Chromosome:'17',Position:10641317,Gene:'MYH3',Genotype:'0/1',Depth:40,Filter:'PASS',ClinVar_Sig:'Pathogenic',Genotype_father:'./.',Depth_father:0,Genotype_mother:'./.',Depth_mother:0};
+    const context: AssessmentContext = {...ctx, members:[{id:'child',role:'proband'},{id:'father',role:'father'},{id:'mother',role:'mother'}], proofs:{row:{reference:'hg19',proband:{gt:'0/1',dp:40,gq:60,ad:[20,20]},father:parent,mother:parent}}};
+    const result = evaluateRow({id:'row',table:'snv-indel',values},context);
+    expect(result).toMatchObject({classification:'Pathogenic',classificationBasis:'clinvar_reference',pinned:true});
+    expect(result.criteria.some(e => e.code === 'PS2' || e.code === 'PM6')).toBe(false);
+    expect(result.classification).toBe(evaluate(values).classification);
+  });
   it.each([
     ['Pathogenic', 'Pathogenic'], ['Likely_pathogenic', 'Likely_Pathogenic'],
     ['Pathogenic/Likely_pathogenic', 'Likely_Pathogenic'], ['Benign', 'Benign'],

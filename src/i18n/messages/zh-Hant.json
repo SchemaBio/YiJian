@@ -1,4 +1,11 @@
 {
+  "assessmentAvailability": {
+    "evidencePackUnavailable": "本機證據套件尚未發布；疾病、表型及家系規則不會推斷缺失證據",
+    "familyProofsUnavailable": "封存資料尚未提供經核驗的 GQ、親緣及定相證據；相關家系條款維持未選取",
+    "probandGQUnavailable": "目前封存資料沒有先證者 GQ；依賴家系品質的候選及 ACMG 家系證據維持未選取",
+    "strThresholdsUnavailable": "STR 疾病閾值套件尚未設定；不會依據報告中未核驗的閾值自動置頂",
+    "imprintingEvidenceUnavailable": "銘印區域證據套件尚未設定；UPD 規則仍為證據不足"
+  },
   "variantAssessment": {
     "evidenceReason": "理由與來源（可附文獻連結）",
     "added": "新增建議",
@@ -1297,6 +1304,7 @@
     "calculateAndSave": "計算並儲存"
   },
   "tasks": {
+    "parentCallUnavailable": "此位點缺少該成員的分型資訊，不能據此判定為野生型或確認新生變異。",
     "mtAltReadCount": "變異支持 reads",
     "probandZygosity": "先證者雜合性",
     "fatherZygosity": "父親雜合性",

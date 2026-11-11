@@ -25,14 +25,16 @@ export function snvSampleColumns(family: boolean, t: TextTranslator): Column<SNV
       accessor: (row: SNVIndel) => {
         const value = sample(row);
         const colors = {Heterozygous:'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200', Homozygous:'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200', Hemizygous:'border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-200', Reference:'border-border-default bg-canvas-inset text-fg-muted', Unknown:'border-border-default bg-canvas-inset text-fg-muted'};
-        return <HoverHint content={value.genotype ?? t('history.notProvided071fb2')}><span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${colors[value.zygosity]}`}>{sampleZygosityLabel(value.zygosity,t)}</span></HoverHint>;
+        const parentMissing = !isProband && value.zygosity === 'Unknown';
+        return <HoverHint content={parentMissing ? t('tasks.parentCallUnavailable') : value.genotype ?? t('history.notProvided071fb2')}><span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${colors[value.zygosity]}`}>{parentMissing ? 'NA' : sampleZygosityLabel(value.zygosity,t)}</span></HoverHint>;
       }, width:110, align:'center' as const,
     },{
       id: isProband ? 'alleleFrequency' : role+'AlleleFrequency',
       header: family ? t('tasks.'+role+'Vaf') : 'VAF',
       accessor: (row: SNVIndel) => {
         const value=sample(row);
-        return <HoverHint content={value.vafSource==='ad' ? t('tasks.sampleVafFromAd',{p0:value.alleleDepth ?? '-'}) : t('tasks.sampleVafReported')}><span className="font-mono tabular-nums text-accent-fg">{formatSampleVaf(value.alleleFrequency,t)}</span></HoverHint>;
+        const parentMissing = !isProband && value.alleleFrequency === undefined;
+        return <HoverHint content={parentMissing ? t('tasks.parentCallUnavailable') : value.vafSource==='ad' ? t('tasks.sampleVafFromAd',{p0:value.alleleDepth ?? '-'}) : t('tasks.sampleVafReported')}><span className="font-mono tabular-nums text-accent-fg">{parentMissing ? 'NA' : formatSampleVaf(value.alleleFrequency,t)}</span></HoverHint>;
       }, width:110, align:'center' as const, sortable:true,
     }];
   });
