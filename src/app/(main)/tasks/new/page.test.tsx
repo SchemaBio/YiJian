@@ -70,7 +70,7 @@ it('shows the SaaS retention checkbox as checked and unlocks submission', async 
   const view = render(<NewAnalysisPage />);
   try {
     fireEvent.click(await screen.findByRole('radio', { name: /BIZ-1/ }));
-    const checkbox = screen.getByRole('checkbox', { name: /我已阅读并了解上述保留期限/ });
+    const checkbox = screen.getByRole('checkbox', { name: /我已阅读并同意上述保留期限/ });
     const submit = screen.getByRole('button', { name: '提交任务' });
     expect(submit).toBeDisabled();
     fireEvent.click(checkbox);

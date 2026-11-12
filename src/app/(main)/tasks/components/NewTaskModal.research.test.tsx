@@ -34,7 +34,7 @@ it('requires retention acknowledgment before creating a SaaS task and resets on 
   expect(create).toBeDisabled();
   fireEvent.click(create);
   expect(submit).not.toHaveBeenCalled();
-  const checkbox = screen.getByRole('checkbox', { name: '我已阅读并了解上述保留期限。' });
+  const checkbox = screen.getByRole('checkbox', { name: '我已阅读并同意上述保留期限。' });
   expect(checkbox).not.toBeChecked();
   fireEvent.click(checkbox);
   await waitFor(() => expect(create).toBeEnabled());
