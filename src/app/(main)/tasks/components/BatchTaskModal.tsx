@@ -42,8 +42,6 @@ function previewRowsToInput(preview: TaskBatchPreviewResponse): TaskBatchInputRo
     pipeline_id: row.pipeline_id,
     remark: row.remark,
     vcf_asset_id: row.vcf_asset_id, vcf_sample_name: row.vcf_sample_name,
-    enable_cnv: row.enable_cnv,
-    enable_sv: row.enable_sv,
   }));
 }
 

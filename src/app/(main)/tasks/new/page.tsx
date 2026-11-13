@@ -172,7 +172,7 @@ export default function NewAnalysisPage() {
         pipelineName: selectedPipelineInfo.name,
         pipelineVersion: selectedPipelineInfo.version,
         remark: notes,
-        inputs: isVCF ? {} : { enable_cnv: true, enable_sv: false },
+        inputs: {},
       });
       router.push(`/tasks/${encodeURIComponent(task.id)}`);
     } catch (err) {

@@ -33,4 +33,5 @@ it('keeps template downloads available to a self-hosted reader',()=>{
  expect(screen.getByRole('button',{name:'上传信息'})).toBeDisabled();
  expect(screen.getByRole('button',{name:'新建任务'})).toBeDisabled();
  fireEvent.click(screen.getByRole('button',{name:'下载模板'}));expect(downloadImportWorkbook).toHaveBeenCalledWith(expect.stringContaining('PROBAND-001,builtin-wes-family-hg19'), 'task-batch-import-template.xlsx','批量任务');
+ const template=vi.mocked(downloadImportWorkbook).mock.calls.at(-1)?.[0] as string;expect(template).not.toContain('启用CNV');expect(template).not.toContain('启用SV');
 });

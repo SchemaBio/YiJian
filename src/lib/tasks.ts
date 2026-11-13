@@ -254,8 +254,6 @@ export interface TaskBatchInputRow {
   pedigree_id: string;
   pipeline_id: string;
   remark: string;
-  enable_cnv: boolean;
-  enable_sv: boolean;
 }
 
 export interface TaskBatchPreviewRow extends TaskBatchInputRow {

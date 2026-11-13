@@ -9,7 +9,7 @@ vi.mock('@/lib/runtime-config', () => ({ getRuntimeBackendFlavor: () => mode.bac
 vi.mock('@/lib/billing',()=>({calculateEstimatedCredits:vi.fn(()=>1),getBillingBalance:vi.fn(async()=>({balance:100})),getBillingConfig:vi.fn(async()=>({min_balance:0})),notifyBillingUpdated:vi.fn()}));
 beforeEach(()=>{vi.clearAllMocks();vi.mocked(calculateEstimatedCredits).mockReturnValue(1);mode.backend='octopus';});
 vi.mock('@/lib/tasks', () => ({ tasksApi: { previewBatch: vi.fn(), createBatch: vi.fn() } }));
-const preview: TaskBatchPreviewResponse = { total_rows: 1, valid_rows: 1, invalid_rows: 0, total_estimated_minutes: 60, rows: [{ row_number: 2, sample_identifier: 'synthetic-sample', pedigree_id: '', pipeline_id: 'synthetic-pipeline', remark: '', enable_cnv: true, enable_sv: false, valid: true, errors: [], estimated_minutes: 60 }] };
+const preview: TaskBatchPreviewResponse = { total_rows: 1, valid_rows: 1, invalid_rows: 0, total_estimated_minutes: 60, rows: [{ row_number: 2, sample_identifier: 'synthetic-sample', pedigree_id: '', pipeline_id: 'synthetic-pipeline', remark: '', valid: true, errors: [], estimated_minutes: 60 }] };
 function upload(file: File) { fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } }); }
 it('rejects unsupported files before contacting the preview service', async () => {
   render(<BatchTaskModal isOpen onClose={vi.fn()} onCompleted={vi.fn()} />);
