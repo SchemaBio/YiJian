@@ -87,9 +87,10 @@ it('links consent to the privacy policy and unified agreement without separate s
 
 it('opens Checkout in a new tab and updates credits in the original page', async () => {
  const id='00000000-0000-0000-0000-000000000099';
+ const created = new Date(2026, 11, 10, 23, 0, 38).toISOString();
  vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,test_credits_enabled:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'test',simulated:true,price:{currency:'hkd',unit_amount:120}});
  vi.mocked(createCheckoutSession).mockResolvedValue({order_id:id,state:'pending',simulated:true,checkout_url:'https://checkout.stripe.com/c/pay/fixture'});
- vi.mocked(getPaymentOrder).mockResolvedValue({id,mode:'test',quantity:10,currency:'hkd',amount:1200,state:'simulated',simulated:true,test_credits_applied:true,refunded_amount:0,recovered_credits:0,created_at:''});
+ vi.mocked(getPaymentOrder).mockResolvedValue({id,mode:'test',quantity:10,currency:'hkd',amount:1200,state:'simulated',simulated:true,test_credits_applied:true,refunded_amount:0,recovered_credits:0,created_at:created});
  vi.mocked(getPaymentOrders).mockResolvedValue({items:[await getPaymentOrder(id)],total:1});
  render(<StripeRechargePanel quantity={10} orgId="org" />);
  await screen.findByRole('checkbox');fireEvent.click(screen.getByRole('checkbox'));
@@ -98,6 +99,8 @@ it('opens Checkout in a new tab and updates credits in the original page', async
  expect(window.open).toHaveBeenCalledWith('about:blank','_blank');expect(checkoutTab.opener).toBeNull();
  expect(window.location.pathname).toBe('/billing/recharge');
  await screen.findByText(id+': 积分已到账');
+ expect(screen.getAllByRole('button', { name: id }).some(button => button.textContent === id)).toBe(true);
+ expect(screen.getAllByText('2026-12-10 23:00:38').length).toBeGreaterThan(0);
  expect(screen.queryByText('测试支付')).not.toBeInTheDocument();
  expect(screen.queryByText(/测试积分|测试充值|开发环境测试支付/)).not.toBeInTheDocument();
  expect(checkoutTab.close).not.toHaveBeenCalled();
