@@ -16,3 +16,4 @@ ulw*
 skills-lock.json
 *.bam
 /docs/REMOTE_SERVER*.md
+output/
