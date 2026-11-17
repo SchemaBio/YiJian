@@ -3,6 +3,7 @@ import { contentSecurityPolicy, isDuckDBWorkerPath } from './lib/content-securit
 import { NextResponse, type NextRequest } from 'next/server';
 import { localeCookie, resolveLocale } from './i18n/locales';
 import { createTextTranslator } from './i18n/text';
+import { demoContentSecurityPolicy, isDemoPath, isDemoWorkerPath } from './lib/demo/policy';
 
 function createNonce() {
   const bytes = new Uint8Array(16);
@@ -12,8 +13,22 @@ function createNonce() {
 
 export async function middleware(request: NextRequest) {
   const nonce = createNonce();
-  const csp = contentSecurityPolicy(nonce, isDuckDBWorkerPath(request.nextUrl.pathname));
+  const demo = isDemoPath(request.nextUrl.pathname);
+  const demoWorker = isDemoWorkerPath(request.nextUrl.pathname);
+  let csp = contentSecurityPolicy(nonce, isDuckDBWorkerPath(request.nextUrl.pathname));
+  if (demo || demoWorker) {
+    // Next's request URL can contain the internal bind address behind a proxy.
+    // Resolve the browser origin only for the isolated Demo policy.
+    const internalOrigin = new URL(request.url);
+    const forwardedProtocol = request.headers.get('x-forwarded-proto');
+    const protocol = forwardedProtocol === 'https' || forwardedProtocol === 'http' ? forwardedProtocol + ':' : internalOrigin.protocol;
+    const publicOrigin = new URL(`${protocol}//${request.headers.get('host') ?? internalOrigin.host}`);
+    csp = demoContentSecurityPolicy(nonce, publicOrigin.origin, demoWorker);
+  }
   const requestHeaders = new Headers(request.headers);
+  // Always overwrite client-supplied markers; they cannot bypass business auth.
+  requestHeaders.set('x-yijian-public-demo', demo ? '1' : '0');
+  requestHeaders.set('x-yijian-demo-locale', demo ? request.nextUrl.searchParams.get('lang') ?? '' : '');
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);
 

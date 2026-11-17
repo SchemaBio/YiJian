@@ -7,9 +7,11 @@ const require = createRequire(import.meta.url);
 const root = dirname(require.resolve('@duckdb/duckdb-wasm'));
 await mkdir('public/duckdb', { recursive: true });
 await mkdir('public/duckdb/1.32.0-csp2', { recursive: true });
+await mkdir('public/demo-engine/1.32.0', { recursive: true });
 for (const file of ['duckdb-mvp.wasm', 'duckdb-eh.wasm', 'duckdb-browser-mvp.worker.js', 'duckdb-browser-eh.worker.js']) {
   await copyFile(join(root, file), join('public/duckdb', file));
   await copyFile(join(root, file), join('public/duckdb/1.32.0-csp2', file));
+  if (file.endsWith('.worker.js')) await copyFile(join(root, file), join('public/demo-engine/1.32.0', file));
 }
 
 const manifest = JSON.parse(await readFile('scripts/duckdb-extensions.json', 'utf8'));

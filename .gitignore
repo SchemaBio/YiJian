@@ -1,6 +1,7 @@
 node_modules
 .pnpm-store/
 public/duckdb/
+public/demo-engine/
 .gotmp/
 .next
 .assessment-benchmark/

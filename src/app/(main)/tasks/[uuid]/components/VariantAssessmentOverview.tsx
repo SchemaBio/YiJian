@@ -1,4 +1,5 @@
 'use client';
+import { usePublicResult } from '@/components/shared/PublicResultContext';
 import * as React from 'react';
 import { screeningNoteText } from '@/lib/assessment-display';
 import { useText } from '@/i18n/useText';
@@ -29,6 +30,7 @@ export function VariantAssessmentOverview({
   onAdoptSource?: (source: AdoptedSource, classification?: string | null) => Promise<void> | void;
 }) {
   const t = useText();
+  const publicResult=usePublicResult();
   const label = (value?: string | null) => (!value || ['.', '-'].includes(value.trim())) ? t('assessmentDisplay.missing') : value === 'insufficient_data' ? t('variantAssessment.insufficient') : value.replaceAll('_', ' ');
 
   // 人工评估是否已经正式保存确认
@@ -125,7 +127,7 @@ export function VariantAssessmentOverview({
   }, [activeSource, clinvarValue, quickValue, aiValue, manualValue]);
 
   const handleCardClick = (source: AdoptedSource) => {
-    if (!onAdoptSource) return;
+    if (publicResult || !onAdoptSource) return;
     let targetClass: string | undefined;
     if (source === 'database' && clinvarValue !== t('assessmentDisplay.missing')) targetClass = clinvarValue;
     else if (source === 'quick' && quickValue !== t('assessmentDisplay.missing')) targetClass = quickValue;
@@ -148,7 +150,7 @@ export function VariantAssessmentOverview({
           </div>
           <span className="text-xs text-fg-muted">
             {t('assessmentDisplay.adoptedFrom')} <strong className="text-fg-default">{sourceLabelMap[activeSource]}</strong>
-            <span className="ml-1 text-[11px] text-fg-subtle">{t('assessmentDisplay.switchHint')}</span>
+            <span className="ml-1 text-[11px] text-fg-subtle">{!publicResult && t('assessmentDisplay.switchHint')}</span>
           </span>
         </div>
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
@@ -166,7 +168,7 @@ export function VariantAssessmentOverview({
               </span>
             ) : null}
           </div>
-          <button
+          <button disabled={publicResult}
             type="button"
             className="inline-flex items-center gap-1 text-xs text-accent-fg font-medium hover:underline"
             onClick={onCalculator}
@@ -180,14 +182,14 @@ export function VariantAssessmentOverview({
       {/* 四轨评估对比卡片（支持点击单选四选一） */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{t('assessmentDisplay.comparison')}</h4>
-          <span className="text-[11px] text-fg-subtle">{t('assessmentDisplay.singleChoice')}</span>
+          <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{publicResult ? t('variantAssessment.overview') : t('assessmentDisplay.comparison')}</h4>
+          <span className="text-[11px] text-fg-subtle">{!publicResult && t('assessmentDisplay.singleChoice')}</span>
         </div>
         <div className="yj-assessment-cards">
           {/* 卡片 1: 数据库参考 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             onClick={() => handleCardClick('database')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('database'); } }}
             className={`cursor-pointer rounded-lg border p-3 flex flex-col justify-between transition-all select-none ${
@@ -207,7 +209,7 @@ export function VariantAssessmentOverview({
                     {t('assessmentDisplay.current')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -221,8 +223,8 @@ export function VariantAssessmentOverview({
 
           {/* 卡片 2: 本地快速初评 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             onClick={() => handleCardClick('quick')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('quick'); } }}
             className={`cursor-pointer rounded-lg border p-3 flex flex-col justify-between transition-all select-none ${
@@ -242,7 +244,7 @@ export function VariantAssessmentOverview({
                     {t('assessmentDisplay.current')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -256,8 +258,8 @@ export function VariantAssessmentOverview({
 
           {/* 卡片 3: AI 证据建议 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             onClick={() => handleCardClick('ai')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('ai'); } }}
             className={`cursor-pointer rounded-lg border p-3 flex flex-col justify-between transition-all select-none ${
@@ -287,7 +289,7 @@ export function VariantAssessmentOverview({
                     {t('assessmentDisplay.proposal')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -301,8 +303,8 @@ export function VariantAssessmentOverview({
 
           {/* 卡片 4: 人工评估 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             onClick={() => handleCardClick('manual')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('manual'); } }}
             className={`cursor-pointer rounded-lg border p-3 flex flex-col justify-between transition-all select-none ${
@@ -328,7 +330,7 @@ export function VariantAssessmentOverview({
                     {t('assessmentDisplay.validated')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -340,7 +342,7 @@ export function VariantAssessmentOverview({
             </div>
             {/* 卡片内部增加 ACMG 评估按钮 */}
             <div className="mt-3 pt-2 border-t border-border-subtle flex items-center">
-              <button
+              <button disabled={publicResult}
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-subtle hover:border-accent-emphasis/50 transition-colors shadow-2xs"
                 onClick={(e) => {
@@ -390,7 +392,7 @@ export function VariantAssessmentOverview({
             </section>
           )}
           <div className="pt-1">
-            <button
+            <button disabled={publicResult}
               type="button"
               className="rounded bg-accent-emphasis px-2.5 py-1 text-xs text-fg-on-emphasis font-medium"
               onClick={onCalculator}

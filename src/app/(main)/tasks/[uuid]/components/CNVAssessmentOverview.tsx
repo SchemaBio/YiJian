@@ -1,4 +1,5 @@
 'use client';
+import { usePublicResult } from '@/components/shared/PublicResultContext';
 import * as React from 'react';
 import { screeningNoteText } from '@/lib/assessment-display';
 import { useText } from '@/i18n/useText';
@@ -25,6 +26,7 @@ export function CNVAssessmentOverview({
   onAdoptSource?: (source: CNVAdoptedSource, classification?: string | null) => Promise<void> | void;
 }) {
   const t = useText();
+  const publicResult=usePublicResult();
 
   const label = (value?: string | null) => {
     if (!value || ['.', '-'].includes(value.trim())) return t('assessmentDisplay.missing');
@@ -136,7 +138,7 @@ export function CNVAssessmentOverview({
   }, [activeSource, dbValue, quickValue, aiValue, clingenValue]);
 
   const handleCardClick = (source: CNVAdoptedSource) => {
-    if (!onAdoptSource) return;
+    if (publicResult || !onAdoptSource) return;
     let targetClass: string | undefined;
     if (source === 'database' && dbValue !== t('assessmentDisplay.missing')) targetClass = dbValue;
     else if (source === 'quick' && quickValue !== t('assessmentDisplay.missing')) targetClass = quickValue;
@@ -158,7 +160,7 @@ export function CNVAssessmentOverview({
           </div>
           <span className="text-xs text-fg-muted">
             {t('assessmentDisplay.adoptedFrom')} <strong className="text-fg-default">{sourceLabelMap[activeSource]}</strong>
-            <span className="ml-1 text-[11px] text-fg-subtle">{t('assessmentDisplay.switchHint')}</span>
+            <span className="ml-1 text-[11px] text-fg-subtle">{!publicResult && t('assessmentDisplay.switchHint')}</span>
           </span>
         </div>
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
@@ -176,7 +178,7 @@ export function CNVAssessmentOverview({
               </span>
             ) : null}
           </div>
-          <button
+          <button disabled={publicResult}
             type="button"
             className="inline-flex items-center gap-1 text-xs text-accent-fg font-medium hover:underline"
             onClick={onClingen}
@@ -190,14 +192,14 @@ export function CNVAssessmentOverview({
       {/* 四轨评估对比卡片（支持点击单选四选一） */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{t('assessmentDisplay.comparison')}</h4>
-          <span className="text-[11px] text-fg-subtle">{t('assessmentDisplay.singleChoice')}</span>
+          <h4 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{publicResult ? t('variantAssessment.overview') : t('assessmentDisplay.comparison')}</h4>
+          <span className="text-[11px] text-fg-subtle">{!publicResult && t('assessmentDisplay.singleChoice')}</span>
         </div>
         <div className="yj-assessment-cards">
           {/* 卡片 1: 数据库参考 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             aria-label={t('assessmentDisplay.choose', {p0: t('assessmentDisplay.database')})}
             onClick={() => handleCardClick('database')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('database'); } }}
@@ -218,7 +220,7 @@ export function CNVAssessmentOverview({
                     {t('assessmentDisplay.current')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -232,8 +234,8 @@ export function CNVAssessmentOverview({
 
           {/* 卡片 2: 本地快速初评 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             aria-label={t('assessmentDisplay.choose', {p0: t('assessmentDisplay.quick')})}
             onClick={() => handleCardClick('quick')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('quick'); } }}
@@ -254,7 +256,7 @@ export function CNVAssessmentOverview({
                     {t('assessmentDisplay.current')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -268,8 +270,8 @@ export function CNVAssessmentOverview({
 
           {/* 卡片 3: AI 证据建议 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             aria-label={t('assessmentDisplay.choose', {p0: t('assessmentDisplay.ai')})}
             onClick={() => handleCardClick('ai')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('ai'); } }}
@@ -300,7 +302,7 @@ export function CNVAssessmentOverview({
                     {t('assessmentDisplay.proposal')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -314,8 +316,8 @@ export function CNVAssessmentOverview({
 
           {/* 卡片 4: ClinGen 评估 */}
           <section
-            role="button"
-            tabIndex={0}
+            role={publicResult ? undefined : "button"} aria-disabled={publicResult || undefined}
+            tabIndex={publicResult ? -1 : 0}
             aria-label={t('assessmentDisplay.choose', {p0: t('assessmentDisplay.clingen')})}
             onClick={() => handleCardClick('clingen')}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick('clingen'); } }}
@@ -342,7 +344,7 @@ export function CNVAssessmentOverview({
                     {t('assessmentDisplay.validated')}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-fg-subtle">{t('assessmentDisplay.adopt')}</span>
+                  <span className="text-[10px] text-fg-subtle">{!publicResult && t('assessmentDisplay.adopt')}</span>
                 )}
               </div>
               <p className="mt-2 text-sm font-semibold text-fg-default">
@@ -354,7 +356,7 @@ export function CNVAssessmentOverview({
             </div>
             {/* 卡片内部增加 ClinGen 评估按钮 */}
             <div className="mt-3 pt-2 border-t border-border-subtle flex items-center">
-              <button
+              <button disabled={publicResult}
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-canvas-subtle px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-subtle hover:border-accent-emphasis/50 transition-colors shadow-2xs"
                 onClick={(e) => {

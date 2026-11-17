@@ -1,4 +1,5 @@
 'use client';
+import { usePublicResult } from '@/components/shared/PublicResultContext';
 
 import * as React from 'react';
 import { Tag } from '@/components/shared/Tag';
@@ -14,13 +15,14 @@ export function SampleHpoTerms({ terms, refreshing, onSave }: {
   terms: Term[]; refreshing: boolean; onSave: (terms: Term[]) => Promise<void>;
 }) {
   const t = useText();
+  const publicResult=usePublicResult();
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState<Term[]>([]);
   const [query, setQuery] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
   const pending = React.useRef(false);
-  const catalog = useHpoTerms(editing);
+  const catalog = useHpoTerms(editing && !publicResult);
   const matches = searchHpoTerms(catalog, query).filter(term => !draft.some(item => item.id === term.id));
   const directId = query.trim().toUpperCase();
   if (/^HP:\d{7}$/.test(directId) && !catalog.some(term => term.id === directId) && !draft.some(term => term.id === directId)) {
@@ -37,7 +39,7 @@ export function SampleHpoTerms({ terms, refreshing, onSave }: {
   return <section className="space-y-3 border-t border-border-default pt-3" aria-label={t('samples.hpoPhenotypeTermsc62e48')}>
     <div className="flex items-center justify-between gap-2">
       <h4 className="text-xs font-medium text-fg-muted">{t('samples.hpoPhenotypeTermsc62e48')}</h4>
-      {!editing && <ActionButton permission="samples.write" action="edit" size="small" variant="ghost" disabled={refreshing} onClick={() => { setDraft(terms.map(term => ({...term}))); setQuery(''); setError(''); setEditing(true); }}>{t('admin.edita7f814')}</ActionButton>}
+      {!publicResult && !editing && <ActionButton permission="samples.write" action="edit" size="small" variant="ghost" disabled={refreshing} onClick={() => { setDraft(terms.map(term => ({...term}))); setQuery(''); setError(''); setEditing(true); }}>{t('admin.edita7f814')}</ActionButton>}
     </div>
     <div className="flex flex-wrap gap-2">
       {(editing ? draft : terms).map(term => <HoverHint key={term.id} content={getHpoTermName(term, t.locale, catalog)}><span className="inline-flex items-center gap-1"><Tag variant="info" className="font-mono">{term.id}</Tag>{editing && <IconActionButton action="close" size="small" variant="ghost" disabled={saving} label={t('samples.remove40a0d2', {p0:term.id})} onClick={() => setDraft(items => items.filter(item => item.id !== term.id))} />}</span></HoverHint>)}

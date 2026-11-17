@@ -4,8 +4,45 @@ import {contentSecurityPolicy,isDuckDBWorkerPath} from './lib/content-security-p
 import {config,middleware} from './middleware';
 import {NextRequest} from 'next/server';
 import {checkTaskDetailAccess} from './lib/task-detail-access';
+import { DEMO_BASE, DEMO_ENGINE, isDemoWorkerPath } from './lib/demo/policy';
 vi.mock('./lib/task-detail-access',()=>({checkTaskDetailAccess:vi.fn()}));
 afterEach(()=>vi.unstubAllEnvs());
+it('isolates the public demo even with an existing session and overwrites forged layout markers', async () => {
+ vi.mocked(checkTaskDetailAccess).mockClear();
+ for (const cookie of ['', 'access_token=existing-session']) {
+  const response = await middleware(new NextRequest('https://demo.test/demo?lang=en', {headers:{cookie}}));
+  expect(response.status).toBe(200);
+  expect(response.headers.get('x-middleware-request-x-yijian-public-demo')).toBe('1');
+  expect(response.headers.get('x-middleware-request-x-yijian-demo-locale')).toBe('en');
+  expect(response.headers.get('Content-Security-Policy')).toContain('https://demo.test'+DEMO_BASE);
+ }
+ expect(checkTaskDetailAccess).not.toHaveBeenCalled();
+ const ordinary = await middleware(new NextRequest('https://demo.test/login', {headers:{'x-yijian-public-demo':'1','x-yijian-demo-locale':'en'}}));
+ expect(ordinary.headers.get('x-middleware-request-x-yijian-public-demo')).toBe('0');
+ expect(ordinary.headers.get('x-middleware-request-x-yijian-demo-locale')).toBe('');
+});
+it('uses the public browser origin rather than the internal Next bind address in demo CSP', async () => {
+ const response = await middleware(new NextRequest('http://0.0.0.0:3000/demo', {headers:{host:'yijian.example','x-forwarded-proto':'https'}}));
+ expect(response.headers.get('Content-Security-Policy')).toContain('https://yijian.example'+DEMO_BASE);
+ expect(response.headers.get('Content-Security-Policy')).not.toContain('0.0.0.0');
+});
+it('keeps ordinary routes on the original CSP and scopes demo worker eval to exact files', async () => {
+ vi.stubEnv('NODE_ENV', 'production');
+ for (const path of ['/login', '/tasks/new', '/demo-engine/other.js', `${DEMO_ENGINE}duckdb-browser-eh.worker.js/extra`]) {
+  expect(isDemoWorkerPath(path)).toBe(false);
+  const response = await middleware(new NextRequest(`https://yijian.example${path}`, {headers:{host:'invalid host'}}));
+  const nonce = response.headers.get('x-middleware-request-x-nonce')!;
+  expect(response.headers.get('Content-Security-Policy')).toBe(contentSecurityPolicy(nonce));
+ }
+ for (const engine of ['eh', 'mvp']) {
+  const path = `${DEMO_ENGINE}duckdb-browser-${engine}.worker.js`;
+  expect(isDemoWorkerPath(path)).toBe(true);
+  const response = await middleware(new NextRequest(`http://0.0.0.0:3000${path}`, {headers:{host:'localhost:3100'}}));
+  expect(response.headers.get('Content-Security-Policy')).toContain("'unsafe-eval'");
+  expect(response.headers.get('Content-Security-Policy')).toContain('http://localhost:3100'+DEMO_BASE);
+  expect(response.headers.get('x-middleware-request-x-yijian-public-demo')).toBe('0');
+ }
+});
 it.each(['zh-CN', 'zh-Hant', 'en', 'es-419'])('localizes unavailable tasks with the %s preference', async locale => {
  vi.mocked(checkTaskDetailAccess).mockResolvedValue('unavailable');
  vi.stubEnv('YIJIAN_DEFAULT_LOCALE', 'en');

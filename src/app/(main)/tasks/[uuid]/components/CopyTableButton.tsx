@@ -1,4 +1,5 @@
 'use client';
+import { usePublicResult } from '@/components/shared/PublicResultContext';
 import { useText } from '@/i18n/useText';
 
 
@@ -13,6 +14,7 @@ export function tableTSV(rows: Array<Array<string | number>>) {
 
 export function CopyTableButton({ rows, label: suppliedLabel }: { rows: Array<Array<string | number>>; label?: string }) {
   const t = useText();
+  const publicResult=usePublicResult();
   const label = suppliedLabel ?? t("tasks.copyTableef798c");
   const [status, setStatus] = React.useState<'idle' | 'copied' | 'failed'>('idle');
   React.useEffect(() => {
@@ -22,7 +24,7 @@ export function CopyTableButton({ rows, label: suppliedLabel }: { rows: Array<Ar
   }, [status]);
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <ActionButton action={status === 'copied' ? 'copied' : 'copy'} size="small" type="button" className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border-default bg-canvas-default px-3 text-xs text-fg-default hover:bg-canvas-subtle" onClick={async () => {
+      <ActionButton disabled={publicResult} action={status === 'copied' ? 'copied' : 'copy'} size="small" type="button" className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border-default bg-canvas-default px-3 text-xs text-fg-default hover:bg-canvas-subtle" onClick={async () => {
         try { await navigator.clipboard.writeText(tableTSV(rows)); setStatus('copied'); }
         catch { setStatus('failed'); }
       }}>

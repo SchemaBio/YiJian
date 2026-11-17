@@ -1,4 +1,5 @@
 'use client';
+import { CNVAnnotationSection } from './CNVAnnotationSection';
 import { PhenotypeSummary } from './PhenotypeSummary';
 import { formatNumericString } from '@/i18n/format';
 import { errorText } from '@/i18n/errors';
@@ -359,74 +360,7 @@ export function CNVDetailPanel({
               />
             </section>
 
-            {/* 2. 注释 */}
-            <section hidden={section !== 'annotation'} className="space-y-4">
-              {(variant.type === 'Amplification' || variant.type === 'Deletion') && (
-                <div className="mt-4 rounded-lg border border-border-default p-3">
-                  <h4 className="mb-2 text-sm font-medium">{t("tasks.candidateIscnAnnotation38e32d")}</h4>
-                  <p className="select-text break-words font-mono text-sm">{variant.iscnCandidate || t("tasks.cannotGenerateConfirmCopyStateReferenceVersionb03eb9")}</p>
-                  <p className="mt-2 text-xs leading-relaxed text-fg-muted">{t("tasks.roundedSequencingCnEstimateXDenotesCandidate64f8d8")}</p>
-                  {variant.annotationValues?.ISCN && (
-                    <details className="mt-2 text-xs text-fg-muted">
-                      <summary className="cursor-pointer">{t("tasks.originalWorkflowAnnotationUnchangedca650c")}</summary>
-                      <p className="mt-1 select-text break-words font-mono">{variant.annotationValues.ISCN}</p>
-                    </details>
-                  )}
-                </div>
-              )}
-
-              {/* 涉及基因 (仅 Segment) */}
-              {!isExon && (variant as CNVSegment).genes?.length > 0 && (
-                <>
-                  <SectionTitle icon={Database} title={t("history.affectedGenes9fbbad")} />
-                  <div className="space-y-0">
-                    <div className="flex flex-wrap gap-2">
-                      {(variant as CNVSegment).genes.map((gene) => (
-                        <a
-                          key={gene}
-                          href={geneCardsURL(gene)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-canvas-inset text-accent-fg rounded hover:bg-accent-subtle transition-colors"
-                        >
-                          {gene}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* 基因组位置链接 */}
-              <SectionTitle icon={MapPin} title={t("tasks.externalResources227d9d")} />
-              <div className="space-y-0">
-                {externalReference ? (
-                  <>
-                    <InfoItem
-                      label="UCSC Genome Browser"
-                      value={t("tasks.view7ea73e", { p0: String(externalReference) })}
-                      link={ucscRegionURL(externalReference, variant.chromosome, variant.startPosition, variant.endPosition)}
-                    />
-                    <InfoItem
-                      label="Ensembl"
-                      value="查看"
-                      link={ensemblRegionURL(variant.chromosome, variant.startPosition, variant.endPosition)}
-                    />
-                  </>
-                ) : (
-                  <InfoItem label={t("tasks.externalResources227d9d")} value={t("display.taskReferenceVersionNotProvided8f850e")} />
-                )}
-                {isExon && (
-                  <InfoItem
-                    label="GeneCards"
-                    value={(variant as CNVExon).gene}
-                    link={geneCardsURL((variant as CNVExon).gene)}
-                  />
-                )}
-              </div>
-            </section>
-
+            <CNVAnnotationSection variant={variant} variantType={variantType} section={section} referenceId={referenceId} />
             {/* 3. 证据 */}
             <section hidden={section !== 'evidence'} className="space-y-4">
               <PhenotypeSummary assessment={variant.automaticAssessment} />

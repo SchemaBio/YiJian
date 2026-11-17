@@ -1,4 +1,5 @@
 'use client';
+import { usePublicResult } from '@/components/shared/PublicResultContext';
 ﻿
 import { useBusinessPermissions } from '@/components/providers/BusinessPermissionProvider';
 import { useText } from '@/i18n/useText';
@@ -28,6 +29,8 @@ export function PinCheckbox({ checked, onChange, disabled, source, reasons }: Re
   const noPermission = !hasPermission('interpretation_reports.manage');
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
+  const publicResult=usePublicResult();
+  if(publicResult) return <span className="inline-flex h-6 w-6 items-center justify-center text-fg-muted" aria-label={checked ? t("tasks.pin7bcf18") : undefined}>{checked ? "✓" : "—"}</span>;
   const tooltip = noPermission ? t('permissions.denied') : readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked ? t("tasks.clickToUnpinbda191", {p0: String(source === 'automatic' ? t('系统自动置顶：{p0}{p1}', {p0:reasons?.join('；')||t("display.evidenceSupportedKeyCandidate43d43a"), p1:''}) : t("display.keyLocusPinneda50ba8"))}) : t("tasks.clickToPinImportantLocus56c657", {p0: String(reasons?.length?t("display.initialAssessment325903")+reasons.join('；'):'')});
 
   return (
@@ -65,6 +68,8 @@ export function FocusCheckbox({ checked, onChange, disabled }: ReviewCheckboxPro
   const noPermission = !hasPermission('interpretation_reports.manage');
   const readOnly = useInterpretationReadOnly();
   disabled = disabled || readOnly;
+  const publicResult=usePublicResult();
+  if(publicResult) return <span className="inline-flex h-6 w-6 items-center justify-center text-fg-muted" aria-label={checked ? t("tasks.pin7bcf18") : undefined}>{checked ? "✓" : "—"}</span>;
   const tooltip = noPermission ? t('permissions.denied') : readOnly ? t("tasks.interpretationIsCompleteReopenItFirsta9331f") : checked
     ? t("tasks.selectedForFocusClickToWithdrawThis7e81d6")
     : t("tasks.clickToIncludeInFocusd66934");

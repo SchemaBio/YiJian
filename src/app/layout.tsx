@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { AppProviders } from '@/components/providers/AppProviders';
+import { PublicProviders } from '@/components/providers/PublicProviders';
 import './globals.css';
 import { getRequestLocale } from '@/i18n/server';
 import { createTextTranslator } from '@/i18n/text';
+import { isLocale } from '@/i18n/locales';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = createTextTranslator(await getRequestLocale());
@@ -28,15 +30,17 @@ export default async function RootLayout({
 }) {
   const headersList = await headers();
   const nonce = headersList.get('x-nonce') ?? undefined;
-  const locale = await getRequestLocale();
+  const demo = headersList.get('x-yijian-public-demo') === '1';
+  const requestedLocale = headersList.get('x-yijian-demo-locale');
+  const locale = demo && isLocale(requestedLocale) ? requestedLocale : await getRequestLocale();
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <script nonce={nonce} src="/runtime-config.js" suppressHydrationWarning></script>
+        {!demo && <script nonce={nonce} src="/runtime-config.js" suppressHydrationWarning></script>}
       </head>
       <body>
-        <AppProviders locale={locale}>{children}</AppProviders>
+        {demo ? <PublicProviders locale={locale}>{children}</PublicProviders> : <AppProviders locale={locale}>{children}</AppProviders>}
       </body>
     </html>
   );
