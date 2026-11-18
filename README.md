@@ -6,6 +6,12 @@ Open-source web frontend for germline bioinformatics analysis and variant annota
 
 Licensed under the [Apache License 2.0](./LICENSE).
 
+## Detailed Deployment and User Guide
+
+[Deployment Guide](https://www.schema-bio.com/en/docs/yijian/deployment)
+
+[User Guide](https://www.schema-bio.com/en/docs/yijian/user-guide)
+
 ## Scope
 
 This repository is the open-source, self-hosted edition. Deployers choose the use case, workflows, data retention, and how results are used. They are responsible for authorization of input data, security, result validation, personnel qualifications, and applicable legal and regulatory requirements.

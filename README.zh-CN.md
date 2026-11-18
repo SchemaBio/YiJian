@@ -6,6 +6,14 @@
 
 采用 [Apache License 2.0](./LICENSE)。
 
+## 详细部署和使用指南
+
+[部署指南](https://www.schema-bio.com/en/docs/yijian/deployment)
+
+
+[使用指南](https://www.schema-bio.com/en/docs/yijian/user-guide)
+
+
 ## 使用边界
 
 本仓库是开源、可自部署的版本。部署者自行决定使用场景、工作流、数据保留和结果用途，并负责输入数据授权、安全保护、结果验证、人员资质以及适用的法律和监管要求。
