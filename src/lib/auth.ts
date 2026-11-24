@@ -1,4 +1,4 @@
-import { api, clearAuthSession, clearLegacyAuthTokens } from './api';
+import { api, clearAuthSession, clearLegacyAuthTokens, SESSION_GENERATION_KEY, sessionGeneration, withSessionLock } from './api';
 import type {
   LoginRequest,
   LoginResponse,
@@ -86,22 +86,21 @@ function mapLoginResponse(data: BackendLoginData): LoginResponse {
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const backendData = await api.post<BackendLoginData>(
-      '/v1/auth/login',
-      data,
-      { coreApi: false }
-    );
-    const response = mapLoginResponse(backendData);
-    clearLegacyAuthTokens();
-    return response;
+    return withSessionLock(async () => {
+      const backendData = await api.post<BackendLoginData>('/v1/auth/login', data, { coreApi: false });
+      localStorage.setItem(SESSION_GENERATION_KEY, crypto.getRandomValues(new Uint32Array(4)).join('-'));
+      clearLegacyAuthTokens();
+      return mapLoginResponse(backendData);
+    });
   },
 
-  logout: async (): Promise<void> => {
-    try {
-      await api.post('/v1/auth/logout', undefined, { coreApi: false });
-    } finally {
+  logout: async (generation = sessionGeneration()): Promise<void> => {
+    await withSessionLock(async () => {
+      if (sessionGeneration() !== generation) return;
+      await api.post('/v1/auth/logout', undefined, { coreApi: false, signal: AbortSignal.timeout(15000) });
+      localStorage.setItem(SESSION_GENERATION_KEY, crypto.getRandomValues(new Uint32Array(4)).join('-'));
       clearAuthSession();
-    }
+    });
   },
 
   changePassword: async (data: { old_password: string; new_password: string }): Promise<{ expires_at?: string }> => {

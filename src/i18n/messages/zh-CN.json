@@ -168,6 +168,8 @@
     "submenuc1c3c6": "子菜单",
     "notSignedIne8041a": "未登录",
     "userMenua375a2": "用户菜单",
+    "signingOut": "正在退出登录…",
+    "signOutUnconfirmed": "尚未确认退出。请检查网络连接后重试。",
     "signOut094774": "退出登录",
     "selectAtLeastOneFile7487f9": "请至少选择一个文件",
     "selectAllOriginalUnfinishedFilesWithMatchingd54e94": "请选择上次上传的全部未完成原文件（文件名、大小和修改时间必须一致），或先放弃恢复记录",

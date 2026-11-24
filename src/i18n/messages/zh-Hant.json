@@ -168,6 +168,8 @@
     "submenuc1c3c6": "子菜單",
     "notSignedIne8041a": "未登錄",
     "userMenua375a2": "使用者菜單",
+    "signingOut": "正在登出…",
+    "signOutUnconfirmed": "尚未確認登出。請檢查網路連線後重試。",
     "signOut094774": "退出登錄",
     "selectAtLeastOneFile7487f9": "請至少選擇一個檔案",
     "selectAllOriginalUnfinishedFilesWithMatchingd54e94": "請選擇上次上傳的全部未完成原檔案（檔案名、大小和修改時間必須一致），或先放棄恢復記錄",

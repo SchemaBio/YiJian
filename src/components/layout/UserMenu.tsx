@@ -6,7 +6,6 @@ import { useText } from '@/i18n/useText';
 import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Avatar, Tooltip } from '@schema/ui-kit';
 import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -27,14 +26,6 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
   const t = useText();
   const [open, setOpen] = React.useState(false);
   const { user, logout } = useAuth();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await logout();
-    setOpen(false);
-    router.push('/login');
-  };
-
   const displayUser: UserData = user ? {
     id: user.id,
     username: user.email,
@@ -108,7 +99,7 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
 
           <div className="p-1.5">
             <button
-              onClick={handleLogout}
+              onClick={() => void logout()}
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger-fg transition-colors hover:bg-danger-subtle"
             >
               <LogOut className="h-4 w-4" />

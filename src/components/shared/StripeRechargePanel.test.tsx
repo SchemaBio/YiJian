@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { StripeRechargePanel } from './StripeRechargePanel';
 import { createCheckoutSession, getPaymentOptions, getPaymentOrders, getPaymentOrder } from '@/lib/payments';
+import { BILLING_UPDATED_EVENT } from '@/lib/billing';
 import { ApiError } from '@/lib/api';
 import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement';
 import { getServicePolicy, SERVICE_POLICY_VERSION } from '@/lib/service-policy';
@@ -44,8 +45,15 @@ it('a return URL only reads the authenticated order and never creates a payment'
  const id='00000000-0000-0000-0000-000000000001'; window.history.replaceState({}, '', '/billing/recharge?order='+id);
  vi.mocked(getPaymentOptions).mockResolvedValue({ recharge_allowed: true, provider: 'stripe', product: 'credit', credits_per_unit: 1, min_quantity: 1, max_quantity: 5000, status: 'disabled', price: null });
  vi.mocked(getPaymentOrder).mockResolvedValue({ id, mode: 'live', quantity: 10, currency: 'usd', amount: 1000, state: 'paid', simulated: false, refunded_amount: 0, recovered_credits: 0, created_at: '' });
- render(<StripeRechargePanel quantity={10} orgId="org" />);
- await screen.findByText(id+': 积分已到账'); expect(createCheckoutSession).not.toHaveBeenCalled();
+ const updated = vi.fn();
+ window.addEventListener(BILLING_UPDATED_EVENT, updated);
+ try {
+   render(<StripeRechargePanel quantity={10} orgId="org" />);
+   await screen.findByText(id+': 积分已到账');
+   expect(createCheckoutSession).not.toHaveBeenCalled();
+   expect(updated).toHaveBeenCalledTimes(1);
+   expect(getPaymentOrders).toHaveBeenCalledTimes(2);
+ } finally { window.removeEventListener(BILLING_UPDATED_EVENT, updated); }
 });
 it('clears purchase acceptance when switching organizations', async () => {
  vi.mocked(getPaymentOptions).mockResolvedValue({recharge_allowed:true,provider:'stripe',product:'credit',credits_per_unit:1,min_quantity:1,max_quantity:5000,status:'available',mode:'live',price:{currency:'usd',unit_amount:100}});

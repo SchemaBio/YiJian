@@ -51,7 +51,18 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
     }, 5000);
     return () => { active = false; window.clearInterval(timer); };
   }, [selected?.id, selected?.state]);
-  useEffect(() => { if (selected?.test_credits_applied) notifyBillingUpdated(); }, [selected?.id, selected?.state, selected?.test_credits_applied]);
+  const settledOrderId = selected && (selected.test_credits_applied || ['paid', 'partially_refunded', 'refunded', 'disputed'].includes(selected.state))
+    ? selected.id : null;
+  const selectedState = selected?.state;
+  useEffect(() => {
+    if (!settledOrderId) return;
+    let active = true;
+    notifyBillingUpdated();
+    void getPaymentOrders(page).then(list => {
+      if (active && scope.current === orgId) { setOrders(list.items); setTotal(list.total); }
+    }).catch(() => { if (active) setError(t('stripePayments.loadFailed')); });
+    return () => { active = false; };
+  }, [settledOrderId, selectedState, orgId, page, t]);
   async function buy() {
     if (lock.current || quantity === null || options?.status !== 'available' || !accepted || !policy || policy.version !== SERVICE_POLICY_VERSION) return;
     const checkoutTab = window.open('about:blank', '_blank');
@@ -74,8 +85,9 @@ export function StripeRechargePanel({ quantity, orgId, selection, manualRequest 
         const url = new URL(result.checkout_url);
         if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') throw new Error('invalid checkout');
         checkoutTab.location.replace(url.href); opened = true;
-        setSelected(await getPaymentOrder(result.order_id));
-      } else { setSelected(await getPaymentOrder(result.order_id)); }
+      }
+      const order = await getPaymentOrder(result.order_id);
+      if (scope.current === owner) setSelected(order);
     } catch (err) {
       if (scope.current !== owner) return;
       const code = err instanceof ApiError ? (err.data as {code?: string})?.code : '';

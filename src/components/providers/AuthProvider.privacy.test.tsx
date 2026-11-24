@@ -5,7 +5,7 @@ import { authApi } from '@/lib/auth';
 
 vi.mock('@/lib/auth', () => ({ authApi: {
   getCurrentUser: vi.fn().mockRejectedValue(new Error('Unauthenticated')),
-  getCurrentOrganization: vi.fn(),
+  getCurrentOrganization: vi.fn(), logout: vi.fn(),
 } }));
 
 function Probe() {
@@ -55,4 +55,22 @@ describe('public privacy access', () => {
       expect(error).not.toHaveBeenCalled();
     } finally { error.mockRestore(); }
   });
+});
+
+it('hides protected content and preserves an unconfirmed logout across reloads', async () => {
+  vi.mocked(authApi.logout).mockRejectedValue(new Error('offline'));
+  function Account() {
+    const auth = useAuth();
+    return <button onClick={() => void auth.logout()}>Account information</button>;
+  }
+  const view = render(<AuthProvider><Account /></AuthProvider>);
+  try {
+    fireEvent.click(screen.getByRole('button', { name: 'Account information' }));
+    await screen.findByText('尚未确认退出。请检查网络连接后重试。');
+    expect(screen.queryByText('Account information')).toBeNull();
+    view.unmount();
+    render(<AuthProvider><Account /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: '退出登录' }));
+    await waitFor(() => expect(authApi.logout).toHaveBeenCalledTimes(2));
+  } finally { localStorage.removeItem('yijian:logout-pending'); }
 });

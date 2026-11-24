@@ -2,16 +2,19 @@
 import { BusinessPermissionContext } from './BusinessPermissionProvider';
 import { userHasPermission, type BusinessPermission } from '@/lib/permissions';
 import { getRuntimeBackendFlavor } from '@/lib/runtime-config';
+import { useText } from '@/i18n/useText';
 import { LocalizedError } from '@/i18n/errors';
 
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { User, UserOrganizationInfo, OrgRole } from '@/types/user';
 import type { LoginResponse } from '@/types/auth';
+import { SESSION_GENERATION_KEY, sessionGeneration } from '@/lib/api';
 import { authApi } from '@/lib/auth';
 import { STORAGE_KEYS } from '@/lib/storage';
 import { hashPassword } from '@/lib/crypto';
 
+const LOGOUT_PENDING_KEY = 'yijian:logout-pending';
 const DEV_MOCK_AUTH = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEV_MOCK_AUTH === 'true';
 
 const MOCK_USER: User = {
@@ -106,6 +109,8 @@ function loginRedirectForCurrentPath(): string {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const t = useText();
+  const [logoutState, setLogoutState] = useState<'idle' | 'pending' | 'failed'>('idle');
   const [user, setUser] = useState<User | null>(null);
   const [organizations, setOrganizations] = useState<UserOrganizationInfo[]>([]);
   const [currentOrg, setCurrentOrg] = useState<UserOrganizationInfo | null>(null);
@@ -134,6 +139,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     const loadSession = async () => {
+      if (localStorage.getItem(LOGOUT_PENDING_KEY) === sessionGeneration()) {
+        setLogoutState('failed');
+        setIsLoading(false);
+        return;
+      }
+      localStorage.removeItem(LOGOUT_PENDING_KEY);
       if (DEV_MOCK_AUTH) {
         const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
         if (storedUser) {
@@ -172,7 +183,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadSession();
+    const onSessionChanged = (event: StorageEvent) => {
+      if (event.key === SESSION_GENERATION_KEY) window.location.reload();
+      if (event.key === LOGOUT_PENDING_KEY && event.newValue === sessionGeneration()) setLogoutState('failed');
+    };
+    window.addEventListener('storage', onSessionChanged);
     return () => {
+      window.removeEventListener('storage', onSessionChanged);
       cancelled = true;
     };
   }, [applySession, resetSession]);
@@ -195,13 +212,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applySession]);
 
   const logout = useCallback(async () => {
+    setLogoutState('pending');
+    const generation = localStorage.getItem(LOGOUT_PENDING_KEY) ?? sessionGeneration();
+    localStorage.setItem(LOGOUT_PENDING_KEY, generation);
     try {
-      await authApi.logout();
-    } catch (error) {
-      console.warn('Logout request failed; clearing local session anyway.', error);
-    } finally {
-      resetSession();
+      if (!DEV_MOCK_AUTH) await authApi.logout(generation);
+    } catch {
+      setLogoutState('failed');
+      return;
     }
+    localStorage.removeItem(LOGOUT_PENDING_KEY);
+    resetSession();
+    window.location.replace('/login');
   }, [resetSession]);
 
   const updateProfile = useCallback(async (data: { name: string }): Promise<User> => {
@@ -334,6 +356,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isSuperAdmin,
   };
 
+  if (logoutState !== 'idle') {
+    return <main className="mx-auto max-w-md space-y-4 p-8">
+      <p role="status">{t(logoutState === 'pending' ? 'common.signingOut' : 'common.signOutUnconfirmed')}</p>
+      {logoutState === 'failed' && <button className="underline" onClick={() => void logout()}>{t('common.signOut094774')}</button>}
+    </main>;
+  }
   return (
     <AuthContext.Provider value={value}>
       <BusinessPermissionContext.Provider value={hasPermission}>{children}</BusinessPermissionContext.Provider>

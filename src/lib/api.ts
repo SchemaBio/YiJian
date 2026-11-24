@@ -192,41 +192,48 @@ function unwrapResponse<T>(json: unknown): T {
   return json as T;
 }
 
-// Refresh lock: prevents concurrent cookie-backed session refresh calls.
+// Cookie rotation is shared by every tab on this origin.
 let refreshPromise: Promise<boolean> | null = null;
 
-async function tryRefreshToken(): Promise<boolean> {
-  // If already refreshing, wait for that promise
-  if (refreshPromise) return refreshPromise;
+export async function withSessionLock<T>(operation: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator === 'undefined' ? undefined : navigator.locks;
+  return locks ? locks.request('yijian-cookie-session', operation) : operation();
+}
 
-  refreshPromise = (async () => {
-    try {
+export const SESSION_GENERATION_KEY = 'yijian:session-generation';
+
+export function sessionGeneration(): string {
+  return typeof window === 'undefined' ? '' : localStorage.getItem(SESSION_GENERATION_KEY) ?? '';
+}
+
+function assertSameSession(generation: string) {
+  if (sessionGeneration() !== generation) throw new ApiError(409, 'Session changed');
+}
+
+function tryRefreshToken(originalCsrf: string | null, generation: string): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = withSessionLock(async () => {
+      assertSameSession(generation);
+      const csrf = getCookie('csrf_token');
+      if (csrf && csrf !== originalCsrf) return true;
       const response = await fetch(`${getRuntimeApiBaseUrl()}/v1/auth/refresh`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(getCookie('csrf_token') ? { 'X-CSRF-Token': getCookie('csrf_token') as string } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
         credentials: 'include',
-        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(15000),
+        body: '{}',
       });
-
-      if (!response.ok) {
-        clearAuthSession();
-        return false;
+      if (response.ok) {
+        clearLegacyAuthTokens();
+        return true;
       }
-
-      await response.json().catch(() => null);
-      clearLegacyAuthTokens();
-      return true;
-    } catch {
+      if (![400, 401, 403].includes(response.status)) {
+        throw new ApiError(response.status, response.statusText);
+      }
       clearAuthSession();
       return false;
-    } finally {
-      refreshPromise = null;
-    }
-  })();
-
+    }).finally(() => { refreshPromise = null; });
+  }
   return refreshPromise;
 }
 
@@ -248,67 +255,38 @@ function shouldAttemptAuthRefresh(endpoint: string): boolean {
   ].includes(endpoint);
 }
 
-async function request<T>(
-  endpoint: string,
-  options: RequestOptions = {}
-): Promise<T> {
+async function authenticatedFetch(endpoint: string, options: RequestOptions): Promise<Response> {
   const { params, coreApi, ...init } = options;
   const url = buildURL(endpoint, params, undefined, coreApi);
-
-  const headers = new Headers(init.headers);
-  if (init.body !== undefined && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  if (isUnsafeMethod(init.method)) {
-    const csrfToken = getCookie('csrf_token');
-    if (csrfToken) {
-      headers.set('X-CSRF-Token', csrfToken);
+  const generation = sessionGeneration();
+  const originalCsrf = getCookie('csrf_token');
+  const send = (target: string) => {
+    const headers = new Headers(init.headers);
+    if (init.body !== undefined && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
     }
-  }
+    const csrf = getCookie('csrf_token');
+    if (csrf && isUnsafeMethod(init.method)) headers.set('X-CSRF-Token', csrf);
+    return fetch(target, { ...init, headers, credentials: init.credentials ?? 'include' });
+  };
+  const sendWithFallback = async () => {
+    const response = await send(url);
+    return shouldRetryViaSquidOctopus(endpoint, response, coreApi)
+      ? send(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK))
+      : response;
+  };
 
-  let response = await fetch(url, {
-    ...init,
-    headers,
-    credentials: init.credentials ?? 'include',
-  });
+  const response = await sendWithFallback();
+  if (response.status !== 401 || !shouldAttemptAuthRefresh(endpoint)) return response;
+  const refreshed = await tryRefreshToken(originalCsrf, generation);
+  assertSameSession(generation);
+  if (refreshed) return sendWithFallback();
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('schema:auth-expired'));
+  throw new ApiError(401, 'Unauthorized', { error: 'Token expired and refresh failed' });
+}
 
-  if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
-    response = await fetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK), {
-      ...init,
-      headers,
-      credentials: init.credentials ?? 'include',
-    });
-  }
-
-  // Auto-refresh on 401. The current-user endpoint is itself under /v1/auth/
-  // and must be eligible: it is the first request made after a page reload and
-  // otherwise an expired access token looks like a logged-out session even when
-  // the refresh token is still valid.
-  if (response.status === 401 && shouldAttemptAuthRefresh(endpoint)) {
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      response = await fetch(url, {
-        ...init,
-        headers,
-        credentials: init.credentials ?? 'include',
-      });
-      if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
-        response = await fetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK), {
-          ...init,
-          headers,
-          credentials: init.credentials ?? 'include',
-        });
-      }
-    } else {
-      // Refresh failed; trigger logout by dispatching event.
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('schema:auth-expired'));
-      }
-      throw new ApiError(401, 'Unauthorized', { error: 'Token expired and refresh failed' });
-    }
-  }
-
+async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  const response = await authenticatedFetch(endpoint, options);
   if (!response.ok) {
     const data = await parseJSONBody(response);
     if (response.status === 403 && data && typeof data === 'object' && (data as { code?: string }).code === 'permission_denied' && typeof window !== 'undefined') {
@@ -370,46 +348,7 @@ async function requestDownload(
   options: RequestOptions = {},
   fallbackFilename = 'download.bin'
 ): Promise<DownloadResult> {
-  const { params, coreApi, ...init } = options;
-  const url = buildURL(endpoint, params, undefined, coreApi);
-
-  const headers = new Headers(init.headers);
-  if (init.body !== undefined && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  if (isUnsafeMethod(init.method)) {
-    const csrfToken = getCookie('csrf_token');
-    if (csrfToken) {
-      headers.set('X-CSRF-Token', csrfToken);
-    }
-  }
-
-  const doFetch = (requestURL = url) => fetch(requestURL, {
-    ...init,
-    headers,
-    credentials: init.credentials ?? 'include',
-  });
-
-  let response = await doFetch();
-  if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
-    response = await doFetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK));
-  }
-  if (response.status === 401 && shouldAttemptAuthRefresh(endpoint)) {
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      response = await doFetch();
-      if (shouldRetryViaSquidOctopus(endpoint, response, coreApi)) {
-        response = await doFetch(buildURL(endpoint, params, CORE_API_PREFIX_FALLBACK));
-      }
-    } else {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('schema:auth-expired'));
-      }
-      throw new ApiError(401, 'Unauthorized', { error: 'Token expired and refresh failed' });
-    }
-  }
-
+  const response = await authenticatedFetch(endpoint, options);
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText, await errorData(response));
   }

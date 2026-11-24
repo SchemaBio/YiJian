@@ -168,6 +168,8 @@
     "submenuc1c3c6": "Submenu",
     "notSignedIne8041a": "Not signed in",
     "userMenua375a2": "User menu",
+    "signingOut": "Signing out…",
+    "signOutUnconfirmed": "Sign-out could not be confirmed. Check your connection and try again.",
     "signOut094774": "Sign out",
     "selectAtLeastOneFile7487f9": "Select at least one file",
     "selectAllOriginalUnfinishedFilesWithMatchingd54e94": "Select all original unfinished files with matching name, size and modification time, or discard recovery first",

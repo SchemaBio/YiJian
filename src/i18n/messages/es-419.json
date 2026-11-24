@@ -168,6 +168,8 @@
     "submenuc1c3c6": "Submenú",
     "notSignedIne8041a": "Sin sesión",
     "userMenua375a2": "Menú de usuario",
+    "signingOut": "Cerrando sesión…",
+    "signOutUnconfirmed": "No se pudo confirmar el cierre de sesión. Revisa tu conexión e inténtalo de nuevo.",
     "signOut094774": "Cerrar sesión",
     "selectAtLeastOneFile7487f9": "Selecciona al menos un archivo",
     "selectAllOriginalUnfinishedFilesWithMatchingd54e94": "Selecciona todos los archivos originales incompletos con igual nombre, tamaño y fecha, o descarta primero la recuperación",
